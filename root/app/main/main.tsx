@@ -1,17 +1,35 @@
+import { useEffect, useState } from 'react';
 import { Component } from 'react';
 import { MessageManager } from './message-manager';
+import { SocketClient } from './server/socket-client';
 import './_styles/styles.scss';
+
+function ChatComponent() {
+    const [socketClient] = useState(new SocketClient());
+    const [messageManager] = useState(new MessageManager(socketClient));
+
+    useEffect(() => {
+        socketClient.connect();
+
+        return () => {
+            socketClient.disconnect();
+        }
+    }, [socketClient, messageManager]);
+}
 
 export class Main extends Component {
     private messageManager: MessageManager;
+    private socketClient: SocketClient;
 
     constructor(props: any) {
         super(props);
-        this.render();
-        this.messageManager = new MessageManager();
+        this.socketClient = new SocketClient();
+        this.messageManager = new MessageManager(this.socketClient);
+        this.socketClient.connect();
+        this.messageManager.init();
     }
 
-    public render() {
+    render() {
         return (
             <div className='app'>
                 <div className='screen join-screen active'>

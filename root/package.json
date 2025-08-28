@@ -5,23 +5,32 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start",
+    "server": "tsx ./app/init.ts",
+    "node": "nodemon --exec tsx ./app/init.ts"
   },
   "dependencies": {
-    "@types/express": "^5.0.3",
     "@types/ws": "^8.18.1",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "fs": "^0.0.2",
     "next": "15.5.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "sql.js": "^1.1.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/express": "^5.0.3",
+    "@types/node": "^20.19.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5"
+    "@types/socket.io": "^3.0.1",
+    "@types/socket.io-client": "^1.4.36",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   }
 }

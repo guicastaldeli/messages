@@ -1,23 +1,26 @@
-import { Server } from "./server/server";
 import { ContentGetter } from "./content-getter";
+import { SocketClient } from "./server/socket-client";
 
 export class MessageManager {
-    private server: Server;
     private contentGetter: ContentGetter;
-    private socket: any;
+    private socket: SocketClient;
     private uname: any;
-    private appEl = document.querySelector<HTMLDivElement>('.app');
+    private appEl: HTMLDivElement | null = null;
 
-    constructor() {
-        this.server = new Server();
+    constructor(socket: SocketClient) {
         this.contentGetter = new ContentGetter();
+        this.socket = socket;
+    }
+
+    public init(): void {
+        if(typeof document === 'undefined') return;
+        this.appEl = document.querySelector<HTMLDivElement>('.app');
         this.updateSocket();
-        
-        this.socket = this.server.io;
     }
 
     public handleUser(): void {
         if(!this.appEl) return;
+        console.log('handleuser')
 
         const joinBtn = this.appEl.querySelector<HTMLButtonElement>('.join-screen #join-user');
         if(!joinBtn) throw new Error('join button err');
@@ -26,7 +29,7 @@ export class MessageManager {
             const usernameInput = this.appEl!.querySelector<HTMLInputElement>('.join-screen #username')!.value;
             if(!usernameInput.length) return;
 
-            this.socket.emit('new-user', usernameInput);
+            this.socket.emitNewUser(usernameInput);
             this.uname = usernameInput;
 
             const active = this.appEl!.querySelector('join-screen')!.classList;
@@ -49,16 +52,13 @@ export class MessageManager {
                 username: this.uname,
                 text: messageInput
             });
-            this.socket.emit('chat', {
-                username: this.uname,
-                text: messageInput
-            });
+            this.socket.emitNewMessage(messageInput);
             messageInput = '';
         });
     }
 
     public exitChat(): void {
-        this.socket.emit('exit-user', this.uname);
+        this.socket.emitExitUser(this.uname);
         window.location.href = window.location.href;
     }
 
@@ -74,16 +74,19 @@ export class MessageManager {
                 mEl.setAttribute('class', 'message my-message');
                 mEl.innerHTML = this.contentGetter.__my(message);
                 messageContainer.appendChild(mEl);
+                break;
             case 'other':
                 const oEl: HTMLDivElement = document.createElement('div');
                 oEl.setAttribute('class', 'message my-message');
                 oEl.innerHTML = this.contentGetter.__other(message);
                 messageContainer.appendChild(oEl);
+                break;
             case 'update':
                 let uEl: HTMLDivElement = document.createElement('div');
                 uEl.setAttribute('class', 'update');
                 uEl.innerText = message;
                 messageContainer.appendChild(uEl);
+                break;
         }
     }
 

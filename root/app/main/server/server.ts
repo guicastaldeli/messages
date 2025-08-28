@@ -1,17 +1,39 @@
-export class Server {
-    private express = require('express');
-    private path = require('path');
-    private app = this.express();
-    private server = require('http').createServer(this.app);
-    public io = require('socket.io')(this.server);
+import express from 'express';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import path from 'path';
+
+export class MessageServer {
+    private app: express.Application;
+    private server: http.Server;
+    private io: SocketIOServer;
 
     constructor() {
+        this.app = express();
+        this.server = http.createServer(this.app);
+        this.io = new SocketIOServer(this.server, {
+            cors: {
+                origin: '*',
+                methods: ['GET', 'POST']
+            }
+        });
+
         this.useApp();
+        this.configRoutes();
         this.configSocket();
     }
 
     private useApp(): void {
-        this.app.use(this.express.static(this.path.join(__dirname + './public')));
+        this.app.use(express.static(path.join(__dirname + '../public')));
+    }
+
+    private configRoutes(): void {
+        this.app.get('/', (_, res) => {
+            res.send('Welcome to Server! :)');
+        });
+        this.app.get('/status', (_, res) => {
+            res.json({ status: 'OK', socketIO: 'enabled' });
+        });
     }
 
     private configSocket(): void {
@@ -25,9 +47,15 @@ export class Server {
                 socket.broadcast.emit('update', username + ' left the chat!');
             });
             //Chat
-            socket.on('new-user', (message: any) => {
+            socket.on('chat', (message: any) => {
                 socket.broadcast.emit('update', message);
             });
-        })
+        });
+    }
+
+    public start(port: string | number): void {
+        this.server.listen(port, () => {
+            console.log(`Server running on port ${port}`);
+        });
     }
 }
