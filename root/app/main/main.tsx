@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Component } from 'react';
 import { MessageManager } from './message-manager';
-import { SocketClient } from './server/socket-client';
+import { SocketClient } from '../.server/socket-client';
 import './_styles/styles.scss';
 
 function ChatComponent() {

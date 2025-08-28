@@ -6,7 +6,7 @@
 ------------------------------------
 */
 
-import { MessageServer } from "./main/server/server";
+import { MessageServer } from './.server/server';
 import express from 'express';
 
 const server = new MessageServer();
