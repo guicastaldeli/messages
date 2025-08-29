@@ -1,12 +1,13 @@
 import express from 'express';
 import http from 'http';
-import { Server as SocketIOServer } from 'socket.io';
 import path from 'path';
+import { Server as SocketIOServer } from 'socket.io';
 
 export class MessageServer {
     private app: express.Application;
     private server: http.Server;
     private io: SocketIOServer;
+    private port: number | string;
 
     constructor() {
         this.app = express();
@@ -17,10 +18,17 @@ export class MessageServer {
                 methods: ['GET', 'POST']
             }
         });
+        this.port = process.env.PORT || 3001;
 
         this.useApp();
         this.configRoutes();
-        this.configSocket();
+        this.configSockets();
+    }
+
+    public init(PORT: number | string): void {
+        this.server.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
     }
 
     private useApp(): void {
@@ -34,10 +42,17 @@ export class MessageServer {
         this.app.get('/status', (_, res) => {
             res.json({ status: 'OK', socketIO: 'enabled' });
         });
+        this.app.get('/.api/route', (req, res) => {
+            const host = req.hostname;
+            const url = `http://${host}:${this.port}`;
+            res.json({ url: url });
+        });
     }
 
-    private configSocket(): void {
+    private configSockets(): void {
         this.io.on('connection', (socket: any) => {
+            console.log('connected', socket.io);
+
             //New User
             socket.on('new-user', (username: any) => {
                 socket.broadcast.emit('update', username + ' joined the chat!');
@@ -48,14 +63,22 @@ export class MessageServer {
             });
             //Chat
             socket.on('chat', (message: any) => {
-                socket.broadcast.emit('update', message);
+                socket.broadcast.emit('chat', message);
+            });
+            //Disconnect
+            socket.on('disconnect', () => {
+                console.log('User disconnected', socket.id);
             });
         });
     }
 
-    public start(port: string | number): void {
-        this.server.listen(port, () => {
-            console.log(`Server running on port ${port}`);
-        });
+    //IO
+    public getIO(): SocketIOServer {
+        return this.io;
+    }
+
+    //App
+    public getApp(): express.Application {
+        return this.app;
     }
 }

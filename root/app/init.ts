@@ -7,16 +7,16 @@
 */
 
 import { MessageServer } from './.server/server';
-import express from 'express';
 
 const server = new MessageServer();
+const app = server.getApp();
 const PORT = process.env.PORT || 3001;
-server.start(PORT);
 
-const app = express();
-app.get('/api/socket-url', (req, res) => {
+app.get('/.api/route', (req, res) => {
     const host = req.hostname;
-    res.json({ url: `http://${host}:${PORT}` });
+    const url = `http://${host}:${PORT}`;
+    res.json({ url: url });
 });
 
+server.init(PORT);
 console.log(`Server starting on port ${PORT}!! ;)`);

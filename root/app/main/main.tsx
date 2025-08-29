@@ -1,21 +1,7 @@
-import { useEffect, useState } from 'react';
 import { Component } from 'react';
 import { MessageManager } from './message-manager';
 import { SocketClient } from '../.server/socket-client';
 import './_styles/styles.scss';
-
-function ChatComponent() {
-    const [socketClient] = useState(new SocketClient());
-    const [messageManager] = useState(new MessageManager(socketClient));
-
-    useEffect(() => {
-        socketClient.connect();
-
-        return () => {
-            socketClient.disconnect();
-        }
-    }, [socketClient, messageManager]);
-}
 
 export class Main extends Component {
     private messageManager: MessageManager;
@@ -25,6 +11,10 @@ export class Main extends Component {
         super(props);
         this.socketClient = new SocketClient();
         this.messageManager = new MessageManager(this.socketClient);
+        this.connect();
+    }
+
+    private connect(): void {
         this.socketClient.connect();
         this.messageManager.init();
     }

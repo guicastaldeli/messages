@@ -5,16 +5,34 @@ export class SocketClient {
     private eventListeners: Map<string, Function[]> = new Map();
     private url!: string;
 
-    private async get(): Promise<string> {
-        const res = await fetch('/api/socket-url');
-        this.url = await res.json();
+    //Url
+    private async getUrl(): Promise<string> {
+        try {
+            const port = process.env.PORT || 3001;
+            if(typeof window !== 'undefined') {
+                const { protocol, hostname } = window.location;
+                this.url = `${protocol}//${hostname}:${port}`;
+            }
+        } catch(err) {
+            console.log(err);
+        }
+
         return this.url;
     }
 
-    public connect(): void {
-        this.get();
-        this.socket = io(this.url);
-        
+    public async connect(): Promise<void> {
+        try {
+            const url = await this.getUrl();
+            this.socket = io(url, { transports: ['websocket', 'polling'] });
+            this.setupSockets();
+        } catch(err) {
+            console.log(err);
+        }
+    }
+
+    private setupSockets(): void {
+        if(!this.socket) return;
+
         //Connect
         this.socket.on('connect', () => {
             console.log('connected to server');
@@ -50,6 +68,7 @@ export class SocketClient {
         }
     }
 
+    //Emitters
     public emitEvent(event: string, data?: any): void {
         const listeners = this.eventListeners.get(event);
         if(listeners) listeners.forEach(callback => callback(data));
@@ -68,10 +87,5 @@ export class SocketClient {
     public emitNewMessage(message: string): void {
         if(!this.socket) return;
         this.socket.emit('chat', message);
-    }
-
-    public disconnect(): void {
-        if(!this.socket) return;
-        this.socket.disconnect();
     }
 }
