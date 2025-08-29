@@ -9,10 +9,8 @@ export class SocketClient {
     private async getUrl(): Promise<string> {
         try {
             const port = process.env.PORT || 3001;
-            if(typeof window !== 'undefined') {
-                const { protocol, hostname } = window.location;
-                this.url = `${protocol}//${hostname}:${port}`;
-            }
+            const { protocol, hostname } = window.location;
+            this.url = `${protocol}//${hostname}:${port}`;
         } catch(err) {
             console.log(err);
         }
