@@ -2,14 +2,16 @@ import express from 'express';
 import http from 'http';
 import path from 'path';
 import { Server as SocketIOServer } from 'socket.io';
+import { Interface } from './interface';
 
 export class MessageServer {
     private app: express.Application;
     private server: http.Server;
     private io: SocketIOServer;
     private port: number | string;
+    private interface: Interface;
 
-    constructor() {
+    constructor(url: string) {
         this.app = express();
         this.server = http.createServer(this.app);
         this.io = new SocketIOServer(this.server, {
@@ -23,11 +25,12 @@ export class MessageServer {
         this.useApp();
         this.configRoutes();
         this.configSockets();
+        this.interface = new Interface(this.server, this.io, this.port, url);
     }
 
-    public init(PORT: number | string): void {
-        this.server.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
+    public init(port: number | string): void {
+        this.server.listen(port, () => {
+            console.log(`Server running`);
         });
     }
 
@@ -36,16 +39,9 @@ export class MessageServer {
     }
 
     private configRoutes(): void {
-        this.app.get('/', (_, res) => {
-            res.send('Welcome to Server! :)');
-        });
-        this.app.get('/status', (_, res) => {
-            res.json({ status: 'OK', socketIO: 'enabled' });
-        });
-        this.app.get('/.api/route', (req, res) => {
-            const host = req.hostname;
-            const url = `http://${host}:${this.port}`;
-            res.json({ url: url });
+        this.app.get('/', async (_, res) => {
+            const content = this.interface.get();
+            res.send(content);
         });
     }
 

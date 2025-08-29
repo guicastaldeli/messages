@@ -1,22 +1,25 @@
 /*
-------------------------------------
+-------------------
 
-            ENTRY POINT
+    ENTRY POINT
             
-------------------------------------
+-------------------
 */
 
+import { NextRequest } from 'next/server';
 import { MessageServer } from './.server/server';
+import { resBaseUrl } from './.api/routes';
 
-const server = new MessageServer();
-const app = server.getApp();
 const PORT = process.env.PORT || 3001;
-
-app.get('/.api/route', (req, res) => {
-    const host = req.hostname;
-    const url = `http://${host}:${PORT}`;
-    res.json({ url: url });
+const dummyReq = new NextRequest(`http://localhost:${PORT}`, {
+    headers: {
+        host: `localhost:${PORT}`,
+        'x-forwarded-proto': 'http',
+    }
 });
+const BASE_URL = resBaseUrl(dummyReq, PORT);
 
+const server = new MessageServer(BASE_URL);
 server.init(PORT);
-console.log(`Server starting on port ${PORT}!! ;)`);
+
+console.log(`Server starting on port ${BASE_URL}!!! ;)`);

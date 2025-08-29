@@ -1,5 +1,5 @@
 import { SocketClient } from "../.server/socket-client";
-import { ContentGetter } from "./content-getter";
+import { ContentGetter } from "../content-getter";
 
 export class MessageManager {
     private contentGetter: ContentGetter;
