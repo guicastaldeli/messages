@@ -32,7 +32,7 @@ export class MessageManager {
             this.socket.emitNewUser(usernameInput);
             this.uname = usernameInput;
 
-            const active = this.appEl!.querySelector('join-screen')!.classList;
+            const active = this.appEl!.querySelector('.join-screen')!.classList;
             active.remove('active');
             active.add('active');
         });
