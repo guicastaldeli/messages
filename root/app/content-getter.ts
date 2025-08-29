@@ -24,16 +24,18 @@ export class ContentGetter {
     }
 
     //Time
-    public __time(): string {
-        const now = new Date();
-        const formattedTime = now.toLocaleString();
+    public async __time(timeStream: any): Promise<string> {
+        const timeData = await timeStream.fetchServerTime();
+        const formattedTime = timeData.local;
 
         const content = `
-            <p id="ms--time" 
+            <p 
+                id="ms--time" 
                 data-auto-time-update 
                 data-time-prefix="Time!: "
+                data-server-time="${timeData.serverTime}"
             >
-                Time: ${formattedTime}
+                Time: ${formattedTime} ${timeData.serverTime ? '(server)' : '(local)'}
             </p>
         `;
         return content;

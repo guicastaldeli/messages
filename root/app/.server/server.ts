@@ -11,7 +11,7 @@ export class MessageServer {
     private port: number | string;
     private interface: Interface;
 
-    constructor(url: string) {
+    constructor(url: string, timeStream: any) {
         this.app = express();
         this.server = http.createServer(this.app);
         this.io = new SocketIOServer(this.server, {
@@ -25,7 +25,13 @@ export class MessageServer {
         this.useApp();
         this.configRoutes();
         this.configSockets();
-        this.interface = new Interface(this.server, this.io, this.port, url);
+        this.interface = new Interface(
+            this.server, 
+            this.io, 
+            this.port, 
+            url,
+            timeStream
+        );
     }
 
     public init(port: number | string): void {
@@ -38,9 +44,9 @@ export class MessageServer {
         this.app.use(express.static(path.join(__dirname + '../public')));
     }
 
-    private configRoutes(): void {
+    private async configRoutes(): Promise<void> {
         this.app.get('/', async (_, res) => {
-            const content = this.interface.get();
+            const content = await this.interface.get();
             res.send(content);
         });
     }

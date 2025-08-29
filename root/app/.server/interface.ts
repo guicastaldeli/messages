@@ -8,17 +8,20 @@ export class Interface {
     private port: number | string;
     private contentGetter: ContentGetter;
     private url: string;
+    private timeStream: any;
     
     constructor(
         server: http.Server,
         io: SocketIOServer,
         port: number | string,
-        url: string
+        url: string,
+        timeStream: any
     ) {
         this.server = server;
         this.io = io;
         this.port = port;
         this.url = url;
+        this.timeStream = timeStream;
         this.contentGetter = new ContentGetter();
     }
 
@@ -35,8 +38,8 @@ export class Interface {
     }
 
     //Time
-    private getTime(): string {
-        const content = this.contentGetter.__time();
+    private async getTime(): Promise<string> {
+        const content = this.contentGetter.__time(this.timeStream);
         return content;
     }
      
@@ -55,10 +58,10 @@ export class Interface {
         return content;
     }
 
-    public get(): string {
+    public async get(): Promise<string> {
         const welcome = this.getWelMessage();
         const version = this.getVersion();
-        const time = this.getTime();
+        const time = await this.getTime();
         const status = this.getStatus();
         const routes = this.getRoutes();
         

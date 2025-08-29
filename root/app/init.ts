@@ -9,6 +9,7 @@
 import { NextRequest } from 'next/server';
 import { MessageServer } from './.server/server';
 import { resBaseUrl } from './.api/routes';
+import { TimeStream } from './.api/time-stream';
 
 const PORT = process.env.PORT || 3001;
 const dummyReq = new NextRequest(`http://localhost:${PORT}`, {
@@ -19,7 +20,11 @@ const dummyReq = new NextRequest(`http://localhost:${PORT}`, {
 });
 const BASE_URL = resBaseUrl(dummyReq, PORT);
 
-const server = new MessageServer(BASE_URL);
+//Time
+const timeStream = new TimeStream();
+
+//Init Server
+const server = new MessageServer(BASE_URL, timeStream);
 server.init(PORT);
 
 console.log(`Server starting on port ${BASE_URL}!!! ;)`);
