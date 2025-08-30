@@ -30,7 +30,7 @@ export class Main extends Component {
                             <input type="text" id='username' />
                         </div>
                         <div className='form-input'>
-                            <button id='join-user' onClick={() => this.messageManager.handleUser()}>Join</button>
+                            <button id='join-user' onClick={() => this.messageManager.handleJoin()}>Join</button>
                         </div>
                     </div>
                 </div>
@@ -43,17 +43,15 @@ export class Main extends Component {
                         {/* Dummy msg */}
                         <div className="message my-message">
                             <div>
-                                <div className="name">You</div>
-                                <div className="text">Hi!</div>
+                                <div className="name"></div>
+                                <div className="text"></div>
                             </div>
                         </div>
-                        <div className="update">
-                            Abs has joined the chat
-                        </div>
+                        <div className="update"></div>
                         <div className="message other-message">
                             <div>
-                                <div className="name">Abc</div>
-                                <div className="text">Hi!</div>
+                                <div className="name"></div>
+                                <div className="text"></div>
                             </div>
                         </div>
                     </div>

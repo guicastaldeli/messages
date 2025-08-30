@@ -41,7 +41,7 @@ export class MessageServer {
     }
 
     private useApp(): void {
-        this.app.use(express.static(path.join(__dirname + '../public')));
+        this.app.use(express.static(path.join(__dirname, '../../public')));
     }
 
     private async configRoutes(): Promise<void> {

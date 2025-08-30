@@ -9,8 +9,10 @@ export class SocketClient {
     private async getUrl(): Promise<string> {
         try {
             const port = process.env.PORT || 3001;
-            const { protocol, hostname } = window.location;
-            this.url = `${protocol}//${hostname}:${port}`;
+            if(typeof window !== 'undefined' && window.location) {
+                const { protocol, hostname } = window.location;
+                this.url = `${protocol}//${hostname}:${port}`;
+            }
         } catch(err) {
             console.log(err);
         }
@@ -21,7 +23,7 @@ export class SocketClient {
     public async connect(): Promise<void> {
         try {
             const url = await this.getUrl();
-            this.socket = io(url, { transports: ['websocket', 'polling'] });
+            this.socket = io(url!, { transports: ['websocket', 'polling'] });
             this.setupSockets();
         } catch(err) {
             console.log(err);

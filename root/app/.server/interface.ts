@@ -73,6 +73,7 @@ export class Interface {
                 ${status}
                 ${routes}
             </div>
+            <script type="module" src="/time-updater.js"></script>
         `;
 
         return content;

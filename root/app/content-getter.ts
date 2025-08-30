@@ -31,8 +31,7 @@ export class ContentGetter {
         const content = `
             <p 
                 id="ms--time" 
-                data-auto-time-update 
-                data-time-prefix="Time!: "
+                data-auto-time-update
                 data-server-time="${timeData.serverTime}"
             >
                 Time: ${formattedTime} ${timeData.serverTime ? '(server)' : '(local)'}

@@ -1,27 +1,16 @@
 class TimeUpdater {
-    private updateIntervals: Map<string, number>;
-
     constructor() {
-        this.updateIntervals = new Map<string, number>();
+        this.updateIntervals = new Map();
     }
 
-    async fetchServerTime(): Promise<{
-        local: string,
-        serverTime: boolean
-    }> {
-        try {
-            const res = await fetch('/.api/time-stream?_=' + Date.now());
-            if(!res.ok) throw new Error('Time API not avaliable!');
-            return await res.json();
-        } catch(err) {
-            return {
-                local: new Date().toLocaleString(),
-                serverTime: false
-            }
+    async fetchServerTime() {
+        return {
+            local: new Date().toLocaleString(),
+            serverTime: false
         }
     }
 
-    public startUpdating(elementId: string, prefix: string = 'Time: ') {
+    startUpdating(elementId, prefix = 'Time: ') {
         const element = document.getElementById(elementId);
         if(!element) return;
 
@@ -37,7 +26,7 @@ class TimeUpdater {
         return () => this.stopUpdating(elementId);
     }
 
-    public stopUpdating(elementId: string) {
+    stopUpdating(elementId) {
         const intervalId = this.updateIntervals.get(elementId);
         if(intervalId) {
             clearInterval(intervalId);
@@ -45,7 +34,7 @@ class TimeUpdater {
         }
     }
 
-    public stopAll() {
+    stopAll() {
         this.updateIntervals.forEach(intervalId => clearInterval(intervalId));
         this.updateIntervals.clear();
     }

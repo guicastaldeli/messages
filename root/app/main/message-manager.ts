@@ -18,7 +18,7 @@ export class MessageManager {
         this.updateSocket();
     }
 
-    public handleUser(): void {
+    public handleJoin(): void {
         if(!this.appEl) return;
         console.log('handleuser')
 
@@ -32,9 +32,15 @@ export class MessageManager {
             this.socket.emitNewUser(usernameInput);
             this.uname = usernameInput;
 
-            const active = this.appEl!.querySelector('.join-screen')!.classList;
-            active.remove('active');
-            active.add('active');
+            //Join Screen
+            const joinScreen = this.appEl!.querySelector('.join-screen');
+            if(!joinScreen) throw new Error('join screen err');
+            joinScreen.classList.remove('active');
+
+            //Chat Screen
+            const chatScreen = this.appEl!.querySelector('.chat-screen');
+            if(!chatScreen) throw new Error('chat screen err');
+            chatScreen.classList.add('active');
         });
     }
 
