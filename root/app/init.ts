@@ -12,13 +12,13 @@ import { resBaseUrl } from './.api/routes';
 import { TimeStream } from './.api/time-stream';
 
 const PORT = process.env.PORT || 3001;
-const dummyReq = new NextRequest(`http://localhost:${PORT}`, {
+const baseReq = new NextRequest(`http://localhost:${PORT}`, {
     headers: {
         host: `localhost:${PORT}`,
         'x-forwarded-proto': 'http',
     }
 });
-const BASE_URL = resBaseUrl(dummyReq, PORT);
+const BASE_URL = resBaseUrl(baseReq, PORT);
 
 //Time
 const timeStream = new TimeStream();

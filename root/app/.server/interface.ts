@@ -66,6 +66,7 @@ export class Interface {
         const routes = this.getRoutes();
         
         const content = `
+            <title>Server</title>
             <div id="container">
                 ${welcome}
                 ${version}

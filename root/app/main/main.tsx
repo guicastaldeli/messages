@@ -9,12 +9,13 @@ export class Main extends Component {
 
     constructor(props: any) {
         super(props);
-        this.socketClient = new SocketClient();
+        this.socketClient = SocketClient.getInstance();
         this.messageManager = new MessageManager(this.socketClient);
         this.connect();
     }
 
     private connect(): void {
+        if(!this.socketClient || this.socketClient['isConnected']) return;
         this.socketClient.connect();
         this.messageManager.init();
     }
@@ -30,7 +31,12 @@ export class Main extends Component {
                             <input type="text" id='username' />
                         </div>
                         <div className='form-input'>
-                            <button id='join-user' onClick={() => this.messageManager.handleJoin()}>Join</button>
+                            <button 
+                                id='join-user' 
+                                onClick={() => this.messageManager.handleJoin()}
+                            >
+                                Join
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -39,25 +45,15 @@ export class Main extends Component {
                         <div className="logo">chatroom</div>
                         <button id="exit-chat">Exit</button>
                     </div>
-                    <div className="messages">
-                        {/* Dummy msg */}
-                        <div className="message my-message">
-                            <div>
-                                <div className="name"></div>
-                                <div className="text"></div>
-                            </div>
-                        </div>
-                        <div className="update"></div>
-                        <div className="message other-message">
-                            <div>
-                                <div className="name"></div>
-                                <div className="text"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <div className="messages"></div>
                     <div className="typebox">
                         <input type="text" id="message-input" />
-                        <button id="send-message">Send</button>
+                        <button 
+                            id="send-message" 
+                            onClick={() => this.messageManager.handleChatMessage()}
+                        >
+                            Send
+                        </button>
                     </div>
                 </div>
             </div>

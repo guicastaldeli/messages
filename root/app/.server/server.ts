@@ -53,23 +53,29 @@ export class MessageServer {
 
     private configSockets(): void {
         this.io.on('connection', (socket: any) => {
-            console.log('connected', socket.io);
+            console.log('connected', socket.id);
+            let username = '';
 
             //New User
-            socket.on('new-user', (username: any) => {
+            socket.on('new-user', (user: any) => {
+                username = user;
                 socket.broadcast.emit('update', username + ' joined the chat!');
             });
             //Exiting User
-            socket.on('exit-user', (username: any) => {
+            socket.on('exit-user', (user: any) => {
+                username = user;
                 socket.broadcast.emit('update', username + ' left the chat!');
             });
             //Chat
             socket.on('chat', (message: any) => {
-                socket.broadcast.emit('chat', message);
+                socket.broadcast.emit('chat', {
+                    username: username,
+                    text: message
+                });
             });
             //Disconnect
             socket.on('disconnect', () => {
-                console.log('User disconnected', socket.id);
+                if(username) socket.broadcast.emit('update', username + ' left the chat!');
             });
         });
     }

@@ -1,9 +1,18 @@
 import io, { Socket } from 'socket.io-client';
 
 export class SocketClient {
+    private static instance: SocketClient;
     private socket: typeof Socket | null = null;
     private eventListeners: Map<string, Function[]> = new Map();
     private url!: string;
+
+    private isConnecting: boolean = false;
+    private isConnected: boolean = false;
+
+    public static getInstance(): SocketClient {
+        if(!SocketClient.instance) SocketClient.instance = new SocketClient();
+        return SocketClient.instance;
+    }
 
     //Url
     private async getUrl(): Promise<string> {
@@ -21,12 +30,16 @@ export class SocketClient {
     }
 
     public async connect(): Promise<void> {
+        if(this.isConnecting || this.isConnected) return;
+        this.isConnecting = true;
+
         try {
             const url = await this.getUrl();
             this.socket = io(url!, { transports: ['websocket', 'polling'] });
             this.setupSockets();
         } catch(err) {
             console.log(err);
+            this.isConnecting = false;
         }
     }
 
@@ -36,6 +49,8 @@ export class SocketClient {
         //Connect
         this.socket.on('connect', () => {
             console.log('connected to server');
+            this.isConnected = true;
+            this.isConnecting = false;
             this.emitEvent('connect');
         });
         //Update

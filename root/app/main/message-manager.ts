@@ -51,15 +51,12 @@ export class MessageManager {
         if(!sendBtn) throw new Error('send button err');
 
         sendBtn.addEventListener('click', () => {
-            let messageInput = this.appEl!.querySelector<HTMLInputElement>('.chat-screen #message-input')!.value;
-            if(!messageInput.length) return;
+            let messageInputEl = this.appEl!.querySelector<HTMLInputElement>('.chat-screen #message-input');
+            let messageInput = messageInputEl!.value;
+            if(!messageInputEl || !messageInput.length) return;
 
-            this.renderMessage('my', {
-                username: this.uname,
-                text: messageInput
-            });
             this.socket.emitNewMessage(messageInput);
-            messageInput = '';
+            messageInputEl.value = '';
         });
     }
 
@@ -78,13 +75,19 @@ export class MessageManager {
             case 'my':
                 const mEl: HTMLDivElement = document.createElement('div');
                 mEl.setAttribute('class', 'message my-message');
-                mEl.innerHTML = this.contentGetter.__my(message);
+                mEl.innerHTML = this.contentGetter.__my({
+                    username: this.uname,
+                    text: message
+                });
                 messageContainer.appendChild(mEl);
                 break;
             case 'other':
                 const oEl: HTMLDivElement = document.createElement('div');
-                oEl.setAttribute('class', 'message my-message');
-                oEl.innerHTML = this.contentGetter.__other(message);
+                oEl.setAttribute('class', 'message other-message');
+                oEl.innerHTML = this.contentGetter.__other({
+                    username: message.username,
+                    text: message.text
+                });
                 messageContainer.appendChild(oEl);
                 break;
             case 'update':
@@ -101,6 +104,7 @@ export class MessageManager {
             this.renderMessage('update', update);
         });
         this.socket.on('chat', (message: any) => {
+            this.renderMessage('my', message);   
             this.renderMessage('other', message);
         });
     }
