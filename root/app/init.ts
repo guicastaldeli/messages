@@ -24,7 +24,7 @@ const BASE_URL = resBaseUrl(baseReq, PORT);
 const timeStream = new TimeStream();
 
 //Init Server
-const server = new MessageServer(BASE_URL, timeStream);
+const server = MessageServer.getInstance(BASE_URL, timeStream);
 server.init(PORT);
 
 console.log(`Server starting on port ${BASE_URL}!!! ;)`);

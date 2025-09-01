@@ -5,6 +5,7 @@ export class SocketClient {
     private socket: typeof Socket | null = null;
     private eventListeners: Map<string, Function[]> = new Map();
     private url!: string;
+    private socketId: string | null = null;
 
     private isConnecting: boolean = false;
     private isConnected: boolean = false;
@@ -35,8 +36,10 @@ export class SocketClient {
 
         try {
             const url = await this.getUrl();
-            this.socket = io(url!, { transports: ['websocket', 'polling'] });
-            this.setupSockets();
+            if(!this.socket) {
+                this.socket = io(url!, { transports: ['websocket', 'polling'] });
+                this.setupSockets();
+            }
         } catch(err) {
             console.log(err);
             this.isConnecting = false;
@@ -51,7 +54,8 @@ export class SocketClient {
             console.log('connected to server');
             this.isConnected = true;
             this.isConnecting = false;
-            this.emitEvent('connect');
+            this.socketId = this.socket!.id;
+            this.emitEvent('connect', this.socketId);
         });
         //Update
         this.socket.on('update', (data: any) => {
@@ -66,7 +70,8 @@ export class SocketClient {
         //Disconnected
         this.socket.on('disconnect', (data: any) => {
             console.log('disconnected from server', data);
-            this.emitEvent('disconecct');
+            this.socketId = null;
+            this.emitEvent('disconnect');
         });
     }
 
@@ -102,5 +107,9 @@ export class SocketClient {
     public emitNewMessage(message: string): void {
         if(!this.socket) return;
         this.socket.emit('chat', message);
+    }
+
+    public getSocketId(): string | null {
+        return this.socketId;
     }
 }

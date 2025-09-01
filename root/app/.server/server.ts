@@ -5,6 +5,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Interface } from './interface';
 
 export class MessageServer {
+    private static instance: MessageServer;
     private app: express.Application;
     private server: http.Server;
     private io: SocketIOServer;
@@ -34,6 +35,11 @@ export class MessageServer {
         );
     }
 
+    public static getInstance(url: string, timeStream: any): MessageServer {
+        if(!MessageServer.instance) MessageServer.instance = new MessageServer(url, timeStream);
+        return MessageServer.instance;
+    }
+
     public init(port: number | string): void {
         this.server.listen(port, () => {
             console.log(`Server running`);
@@ -59,7 +65,7 @@ export class MessageServer {
             //New User
             socket.on('new-user', (user: any) => {
                 username = user;
-                socket.broadcast.emit('update', username + ' joined the chat!');
+                //socket.broadcast.emit('update', username + ' joined!');
             });
             //Exiting User
             socket.on('exit-user', (user: any) => {
@@ -70,7 +76,8 @@ export class MessageServer {
             socket.on('chat', (message: any) => {
                 socket.broadcast.emit('chat', {
                     username: username,
-                    text: message
+                    text: message,
+                    senderId: socket.id
                 });
             });
             //Disconnect

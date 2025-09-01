@@ -79,7 +79,7 @@ export class ContentGetter {
     -----------------------
     */
 
-    public __my(message: any): string {
+    public __self(message: any): string {
         const content = `
             <div>
                 <div class="name">${message.username}</div>

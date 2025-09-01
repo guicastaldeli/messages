@@ -6,6 +6,10 @@ export class MessageManager {
     private socket: SocketClient;
     private uname: any;
     private appEl: HTMLDivElement | null = null;
+    private socketId: string | null = null;
+
+    private joinHandled: boolean = false;
+    private chatHandled: boolean = false;
 
     constructor(socket: SocketClient) {
         this.contentGetter = new ContentGetter();
@@ -16,11 +20,15 @@ export class MessageManager {
         if(typeof document === 'undefined') return;
         this.appEl = document.querySelector<HTMLDivElement>('.app');
         this.updateSocket();
+
+        this.socket.on('connect', (id: string) => {
+            this.socketId = id;
+        });
     }
 
     public handleJoin(): void {
-        if(!this.appEl) return;
-        console.log('handleuser')
+        if(!this.appEl || this.joinHandled) return;
+        this.joinHandled = true;
 
         const joinBtn = this.appEl.querySelector<HTMLButtonElement>('.join-screen #join-user');
         if(!joinBtn) throw new Error('join button err');
@@ -45,7 +53,8 @@ export class MessageManager {
     }
 
     public handleChatMessage(): void {
-        if(!this.appEl) return;
+        if(!this.appEl || this.chatHandled) return;
+        this.chatHandled = true;
 
         const sendBtn = this.appEl.querySelector<HTMLButtonElement>('.chat-screen #send-message');
         if(!sendBtn) throw new Error('send button err');
@@ -55,6 +64,7 @@ export class MessageManager {
             let messageInput = messageInputEl!.value;
             if(!messageInputEl || !messageInput.length) return;
 
+            this.renderMessage('self', messageInput);   
             this.socket.emitNewMessage(messageInput);
             messageInputEl.value = '';
         });
@@ -69,13 +79,13 @@ export class MessageManager {
         if(!this.appEl) return;
 
         let messageContainer = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
-        if(!messageContainer) throw new Error('messgae container err');
+        if(!messageContainer) throw new Error('message container err');
 
         switch(type) {
-            case 'my':
+            case 'self':
                 const mEl: HTMLDivElement = document.createElement('div');
-                mEl.setAttribute('class', 'message my-message');
-                mEl.innerHTML = this.contentGetter.__my({
+                mEl.setAttribute('class', 'message self-message');
+                mEl.innerHTML = this.contentGetter.__self({
                     username: this.uname,
                     text: message
                 });
@@ -100,12 +110,16 @@ export class MessageManager {
     }
 
     private updateSocket(): void {
-        this.socket.on('update', (update: any) => {
-            this.renderMessage('update', update);
-        });
-        this.socket.on('chat', (message: any) => {
-            this.renderMessage('my', message);   
+    this.socket.on('update', (update: any) => {
+        this.renderMessage('update', update);
+    });
+    
+    this.socket.on('chat', (message: any) => {
+        // Only render messages from other users
+        if(message.senderId !== this.socketId) {
             this.renderMessage('other', message);
-        });
-    }
+        }
+        // Self messages are already rendered locally, so ignore them here
+    });
+}
 }
