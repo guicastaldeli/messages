@@ -46,7 +46,12 @@ export class Main extends Component {
                 <div className='screen chat-screen'>
                     <div className="header">
                         <div className="logo">chatroom</div>
-                        <button id="exit-chat">Exit</button>
+                        <button 
+                            id="exit-chat"
+                            onClick={() => this.messageManager.exitChat()}
+                        >
+                            Exit
+                        </button>
                     </div>
                     <div className="messages"></div>
                     <div className="typebox">
