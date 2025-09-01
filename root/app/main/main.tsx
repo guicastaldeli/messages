@@ -11,6 +11,9 @@ export class Main extends Component {
         super(props);
         this.socketClient = SocketClient.getInstance();
         this.messageManager = new MessageManager(this.socketClient);
+    }
+
+    componentDidMount(): void {
         this.connect();
     }
 

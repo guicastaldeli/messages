@@ -65,7 +65,7 @@ export class MessageServer {
             //New User
             socket.on('new-user', (user: any) => {
                 username = user;
-                //socket.broadcast.emit('update', username + ' joined!');
+                socket.broadcast.emit('update', username + ' joined!');
             });
             //Exiting User
             socket.on('exit-user', (user: any) => {
