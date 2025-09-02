@@ -1,9 +1,13 @@
+import { ReactDOMServer } from "next/dist/server/route-modules/app-page/vendored/ssr/entrypoints";
 import { SocketClient } from "../.server/socket-client";
 import { ContentGetter } from "../content-getter";
+import { MessageTypes } from "./message-types";
 
 export class MessageManager {
     private contentGetter: ContentGetter;
     private socket: SocketClient;
+    private messageTypes: MessageTypes;
+
     private uname: any;
     private appEl: HTMLDivElement | null = null;
     private socketId: string | null = null;
@@ -14,6 +18,7 @@ export class MessageManager {
     constructor(socket: SocketClient) {
         this.contentGetter = new ContentGetter();
         this.socket = socket;
+        this.messageTypes = new MessageTypes(this.contentGetter);
     }
 
     public init(): void {
@@ -75,51 +80,34 @@ export class MessageManager {
         window.location.href = window.location.href;
     }
 
-    private renderMessage(type: any, message: any) {
+    private renderMessage(type: any, data: any) {
         if(!this.appEl) return;
 
         let messageContainer = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
         if(!messageContainer) throw new Error('message container err');
 
-        switch(type) {
-            case 'self':
-                const mEl: HTMLDivElement = document.createElement('div');
-                mEl.setAttribute('class', 'message self-message');
-                mEl.innerHTML = this.contentGetter.__self({
-                    username: this.uname,
-                    text: message
-                });
-                messageContainer.appendChild(mEl);
-                break;
-            case 'other':
-                const oEl: HTMLDivElement = document.createElement('div');
-                oEl.setAttribute('class', 'message other-message');
-                oEl.innerHTML = this.contentGetter.__other({
-                    username: message.username,
-                    text: message.text
-                });
-                messageContainer.appendChild(oEl);
-                break;
-            case 'update':
-                let uEl: HTMLDivElement = document.createElement('div');
-                uEl.setAttribute('class', 'update');
-                uEl.innerText = message;
-                messageContainer.appendChild(uEl);
-                break;
-        }
+        const content = this.contentGetter.__messageContent(
+            this.messageTypes.content, 
+            type, 
+            data
+        );
+
+        const render = ReactDOMServer.renderToString(content);
+        messageContainer.insertAdjacentHTML('beforeend', render);
     }
 
     private updateSocket(): void {
-    this.socket.on('update', (update: any) => {
-        this.renderMessage('update', update);
-    });
-    
-    this.socket.on('chat', (message: any) => {
-        // Only render messages from other users
-        if(message.senderId !== this.socketId) {
-            this.renderMessage('other', message);
-        }
-        // Self messages are already rendered locally, so ignore them here
-    });
-}
+        this.socket.on('update', (update: any) => {
+            this.renderMessage('update', update);
+        });
+        
+        this.socket.on('chat', (message: any) => {
+            if(message.senderId !== this.socketId) {
+                this.renderMessage('other', {
+                    username: message.username,
+                    text: message.text
+                });
+            }
+        });
+    }
 }
