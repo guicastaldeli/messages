@@ -3,6 +3,7 @@ import http from 'http';
 import path from 'path';
 import { Server as SocketIOServer } from 'socket.io';
 import { Interface } from './interface';
+import { EventRegistry } from './event-registry';
 
 export class MessageServer {
     private static instance: MessageServer;
@@ -60,39 +61,33 @@ export class MessageServer {
     private configSockets(): void {
         this.io.on('connection', (socket: any) => {
             console.log('connected', socket.id);
-            let username = '';
+            socket.username = '';
 
-            //New User
-            socket.on('new-user', (user: any) => {
-                username = user;
-                socket.broadcast.emit(
-                    'update', 
-                    { data: username + ' joined!'}
-                );
-            });
-            //Exiting User
-            socket.on('exit-user', (user: any) => {
-                username = user;
-                socket.broadcast.emit(
-                    'update', 
-                    { data: username + ' left the chat!' }
-                );
-            });
-            //Chat
-            socket.on('chat', (content: any) => {
-                const data = {
-                    username: username,
-                    content: content,
-                    senderId: socket.id
-                }
-                this.io.emit('chat', data);
-            });
-            //Disconnect
-            socket.on('disconnect', () => {
-                if(username) socket.broadcast.emit(
-                    'update', 
-                    { data: username + ' left the chat!' }
-                );
+            EventRegistry.getAllEvents().forEach(({ 
+                eventName, 
+                handler, 
+                broadcast,
+                broadcastSelf,
+                targetEvent = eventName
+            }) => {
+                socket.on(eventName, (data: any) => {
+                    try {
+                        const result = handler(socket, data, this.io);
+
+                        if(broadcast) {
+                            const emitEventName = targetEvent;
+
+                            if(broadcastSelf) {
+                                this.io.emit(emitEventName, result);
+                            } else {
+                                socket.broadcast.emit(emitEventName, result);
+                            }
+                        }
+                    } catch(err) {
+                        console.log(err);
+                        throw new Error('err');
+                    }
+                });
             });
         });
     }
