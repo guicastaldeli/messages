@@ -79,12 +79,13 @@ export class MessageServer {
                 );
             });
             //Chat
-            socket.on('chat', (message: any) => {
-                socket.broadcast.emit('chat', {
+            socket.on('chat', (content: any) => {
+                const data = {
                     username: username,
-                    content: message,
+                    content: content,
                     senderId: socket.id
-                });
+                }
+                this.io.emit('chat', data);
             });
             //Disconnect
             socket.on('disconnect', () => {

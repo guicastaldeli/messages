@@ -11,6 +11,7 @@ export class MessageManager {
     private uname: any;
     private appEl: HTMLDivElement | null = null;
     private socketId: string | null = null;
+    private currentUserId: string | null = null;
 
     private joinHandled: boolean = false;
     private chatHandled: boolean = false;
@@ -28,6 +29,7 @@ export class MessageManager {
 
         this.socket.on('connect', (id: string) => {
             this.socketId = id;
+            this.currentUserId = id;
         });
     }
 
@@ -68,11 +70,7 @@ export class MessageManager {
             let messageInputEl = this.appEl!.querySelector<HTMLInputElement>('.chat-screen #message-input');
             let messageInput = messageInputEl!.value;
             if(!messageInputEl || !messageInput.length) return;
-
-            this.renderMessage('self', {
-                username: this.uname,
-                content: messageInput
-            });   
+ 
             this.socket.emitNewMessage(messageInput);
             messageInputEl.value = '';
         });
@@ -105,12 +103,11 @@ export class MessageManager {
         });
         
         this.socket.on('chat', (message: any) => {
-            if(message.senderId !== this.socketId) {
-                this.renderMessage('other', {
-                    username: message.username,
-                    content: message.content
-                });
-            }
+            const type = message.senderId === this.socketId;
+            this.renderMessage(type ? 'self' : 'other', {
+                username: message.username,
+                content: message.content
+            });
         });
     }
 }
