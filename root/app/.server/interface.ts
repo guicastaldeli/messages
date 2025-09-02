@@ -26,25 +26,25 @@ export class Interface {
     }
 
     //Welcome Message
-    private getWelMessage(): string {
+    private getWelMessage(): React.ReactNode {
         const content = this.contentGetter.__welcome();
         return content;
     }
 
     //Version
-    private getVersion(): string {
+    private getVersion(): React.ReactNode {
         const content = this.contentGetter.__version();
         return content;
     }
 
     //Time
-    private async getTime(): Promise<string> {
+    private async getTime(): Promise<React.ReactNode> {
         const content = this.contentGetter.__time(this.timeStream);
         return content;
     }
      
     //Status
-    private getStatus(): string {
+    private getStatus(): React.ReactNode {
         const status = this.server.listening ? 'running' : 'stopped';
         const uptime = process.uptime();
         const connections = this.io.engine.clientsCount;
@@ -53,30 +53,25 @@ export class Interface {
     }
 
     //Routes
-    private getRoutes(): string {
+    private getRoutes(): React.ReactNode {
         const content = this.contentGetter.__route(this.url);
         return content;
     }
 
-    public async get(): Promise<string> {
+    public async get(): Promise<React.ReactNode> {
         const welcome = this.getWelMessage();
         const version = this.getVersion();
         const time = await this.getTime();
         const status = this.getStatus();
         const routes = this.getRoutes();
         
-        const content = `
-            <title>Server</title>
-            <div id="container">
-                ${welcome}
-                ${version}
-                ${time}
-                ${status}
-                ${routes}
-            </div>
-            <script type="module" src="/time-updater.js"></script>
-        `;
-
+        const content = this.contentGetter.__final(
+            welcome,
+            version,
+            time,
+            status,
+            routes
+        );
         return content;
     }
 }

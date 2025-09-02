@@ -1,3 +1,5 @@
+import * as ReactDOMServer from 'react-dom/server';
+
 export class ContentGetter {
     /*
     ----------------------
@@ -48,7 +50,7 @@ export class ContentGetter {
     }
 
     //Route
-    __route({ route }: { route: string }) {
+    __route(route: string) {
         const content =
         <div id="ms--route">
             <p>ROUTE: {route}</p>
@@ -65,6 +67,30 @@ export class ContentGetter {
         //Password
     //
 
+    //Final
+    __final(
+        welcome: React.ReactNode,
+        version: React.ReactNode,
+        time: React.ReactNode,
+        status: React.ReactNode,
+        routes: React.ReactNode
+    ) {
+        const content = (
+            <>
+                <title>Server</title>
+                <div id="container">
+                    {welcome}
+                    {version}
+                    {time}
+                    {status}
+                    {routes}
+                </div>
+                <script type="module" src="/time-updater.js"></script>
+            </>
+        );
+        return ReactDOMServer.renderToStaticMarkup(content);
+    }
+
     /*
     -----------------------
 
@@ -80,7 +106,7 @@ export class ContentGetter {
             <div className="name">{message.username}</div>
             <div className="text">{message.text}</div>
         </div>
-        return content;
+        return ReactDOMServer.renderToStaticMarkup(content);
     }
 
     //Other
@@ -96,7 +122,7 @@ export class ContentGetter {
     //Update
     __update(data: string) {
         const content = <div className="update">{data}</div>;
-        return content;
+        return ReactDOMServer.renderToStaticMarkup(content);
     }
 
     //Message Content
@@ -109,6 +135,6 @@ export class ContentGetter {
         <div className="message-content">
             {messageTypes[type](data)}
         </div>
-        return content;
+        return ReactDOMServer.renderToStaticMarkup(content);
     }
 }
