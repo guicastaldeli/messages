@@ -7,7 +7,7 @@ export const configSocketEvents = (): void => {
             eventName: 'new-user',
             handler: (socket, user) => {
                 socket.username = user;
-                return { data: user + 'joined' }
+                return { data: user + ' joined' }
             },
             broadcast: true,
             broadcastSelf: false,
@@ -18,7 +18,7 @@ export const configSocketEvents = (): void => {
             eventName: 'exit-user',
             handler: (socket, user) => {
                 socket.username = user;
-                return { data: user + 'left' }
+                return { data: user + ' left' }
             },
             broadcast: true,
             broadcastSelf: false,
@@ -26,7 +26,7 @@ export const configSocketEvents = (): void => {
         },
         {
             //Chat
-            eventName: 'new-user',
+            eventName: 'chat',
             handler: (socket, content) => {
                 return {
                     username: socket.username,
@@ -35,15 +35,14 @@ export const configSocketEvents = (): void => {
                 }
             },
             broadcast: true,
-            broadcastSelf: false,
-            targetEvent: ''
+            broadcastSelf: true,
+            targetEvent: 'chat'
         },
         {
             //Disconnect
             eventName: 'disconnect',
-            handler: (socket, user) => {
-                socket.username = user;
-                return { data: user + 'left' }
+            handler: (socket) => {
+                return { data: socket.username + ' left' }
             },
             broadcast: true,
             broadcastSelf: false,

@@ -4,6 +4,7 @@ import path from 'path';
 import { Server as SocketIOServer } from 'socket.io';
 import { Interface } from './interface';
 import { EventRegistry } from './event-registry';
+import { configSocketEvents } from './socket-events';
 
 export class MessageServer {
     private static instance: MessageServer;
@@ -59,6 +60,8 @@ export class MessageServer {
     }
 
     private configSockets(): void {
+        configSocketEvents();
+        
         this.io.on('connection', (socket: any) => {
             console.log('connected', socket.id);
             socket.username = '';
