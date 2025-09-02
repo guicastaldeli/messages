@@ -1,3 +1,4 @@
+import { ReactElement } from 'react';
 import * as ReactDOMServer from 'react-dom/server';
 
 export class ContentGetter {
@@ -10,19 +11,19 @@ export class ContentGetter {
     */
 
     //Welcome Message
-    __welcome() {
+    __welcome(): ReactElement {
         const content = <p id="ms--wel">Welcome to Server! :)</p>;
         return content;
     }
 
     //Version
-    __version() {
+    __version(): ReactElement {
         const content = <p id="ms--version">Messages Server v1.0</p>;
         return content;
     }
 
     //Time
-    __time(data: any) {
+    __time(data: any): ReactElement {
         const content =
         <p 
             id="ms--time" 
@@ -39,7 +40,7 @@ export class ContentGetter {
         status: string,
         uptime: number,
         connections: number 
-    ) {
+    ): ReactElement {
         const content =
         <div id="ms--status">
             <p>STATUS: {status}</p>
@@ -50,7 +51,7 @@ export class ContentGetter {
     }
 
     //Route
-    __route(route: string) {
+    __route(route: string): ReactElement {
         const content =
         <div id="ms--route">
             <p>ROUTE: {route}</p>
@@ -74,7 +75,7 @@ export class ContentGetter {
         time: React.ReactNode,
         status: React.ReactNode,
         routes: React.ReactNode
-    ) {
+    ): string {
         const content = (
             <>
                 <title>Server</title>
@@ -100,29 +101,30 @@ export class ContentGetter {
     */
 
     //Self
-    __self(message: any) {
-        const content =
-        <div>
-            <div className="name">{message.username}</div>
-            <div className="text">{message.text}</div>
-        </div>
-        return ReactDOMServer.renderToStaticMarkup(content);
+    __self(message: any): ReactElement {
+        const content = (
+            <div className="message self-message">
+                <div className="user">{message.username}</div>
+                <div className="content">{message.content}</div>
+            </div>
+        );
+        return content;
     }
 
     //Other
-    __other(message: any) {
+    __other(message: any): ReactElement {
         const content =
-        <div>
-            <div className="name">{message.username}</div>
-            <div className="text">{message.text}</div>
+        <div className="message other-message">
+            <div className="user">{message.username}</div>
+            <div className="content">{message.content}</div>
         </div>;
         return content;
     }
 
     //Update
-    __update(data: string) {
-        const content = <div className="update">{data}</div>;
-        return ReactDOMServer.renderToStaticMarkup(content);
+    __update(data: { data: string }): ReactElement {
+        const content = <div className="update">{data.data}</div>;
+        return content;
     }
 
     //Message Content
@@ -130,11 +132,9 @@ export class ContentGetter {
         messageTypes: Record<string, (data: any) => React.ReactNode>,
         type: string,
         data: any
-    ) {
-        const content =
-        <div className="message-content">
-            {messageTypes[type](data)}
-        </div>
-        return ReactDOMServer.renderToStaticMarkup(content);
+    ): ReactElement {
+        const messageData = messageTypes[type](data);
+        const content = <div className="message-content">{messageData}</div>
+        return content;
     }
 }

@@ -69,7 +69,10 @@ export class MessageManager {
             let messageInput = messageInputEl!.value;
             if(!messageInputEl || !messageInput.length) return;
 
-            this.renderMessage('self', messageInput);   
+            this.renderMessage('self', {
+                username: this.uname,
+                content: messageInput
+            });   
             this.socket.emitNewMessage(messageInput);
             messageInputEl.value = '';
         });
@@ -92,7 +95,7 @@ export class MessageManager {
             data
         );
 
-        const render = ReactDOMServer.renderToString(content);
+        const render = ReactDOMServer.renderToStaticMarkup(content);
         messageContainer.insertAdjacentHTML('beforeend', render);
     }
 
@@ -105,7 +108,7 @@ export class MessageManager {
             if(message.senderId !== this.socketId) {
                 this.renderMessage('other', {
                     username: message.username,
-                    text: message.text
+                    content: message.content
                 });
             }
         });

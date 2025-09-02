@@ -65,24 +65,33 @@ export class MessageServer {
             //New User
             socket.on('new-user', (user: any) => {
                 username = user;
-                socket.broadcast.emit('update', username + ' joined!');
+                socket.broadcast.emit(
+                    'update', 
+                    { data: username + ' joined!'}
+                );
             });
             //Exiting User
             socket.on('exit-user', (user: any) => {
                 username = user;
-                socket.broadcast.emit('update', username + ' left the chat!');
+                socket.broadcast.emit(
+                    'update', 
+                    { data: username + ' left the chat!' }
+                );
             });
             //Chat
             socket.on('chat', (message: any) => {
                 socket.broadcast.emit('chat', {
                     username: username,
-                    text: message,
+                    content: message,
                     senderId: socket.id
                 });
             });
             //Disconnect
             socket.on('disconnect', () => {
-                if(username) socket.broadcast.emit('update', username + ' left the chat!');
+                if(username) socket.broadcast.emit(
+                    'update', 
+                    { data: username + ' left the chat!' }
+                );
             });
         });
     }

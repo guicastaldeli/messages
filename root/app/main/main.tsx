@@ -31,7 +31,7 @@ export class Main extends Component {
                         <h2>Join chatroom</h2>
                         <div className="form-input">
                             <label>Username</label>
-                            <input type="text" id='username' />
+                            <input type="text" id="username" />
                         </div>
                         <div className='form-input'>
                             <button 
