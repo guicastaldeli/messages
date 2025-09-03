@@ -1,11 +1,13 @@
-import { ReactDOMServer } from "next/dist/server/route-modules/app-page/vendored/ssr/entrypoints";
+import { React, ReactDOMServer } from "next/dist/server/route-modules/app-page/vendored/ssr/entrypoints";
 import { SocketClient } from "../.server/socket-client";
+import { SocketEmitter } from "../.server/socket-emitter";
 import { ContentGetter } from "../content-getter";
 import { MessageTypes } from "./message-types";
+import { configSocketClientEvents } from '../.data/socket-client-events';
 
 export class MessageManager {
     private contentGetter: ContentGetter;
-    private socket: SocketClient;
+    private socketClient: SocketClient;
     private messageTypes: MessageTypes;
 
     private uname: any;
@@ -16,21 +18,22 @@ export class MessageManager {
     private joinHandled: boolean = false;
     private chatHandled: boolean = false;
 
-    constructor(socket: SocketClient) {
+    constructor(socketClient: SocketClient) {
         this.contentGetter = new ContentGetter();
-        this.socket = socket;
+        this.socketClient = socketClient;
         this.messageTypes = new MessageTypes(this.contentGetter);
     }
 
-    public init(): void {
+    public async init(): Promise<void> {
         if(typeof document === 'undefined') return;
         this.appEl = document.querySelector<HTMLDivElement>('.app');
-        this.updateSocket();
-
-        this.socket.on('connect', (id: string) => {
+        
+        this.socketClient.on('connect', (id: string) => {
             this.socketId = id;
             this.currentUserId = id;
         });
+        await this.socketClient.connect();
+        this.updateSocket();
     }
 
     public handleJoin(): void {
@@ -44,7 +47,7 @@ export class MessageManager {
             const usernameInput = this.appEl!.querySelector<HTMLInputElement>('.join-screen #username')!.value;
             if(!usernameInput.length) return;
 
-            this.socket.emitNewUser(usernameInput);
+            this.socketClient.socketEmitter.emit('new-user', usernameInput);
             this.uname = usernameInput;
 
             //Join Screen
@@ -71,13 +74,17 @@ export class MessageManager {
             let messageInput = messageInputEl!.value;
             if(!messageInputEl || !messageInput.length) return;
  
-            this.socket.emitNewMessage(messageInput);
+            this.socketClient.socketEmitter.emit('chat', {
+                senderId: this.socketClient.getSocketId(),
+                username: this.uname,
+                content: messageInput,
+            });
             messageInputEl.value = '';
         });
     }
 
     public exitChat(): void {
-        this.socket.emitExitUser(this.uname);
+        this.socketClient.socketEmitter.emit('exit-chat', this.uname);
         window.location.href = window.location.href;
     }
 
@@ -93,21 +100,42 @@ export class MessageManager {
             data
         );
 
-        const render = ReactDOMServer.renderToStaticMarkup(content);
-        messageContainer.insertAdjacentHTML('beforeend', render);
+        if(React.isValidElement(content)) {
+            const render = ReactDOMServer.renderToStaticMarkup(content);
+            messageContainer.insertAdjacentHTML('beforeend', render);
+        }
     }
 
     private updateSocket(): void {
-        this.socket.on('update', (update: any) => {
-            this.renderMessage('update', update);
-        });
+        if(this.socketClient && this.socketClient.socket) {
+            console.log('tst')
+            configSocketClientEvents(this.socketClient, this.socketClient.socket);
+        }
         
-        this.socket.on('chat', (message: any) => {
-            const type = message.senderId === this.socketId;
-            this.renderMessage(type ? 'self' : 'other', {
-                username: message.username,
-                content: message.content
-            });
+        //Update
+        this.socketClient.socketEmitter.registerEventHandler({
+            eventName: 'update',
+            handler: (update: any) => {
+                this.renderMessage('update', update);
+            },
+            autoRegister: true
         });
+
+        //Chat
+        this.socketClient.socketEmitter.registerEventHandler({
+            eventName: 'chat',
+            handler: (message: any) => {
+                const type = message.senderId === this.socketId;
+                this.renderMessage(type ? 'self' : 'other', {
+                    username: message.username,
+                    content: message.content
+                });
+            },
+            autoRegister: true
+        });
+
+        setTimeout(() => {
+            this.socketClient.socket?.emit('AAAAAAAAAAAAAAAAAAAAAAAAAA', { message: 'client test' });
+        }, 100);
     }
 }

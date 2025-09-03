@@ -1,8 +1,10 @@
 import io, { Socket } from 'socket.io-client';
+import { SocketEmitter } from './socket-emitter';
 
 export class SocketClient {
     private static instance: SocketClient;
-    private socket: typeof Socket | null = null;
+    public socket: typeof Socket | null = null;
+    public socketEmitter!: SocketEmitter;
     private eventListeners: Map<string, Function[]> = new Map();
     private url!: string;
     private socketId: string | null = null;
@@ -38,41 +40,13 @@ export class SocketClient {
             const url = await this.getUrl();
             if(!this.socket) {
                 this.socket = io(url!, { transports: ['websocket', 'polling'] });
-                this.setupSockets();
+                this.socketEmitter = new SocketEmitter(this.socket);
+                this.socketEmitter.registerAllEvents(this.emitEvent.bind(this))
             }
         } catch(err) {
             console.log(err);
             this.isConnecting = false;
         }
-    }
-
-    private setupSockets(): void {
-        if(!this.socket) return;
-
-        //Connect
-        this.socket.on('connect', () => {
-            console.log('connected to server');
-            this.isConnected = true;
-            this.isConnecting = false;
-            this.socketId = this.socket!.id;
-            this.emitEvent('connect', this.socketId);
-        });
-        //Update
-        this.socket.on('update', (data: any) => {
-            console.log('update received', data);
-            this.emitEvent('update', data);
-        });
-        //Chat
-        this.socket.on('chat', (data: any) => {
-            console.log('chat received', data);
-            this.emitEvent('chat', data);
-        });
-        //Disconnected
-        this.socket.on('disconnect', (data: any) => {
-            console.log('disconnected from server', data);
-            this.socketId = null;
-            this.emitEvent('disconnect');
-        });
     }
 
     public on(event: string, callback: Function): void {
@@ -88,25 +62,9 @@ export class SocketClient {
         }
     }
 
-    //Emitters
     public emitEvent(event: string, data?: any): void {
         const listeners = this.eventListeners.get(event);
         if(listeners) listeners.forEach(callback => callback(data));
-    }
-
-    public emitNewUser(username: string): void {
-        if(!this.socket) return;
-        this.socket.emit('new-user', username);
-    }
-
-    public emitExitUser(username: string): void {
-        if(!this.socket) return;
-        this.socket.emit('exit-user', username);
-    }
-
-    public emitNewMessage(message: string): void {
-        if(!this.socket) return;
-        this.socket.emit('chat', message);
     }
 
     public getSocketId(): string | null {

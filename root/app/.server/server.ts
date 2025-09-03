@@ -4,7 +4,7 @@ import path from 'path';
 import { Server as SocketIOServer } from 'socket.io';
 import { Interface } from './interface';
 import { EventRegistry } from './event-registry';
-import { configSocketEvents } from './socket-events';
+import { configSocketEvents } from '../.data/socket-events';
 
 export class MessageServer {
     private static instance: MessageServer;

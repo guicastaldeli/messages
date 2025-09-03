@@ -1,4 +1,4 @@
-import { EventRegistry, SocketEventHandler } from './event-registry';
+import { EventRegistry, SocketEventHandler } from '../.server/event-registry';
 
 export const configSocketEvents = (): void => {
     const events: SocketEventHandler[] = [
