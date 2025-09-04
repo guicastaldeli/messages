@@ -12,6 +12,7 @@ export const configSocketClientEvents = (socketClient: SocketClient, socket: typ
             eventName: 'update',
             handler: (data: any) => {
                 console.log('Update received:', data);
+                socketClient.emitEvent('update', data);
             },
             autoRegister: true
         },
@@ -19,6 +20,7 @@ export const configSocketClientEvents = (socketClient: SocketClient, socket: typ
             eventName: 'chat',
             handler: (data: any) => {
                 console.log('Chat message received:', data);
+                socketClient.emitEvent('chat', data);
             },
             autoRegister: true
         }
@@ -51,4 +53,5 @@ export const configSocketClientEvents = (socketClient: SocketClient, socket: typ
 
     socketClient.socketEmitter.registerAllEventHandlers(eventHandlers);
     socketClient.socketEmitter.registerAllEmitHandlers(emitHandlers);
+    socketClient.socketEmitter.registerAllEvents(socketClient.emitEvent.bind(socketClient));
 }

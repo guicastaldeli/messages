@@ -32,6 +32,12 @@ export class SocketEmitter {
 
     public registerEventHandler(handlerConfig: EventHandler): void {
         this.eventHandlers.set(handlerConfig.eventName, handlerConfig);
+
+        if(this.socket && handlerConfig.autoRegister !== false) {
+            this.socket.on(handlerConfig.eventName, (data: any) => {
+                handlerConfig.handler(data);
+            });
+        }
     }
 
     public registerAllEventHandlers(handlers: EventHandler[]): void {

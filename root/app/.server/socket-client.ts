@@ -39,13 +39,20 @@ export class SocketClient {
         try {
             const url = await this.getUrl();
             if(!this.socket) {
-                this.socket = io(url!, { transports: ['websocket', 'polling'] });
+                this.socket = io(url, { transports: ['websocket', 'polling'] });
                 this.socketEmitter = new SocketEmitter(this.socket);
-                this.socketEmitter.registerAllEvents(this.emitEvent.bind(this))
+                this.socketEmitter.registerAllEvents(this.emitEvent.bind(this));
+
+                this.socket.on('connect', () => {
+                    this.socketId = this.socket!.id;
+                    this.isConnected = true;
+                    this.isConnecting = false;
+                    this.emitEvent('connect', this.socketId);
+                });
             }
         } catch(err) {
             console.log(err);
-            this.isConnecting = false;
+            throw new Error('err');
         }
     }
 

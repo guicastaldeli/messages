@@ -125,17 +125,13 @@ export class MessageManager {
         this.socketClient.socketEmitter.registerEventHandler({
             eventName: 'chat',
             handler: (message: any) => {
-                const type = message.senderId === this.socketId;
+                const type = message.content.senderId === this.socketId;
                 this.renderMessage(type ? 'self' : 'other', {
-                    username: message.username,
-                    content: message.content
+                    username: message.content.username,
+                    content: message.content.content
                 });
             },
             autoRegister: true
         });
-
-        setTimeout(() => {
-            this.socketClient.socket?.emit('AAAAAAAAAAAAAAAAAAAAAAAAAA', { message: 'client test' });
-        }, 100);
     }
 }
