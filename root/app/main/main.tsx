@@ -26,8 +26,7 @@ export class Main extends Component {
 
     //Create Group
     private handleCreateGroup = (): void => {
-        console.log('tst')
-        this.messageManager.createGroup();
+        this.messageManager.groupManager.showMenu();
     }
 
     render() {

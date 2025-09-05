@@ -1,6 +1,6 @@
 import './_styles/styles.scss';
 import { Component } from 'react';
-import { GroupLayout } from './layout/group';
+import { GroupLayout } from './chat/group/group-layout';
 import { MessageManager } from './message-manager';
 
 interface Props {
@@ -22,20 +22,22 @@ export class Dashboard extends Component<Props, State> {
 
     render() {
         return (
-            <div className="screen main-dashboard">
-                <header>
-                    <div id="actions-bar">
-                        <button 
-                            id="action-chat"
-                            onClick={() => this.props.onCreateGroup()}
-                        >
-                            Chat++++
-                        </button>
-                    </div>
-                </header>
+            <>
+                <div className="screen main-dashboard">
+                    <header>
+                        <div id="actions-bar">
+                            <button 
+                                id="action-chat"
+                                onClick={() => this.props.onCreateGroup()}
+                            >
+                                Chat++++
+                            </button>
+                        </div>
+                    </header>
 
+                </div>
                 <GroupLayout messageManager={this.props.messageManager} />
-            </div>
+            </>
         );
     }
 }

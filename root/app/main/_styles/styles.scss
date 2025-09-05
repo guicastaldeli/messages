@@ -23,7 +23,15 @@ body {
 .app > .screen {
     display: none;
 }
+.app > .form {
+    display: none;
+}
 .app > .screen.active {
+    display: block;
+    width: 70%;
+    height: 90%;
+}
+.app > .form.active {
     display: block;
     width: 70%;
     height: 90%;

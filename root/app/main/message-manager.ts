@@ -1,9 +1,9 @@
 import { React, ReactDOMServer } from "next/dist/server/route-modules/app-page/vendored/ssr/entrypoints";
 import { SocketClient } from "../.server/socket-client";
-import { SocketEmitter } from "../.server/socket-emitter";
 import { ContentGetter } from "../content-getter";
 import { MessageTypes } from "./message-types";
 import { configSocketClientEvents } from '../.data/socket-client-events';
+import { GroupManager } from "./chat/group/group-manager";
 
 export class MessageManager {
     private contentGetter: ContentGetter;
@@ -18,6 +18,8 @@ export class MessageManager {
     private joinHandled: boolean = false;
     private chatHandled: boolean = false;
 
+    public groupManager!: GroupManager;
+
     constructor(socketClient: SocketClient) {
         this.contentGetter = new ContentGetter();
         this.socketClient = socketClient;
@@ -27,6 +29,7 @@ export class MessageManager {
     public async init(): Promise<void> {
         if(typeof document === 'undefined') return;
         this.appEl = document.querySelector<HTMLDivElement>('.app');
+        this.groupManager = new GroupManager(this.socketClient, this.appEl, this.uname);
         
         this.socketClient.on('connect', (id: string) => {
             this.socketId = id;
@@ -162,33 +165,4 @@ export class MessageManager {
             });
         //
     }
-
-    //Group
-        public createGroup(): void {
-            if(!this.uname) {
-                console.log('name err');
-                return
-            }
-
-            const data = {
-                creator: this.uname,
-                creatorId: this.socketClient.getSocketId(),
-                name: `Group: ${Date.now()}`
-            }
-
-            this.socketClient.socketEmitter.emit('create-group', data);
-        }
-
-        public showGroup(): void {
-            if(!this.appEl) return;
-
-            const joinScreen = this.appEl.querySelector('.join-screen');
-            const dashboard = this.appEl.querySelector('.main-dashboard');
-            if(joinScreen) joinScreen.classList.remove('active');
-            if(dashboard) dashboard.classList.remove('active');
-
-            const group = this.appEl.querySelector('.chat-screen');
-            if(group) group.classList.add('active'); 
-        }
-    //
 }
