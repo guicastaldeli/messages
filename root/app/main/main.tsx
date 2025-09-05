@@ -1,7 +1,8 @@
+import './_styles/styles.scss';
 import { Component } from 'react';
 import { MessageManager } from './message-manager';
 import { SocketClient } from '../.server/socket-client';
-import './_styles/styles.scss';
+import { Dashboard } from './dashboard';
 
 export class Main extends Component {
     private messageManager: MessageManager;
@@ -21,6 +22,12 @@ export class Main extends Component {
         if(!this.socketClient || this.socketClient['isConnected']) return;
         this.socketClient.connect();
         this.messageManager.init();
+    }
+
+    //Create Group
+    private handleCreateGroup = (): void => {
+        console.log('tst')
+        this.messageManager.createGroup();
     }
 
     render() {
@@ -43,28 +50,11 @@ export class Main extends Component {
                         </div>
                     </div>
                 </div>
-                <div className='screen chat-screen'>
-                    <div className="header">
-                        <div className="logo">chatroom</div>
-                        <button 
-                            id="exit-chat"
-                            onClick={() => this.messageManager.exitChat()}
-                        >
-                            Exit
-                        </button>
-                    </div>
-                    <div className="messages"></div>
-                    <div className="typebox">
-                        <input type="text" id="message-input" />
-                        <button 
-                            id="send-message" 
-                            onClick={() => this.messageManager.handleChatMessage()}
-                        >
-                            Send
-                        </button>
-                    </div>
-                </div>
+                <Dashboard 
+                    onCreateGroup={this.handleCreateGroup}
+                    messageManager={this.messageManager} 
+                />
             </div>
-        )
+        );
     }
 }

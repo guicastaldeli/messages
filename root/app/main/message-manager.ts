@@ -55,10 +55,10 @@ export class MessageManager {
             if(!joinScreen) throw new Error('join screen err');
             joinScreen.classList.remove('active');
 
-            //Chat Screen
-            const chatScreen = this.appEl!.querySelector('.chat-screen');
-            if(!chatScreen) throw new Error('chat screen err');
-            chatScreen.classList.add('active');
+            //Dashboard
+            const dashboard = this.appEl!.querySelector('.main-dashboard');
+            if(!dashboard) throw new Error('dashboard');
+            dashboard.classList.add('active');
         });
     }
 
@@ -133,5 +133,62 @@ export class MessageManager {
             },
             autoRegister: true
         });
+
+        //Group
+            this.socketClient.socketEmitter.registerEventHandler({
+                eventName: 'group-creation-scss',
+                handler: (data: any) => {
+                    console.log('Group created', data);
+                    alert(`Group '${data.name}' created! :)`);
+                },
+                autoRegister: true
+            });
+
+            this.socketClient.socketEmitter.registerEventHandler({
+                eventName: 'group-creation-err',
+                handler: (err: any) => {
+                    console.error('Group creation failed', err);
+                    alert(`Failed to create group: ${err.message}`);
+                },
+                autoRegister: true
+            });
+
+            this.socketClient.socketEmitter.registerEventHandler({
+                eventName: 'group-update',
+                handler: (update: any) => {
+                    this.renderMessage('update', update);
+                },
+                autoRegister: true
+            });
+        //
     }
+
+    //Group
+        public createGroup(): void {
+            if(!this.uname) {
+                console.log('name err');
+                return
+            }
+
+            const data = {
+                creator: this.uname,
+                creatorId: this.socketClient.getSocketId(),
+                name: `Group: ${Date.now()}`
+            }
+
+            this.socketClient.socketEmitter.emit('create-group', data);
+        }
+
+        public showGroup(): void {
+            if(!this.appEl) return;
+
+            const joinScreen = this.appEl.querySelector('.join-screen');
+            const dashboard = this.appEl.querySelector('.main-dashboard');
+            if(joinScreen) joinScreen.classList.remove('active');
+            if(dashboard) dashboard.classList.remove('active');
+
+            const group = this.appEl.querySelector('.chat-screen');
+            if(group) group.classList.add('active'); 
+        }
+    //
 }
