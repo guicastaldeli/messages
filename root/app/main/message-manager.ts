@@ -29,7 +29,12 @@ export class MessageManager {
     public async init(): Promise<void> {
         if(typeof document === 'undefined') return;
         this.appEl = document.querySelector<HTMLDivElement>('.app');
-        this.groupManager = new GroupManager(this.socketClient, this.appEl, this.uname);
+        this.groupManager = new GroupManager(
+            this.socketClient,
+            this, 
+            this.appEl, 
+            this.uname
+        );
         
         this.socketClient.on('connect', (id: string) => {
             this.socketId = id;

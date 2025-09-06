@@ -4,7 +4,11 @@ import { MessageManager } from './message-manager';
 import { SocketClient } from '../.server/socket-client';
 import { Dashboard } from './dashboard';
 
-export class Main extends Component {
+interface State {
+    groupManager: MessageManager['groupManager'] | null;
+}
+
+export class Main extends Component<any, State> {
     private messageManager: MessageManager;
     private socketClient: SocketClient;
 
@@ -12,6 +16,7 @@ export class Main extends Component {
         super(props);
         this.socketClient = SocketClient.getInstance();
         this.messageManager = new MessageManager(this.socketClient);
+        this.state = { groupManager: null }
     }
 
     componentDidMount(): void {
@@ -22,6 +27,7 @@ export class Main extends Component {
         if(!this.socketClient || this.socketClient['isConnected']) return;
         this.socketClient.connect();
         this.messageManager.init();
+        this.setState({ groupManager: this.messageManager.groupManager });
     }
 
     //Create Group
@@ -51,7 +57,8 @@ export class Main extends Component {
                 </div>
                 <Dashboard 
                     onCreateGroup={this.handleCreateGroup}
-                    messageManager={this.messageManager} 
+                    messageManager={this.messageManager}
+                    groupManager={this.state.groupManager!}
                 />
             </div>
         );
