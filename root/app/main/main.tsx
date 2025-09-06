@@ -30,6 +30,16 @@ export class Main extends Component<any, State> {
         this.setState({ groupManager: this.messageManager.groupManager });
     }
 
+    //Join
+    private handleJoin = async (): Promise<void> => {
+        try {
+            await this.messageManager.handleJoin();
+            this.setState({ groupManager: this.messageManager.groupManager });
+        } catch(err) {
+            console.error(err);
+        }
+    }
+
     //Create Group
     private handleCreateGroup = (): void => {
         this.messageManager.groupManager.showMenu();
@@ -48,7 +58,7 @@ export class Main extends Component<any, State> {
                         <div className='form-input'>
                             <button 
                                 id='join-user' 
-                                onClick={() => this.messageManager.handleJoin()}
+                                onClick={this.handleJoin}
                             >
                                 Join
                             </button>

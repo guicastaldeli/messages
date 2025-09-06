@@ -29,12 +29,6 @@ export class MessageManager {
     public async init(): Promise<void> {
         if(typeof document === 'undefined') return;
         this.appEl = document.querySelector<HTMLDivElement>('.app');
-        this.groupManager = new GroupManager(
-            this.socketClient,
-            this, 
-            this.appEl, 
-            this.uname
-        );
         
         this.socketClient.on('connect', (id: string) => {
             this.socketId = id;
@@ -44,29 +38,39 @@ export class MessageManager {
         this.updateSocket();
     }
 
-    public handleJoin(): void {
-        if(!this.appEl || this.joinHandled) return;
-        this.joinHandled = true;
+    public handleJoin(): Promise<void> {
+        return new Promise((res, rej) => {
+            if(!this.appEl || this.joinHandled) return rej('err');
+    
+            const usernameInput = this.appEl.querySelector<HTMLInputElement>('.join-screen #username');
+            if(!usernameInput || !usernameInput.value.trim()) return rej(new Error('Username is required'));
+            this.joinHandled = true;
 
-        const joinBtn = this.appEl.querySelector<HTMLButtonElement>('.join-screen #join-user');
-        if(!joinBtn) throw new Error('join button err');
+            try {
+                this.socketClient.socketEmitter.emit('new-user', usernameInput.value);
+                this.uname = usernameInput.value;
+                this.groupManager = new GroupManager(
+                    this.socketClient,
+                    this,
+                    this.appEl,
+                    this.uname
+                );
 
-        joinBtn.addEventListener('click', () => {
-            const usernameInput = this.appEl!.querySelector<HTMLInputElement>('.join-screen #username')!.value;
-            if(!usernameInput.length) return;
+                //Join Screen
+                const joinScreen = this.appEl!.querySelector('.join-screen');
+                if(!joinScreen) throw new Error('join screen err');
+                joinScreen.classList.remove('active');
+    
+                //Dashboard
+                const dashboard = this.appEl!.querySelector('.main-dashboard');
+                if(!dashboard) throw new Error('dashboard');
+                dashboard.classList.add('active');
 
-            this.socketClient.socketEmitter.emit('new-user', usernameInput);
-            this.uname = usernameInput;
-
-            //Join Screen
-            const joinScreen = this.appEl!.querySelector('.join-screen');
-            if(!joinScreen) throw new Error('join screen err');
-            joinScreen.classList.remove('active');
-
-            //Dashboard
-            const dashboard = this.appEl!.querySelector('.main-dashboard');
-            if(!dashboard) throw new Error('dashboard');
-            dashboard.classList.add('active');
+                res();
+            } catch(err) {
+                this.joinHandled = false;
+                rej(err);
+            }
         });
     }
 

@@ -4,15 +4,29 @@ import { SocketClient } from "@/app/.server/socket-client";
 import { MessageManager } from "../../message-manager";
 import { GroupLayout } from "./group-layout";
 
+interface CreationData {
+    id: string;
+    name: string;
+    creator: string;
+    creatorId: string;
+    members: string[];
+    createdAt: string;
+}
+
 export class GroupManager {
     private socketClient: SocketClient;
     private messageManager: MessageManager;
     public appEl: HTMLDivElement | null = null;
-    private currentGroupName: string = '';
+    private layoutRef = React.createRef<GroupLayout>();
     private uname: any;
-
+    
     private root: Root | null = null;
     private container!: HTMLElement;
+
+    private currentGroupName: string = '';
+    private currentGroupId: string = '';
+    private onCreateSuccess?: (data: CreationData) => void;
+    private onCreateError?: (error: any) => void;
 
     constructor(
         socketClient: SocketClient,
@@ -24,14 +38,46 @@ export class GroupManager {
         this.messageManager = messageManager;
         this.appEl = appEl;
         this.uname = uname;
+        this.setupSocketListeners();
     }
 
-    private renderLayout(): void {
+    private setupSocketListeners(): void {
+        //Success
+        this.socketClient.socketEmitter.registerEventHandler({
+            eventName: 'group-created-scss',
+            handler: (data: CreationData) => {
+                this.currentGroupName = data.name;
+                this.currentGroupId = data.id;
+                console.log('sucss!', data);
+                if(this.onCreateSuccess) this.onCreateSuccess(data)
+            },
+            autoRegister: true
+        });
+
+        //Error
+        this.socketClient.socketEmitter.registerEventHandler({
+            eventName: 'error',
+            handler: (error) => {
+                console.error(error);
+                if(this.onCreateError) this.onCreateError(error);
+            },
+            autoRegister: true
+        });
+    }
+
+    private renderLayout(
+        onCreateSuccess: (data: CreationData) => void,
+        onCreateError: (error: any) => void,
+    ): void {
         if(!this.container) return;
         this.container.innerHTML = '';
 
+        this.onCreateSuccess = onCreateSuccess;
+        this.onCreateError = onCreateError;
+
         this.root = createRoot(this.container);
         const content = React.createElement(GroupLayout, {
+            ref: this.layoutRef,
             messageManager: this.messageManager,
             groupManager: this
         });
@@ -45,31 +91,53 @@ export class GroupManager {
     public showMenu(): void {
         if(!this.appEl) return;
         
-        this.renderLayout();
+        this.renderLayout(
+            (data) => {
+                this.showChatScreen(data.name);
+            },
+            (error) => {
+                alert(`Failed to create group: ${error.message}`);
+                this.showForm();
+            }
+        );
+        
+        this.showForm();
+    }
+
+    private showForm(): void {
+        if(!this.appEl) return;
+
         const joinScreen = this.appEl.querySelector('.join-screen');
         const dashboard = this.appEl.querySelector('.main-dashboard');
         if(joinScreen) joinScreen.classList.remove('active');
         if(dashboard) dashboard.classList.remove('active');
 
         const info = this.appEl.querySelector('.group-info');
-        if(info) info.classList.add('active'); 
+        if(info) info.classList.add('active');
     }
 
-    private create(): void {
+    private showChatScreen(groupName: string): void {
         if(!this.appEl) return;
+        this.currentGroupName = groupName;
 
-        //Name Form Input
-        const nameInput = this.appEl.querySelector<HTMLInputElement>('#group-info-name');
-        if(!nameInput || !nameInput.value.trim()) throw new Error('err!!');
-        this.currentGroupName = nameInput.value.trim();
+        //Info Form
+        const infoForm = this.appEl.querySelector('.group-info');
+        if(infoForm) infoForm.classList.remove('active');
 
         //Name Display
         const nameEl = this.appEl.querySelector('#group-name');
         if(nameEl) nameEl.textContent = this.currentGroupName;
 
-        //Info Form
-        const infoForm = this.appEl.querySelector('.group-info');
-        if(infoForm) infoForm.classList.remove('active');
+        const event = new CustomEvent(
+            'group-creation-complete', {
+            detail: { groupName }
+        });
+        window.dispatchEvent(event);
+    }
+
+    private create(groupName: string): void {
+        if(!groupName.trim()) throw new Error('name invalid');
+        this.currentGroupName = groupName;
 
         //Emit
         this.socketClient.socketEmitter.emit('create-group', {
@@ -79,7 +147,7 @@ export class GroupManager {
         });
     }
 
-    public handleCreate = (): void => {
-        this.create();
+    public manageCreate = (groupName: string): void => {
+        this.create(groupName);
     }
 }

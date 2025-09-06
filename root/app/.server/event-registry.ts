@@ -3,7 +3,7 @@ export interface SocketEventHandler {
     handler: (socket: any, data: any, io: any) => void;
     broadcast?: boolean;
     broadcastSelf?: boolean;
-    targetEvent: string | undefined
+    targetEvent: string | undefined | null
 }
 
 export class EventRegistry {

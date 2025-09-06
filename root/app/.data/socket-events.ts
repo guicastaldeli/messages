@@ -51,21 +51,28 @@ export const configSocketEvents = (): void => {
 
                     const newGroup = {
                         id: id,
-                        name: data.name || `Group_${Date.now()}`,
+                        name: data.groupName,
                         creator: data.creator,
                         creatorId: data.creatorId,
                         members: [data.creatorId],
                         createdAt: creationDate
                     }
+
+                    socket.emit('group-created-scss', newGroup);
+                    socket.broadcast.emit('group-update', {
+                        type: 'group-created',
+                        groupName: data.groupName,
+                        creator: data.creator
+                    });
                     return newGroup;
                 } catch(err) {
                     console.log(err);
-                    throw new Error('err');
+                    throw err;
                 }
             },
             broadcast: false,
             broadcastSelf: false,
-            targetEvent: 'group-created-scss'
+            targetEvent: null
         },
         {
             //Join Group

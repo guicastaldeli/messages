@@ -81,7 +81,7 @@ export class MessageServer {
                             const emitEventName = targetEvent;
 
                             if(broadcastSelf) {
-                                this.io.emit(emitEventName, result);
+                                this.io.emit(emitEventName!, result);
                             } else {
                                 socket.broadcast.emit(emitEventName, result);
                             }
