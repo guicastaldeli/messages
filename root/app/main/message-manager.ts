@@ -97,7 +97,7 @@ export class MessageManager {
 
     public exitChat(): void {
         this.socketClient.socketEmitter.emit('exit-chat', this.uname);
-        window.location.href = window.location.href;
+        
     }
 
     private renderMessage(type: any, data: any) {
