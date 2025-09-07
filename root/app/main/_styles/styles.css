@@ -166,4 +166,10 @@ body {
   outline: none;
   border: none;
   cursor: pointer;
+}
+
+#main-list {
+  background-color: rgb(179, 110, 110);
+  width: 30%;
+  height: 100%;
 }/*# sourceMappingURL=styles.css.map */

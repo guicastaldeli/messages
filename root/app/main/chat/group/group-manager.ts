@@ -41,15 +41,46 @@ export class GroupManager {
         this.setupSocketListeners();
     }
 
+    //State Related
+        private onStateChange?: (
+            state: {
+                showForm: boolean;
+                showChat: boolean;
+                groupName: string;
+            }
+        ) => void;
+
+        private currentState = {
+            showForm: false,
+            showChat: false,
+            groupName: ''
+        }
+
+        public setStateChange(callback: (state: any) => void): void {
+            this.onStateChange = callback;
+        }
+
+        public updateState(newState: Partial<typeof this.currentState>): void {
+            this.currentState = { ...this.currentState, ...newState }
+            if(this.onStateChange) this.onStateChange(this.currentState);
+        }
+    //
+
     private setupSocketListeners(): void {
         //Success
         this.socketClient.socketEmitter.registerEventHandler({
             eventName: 'group-created-scss',
             handler: (data: CreationData) => {
                 this.currentGroupName = data.name;
+                const name = this.currentGroupName;
                 this.currentGroupId = data.id;
-                console.log('sucss!', data);
-                if(this.onCreateSuccess) this.onCreateSuccess(data)
+                if(this.onCreateSuccess) this.onCreateSuccess(data);
+
+                const event = new CustomEvent( 
+                    'group-creation-complete', 
+                    { detail: { name } }
+                ); 
+                window.dispatchEvent(event);
             },
             autoRegister: true
         });
@@ -70,17 +101,18 @@ export class GroupManager {
         onCreateError: (error: any) => void,
     ): void {
         if(!this.container) return;
-        this.container.innerHTML = '';
 
         this.onCreateSuccess = onCreateSuccess;
         this.onCreateError = onCreateError;
 
-        this.root = createRoot(this.container);
         const content = React.createElement(GroupLayout, {
             ref: this.layoutRef,
             messageManager: this.messageManager,
-            groupManager: this
+            groupManager: this,
+            onSuccess: onCreateSuccess,
+            onError: onCreateError
         });
+        if(!this.root) this.root = createRoot(this.container);
         this.root.render(content);
     }
 
@@ -93,46 +125,27 @@ export class GroupManager {
         
         this.renderLayout(
             (data) => {
-                this.showChatScreen(data.name);
+                this.updateState({
+                    showForm: false,
+                    showChat: true,
+                    groupName: data.name
+                });
             },
             (error) => {
                 alert(`Failed to create group: ${error.message}`);
-                this.showForm();
+                this.updateState({
+                    showForm: true,
+                    showChat: false,
+                    groupName: ''
+                })
             }
         );
         
-        this.showForm();
-    }
-
-    private showForm(): void {
-        if(!this.appEl) return;
-
-        const joinScreen = this.appEl.querySelector('.join-screen');
-        const dashboard = this.appEl.querySelector('.main-dashboard');
-        if(joinScreen) joinScreen.classList.remove('active');
-        if(dashboard) dashboard.classList.remove('active');
-
-        const info = this.appEl.querySelector('.group-info');
-        if(info) info.classList.add('active');
-    }
-
-    private showChatScreen(groupName: string): void {
-        if(!this.appEl) return;
-        this.currentGroupName = groupName;
-
-        //Info Form
-        const infoForm = this.appEl.querySelector('.group-info');
-        if(infoForm) infoForm.classList.remove('active');
-
-        //Name Display
-        const nameEl = this.appEl.querySelector('#group-name');
-        if(nameEl) nameEl.textContent = this.currentGroupName;
-
-        const event = new CustomEvent(
-            'group-creation-complete', {
-            detail: { groupName }
+        this.updateState({
+            showForm: true,
+            showChat: false,
+            groupName: ''
         });
-        window.dispatchEvent(event);
     }
 
     private create(groupName: string): void {

@@ -1,4 +1,4 @@
-import { ReactElement } from 'react';
+import React, { ReactElement } from 'react';
 import * as ReactDOMServer from 'react-dom/server';
 
 export class ContentGetter {
@@ -11,19 +11,19 @@ export class ContentGetter {
     */
 
     //Welcome Message
-    __welcome(): ReactElement {
+    __welcome(): React.ReactElement {
         const content = <p id="ms--wel">Welcome to Server! :)</p>;
         return content;
     }
 
     //Version
-    __version(): ReactElement {
+    __version(): React.ReactElement {
         const content = <p id="ms--version">Messages Server v1.0</p>;
         return content;
     }
 
     //Time
-    __time(data: any): ReactElement {
+    __time(data: any): React.ReactElement {
         const content =
         <p 
             id="ms--time" 
@@ -40,7 +40,7 @@ export class ContentGetter {
         status: string,
         uptime: number,
         connections: number 
-    ): ReactElement {
+    ): React.ReactElement {
         const content =
         <div id="ms--status">
             <p>STATUS: {status}</p>
@@ -51,7 +51,7 @@ export class ContentGetter {
     }
 
     //Route
-    __route(route: string): ReactElement {
+    __route(route: string): React.ReactElement {
         const content =
         <div id="ms--route">
             <p>ROUTE: {route}</p>
@@ -101,7 +101,7 @@ export class ContentGetter {
     */
 
     //Self
-    __self(message: any): ReactElement {
+    __self(message: any): React.ReactElement {
         const content = (
             <div className="message self-message">
                 <div className="user">{message.username}</div>
@@ -112,7 +112,7 @@ export class ContentGetter {
     }
 
     //Other
-    __other(message: any): ReactElement {
+    __other(message: any): React.ReactElement {
         const content =
         <div className="message other-message">
             <div className="user">{message.username}</div>
@@ -122,7 +122,7 @@ export class ContentGetter {
     }
 
     //Update
-    __update(data: { data: string }): ReactElement {
+    __update(data: { data: string }): React.ReactElement {
         const content = <div className="update">{data.data}</div>;
         return content;
     }

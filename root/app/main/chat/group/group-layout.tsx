@@ -6,6 +6,8 @@ import { GroupManager } from './group-manager';
 interface Props {
     messageManager: MessageManager;
     groupManager: GroupManager;
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
 }
 
 interface State {
@@ -13,6 +15,11 @@ interface State {
     groupName: string;
     isLoading: boolean;
     error: string | null;
+    managerState: {
+        showForm: boolean;
+        showChat: boolean;
+        groupName: string;
+    }
 }
 
 export class GroupLayout extends Component<Props, State> {
@@ -32,11 +39,19 @@ export class GroupLayout extends Component<Props, State> {
             creationComplete: false,
             groupName: '',
             isLoading: false,
-            error: null
+            error: null,
+            managerState: {
+                showForm: true,
+                showChat: false,
+                groupName: ''
+            }
         }
     }
 
     componentDidMount(): void {
+        this.groupManager.setStateChange((state: any) => {
+            this.setState({ managerState: state });
+        });
         window.addEventListener(
             'group-creation-complete',
             this.handleCreationComplete as EventListener
@@ -51,8 +66,6 @@ export class GroupLayout extends Component<Props, State> {
 
     handleCreationComplete = (event: CustomEvent) => {
         this.setState({
-            creationComplete: true,
-            groupName: event.detail.groupName,
             isLoading: false,
             error: null
         });
@@ -78,7 +91,7 @@ export class GroupLayout extends Component<Props, State> {
                 if(this.state.isLoading && !this.state.creationComplete) {
                     this.setState({
                         isLoading: false,
-                        error: 'Timout. try again ;-;'
+                        error: 'Timeout. try again ;-;'
                     });
                 }
             }, this.timeout);
@@ -102,51 +115,63 @@ export class GroupLayout extends Component<Props, State> {
         });
     }
 
+    handleExitChat = () => {
+        this.messageManager.exitChat();
+        this.groupManager.showMenu();
+        this.resetForm();
+    }
+
     render() {
+        const { isLoading, error } = this.state;
+        const { showForm, showChat, groupName } = this.state.managerState;
+        
         return (
             <>
                 {/* Info */}
-                <div className="group-info form">
-                    <input 
-                        type="text" 
-                        id="group-info-name"
-                        ref={this.nameInputRef}
-                        placeholder="Enter group name"
-                        disabled={this.state.isLoading}
-                    />
-                    <button 
-                        id="create-group button"
-                        disabled={this.state.isLoading}
-                        onClick={() => {
-                            this.handleCreate();
-                            this.resetForm()
-                        }}
-                    >
-                        {this.state.isLoading ? 'Creating...' : 'Create Group'}
-                    </button>
+                {showForm && (
+                    <div className="group-info form">
+                        <input 
+                            type="text" 
+                            id="group-info-name"
+                            ref={this.nameInputRef}
+                            placeholder="Enter group name"
+                            disabled={isLoading}
+                            defaultValue={groupName}
+                        />
+                        <button 
+                            id="create-group button"
+                            disabled={isLoading}
+                            onClick={() => {
+                                this.handleCreate();
+                                this.resetForm();
+                            }}
+                        >
+                            {isLoading ? 'Creating...' : 'Create Group'}
+                        </button>
 
-                    {/* Loading */}
-                    {this.state.isLoading && (
-                        <div className="loading">Creating group, please wait...</div>
-                    )}
+                        {/* Loading */}
+                        {isLoading && (
+                            <div className="loading">Creating group, please wait...</div>
+                        )}
 
-                    {/* Error */}
-                    {this.state.error && (
-                        <div className="error">
-                            <p>{this.state.error}</p>
-                            <button onClick={this.handleRetry}>Try Again</button>
-                        </div>
-                    )}
-                </div>
+                        {/* Error */}
+                        {error && (
+                            <div className="error">
+                                <p>{error}</p>
+                                <button onClick={this.handleRetry}>Try Again</button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Layout */}
-                {this.state.creationComplete && (
+                {showChat && (
                     <div className="screen chat-screen">
                         <div className="header">
-                            <div id="group-name">{this.state.groupName}</div>
+                            <div id="group-name">{groupName}</div>
                             <button 
                                 id="exit-chat"
-                                onClick={() => this.messageManager.exitChat()}
+                                onClick={this.handleExitChat}
                             >
                                 Exit Group
                             </button>

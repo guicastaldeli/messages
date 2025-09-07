@@ -61,6 +61,10 @@ export class Dashboard extends Component<Props, State> {
                         )}
 
                         <div className="group-container" ref={this.groupContainerRef}></div>
+
+                        <div id="main-list">
+                            <p>list</p>
+                        </div>
                     </>
                 )}
             </SessionContext.Consumer>
