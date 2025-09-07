@@ -38,7 +38,7 @@ export class MessageManager {
         this.updateSocket();
     }
 
-    public handleJoin(): Promise<void> {
+    public handleJoin(): Promise<'dashboard'> {
         return new Promise((res, rej) => {
             if(!this.appEl || this.joinHandled) return rej('err');
     
@@ -55,18 +55,7 @@ export class MessageManager {
                     this.appEl,
                     this.uname
                 );
-
-                //Join Screen
-                const joinScreen = this.appEl!.querySelector('.join-screen');
-                if(!joinScreen) throw new Error('join screen err');
-                joinScreen.classList.remove('active');
-    
-                //Dashboard
-                const dashboard = this.appEl!.querySelector('.main-dashboard');
-                if(!dashboard) throw new Error('dashboard');
-                dashboard.classList.add('active');
-
-                res();
+                res('dashboard');
             } catch(err) {
                 this.joinHandled = false;
                 rej(err);

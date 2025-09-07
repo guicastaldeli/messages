@@ -1,10 +1,8 @@
 import { createContext, useContext } from "react";
 
 export type SessionType = 
-'join' |
-'dashboard' |
-'groupForm' |
-'chat';
+'login' |
+'dashboard'
 
 export interface ContextType {
     currentSession: SessionType;
@@ -12,7 +10,7 @@ export interface ContextType {
 }
 
 export const SessionContext = createContext<ContextType>({
-    currentSession: 'join',
+    currentSession: 'login',
     setSession: () => {}
 });
 

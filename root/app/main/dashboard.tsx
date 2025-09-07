@@ -2,6 +2,7 @@ import './_styles/styles.scss';
 import React, { Component } from 'react';
 import { MessageManager } from './message-manager';
 import { GroupManager } from './chat/group/group-manager';
+import { SessionContext } from '../.api/session-context';
 
 interface Props {
     onCreateGroup: () => void;
@@ -41,22 +42,28 @@ export class Dashboard extends Component<Props, State> {
 
     render() {
         return (
-            <>
-                <div className="screen main-dashboard">
-                    <header>
-                        <div id="actions-bar">
-                            <button 
-                                id="action-chat"
-                                onClick={() => this.props.onCreateGroup()}
-                            >
-                                Chat++++
-                            </button>
-                        </div>
-                    </header>
-                </div>
+            <SessionContext.Consumer>
+                {({ currentSession }) => (
+                    <>
+                        {currentSession === 'dashboard' && (
+                            <div className="screen main-dashboard">
+                                <header>
+                                    <div id="actions-bar">
+                                        <button 
+                                            id="action-chat"
+                                            onClick={() => this.props.onCreateGroup()}
+                                        >
+                                            Chat++++
+                                        </button>
+                                    </div>
+                                </header>
+                            </div>
+                        )}
 
-                <div className="group-container" ref={this.groupContainerRef}></div>
-            </>
+                        <div className="group-container" ref={this.groupContainerRef}></div>
+                    </>
+                )}
+            </SessionContext.Consumer>
         );
     }
 }

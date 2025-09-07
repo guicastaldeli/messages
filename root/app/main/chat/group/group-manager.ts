@@ -3,7 +3,6 @@ import { createRoot, Root } from "react-dom/client";
 import { SocketClient } from "@/app/.server/socket-client";
 import { MessageManager } from "../../message-manager";
 import { GroupLayout } from "./group-layout";
-import { Sessions, SessionManager } from "../../session-manager";
 
 interface CreationData {
     id: string;
@@ -17,8 +16,6 @@ interface CreationData {
 export class GroupManager {
     private socketClient: SocketClient;
     private messageManager: MessageManager;
-    private sessionManager: SessionManager;
-
     public appEl: HTMLDivElement | null = null;
     private layoutRef = React.createRef<GroupLayout>();
     private uname: any;
@@ -34,20 +31,14 @@ export class GroupManager {
     constructor(
         socketClient: SocketClient,
         messageManager: MessageManager,
-        sessionManager: SessionManager,
         appEl: HTMLDivElement | null = null, 
         uname: any
     ) {
         this.socketClient = socketClient;
         this.messageManager = messageManager;
-        this.sessionManager = sessionManager;
         this.appEl = appEl;
         this.uname = uname;
         this.setupSocketListeners();
-    }
-
-    private setSession(session: Sessions): void {
-        this.sessionManager.setSession(session);
     }
 
     private setupSocketListeners(): void {
@@ -102,15 +93,15 @@ export class GroupManager {
         
         this.renderLayout(
             (data) => {
-                this.setSession('chat');
+                this.showChatScreen(data.name);
             },
             (error) => {
                 alert(`Failed to create group: ${error.message}`);
-                this.setSession('groupForm');
+                this.showForm();
             }
         );
         
-        this.setSession('groupForm');
+        this.showForm();
     }
 
     private showForm(): void {

@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { SessionContext, SessionType, ContextType } from '../.api/session-context';
 
 interface Props {
-    internal: React.ReactNode;
+    children: React.ReactNode;
     initialSession?: SessionType;
 }
 
@@ -14,7 +14,7 @@ export class SessionProvider extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
-            currentSession: props.initialSession || 'join'
+            currentSession: props.initialSession || 'login'
         }
     }
 
@@ -32,7 +32,7 @@ export class SessionProvider extends Component<Props, State> {
     render() {
         return (
             <SessionContext.Provider value={this.getContextValue()}>
-                {this.props.internal}
+                {this.props.children}
             </SessionContext.Provider>
         )
     }
