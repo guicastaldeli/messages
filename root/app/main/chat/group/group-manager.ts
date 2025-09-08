@@ -138,6 +138,10 @@ export class GroupManager {
 
     public showMenu(): void {
         if(!this.appEl) return;
+        if(this.root) {
+            this.root.unmount();
+            this.root = null;
+        }
         
         this.renderLayout(
             (data) => {

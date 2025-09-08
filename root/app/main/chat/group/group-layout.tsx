@@ -64,9 +64,10 @@ export class GroupLayout extends Component<Props, State> {
         );
     }
 
-    handleCreationComplete = (event: CustomEvent) => {
+    handleCreationComplete = () => {
         this.setState({
             isLoading: false,
+            creationComplete: true,
             error: null
         });
     }
@@ -117,8 +118,12 @@ export class GroupLayout extends Component<Props, State> {
 
     handleExitChat = () => {
         this.messageManager.exitChat();
-        this.groupManager.showMenu();
         this.resetForm();
+        this.groupManager.updateState({
+            showForm: false,
+            showChat: false,
+            groupName: ''
+        });
     }
 
     render() {
@@ -143,7 +148,7 @@ export class GroupLayout extends Component<Props, State> {
                             disabled={isLoading}
                             onClick={() => {
                                 this.handleCreate();
-                                this.resetForm();
+                                //this.resetForm();
                             }}
                         >
                             {isLoading ? 'Creating...' : 'Create Group'}

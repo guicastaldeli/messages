@@ -30,7 +30,7 @@ export class Main extends Component<any, State> {
         this.messageManager = new MessageManager(this.socketClient);
         this.state = { 
             groupManager: null,
-            currentSession: 'login',
+            currentSession: 'main',
             chatList: [],
             activeChat: null
         }
@@ -89,7 +89,7 @@ export class Main extends Component<any, State> {
                     currentSession,
                     setSession: this.setSession
                 }}>
-                    {currentSession === 'login' && (
+                    {currentSession === 'main' && (
                         <div className='screen join-screen'>
                             <div className='form'>
                                 <h2>Join chatroom</h2>

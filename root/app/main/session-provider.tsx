@@ -14,7 +14,7 @@ export class SessionProvider extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
-            currentSession: props.initialSession || 'login'
+            currentSession: props.initialSession || 'main'
         }
     }
 

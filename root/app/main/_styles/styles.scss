@@ -165,4 +165,10 @@ body {
     width: 30%;
     height: 100%;
 }
+
+li {
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.388);
+    }
+}
     
