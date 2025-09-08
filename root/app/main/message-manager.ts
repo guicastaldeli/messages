@@ -63,7 +63,7 @@ export class MessageManager {
         });
     }
 
-    public handleChatMessage(): void {
+    public handleSendMessage(): void {
         if(!this.appEl || this.chatHandled) return;
         this.chatHandled = true;
 

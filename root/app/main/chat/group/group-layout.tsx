@@ -146,10 +146,7 @@ export class GroupLayout extends Component<Props, State> {
                         <button 
                             id="create-group button"
                             disabled={isLoading}
-                            onClick={() => {
-                                this.handleCreate();
-                                //this.resetForm();
-                            }}
+                            onClick={this.handleCreate}
                         >
                             {isLoading ? 'Creating...' : 'Create Group'}
                         </button>
@@ -186,7 +183,7 @@ export class GroupLayout extends Component<Props, State> {
                             <input type="text" id="message-input" />
                             <button 
                                 id="send-message" 
-                                onClick={() => this.messageManager.handleChatMessage()}
+                                onClick={() => this.messageManager.handleSendMessage()}
                             >
                                 Send
                             </button>

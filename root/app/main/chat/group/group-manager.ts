@@ -39,6 +39,7 @@ export class GroupManager {
         this.appEl = appEl;
         this.uname = uname;
         this.setupSocketListeners();
+        this.setupMessageListeners();
     }
 
     //State Related
@@ -65,6 +66,38 @@ export class GroupManager {
             if(this.onStateChange) this.onStateChange(this.currentState);
         }
     //
+
+    private setupMessageListeners(): void {
+        //New Messages
+        this.socketClient.socketEmitter.registerEventHandler({
+            eventName: 'new-message',
+            handler: (data: any) => {
+                this.updateChatList(data);
+            },
+            autoRegister: true
+        });
+
+        //Group Messages
+        this.socketClient.socketEmitter.registerEventHandler({
+            eventName: 'group-message',
+            handler: (data: any) => {
+                this.updateChatList(data);
+            },
+            autoRegister: true
+        });
+    }
+
+    private updateChatList(data: any): void {
+        const chatEvent = new CustomEvent('chat-message-received', {
+            detail: {
+                chatId: data.groupId || data.chatId,
+                message: data.content.content || data.content,
+                timestamp: data.timestamp,
+                sender: data.sender
+            }
+        });
+        window.dispatchEvent(chatEvent);
+    }
 
     private setupSocketListeners(): void {
         //Success

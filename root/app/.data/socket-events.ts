@@ -3,7 +3,7 @@ import { EventRegistry, SocketEventHandler } from '../.server/event-registry';
 export const configSocketEvents = (): void => {
     const events: SocketEventHandler[] = [
         {
-            //New User
+            /* New User */
             eventName: 'new-user',
             handler: (socket, user) => {
                 socket.username = user;
@@ -14,7 +14,7 @@ export const configSocketEvents = (): void => {
             targetEvent: 'update'
         },
         {
-            //Exit User
+            /* Exit User */
             eventName: 'exit-user',
             handler: (socket, user) => {
                 socket.username = user;
@@ -25,7 +25,7 @@ export const configSocketEvents = (): void => {
             targetEvent: 'update'
         },
         {
-            //Chat
+            /* Chat */
             eventName: 'chat',
             handler: (socket, content) => {
                 return {
@@ -39,7 +39,7 @@ export const configSocketEvents = (): void => {
             targetEvent: 'chat'
         },
         {
-            //Create Group
+            /* Create Group */
             eventName: 'create-group',
             handler: (socket, data, io) => {
                 try {
@@ -75,7 +75,7 @@ export const configSocketEvents = (): void => {
             targetEvent: null
         },
         {
-            //Join Group
+            /* Join Group */
             eventName: 'join-group',
             handler: (socket, data, io) => {
                 const { groupId, username, userId } = data;
@@ -91,7 +91,7 @@ export const configSocketEvents = (): void => {
             targetEvent: 'group-created-scss'
         },
         {
-            //Exit Group
+            /* Exit Group */
             eventName: 'exit-group',
             handler: (socket, data, io) => {
                 const { groupId, username } = data;
@@ -106,7 +106,7 @@ export const configSocketEvents = (): void => {
             targetEvent: 'group-update'
         },
         {
-            //Disconnect
+            /* Disconnect */
             eventName: 'disconnect',
             handler: (socket) => {
                 return { data: socket.username + ' left' }
@@ -115,6 +115,38 @@ export const configSocketEvents = (): void => {
             broadcastSelf: false,
             targetEvent: 'update'
         },
+        {
+            /* New Message */
+            eventName: 'new-message',
+            handler: (socket, data) => {
+                return {
+                    chatId: data.chatId,
+                    content: data.content,
+                    sender: socket.username,
+                    senderId: socket.id,
+                    timestamp: new Date().toISOString()
+                }
+            },
+            broadcast: true,
+            broadcastSelf: true,
+            targetEvent: 'new-message'
+        },
+        {
+            /* Group Message */
+            eventName: 'group-message',
+            handler: (socket, data) => {
+                return {
+                    chatId: data.chatId,
+                    content: data.content,
+                    sender: socket.username,
+                    senderId: socket.id,
+                    timestamp: new Date().toISOString()
+                }
+            },
+            broadcast: true,
+            broadcastSelf: true,
+            targetEvent: 'group-message'
+        }
     ];
 
     EventRegistry.registerAllEvents(events);
