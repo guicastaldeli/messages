@@ -8,10 +8,14 @@ interface Props {
     onCreateGroup: () => void;
     messageManager: MessageManager;
     groupManager: GroupManager;
+    chatList: any[];
+    activeChat: any;
 }
 
 interface State {
     groups: any[];
+    chatList: any[];
+    activeChat: any;
 }
 
 export class Dashboard extends Component<Props, State> {
@@ -20,7 +24,9 @@ export class Dashboard extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
-            groups: []
+            groups: [],
+            chatList: props.chatList || [],
+            activeChat: props.activeChat || null
         }
         this.groupContainerRef = React.createRef();
     }
@@ -40,7 +46,14 @@ export class Dashboard extends Component<Props, State> {
         }
     }
 
+    handleChatSelect = (chat: any): void => {
+        const event = new CustomEvent('chat-activated', { detail: chat });
+        window.dispatchEvent(event);
+    }
+
     render() {
+        const { chatList, activeChat } = this.props;
+
         return (
             <SessionContext.Consumer>
                 {({ currentSession }) => (
@@ -62,8 +75,35 @@ export class Dashboard extends Component<Props, State> {
 
                         <div className="group-container" ref={this.groupContainerRef}></div>
 
-                        <div id="main-list">
-                            <p>list</p>
+                        <div id="chat-container">
+                            <div className="chat-list">
+                                {chatList.length === 0 ? (
+                                    <p>No chats.</p>
+                                ) : (
+                                    <ul>
+                                        {chatList.map(chat => (
+                                            <li
+                                                key={chat.id}
+                                                className={`chat-item ${
+                                                    activeChat && 
+                                                    activeChat.id === chat.id ? 'active' : ''
+                                                }`}
+                                                onClick={() => this.handleChatSelect(chat)}
+                                            >
+                                                <div className="chat-icon">
+                                                    {chat.type === 'group' ? 'g' : 'd'}
+                                                </div>
+                                                <div className="chat-info">
+                                                    <div className="chat-name">{chat.name}</div>
+                                                    <div className="chat-preview">
+                                                        {chat.lastMessage || 'No mesages yet'}
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
                         </div>
                     </>
                 )}

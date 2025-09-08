@@ -1,18 +1,25 @@
 import './_styles/styles.scss';
+import React from 'react';
 import { Component } from 'react';
 import { MessageManager } from './message-manager';
 import { SocketClient } from '../.server/socket-client';
 import { Dashboard } from './dashboard';
 import { SessionContext, SessionType } from '../.api/session-context';
+import { ChatManager } from './chat/chat-manager';
+import { Item } from './chat/chat-manager';
+import { ActiveChat } from './chat/chat-manager';
 
 interface State {
     groupManager: MessageManager['groupManager'] | null;
     currentSession: SessionType;
+    chatList: Item[];
+    activeChat: ActiveChat | null;
 }
 
 export class Main extends Component<any, State> {
     private messageManager: MessageManager;
     private socketClient: SocketClient;
+    private chatItem: ChatManager;
 
     static contextType = SessionContext;
     declare context: React.ContextType<typeof SessionContext>;
@@ -23,12 +30,20 @@ export class Main extends Component<any, State> {
         this.messageManager = new MessageManager(this.socketClient);
         this.state = { 
             groupManager: null,
-            currentSession: 'login'
+            currentSession: 'login',
+            chatList: [],
+            activeChat: null
         }
+        this.chatItem = new ChatManager(this.setState.bind(this));
     }
 
     componentDidMount(): void {
         this.connect();
+        this.chatItem.mount();
+    }
+
+    componentWillUnmount(): void {
+        this.chatItem.unmount();
     }
 
     private connect(): void {
@@ -62,8 +77,11 @@ export class Main extends Component<any, State> {
     }
 
     render() {
-        const { currentSession } = this.state;
-        console.log(currentSession)
+        const { 
+            currentSession, 
+            chatList, 
+            activeChat
+        } = this.state;
 
         return (
             <div className='app'>
@@ -96,6 +114,8 @@ export class Main extends Component<any, State> {
                             onCreateGroup={this.handleCreateGroup}
                             messageManager={this.messageManager}
                             groupManager={this.state.groupManager!}
+                            chatList={chatList}
+                            activeChat={activeChat}
                         />
                     )}
                 </SessionContext.Provider>

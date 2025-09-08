@@ -74,6 +74,22 @@ export class GroupManager {
                 this.currentGroupName = data.name;
                 const name = this.currentGroupName;
                 this.currentGroupId = data.id;
+
+                const chatItem = {
+                    id: data.id,
+                    name: data.name,
+                    type: 'group',
+                    creator: data.creator,
+                    members: data.members,
+                    unreadCount: 0
+                }
+
+                const chatEvent = new CustomEvent(
+                    'chat-item-added',
+                    { detail: chatItem }
+                );
+                window.dispatchEvent(chatEvent);
+
                 if(this.onCreateSuccess) this.onCreateSuccess(data);
 
                 const event = new CustomEvent( 
