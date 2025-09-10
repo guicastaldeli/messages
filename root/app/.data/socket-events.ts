@@ -130,22 +130,6 @@ export const configSocketEvents = (): void => {
             broadcast: true,
             broadcastSelf: true,
             targetEvent: 'new-message'
-        },
-        {
-            /* Group Message */
-            eventName: 'group-message',
-            handler: (socket, data) => {
-                return {
-                    chatId: data.chatId,
-                    content: data.content,
-                    sender: socket.username,
-                    senderId: socket.id,
-                    timestamp: new Date().toISOString()
-                }
-            },
-            broadcast: true,
-            broadcastSelf: true,
-            targetEvent: 'group-message'
         }
     ];
 

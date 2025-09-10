@@ -80,6 +80,7 @@ export class MessageManager {
                 username: this.uname,
                 content: messageInput,
             });
+            console.log(messageInputEl.value)
             messageInputEl.value = '';
         });
     }
@@ -109,7 +110,6 @@ export class MessageManager {
 
     private updateSocket(): void {
         if(this.socketClient && this.socketClient.socket) {
-            console.log('tst')
             configSocketClientEvents(this.socketClient, this.socketClient.socket);
         }
         
