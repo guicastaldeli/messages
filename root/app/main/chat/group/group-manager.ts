@@ -3,6 +3,7 @@ import { createRoot, Root } from "react-dom/client";
 import { SocketClient } from "@/app/.server/socket-client";
 import { MessageManager } from "../../message-manager";
 import { GroupLayout } from "./group-layout";
+import { chatState } from "../../chat-state-service";
 
 interface CreationData {
     id: string;
@@ -73,25 +74,34 @@ export class GroupManager {
             handler: (data: CreationData) => {
                 this.currentGroupName = data.name;
                 const name = this.currentGroupName;
+                const time = new Date().toISOString();
                 this.currentGroupId = data.id;
+                chatState.setType('group');
 
                 const chatItem = {
-                    id: data.id,
+                    id: this.currentGroupId,
+                    groupId: data.id,
                     name: data.name,
                     type: 'group',
                     creator: data.creator,
                     members: data.members,
-                    unreadCount: 0
+                    unreadCount: 0,
+                    lastMessage: 'No messages yet!! :(',
+                    lastMessageTime: time
                 }
 
+                //Chat Event
                 const chatEvent = new CustomEvent(
                     'chat-item-added',
                     { detail: chatItem }
                 );
                 window.dispatchEvent(chatEvent);
 
-                if(this.onCreateSuccess) this.onCreateSuccess(data);
+                if(this.onCreateSuccess) {
+                    this.onCreateSuccess(data);
+                }
 
+                //Group Event
                 const event = new CustomEvent( 
                     'group-creation-complete', 
                     { detail: { name } }
@@ -171,6 +181,7 @@ export class GroupManager {
     private create(groupName: string): void {
         if(!groupName.trim()) throw new Error('name invalid');
         this.currentGroupName = groupName;
+        chatState.setType('group');
 
         //Emit
         this.socketClient.socketEmitter.emit('create-group', {

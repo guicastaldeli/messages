@@ -19,7 +19,7 @@ interface State {
 export class Main extends Component<any, State> {
     private messageManager: MessageManager;
     private socketClient: SocketClient;
-    private chatItem: ChatManager;
+    private chatManager: ChatManager;
 
     static contextType = SessionContext;
     declare context: React.ContextType<typeof SessionContext>;
@@ -34,16 +34,16 @@ export class Main extends Component<any, State> {
             chatList: [],
             activeChat: null
         }
-        this.chatItem = new ChatManager(this.setState.bind(this));
+        this.chatManager = new ChatManager(this.setState.bind(this));
     }
 
     componentDidMount(): void {
         this.connect();
-        this.chatItem.mount();
+        this.chatManager.mount();
     }
 
     componentWillUnmount(): void {
-        this.chatItem.unmount();
+        this.chatManager.unmount();
     }
 
     private connect(): void {
@@ -113,6 +113,7 @@ export class Main extends Component<any, State> {
                         <Dashboard 
                             onCreateGroup={this.handleCreateGroup}
                             messageManager={this.messageManager}
+                            chatManager={this.chatManager}
                             groupManager={this.state.groupManager!}
                             chatList={chatList}
                             activeChat={activeChat}

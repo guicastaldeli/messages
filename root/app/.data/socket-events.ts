@@ -1,11 +1,15 @@
 import { EventRegistry, SocketEventHandler } from '../.server/event-registry';
+import { MessageTracker } from '../main/message-tracker';
 
 export const configSocketEvents = (): void => {
+    const messageTracker = MessageTracker.getInstance();
+    
     const events: SocketEventHandler[] = [
         {
             /* New User */
             eventName: 'new-user',
             handler: (socket, user) => {
+                messageTracker.trackMessage('new-user', user, 'received', socket.id, user);
                 socket.username = user;
                 return { data: user + ' joined' }
             },
@@ -17,6 +21,7 @@ export const configSocketEvents = (): void => {
             /* Exit User */
             eventName: 'exit-user',
             handler: (socket, user) => {
+                messageTracker.trackMessage('exit-user', user, 'received', socket.id, user);
                 socket.username = user;
                 return { data: user + ' left' }
             },
@@ -27,11 +32,13 @@ export const configSocketEvents = (): void => {
         {
             /* Chat */
             eventName: 'chat',
-            handler: (socket, content) => {
+            handler: (socket, data) => {
+                messageTracker.trackMessage('chat', data, 'received', socket.id, socket.content);
                 return {
                     username: socket.username,
-                    content: content,
-                    senderId: socket.id
+                    content: data,
+                    senderId: socket.id,
+                    chatId: data.chatId || socket.id
                 }
             },
             broadcast: true,

@@ -63,7 +63,7 @@ export class MessageManager {
         });
     }
 
-    public handleSendMessage(): void {
+    public handleSendMessage(chatId?: string): void {
         if(!this.appEl || this.chatHandled) return;
         this.chatHandled = true;
 
@@ -79,8 +79,8 @@ export class MessageManager {
                 senderId: this.socketClient.getSocketId(),
                 username: this.uname,
                 content: messageInput,
+                chatId: chatId
             });
-            console.log(messageInputEl.value)
             messageInputEl.value = '';
         });
     }

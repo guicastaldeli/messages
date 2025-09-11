@@ -3,10 +3,13 @@ import React, { Component } from 'react';
 import { MessageManager } from './message-manager';
 import { GroupManager } from './chat/group/group-manager';
 import { SessionContext } from '../.api/session-context';
+import { ChatManager } from './chat/chat-manager';
+import { chatState } from './chat-state-service';
 
 interface Props {
     onCreateGroup: () => void;
     messageManager: MessageManager;
+    chatManager: ChatManager;
     groupManager: GroupManager;
     chatList: any[];
     activeChat: any;
@@ -34,6 +37,7 @@ export class Dashboard extends Component<Props, State> {
     componentDidMount(): void {
         if(!this.groupContainerRef.current || !this.props.groupManager) return;
         this.props.groupManager.setContainer(this.groupContainerRef.current);
+        this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
     }
 
     componentDidUpdate(prevProps: Props): void {
@@ -44,11 +48,23 @@ export class Dashboard extends Component<Props, State> {
         ) {
             this.props.groupManager.setContainer(this.groupContainerRef.current);
         }
+
+        if (prevProps.chatList !== this.props.chatList) {
+            this.setState({ chatList: this.props.chatList || [] });
+        }
+        if (prevProps.activeChat !== this.props.activeChat) {
+            this.setState({ activeChat: this.props.activeChat || null });
+        }
     }
 
     handleChatSelect = (chat: any): void => {
+        chatState.setType(chat.type === 'direct' ? 'direct' : 'group');
         const event = new CustomEvent('chat-activated', { detail: chat });
         window.dispatchEvent(event);
+    }
+
+    handleSendMessage = (chatId: string): void => {
+        this.props.messageManager.handleSendMessage(chatId);
     }
 
     render() {
@@ -66,7 +82,7 @@ export class Dashboard extends Component<Props, State> {
                                             id="action-chat"
                                             onClick={() => this.props.onCreateGroup()}
                                         >
-                                            Chat++++
+                                            Group++++
                                         </button>
                                     </div>
                                 </header>
@@ -81,9 +97,9 @@ export class Dashboard extends Component<Props, State> {
                                     <p>No chats.</p>
                                 ) : (
                                     <ul>
-                                        {chatList.map(chat => (
+                                        {chatList.map((chat, i) => (
                                             <li
-                                                key={chat.id}
+                                                key={chat.id || i}
                                                 className={`chat-item ${
                                                     activeChat && 
                                                     activeChat.id === chat.id ? 'active' : ''
@@ -96,7 +112,7 @@ export class Dashboard extends Component<Props, State> {
                                                 <div className="chat-info">
                                                     <div className="chat-name">{chat.name}</div>
                                                     <div className="chat-preview">
-                                                        {chat.lastMessage || 'No mesages yet'}
+                                                        {chat.lastMessage}
                                                     </div>
                                                 </div>
                                             </li>
