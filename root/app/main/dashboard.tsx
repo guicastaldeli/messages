@@ -110,8 +110,8 @@ export class Dashboard extends Component<Props, State> {
                                                     {chat.type === 'group' ? 'g' : 'd'}
                                                 </div>
                                                 <div className="chat-info">
-                                                    <div className="chat-name">{chat.name}</div>
-                                                    <div className="chat-preview">
+                                                    <div id="chat-name">{chat.name}</div>
+                                                    <div id="chat-preview">
                                                         {chat.lastMessage}
                                                     </div>
                                                 </div>

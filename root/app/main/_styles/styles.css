@@ -176,4 +176,12 @@ body {
 
 li:hover {
   background-color: rgba(0, 0, 0, 0.388);
+}
+
+#chat-name {
+  font-weight: bolder;
+}
+
+#chat-preview {
+  font-style: italic;
 }/*# sourceMappingURL=styles.css.map */
