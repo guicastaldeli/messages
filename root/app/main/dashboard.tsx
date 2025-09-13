@@ -61,14 +61,16 @@ export class Dashboard extends Component<Props, State> {
         chatState.setType(chat.type === 'direct' ? 'direct' : 'group');
         const event = new CustomEvent('chat-activated', { detail: chat });
         window.dispatchEvent(event);
+        this.updateState({
+            showForm: false,
+            showChat: true,
+            hideChat: false,
+            groupName: chat.name
+        });
     }
 
     handleSendMessage = (chatId: string): void => {
         this.props.messageManager.handleSendMessage(chatId);
-    }
-
-    handleShow = () => {
-
     }
 
     //State Related

@@ -42,7 +42,5 @@ export class Controller {
             this.appEl,
             this.uname
         );
-        console.log(this.appEl)
-        console.log(this.uname)
     }
 }
