@@ -73,7 +73,7 @@ export class MessageServer {
                 broadcastSelf,
                 targetEvent = eventName
             }) => {
-                socket.on(eventName, (data: any) => {
+                socket.on(eventName, async (data: any) => {
                     try {
                         const result = handler(socket, data, this.io);
 
@@ -89,6 +89,7 @@ export class MessageServer {
                     } catch(err) {
                         console.log(err);
                         throw new Error('err');
+                        
                     }
                 });
             });

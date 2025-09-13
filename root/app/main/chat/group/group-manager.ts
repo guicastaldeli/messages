@@ -4,6 +4,7 @@ import { SocketClient } from "@/app/.server/socket-client";
 import { MessageManager } from "../../message-manager";
 import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat-state-service";
+import { Dashboard } from "../../dashboard";
 
 interface CreationData {
     id: string;
@@ -17,6 +18,8 @@ interface CreationData {
 export class GroupManager {
     private socketClient: SocketClient;
     private messageManager: MessageManager;
+    public dashboard: Dashboard;
+
     public appEl: HTMLDivElement | null = null;
     private layoutRef = React.createRef<GroupLayout>();
     private uname: any;
@@ -32,40 +35,17 @@ export class GroupManager {
     constructor(
         socketClient: SocketClient,
         messageManager: MessageManager,
+        dashboard: Dashboard,
         appEl: HTMLDivElement | null = null, 
         uname: any
     ) {
         this.socketClient = socketClient;
         this.messageManager = messageManager;
+        this.dashboard = dashboard;
         this.appEl = appEl;
         this.uname = uname;
         this.setupSocketListeners();
     }
-
-    //State Related
-        private onStateChange?: (
-            state: {
-                showForm: boolean;
-                showChat: boolean;
-                groupName: string;
-            }
-        ) => void;
-
-        private currentState = {
-            showForm: false,
-            showChat: false,
-            groupName: ''
-        }
-
-        public setStateChange(callback: (state: any) => void): void {
-            this.onStateChange = callback;
-        }
-
-        public updateState(newState: Partial<typeof this.currentState>): void {
-            this.currentState = { ...this.currentState, ...newState }
-            if(this.onStateChange) this.onStateChange(this.currentState);
-        }
-    //
 
     private setupSocketListeners(): void {
         //Success
@@ -155,25 +135,28 @@ export class GroupManager {
         
         this.renderLayout(
             (data) => {
-                this.updateState({
+                this.dashboard.updateState({
                     showForm: false,
                     showChat: true,
+                    hideChat: false,
                     groupName: data.name
                 });
             },
             (error) => {
                 alert(`Failed to create group: ${error.message}`);
-                this.updateState({
+                this.dashboard.updateState({
                     showForm: true,
                     showChat: false,
+                    hideChat: false,
                     groupName: ''
                 })
             }
         );
         
-        this.updateState({
+        this.dashboard.updateState({
             showForm: true,
             showChat: false,
+            hideChat: false,
             groupName: ''
         });
     }
@@ -193,5 +176,9 @@ export class GroupManager {
 
     public manageCreate = (groupName: string): void => {
         this.create(groupName);
+    }
+
+    public exitChat(): void {
+        this.socketClient.socketEmitter.emit('exit-chat', this.uname);
     }
 }

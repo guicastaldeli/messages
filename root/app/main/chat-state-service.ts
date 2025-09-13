@@ -7,7 +7,6 @@ class ChatStateService {
     public setType(t: Type): void {
         if(this.current === t) return;
         this.current = t;
-        console.log(t);
         for(const l of this.listeners) l(t);
     }
 

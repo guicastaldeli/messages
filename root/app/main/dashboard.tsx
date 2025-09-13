@@ -67,6 +67,37 @@ export class Dashboard extends Component<Props, State> {
         this.props.messageManager.handleSendMessage(chatId);
     }
 
+    handleShow = () => {
+
+    }
+
+    //State Related
+        public onStateChange?: (
+            state: {
+                showForm: boolean;
+                showChat: boolean;
+                hideChat: boolean;
+                groupName: string;
+            }
+        ) => void;
+
+        private currentState = {
+            showForm: false,
+            showChat: false,
+            hideChat: false,
+            groupName: ''
+        }
+
+        public setStateChange(callback: (state: any) => void): void {
+            this.onStateChange = callback;
+        }
+
+        public updateState(newState: Partial<typeof this.currentState>): void {
+            this.currentState = { ...this.currentState, ...newState }
+            if(this.onStateChange) this.onStateChange(this.currentState);
+        }
+    //
+
     render() {
         const { chatList, activeChat } = this.props;
 

@@ -37,8 +37,8 @@ export class MessageTracker {
         this.messageLogs.push(messageLog);
 
         if(this.messageLogs.length > this.maxLogs) this.messageLogs = this.messageLogs.slice(-this.maxLogs);
-        this.logToConsole(messageLog);
         this.emitMessageEvent(messageLog);
+        //this.logToConsole(messageLog);
     }
 
     public getMessageLogs(): MessageLog[] {

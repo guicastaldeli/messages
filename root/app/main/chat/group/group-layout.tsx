@@ -18,6 +18,7 @@ interface State {
     managerState: {
         showForm: boolean;
         showChat: boolean;
+        hideChat: boolean;
         groupName: string;
     }
 }
@@ -28,7 +29,6 @@ export class GroupLayout extends Component<Props, State> {
 
     private timeout: number = 5000;
     private nameInputRef = createRef<HTMLInputElement>();
-    private containerRef = createRef<HTMLDivElement>();
 
     constructor(props: Props) {
         super(props);
@@ -43,13 +43,14 @@ export class GroupLayout extends Component<Props, State> {
             managerState: {
                 showForm: true,
                 showChat: false,
+                hideChat: false,
                 groupName: ''
             }
         }
     }
 
     componentDidMount(): void {
-        this.groupManager.setStateChange((state: any) => {
+        this.groupManager.dashboard.setStateChange((state: any) => {
             this.setState({ managerState: state });
         });
         window.addEventListener(
@@ -117,18 +118,33 @@ export class GroupLayout extends Component<Props, State> {
     }
 
     handleExitChat = () => {
-        this.messageManager.exitChat();
+        this.groupManager.exitChat();
         this.resetForm();
-        this.groupManager.updateState({
+        this.groupManager.dashboard.updateState({
             showForm: false,
             showChat: false,
+            hideChat: false,
+            groupName: ''
+        });
+    }
+
+    handleBack = () => {
+        this.groupManager.dashboard.updateState({
+            showForm: false,
+            showChat: false,
+            hideChat: true,
             groupName: ''
         });
     }
 
     render() {
         const { isLoading, error } = this.state;
-        const { showForm, showChat, groupName } = this.state.managerState;
+        const { 
+            showForm, 
+            showChat,
+            hideChat, 
+            groupName 
+        } = this.state.managerState;
         
         return (
             <>
@@ -171,6 +187,12 @@ export class GroupLayout extends Component<Props, State> {
                     <div className="screen chat-screen">
                         <div className="header">
                             <div id="group-name">{groupName}</div>
+                            <button 
+                                id="exit-chat"
+                                onClick={this.handleBack}
+                            >
+                                Back
+                            </button>
                             <button 
                                 id="exit-chat"
                                 onClick={this.handleExitChat}

@@ -3,12 +3,14 @@ import { SocketClient } from "../.server/socket-client";
 import { ContentGetter } from "../content-getter";
 import { MessageTypes } from "./message-types";
 import { configSocketClientEvents } from '../.data/socket-client-events';
-import { GroupManager } from "./chat/group/group-manager";
+import { Controller } from "./controller";
 
 export class MessageManager {
     private contentGetter: ContentGetter;
     private socketClient: SocketClient;
     private messageTypes: MessageTypes;
+    public controller!: Controller;
+    public dashboard: any;
 
     private uname: any;
     private appEl: HTMLDivElement | null = null;
@@ -18,12 +20,20 @@ export class MessageManager {
     private joinHandled: boolean = false;
     private chatHandled: boolean = false;
 
-    public groupManager!: GroupManager;
-
     constructor(socketClient: SocketClient) {
         this.contentGetter = new ContentGetter();
         this.socketClient = socketClient;
         this.messageTypes = new MessageTypes(this.contentGetter);
+    }
+
+    private initController(): void {
+        this.controller = new Controller(
+            this.socketClient,
+            this,
+            this.dashboard,
+            this.appEl,
+            this.uname
+        );
     }
 
     public async init(): Promise<void> {
@@ -49,18 +59,18 @@ export class MessageManager {
             try {
                 this.socketClient.socketEmitter.emit('new-user', usernameInput.value);
                 this.uname = usernameInput.value;
-                this.groupManager = new GroupManager(
-                    this.socketClient,
-                    this,
-                    this.appEl,
-                    this.uname
-                );
+                this.initController();
+                this.controller.init();
                 res('dashboard');
             } catch(err) {
                 this.joinHandled = false;
                 rej(err);
             }
         });
+    }
+
+    public handleBack(): void {
+        
     }
 
     public handleSendMessage(chatId?: string): void {
@@ -83,11 +93,6 @@ export class MessageManager {
             });
             messageInputEl.value = '';
         });
-    }
-
-    public exitChat(): void {
-        this.socketClient.socketEmitter.emit('exit-chat', this.uname);
-        
     }
 
     private renderMessage(type: any, data: any) {

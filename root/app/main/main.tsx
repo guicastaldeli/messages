@@ -10,16 +10,17 @@ import { Item } from './chat/chat-manager';
 import { ActiveChat } from './chat/chat-manager';
 
 interface State {
-    groupManager: MessageManager['groupManager'] | null;
+    groupManager: MessageManager['controller']['groupManager'] | null;
     currentSession: SessionType;
     chatList: Item[];
     activeChat: ActiveChat | null;
 }
 
 export class Main extends Component<any, State> {
-    private messageManager: MessageManager;
+    private messageManager!: MessageManager;
     private socketClient: SocketClient;
     private chatManager: ChatManager;
+    private dashboardInstance: Dashboard | null = null;
 
     static contextType = SessionContext;
     declare context: React.ContextType<typeof SessionContext>;
@@ -50,7 +51,15 @@ export class Main extends Component<any, State> {
         if(!this.socketClient || this.socketClient['isConnected']) return;
         this.socketClient.connect();
         this.messageManager.init();
-        this.setState({ groupManager: this.messageManager.groupManager });
+       // this.setState({ groupManager: this.messageManager.controller.groupManager });
+    }
+
+    private setDashboardRef = (instance: Dashboard | null): void => {
+        this.dashboardInstance = instance;
+        if(instance && this.messageManager) {
+            this.messageManager.dashboard = instance;
+            this.messageManager.controller.setDashboard(instance);
+        }
     }
 
     //Session
@@ -63,7 +72,7 @@ export class Main extends Component<any, State> {
         try {
             await this.messageManager.handleJoin();
             this.setState({ 
-                groupManager: this.messageManager.groupManager,
+                groupManager: this.messageManager.controller.groupManager,
                 currentSession: 'dashboard'
             });
         } catch(err) {
@@ -73,7 +82,7 @@ export class Main extends Component<any, State> {
 
     //Create Group
     private handleCreateGroup = (): void => {
-        this.messageManager.groupManager.showMenu();
+        this.messageManager.controller.groupManager.showMenu();
     }
 
     render() {
@@ -111,6 +120,7 @@ export class Main extends Component<any, State> {
 
                     {currentSession === 'dashboard' && (
                         <Dashboard 
+                            ref={this.setDashboardRef}
                             onCreateGroup={this.handleCreateGroup}
                             messageManager={this.messageManager}
                             chatManager={this.chatManager}
