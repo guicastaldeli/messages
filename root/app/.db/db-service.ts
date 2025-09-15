@@ -3,6 +3,7 @@ import path from 'path';
 import { UsersConfig } from './users-config';
 import { MessagesConfig } from './messages-config';
 import { GroupsConfig } from './groups-config';
+import { colorConverter } from '../.utils/color-converter';
 
 class DbService {
     private usersDb!: sqlite3.Database;
@@ -20,9 +21,9 @@ class DbService {
     }
 
     private load(): void {
-        this.usersDb = new sqlite3.Database(path.join(__dirname, './data/users.db'));
-        this.messagesDb = new sqlite3.Database(path.join(__dirname, './data/messages.db'));
-        this.groupsDb = new sqlite3.Database(path.join(__dirname, './data/groups.db'));
+        this.usersDb = new sqlite3.Database(path.join(__dirname, './src/users.db'));
+        this.messagesDb = new sqlite3.Database(path.join(__dirname, './src/messages.db'));
+        this.groupsDb = new sqlite3.Database(path.join(__dirname, './src/groups.db'));
     }
 
     private init(): void {
@@ -99,8 +100,7 @@ class DbService {
 
     public alert(): void {
         console.log(
-            `%cALERT!, Database initialized :)`, 
-            `color: #0073d1ff; font-weight: bold;`
+            `${colorConverter.style('ALERT', ['red', 'italic'])}, ${colorConverter.style('Database initialized :)', ['blue', 'bold'])}`
         );
     }
 }
