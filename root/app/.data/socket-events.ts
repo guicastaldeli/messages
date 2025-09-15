@@ -1,5 +1,6 @@
 import { EventRegistry, SocketEventHandler } from '../.server/event-registry';
 import { MessageTracker } from '../main/message-tracker';
+import { dbService } from '../.db/db-service';
 
 export const configSocketEvents = (): void => {
     const messageTracker = MessageTracker.getInstance();
@@ -8,8 +9,15 @@ export const configSocketEvents = (): void => {
         {
             /* New User */
             eventName: 'new-user',
-            handler: (socket, user) => {
+            handler: async (socket, user) => {
                 messageTracker.trackMessage('new-user', user, 'received', socket.id, user);
+
+                try {
+                    await dbService.usersConfig.addUser(socket.id, user)
+                } catch(err) {
+                    console.error('Failed to add user:', err);
+                }
+
                 socket.username = user;
                 return { data: user + ' joined' }
             },
@@ -32,8 +40,19 @@ export const configSocketEvents = (): void => {
         {
             /* Chat */
             eventName: 'chat',
-            handler: (socket, data) => {
+            handler: async (socket, data) => {
                 messageTracker.trackMessage('chat', data, 'received', socket.id, socket.content);
+
+                try {
+                    await dbService.messagesConfig.saveMessage({
+                        chatId: data.chatId || socket.id,
+                        senderId: socket.id,
+                        content: data || socket.content || data.content
+                    });
+                } catch(err) {
+                    console.error('Failed to save message:', err);
+                }
+
                 return {
                     username: socket.username,
                     content: data,
@@ -48,7 +67,7 @@ export const configSocketEvents = (): void => {
         {
             /* Create Group */
             eventName: 'create-group',
-            handler: (socket, data, io) => {
+            handler: async (socket, data, io) => {
                 try {
                     if(!data.creator || !data.creatorId) throw new Error('Invalid group data!');
 
@@ -63,6 +82,18 @@ export const configSocketEvents = (): void => {
                         creatorId: data.creatorId,
                         members: [data.creatorId],
                         createdAt: creationDate
+                    }
+
+                    try {
+                        await dbService.groupsConfig.createGroup({
+                            id: id,
+                            name: data.groupName,
+                            creatorId: data.creatorId
+                        });
+
+                        await dbService.groupsConfig.addUserToGroup(id, data.creatorId);
+                    } catch(err) {
+                        console.error('Failed to save group:', err);
                     }
 
                     socket.emit('group-created-scss', newGroup);

@@ -1,15 +1,22 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
-import fs from 'fs';
+import { UsersConfig } from './users-config';
+import { MessagesConfig } from './messages-config';
+import { GroupsConfig } from './groups-config';
 
-export class DbService {
+class DbService {
     private usersDb!: sqlite3.Database;
     private messagesDb!: sqlite3.Database;
     private groupsDb!: sqlite3.Database; 
 
+    public usersConfig!: UsersConfig;
+    public messagesConfig!: MessagesConfig;
+    public groupsConfig!: GroupsConfig;
+
     constructor() {
         this.load();
         this.init();
+        this.set();
     }
 
     private load(): void {
@@ -77,4 +84,25 @@ export class DbService {
             });
         });
     }
+
+    private set(): void {
+        this.usersConfig = new UsersConfig(this.usersDb);
+        this.messagesConfig = new MessagesConfig(this.messagesDb);
+        this.groupsConfig = new GroupsConfig(this.groupsDb);
+    }
+
+    public close(): void {
+        this.usersDb.close();
+        this.messagesDb.close();
+        this.groupsDb.close();
+    }
+
+    public alert(): void {
+        console.log(
+            `%cALERT!, Database initialized :)`, 
+            `color: #0073d1ff; font-weight: bold;`
+        );
+    }
 }
+
+export const dbService = new DbService();
