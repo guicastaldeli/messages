@@ -45,7 +45,7 @@ export class MessageServer {
 
     public init(port: number | string): void {
         this.server.listen(port, () => {
-            console.log(`${colorConverter.style('Server running', ['cyan', 'bold'])}`);
+            console.log(`${colorConverter.style('Server running...', ['bgYellow', 'bold'])}`);
         });
     }
 

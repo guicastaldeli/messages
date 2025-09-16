@@ -1,7 +1,7 @@
 class ColorConverterInstance {
     private static ansiColorsList: { [key: string]: string } = {
         //Basic colors
-        'black': '\x1b[30m',
+        'black': '\x1b[29m',
         'red': '\x1b[31m',
         'green': '\x1b[32m',
         'yellow': '\x1b[33m',
@@ -44,8 +44,13 @@ class ColorConverterInstance {
     }
 
     public static toAnsi(color: string): string {
-        if(this.ansiColorsList[color.toLowerCase()]) {
-            return this.ansiColorsList[color.toLowerCase()]
+        const lower = color.toLowerCase();
+
+        if(this.ansiColorsList[color]) {
+            return this.ansiColorsList[color];
+        }
+        if(this.ansiColorsList[lower]) {
+            return this.ansiColorsList[lower]
         }
         if(color.startsWith('#')) {
             return this.hexToAnsi(color);

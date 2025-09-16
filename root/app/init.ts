@@ -30,7 +30,16 @@ const server = MessageServer.getInstance(BASE_URL, timeStream);
 server.init(PORT);
 
 function alert() {
+    const spaceBg = ('-').repeat(77);
+    const spaceText = ('-').repeat(30);
+
     console.log(
+        `${colorConverter.style(`${spaceBg}\n`, ['white', 'bold'])}` +
+        `${colorConverter.style(`${spaceText}`, ['white', 'bold'])}` +
+        `${colorConverter.style(' Messages Server ', ['blue', 'bold'])}` +
+        `${colorConverter.style(`${spaceText}\n`, ['white', 'bold'])}` +
+        `${colorConverter.style(`${spaceBg}\n`, ['white', 'bold'])}` +
+
         `${colorConverter.style('Server starting on port ', ['magenta', 'italic'])}` +
         `${colorConverter.style(`${BASE_URL}`, ['white', 'blink'])}` +
         `${colorConverter.style('!!! ;)', ['magenta', 'italic'])}`

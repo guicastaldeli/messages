@@ -1,5 +1,6 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { UsersConfig } from './users-config';
 import { MessagesConfig } from './messages-config';
 import { GroupsConfig } from './groups-config';
@@ -15,24 +16,67 @@ class DbService {
     public groupsConfig!: GroupsConfig;
 
     constructor() {
+        this.cleanupCorruptedFiles();
+        this.ensureDataDir();
         this.load();
         this.init();
         this.set();
     }
 
+    private cleanupCorruptedFiles(): void {
+        const dataDir = path.join(__dirname, './src');
+        if(!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+            return;
+        }
+
+        const filesToClean = [
+            path.join(dataDir, 'users.db'),
+            path.join(dataDir, 'messages.db'),
+            path.join(dataDir, 'groups.db')
+        ];
+        filesToClean.forEach(path => {
+            if(fs.existsSync(path)) {
+                const content = fs.readFileSync(path, 'utf8');
+                if(!content.includes('CREATE TABLE')) {
+                    console.log(`${colorConverter.style(`REMOVING CORRUPTED FILE: ${path}...`, ['red', 'bold'])}`);
+                    fs.unlinkSync(path);
+                }
+            }
+        });
+    }
+
+    private ensureDataDir(): void {
+        const dataDir = path.join(__dirname, './src');
+        if(!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    }
+
     private load(): void {
-        this.usersDb = new sqlite3.Database(path.join(__dirname, './src/users.db'));
-        this.messagesDb = new sqlite3.Database(path.join(__dirname, './src/messages.db'));
-        this.groupsDb = new sqlite3.Database(path.join(__dirname, './src/groups.db'));
+        try {
+            const usersDbPath = path.join(__dirname, './src/users.db');
+            const messagesDbPath = path.join(__dirname, './src/messages.db');
+            const groupsDbPath = path.join(__dirname, './src/groups.db');
+
+            if(!fs.existsSync(usersDbPath)) fs.writeFileSync(usersDbPath, '');
+            if(!fs.existsSync(messagesDbPath)) fs.writeFileSync(messagesDbPath, '');
+            if(!fs.existsSync(groupsDbPath)) fs.writeFileSync(groupsDbPath, '');
+
+            this.usersDb = new sqlite3.Database(usersDbPath);
+            this.messagesDb = new sqlite3.Database(messagesDbPath);
+            this.groupsDb = new sqlite3.Database(groupsDbPath);
+        } catch(err) {
+            console.error('Failed to load databases', err);
+            throw err;
+        }
     }
 
     private init(): void {
         /* Users Table */
         this.usersDb.serialize(() => {
             this.usersDb.run(`
-                CREATE TABLE users (
+                CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
-                    username TEXT UNIQUE NOT NULL
+                    username TEXT UNIQUE NOT NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             `, (err) => {
@@ -43,7 +87,7 @@ class DbService {
         /* Groups Table */
         this.groupsDb.serialize(() => {
             this.groupsDb.run(`
-                CREATE TABLE groups (
+                CREATE TABLE IF NOT EXISTS groups (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     creator_id TEXT NOT NULL,
@@ -55,7 +99,7 @@ class DbService {
             });
 
             this.groupsDb.run(`
-                CREATE TABLE group_members (
+                CREATE TABLE IF NOT EXISTS group_members (
                     group_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -71,7 +115,7 @@ class DbService {
         /* Messages Table */
         this.messagesDb.serialize(() => {
             this.messagesDb.run(`
-                CREATE TABLE messages (
+                CREATE TABLE IF NOT EXISTS messages (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     chat_id TEXT NOT NULL,
                     sender_id TEXT NOT NULL,
