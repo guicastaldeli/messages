@@ -11,6 +11,7 @@ import { MessageServer } from './.server/server';
 import { resBaseUrl } from './.api/routes';
 import { TimeStream } from './.api/time-stream';
 import { dbService } from './.db/db-service';
+import { colorConverter } from './.utils/color-converter';
 
 const PORT = process.env.PORT || 3001;
 const baseReq = new NextRequest(`http://localhost:${PORT}`, {
@@ -28,5 +29,13 @@ const timeStream = new TimeStream();
 const server = MessageServer.getInstance(BASE_URL, timeStream);
 server.init(PORT);
 
+function alert() {
+    console.log(
+        `${colorConverter.style('Server starting on port ', ['magenta', 'italic'])}` +
+        `${colorConverter.style(`${BASE_URL}`, ['white', 'blink'])}` +
+        `${colorConverter.style('!!! ;)', ['magenta', 'italic'])}`
+    );
+}
+
+alert();
 dbService.alert();
-console.log(`Server starting on port ${BASE_URL}!!! ;)`);

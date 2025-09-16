@@ -5,6 +5,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Interface } from './interface';
 import { EventRegistry } from './event-registry';
 import { configSocketEvents } from '../.data/socket-events';
+import { colorConverter } from '../.utils/color-converter';
 
 export class MessageServer {
     private static instance: MessageServer;
@@ -44,7 +45,7 @@ export class MessageServer {
 
     public init(port: number | string): void {
         this.server.listen(port, () => {
-            console.log(`Server running`);
+            console.log(`${colorConverter.style('Server running', ['cyan', 'bold'])}`);
         });
     }
 
