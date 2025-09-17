@@ -144,7 +144,7 @@ class DbService {
 
     public alert(): void {
         console.log(
-            `${colorConverter.style('ALERT', ['red', 'italic'])}, ${colorConverter.style('Database initialized :)', ['blue', 'bold'])}`
+            `${colorConverter.style('ALERT', ['red', 'italic'])}, ${colorConverter.style('Database initialized :)', ['green', 'bold'])}`
         );
     }
 }

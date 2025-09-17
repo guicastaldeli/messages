@@ -38,7 +38,6 @@ export class MessageTracker {
 
         if(this.messageLogs.length > this.maxLogs) this.messageLogs = this.messageLogs.slice(-this.maxLogs);
         this.emitMessageEvent(messageLog);
-        //this.logToConsole(messageLog);
     }
 
     public getMessageLogs(): MessageLog[] {
@@ -52,24 +51,6 @@ export class MessageTracker {
     private generateId(): string {
         const id = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         return id;
-    }
-
-    private logToConsole(log: MessageLog): void {
-        const timestamp = log.timestamp.toISOString().split('T')[1].split('.')[0];
-        const direction = log.direction === 'sent' ? '📤 SENT' : '📥 RECEIVED';
-        const userInfo = log.username ? `(${log.username})` : ' no user';
-
-        console.groupCollapsed(`%c${direction} ${log.eventName}${userInfo} @ ${timestamp}`, 
-        `color: ${log.direction === 'sent' ? '#4CAF50' : '#2196F3'}; font-weight: bold;`);
-        
-        console.log('Event:', log.eventName);
-        console.log('Direction:', log.direction);
-        console.log('Timestamp:', log.timestamp.toISOString());
-
-        if(log.senderId) console.log('SENDER ID:', log.senderId);
-        if(log.username) console.log('Username:', log.username);
-        console.log('Data:', log.data);
-        console.groupEnd();
     }
 
     private emitMessageEvent(log: MessageLog): void {
@@ -92,4 +73,27 @@ export class MessageTracker {
             }
         }
     }
+
+    /*
+    ** 
+    *** test logs (**in case it needed)
+    **
+    private logToConsole(log: MessageLog): void {
+        const timestamp = log.timestamp.toISOString().split('T')[1].split('.')[0];
+        const direction = log.direction === 'sent' ? '📤 SENT' : '📥 RECEIVED';
+        const userInfo = log.username ? `(${log.username})` : ' no user';
+
+        console.groupCollapsed(`%c${direction} ${log.eventName}${userInfo} @ ${timestamp}`, 
+        `color: ${log.direction === 'sent' ? '#4CAF50' : '#2196F3'}; font-weight: bold;`);
+        
+        console.log('Event:', log.eventName);
+        console.log('Direction:', log.direction);
+        console.log('Timestamp:', log.timestamp.toISOString());
+
+        if(log.senderId) console.log('SENDER ID:', log.senderId);
+        if(log.username) console.log('Username:', log.username);
+        console.log('Data:', log.data);
+        console.groupEnd();
+    }
+    */
 }

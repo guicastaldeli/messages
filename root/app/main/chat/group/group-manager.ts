@@ -149,7 +149,7 @@ export class GroupManager {
                     showChat: false,
                     hideChat: false,
                     groupName: ''
-                })
+                });
             }
         );
         

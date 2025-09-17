@@ -2,12 +2,13 @@ import sqlite3 from 'sqlite3';
 
 export class MessagesConfig {
     private db: sqlite3.Database;
+    private lastId: number = 0;
         
     constructor(db: sqlite3.Database) {
         this.db = db;
     }
 
-    public async saveMessage(data: {
+    public saveMessage(data: {
         chatId: string;
         senderId: string;
         content: string;

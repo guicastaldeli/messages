@@ -40,14 +40,14 @@ export const configSocketEvents = (): void => {
         {
             /* Chat */
             eventName: 'chat',
-            handler: async (socket, data) => {
+            handler: (socket, data) => {
                 messageTracker.trackMessage('chat', data, 'received', socket.id, socket.content);
 
                 try {
-                    await dbService.messagesConfig.saveMessage({
+                    dbService.messagesConfig.saveMessage({
                         chatId: data.chatId || socket.id,
                         senderId: socket.id,
-                        content: data || socket.content || data.content
+                        content: data.content || socket.content
                     });
                 } catch(err) {
                     console.error('Failed to save message:', err);

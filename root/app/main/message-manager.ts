@@ -45,7 +45,7 @@ export class MessageManager {
             this.currentUserId = id;
         });
         await this.socketClient.connect();
-        this.updateSocket();
+        await this.updateSocket();
     }
 
     public handleJoin(): Promise<'dashboard'> {
@@ -89,7 +89,7 @@ export class MessageManager {
                 senderId: this.socketClient.getSocketId(),
                 username: this.uname,
                 content: messageInput,
-                chatId: chatId
+                chatId: chatId || this.socketId
             });
             messageInputEl.value = '';
         });
@@ -113,7 +113,7 @@ export class MessageManager {
         }
     }
 
-    private updateSocket(): void {
+    private async updateSocket(): Promise<void> {
         if(this.socketClient && this.socketClient.socket) {
             configSocketClientEvents(this.socketClient, this.socketClient.socket);
         }
@@ -130,12 +130,18 @@ export class MessageManager {
         //Chat
         this.socketClient.socketEmitter.registerEventHandler({
             eventName: 'chat',
-            handler: (message: any) => {
+            handler: async (message: any) => {
+                console.log('working');
+                console.log('1st message', message);
                 const type = message.content.senderId === this.socketId;
+                console.log('working2')
+                console.log('2nd message', message);
                 this.renderMessage(type ? 'self' : 'other', {
                     username: message.content.username,
                     content: message.content.content
                 });
+                console.log('working3')
+                console.log('3rd message', message);
             },
             autoRegister: true
         });
