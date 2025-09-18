@@ -16,7 +16,9 @@ export const configSocketEvents = (): void => {
                 connectionTracker.updateUsername(socket.id, user);
 
                 try {
-                    await dbService.usersConfig.addUser(socket.id, user)
+                    await dbService.usersConfig.addUser(socket.id, user);
+                    const connectionInfo = connectionTracker.getConnection(socket.id);
+                    if(connectionInfo) connectionTracker.logUsernameSet(connectionInfo, user);
                 } catch(err) {
                     console.error('Failed to add user:', err);
                 }
@@ -150,7 +152,7 @@ export const configSocketEvents = (): void => {
             /* Disconnect */
             eventName: 'disconnect',
             handler: (socket) => {
-                return { data: socket.username + ' left' }
+                connectionTracker.trackDisconnection(socket);
             },
             broadcast: true,
             broadcastSelf: false,

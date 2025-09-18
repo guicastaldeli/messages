@@ -43,12 +43,12 @@ export class ConnectionTracker {
         this.notifyConnectionCallbacks(connectionInfo);
     }
 
-    public trackDisconnection(socket: Socket, reason: string = 'unknown'): void {
+    public trackDisconnection(socket: Socket): void {
         const connectionInfo = this.connections.get(socket.id);
         if(connectionInfo) {
             connectionInfo.disconnectedAt = new Date();
             connectionInfo.isConnected = false;
-            this.logDisconnection(connectionInfo, reason);
+            this.logDisconnection(connectionInfo);
             this.notifyDisconnectionCallbacks(connectionInfo);
         }
     }
@@ -114,22 +114,40 @@ export class ConnectionTracker {
     */
     private logConnection(info: ConnectionInfo): void {
         const timestamp = new Date().toLocaleTimeString();
-        const socket = colorConverter.style(`${info.socketId}`, ['blue', 'bold']);
-        const ip = colorConverter.style(`${info.ipAddress}`, ['blue', 'bold']);
-        const prefix = colorConverter.style(`${timestamp} - CONNECTED: `, ['green', 'italic']);
-        const suffix = colorConverter.style(' from IP: ', ['green', 'italic']);
+        const socket = colorConverter.style(`${info.socketId}`, ['white', 'bold']);
+        const ip = colorConverter.style(`${info.ipAddress}`, ['white', 'bold']);
+        const prefix = colorConverter.style(`${timestamp} - CONNECTED: `, ['brightGreen', 'italic']);
+        const suffix = colorConverter.style(' from IP: ', ['brightGreen', 'italic']);
         console.log(prefix + socket + suffix + ip);
     }
 
-    private logDisconnection(info: ConnectionInfo, reason: string): void {
+    private logDisconnection(info: ConnectionInfo): void {
         const timestamp = new Date().toLocaleTimeString();
+        const ip = colorConverter.style(`${info.ipAddress}`, ['white', 'bold']);
+        const socket = colorConverter.style(`${info.socketId}`, ['white', 'bold']);
         const duration = 
         info.disconnectedAt ?
         Math.round((info.disconnectedAt.getTime() - info.connectedAt.getTime()) / 1000) :
         0;
+        const prefix = colorConverter.style(`${timestamp} - DISCONNECTED: from IP: `, ['brightRed', 'italic']);
+        const suffix = colorConverter.style(`after ${duration}s`, ['brightRed', 'italic']);
+        console.log(
+            prefix +
+            ip +
+            colorConverter.style(' (', ['brightRed', 'italic']) +
+            socket +
+            ` ${suffix}` +
+            colorConverter.style(')', ['brightRed', 'italic'])
+        );
+    }
 
-        const message = `${timestamp} - DISCONNECTED: (${info.socketId} after ${duration}s - Reason: ${reason})`;
-        console.log(colorConverter.style(message, ['red', 'bold']));
+    public logUsernameSet(info: ConnectionInfo, user: string): void {
+        const timestamp = new Date().toLocaleTimeString();
+        const socket = colorConverter.style(`${info.socketId}`, ['white', 'bold']);
+        const username = colorConverter.style(`${user}`, ['white', 'bold']);
+        const prefix = colorConverter.style(`${timestamp} - USER JOINED: `, ['brightBlue', 'italic']);
+        const suffix = colorConverter.style(' with Socket ID: ', ['brightBlue', 'italic']);
+        console.log(prefix + username + suffix + socket); 
     }
 
     /*
