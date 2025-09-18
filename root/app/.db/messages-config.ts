@@ -60,6 +60,26 @@ export class MessagesConfig {
         });
     }
 
+    public async getMessagesByChatId(chatId: string, limit: number = 50): Promise<any[]> {
+        return new Promise((res, rej) => {
+            this.db.all(
+                `
+                    SELECT m.*, u.username,
+                    FROM messages m
+                    LEFT JOIN users u ON m.sender_id = u.id
+                    WHERE m.chat_id = ?
+                    ORDER BY m.created_at ASC
+                    LIMIT ?
+                `,
+                [chatId, limit],
+                (err, rows) => {
+                    if(err) rej(err);
+                    else res(rows);
+                }
+            )
+        });
+    }
+
     public async getRecentChats(userId: string, limit: number = 5): Promise<any[]> {
         return new Promise((res, rej) => {
             this.db.all(
@@ -110,6 +130,26 @@ export class MessagesConfig {
                     else res(rows);
                 }
             );
+        });
+    }
+
+    public async getRecentMessages(chatId: string, limit: number = 20): Promise<any[]> {
+        return new Promise((res, rej) => {
+            this.db.all(
+                `
+                    SELECT m.*, u.username
+                    FROM messages m
+                    LEFT JOIN users u ON m.sender_id = u.id
+                    WHERE m.chat_id = ?
+                    ORDER BY m.created_at DESC
+                    LIMIT ?
+                `,
+                [chatId, limit],
+                (err, rows) => {
+                    if(err) rej(err);
+                    else res(rows.reverse());
+                }
+            )
         });
     }
 }

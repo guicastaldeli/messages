@@ -7,7 +7,7 @@ import { Controller } from "./controller";
 
 export class MessageManager {
     private contentGetter: ContentGetter;
-    private socketClient: SocketClient;
+    public socketClient: SocketClient;
     private messageTypes: MessageTypes;
     public controller!: Controller;
     public dashboard: any;

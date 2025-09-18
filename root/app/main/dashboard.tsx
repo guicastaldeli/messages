@@ -34,10 +34,20 @@ export class Dashboard extends Component<Props, State> {
         this.groupContainerRef = React.createRef();
     }
 
-    componentDidMount(): void {
+    async componentDidMount(): Promise<void> {
         if(!this.groupContainerRef.current || !this.props.groupManager) return;
         this.props.groupManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
+
+        /*
+        try {
+            const socketId = this.props.messageManager.socketClient.getSocketId() || '';
+            const chatList = await this.props.chatManager.getChatList(socketId);
+            this.setState({ chatList });
+        } catch(err) {
+            console.error('Error loading chat list', err);
+        }
+            */
     }
 
     componentDidUpdate(prevProps: Props): void {
@@ -57,16 +67,29 @@ export class Dashboard extends Component<Props, State> {
         }
     }
 
-    handleChatSelect = (chat: any): void => {
+    handleChatSelect = async (chat: any): Promise<void> => {
         chatState.setType(chat.type === 'direct' ? 'direct' : 'group');
-        const event = new CustomEvent('chat-activated', { detail: chat });
-        window.dispatchEvent(event);
-        this.updateState({
-            showForm: false,
-            showChat: true,
-            hideChat: false,
-            groupName: chat.name
-        });
+        
+        try {
+            const messages = await this.props.chatManager.loadChatHistory(chat.id);
+            const event = new CustomEvent('chat-activated', { detail: { chat, messages } });
+            window.dispatchEvent(event);
+
+            this.updateState({
+                showForm: false,
+                showChat: true,
+                hideChat: false,
+                groupName: chat.name
+            });
+            this.setState({
+                activeChat: {
+                    ...chat,
+                    messages
+                }
+            });
+        } catch(err) {
+            console.error('Error loading chat history:', err);
+        }
     }
 
     handleSendMessage = (chatId: string): void => {
