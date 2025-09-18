@@ -4,6 +4,7 @@ import path from 'path';
 import { Server as SocketIOServer } from 'socket.io';
 import { Interface } from './interface';
 import { EventRegistry } from './event-registry';
+import { ConnectionTracker } from './connection-tracker';
 import { configSocketEvents } from '../.data/socket-events';
 import { colorConverter } from '../.utils/color-converter';
 
@@ -13,6 +14,7 @@ export class MessageServer {
     private server: http.Server;
     private io: SocketIOServer;
     private port: number | string;
+    private connectionTracker: ConnectionTracker;
     private interface: Interface;
 
     constructor(url: string, timeStream: any) {
@@ -28,6 +30,7 @@ export class MessageServer {
 
         this.useApp();
         this.configRoutes();
+        this.connectionTracker = ConnectionTracker.getInstance();
         this.configSockets();
         this.interface = new Interface(
             this.server, 
@@ -64,8 +67,8 @@ export class MessageServer {
         configSocketEvents();
         
         this.io.on('connection', (socket: any) => {
-            console.log('connected', socket.id);
             socket.username = '';
+            this.connectionTracker.trackConnection(socket);
 
             EventRegistry.getAllEvents().forEach(({ 
                 eventName, 

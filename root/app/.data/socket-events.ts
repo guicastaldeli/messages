@@ -1,9 +1,11 @@
 import { EventRegistry, SocketEventHandler } from '../.server/event-registry';
 import { MessageTracker } from '../main/message-tracker';
 import { dbService } from '../.db/db-service';
+import { ConnectionTracker } from '../.server/connection-tracker';
 
 export const configSocketEvents = (): void => {
     const messageTracker = MessageTracker.getInstance();
+    const connectionTracker = ConnectionTracker.getInstance();
     
     const events: SocketEventHandler[] = [
         {
@@ -11,6 +13,7 @@ export const configSocketEvents = (): void => {
             eventName: 'new-user',
             handler: async (socket, user) => {
                 messageTracker.trackMessage('new-user', user, 'received', socket.id, user);
+                connectionTracker.updateUsername(socket.id, user);
 
                 try {
                     await dbService.usersConfig.addUser(socket.id, user)
