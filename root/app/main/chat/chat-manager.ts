@@ -144,7 +144,7 @@ export class ChatManager {
 
     public async loadRecentMessages(chatId: string): Promise<any[]> {
         try {
-            const res = await fetch(`../../.api//messages-routes?chatId=${chatId}`);
+            const res = await fetch(`../../.api/messages-routes?chatId=${chatId}`);
             return res.ok ? await res.json() : [];
         } catch(err) {
             console.error('Error loading recent messages:', err);
@@ -154,7 +154,7 @@ export class ChatManager {
 
     public async getChatList(userId: string): Promise<any[]> {
         try {
-            const res = await fetch(`../../.api//recent-chats?userId=${userId}`);
+            const res = await fetch(`../../.api/recent-chats?userId=${userId}`);
             return res.ok ? await res.json() : [];
         } catch(err) {
             console.error('Error loading chat list', err);

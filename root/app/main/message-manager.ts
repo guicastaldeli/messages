@@ -131,17 +131,11 @@ export class MessageManager {
         this.socketClient.socketEmitter.registerEventHandler({
             eventName: 'chat',
             handler: async (message: any) => {
-                console.log('working');
-                console.log('1st message', message);
                 const type = message.content.senderId === this.socketId;
-                console.log('working2')
-                console.log('2nd message', message);
                 this.renderMessage(type ? 'self' : 'other', {
                     username: message.content.username,
                     content: message.content.content
                 });
-                console.log('working3')
-                console.log('3rd message', message);
             },
             autoRegister: true
         });
