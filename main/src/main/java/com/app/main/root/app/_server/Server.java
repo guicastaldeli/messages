@@ -11,6 +11,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.CloseStatus;
+import com.app.main.root.app._utils.ColorConverter;
 import java.util.Map;
 
 @Component

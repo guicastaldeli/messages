@@ -1,6 +1,8 @@
 package com.app.main.root.app._server;
-import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import java.util.*;
 
 @FunctionalInterface
 interface SocketEventHandler {
@@ -63,18 +65,55 @@ public class EventRegistry {
         return new EventHandlerConfig(
             eventName,
             (socket, data, io) -> {
-                handler.handle(socket, data, io);
-                if(io != null) {
+                Object result = handler.handle(socket, data, io);
+                if(io != null && events.get(eventName).broadcast) {
                     String emitEventName = targetEvent != null ? targetEvent : eventName;
-
-                    //FIX LATER 
-                    // This part depends on your WebSocket library implementation
-                    // You'll need to adapt this to your specific WebSocket framework
+                    broadcastMessage(
+                        socket, 
+                        io, 
+                        emitEventName, 
+                        result, 
+                        broadcastSelf != null ? broadcastSelf : false
+                    );
                 }
             },
             true,
             broadcastSelf != null ? broadcastSelf : false,
             targetEvent
         );
+    }
+
+    private static void broadcastMessage(
+        Object socket,
+        Object io,
+        String eventName,
+        Object data,
+        boolean broadcastSelf
+    ) {
+        if(io instanceof SimpMessagingTemplate) {
+            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
+            String dest = "/topic/" + eventName;
+
+            if(broadcastSelf) {
+                messagingTemplate.convertAndSend(dest, data);
+            } else {
+                if(socket instanceof WebSocketSession) {
+                    WebSocketSession currentSession = (WebSocketSession) socket;
+                    messagingTemplate.convertAndSend(dest, data);
+                } else {
+                    messagingTemplate.convertAndSend(dest, data);
+                }
+            }
+        }
+    }
+
+    private static void handleEvent(
+        String eventName,
+        Object socket,
+        Object data,
+        Object io
+    ) {
+        EventHandlerConfig eventConfig = events.get(eventName);
+        if(eventConfig != null) eventConfig.handler.handle(socket, data, io);
     }
 }

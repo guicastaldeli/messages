@@ -1,0 +1,232 @@
+package com.app.main.root.app._data;
+import com.app.main.root.app._server.EventRegistry;
+import com.app.main.root.app._server.ConnectionTracker;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import com.app.main.root.app._data.SocketMethods;
+import java.util.*;
+
+@Component
+public class ConfigSocketEvents {
+    private final MessageTracker messageTracker;
+    private final ConnectionTracker connectionTracker;
+    private final DatabaseService databaseService;
+    private final SocketMethods socketMethods;
+
+    @Autowired
+    public ConfigSocketEvents(
+        MessageTracker messageTracker,
+        ConnectionTracker connectionTracker,
+        DatabaseService databaseService
+    ) {
+        this.messageTracker = messageTracker;
+        this.connectionTracker = connectionTracker;
+        this.databaseService = databaseService;
+    }
+
+    public void configSocketEvents() {
+        List<EventRegistry.EventHandlerConfig> events = Arrays.asList(
+            //New User Event
+            EventRegistry.createBroadcastEvent(
+                "new-user",
+                (socket, data, io) -> {
+                    String user = (String) data;
+                    String sessionId = socketMethods.getSessionId(socket);
+
+                    messageTracker.trackMessage(
+                        "new-user", 
+                        "received",
+                        sessionId,
+                        user
+                    );
+                    connectionTracker.updateUsername(sessionId, user);
+
+                    try {
+                        databaseService.getUsersConfig().addUser(sessionId, user);
+                        ConnectionTracker.ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
+                        if(connectionInfo != null) connectionTracker.logUsernameSet(connectionInfo, user);
+                    } catch(Exception err) {
+                        System.err.println("Failed to add user: " + err.getMessage());
+                    }
+
+                    setSocketUsername(socket, user);
+                    return user + " joined";
+                },
+                false,
+                "update"
+            ),
+            //Exit User Event
+            EventRegistry.createBroadcastEvent(
+                "exit-user",
+                (socket, data, io) -> {
+                    String user = (String) data;
+                    String sessionId = socketMethods.getSessionId(socket);
+    
+                    messageTracker.trackMessage(
+                        "exit-user",
+                        user,
+                        "received",
+                        sessionId,
+                        user
+                    );
+                    setSocketUsername(socket, user);
+                    return user + " left";
+                },
+                false,
+                "update"
+            ),
+            //Chat Event
+            EventRegistry.createBroadcastEvent(
+                "chat",
+                (socket, data, io) -> {
+                    Map<String, Object> messageData = (Map<String, Object>) data;
+                    String content = (String) messageData.get("content");
+                    String chatId = (String) messageData.get("chatId");
+                    String sessionId = socketMethods.getSessionId(socket);
+                    String chatSocket = chatId != null ? chatId : sessionId; 
+    
+                    messageTracker.trackMessage(
+                        "chat",
+                        data,
+                        "received",
+                        sessionId,
+                        content
+                    );
+    
+                    try {
+                        databaseService.getMessagesConfig().saveMessage(sessionId, chatSocket, content);
+                    } catch(Exception err) {
+                        System.err.println("Failed to save message: " + err.getMessage());
+                    }
+    
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("username", getSocketUsername(socket));
+                    res.put("content", data);
+                    res.put("senderId", sessionId);
+                    res.put("chatId", chatSocket);
+                    return res;
+                },
+                true,
+                "chat"
+            ),
+            //Create Group Event
+            new EventRegistry.EventHandlerConfig(
+                "create-group",
+                (socket, data, io) -> {
+                    try {
+                        Map<String, Object> groupData = (Map<String, Object>) data;
+                        String creator = (String) groupData.get("creator");
+                        String creatorId = (String) groupData.get("creatorId");
+                        String creationDate = new Date().toString();
+                        String format = UUID.randomUUID().toString(0, 7);
+                        String id = "group_" + System.currentTimeMillis() + "_" + format;
+                        String groupName = groupData.get("groupName");
+                        String sessionId = socketMethods.getSessionId(socket);
+                        String groupCreatedScssData = "/topic/group-created-scss";
+                        String groupUpdateData = "/topic/group-update";
+                        if(creator == null || creatorId == null) throw new IllegalArgumentException("Invalid group data!");
+
+                        Map<String, Object> newGroup = new HashMap<>();
+                        newGroup.put("id", id);
+                        newGroup.put("name", groupName);
+                        newGroup.put("creator", creator);
+                        newGroup.put("creatorId", creatorId);
+                        newGroup.put("members", Arrays.asList(creatorId));
+                        newGroup.put("createdAt", creationDate);
+
+                        try {
+                            databaseService.getGroupsConfig().createGroup(id, groupName, creatorId);
+                            databaseService.getGroupsConfig().addUserToGroup(id, creatorId);
+                        } catch(Exception err) {
+                            System.err.println("Failed to save group: " + err.getMessage());
+                        }
+
+                        if(io instanceof SimpMessagingTemplate) {
+                            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate);
+                            messagingTemplate.convertAndSendToUser(sessionId, groupCreatedScssData, newGroup);
+                        }
+
+                        Map<String, Object> groupUpdate = new HashMap<>();
+                        groupUpdate.put("type", "group-created");
+                        groupUpdate.put("groupName", groupData.get("groupName"));
+                        groupUpdate.put("creator", creator);
+
+                        if(io instanceof SimpMessagingTemplate) {
+                            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate);
+                            messagingTemplate.convertAndSend(groupUpdateData, groupUpdate);
+                        }
+
+                        return newGroup;
+                    } catch(Exception err) {
+                        System.err("Error creating group: " + err.getMessage());
+                        throw new RuntimeException("Group creation failed", err);
+                    }
+                },
+                false,
+                false,
+                null
+            ),
+            //Join Group Event
+            EventRegistry.createBroadcastEvent(
+                "join-group",
+                (socket, data, io) -> {
+                    Map<String, Object> joinData = (Map<String, Object>) data;
+                    String groupId = (String) joinData.get("groupId");
+                    String username = (String) joinData.get("username");
+                    String sessionId = socketMethods.getSessionId(socket);
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("groupId", groupId);
+                    res.put("groupId", username);
+                    res.put("groupId", sessionId);
+                    res.put("groupId", groupId);
+                    res.put("message", username + " joined");
+                    return res;
+                },
+                true,
+                "group-created-scss"
+            ),
+            //Exit Group Event
+            EventRegistry.createBroadcastEvent(
+                "exit-group",
+                (socket, data, io) -> {
+                    Map<String, Object> exitData = (Map<String, Object>) data;
+                    String groupId = (String) exitData.get("groupId");
+                    String username = (String) exitData.get("username");
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("groupId", groupId);
+                    res.put("username", username);
+                    res.put("message", username + " left");
+                    return res;
+                },
+                false,
+                "group-update"
+            ),
+            //New Message Event
+            EventRegistry.createBroadcastEvent(
+                "new-message",
+                (socket, data, io) -> {
+                    Map<String, Object> messageData = (Map<String, Object>) data;
+                    String socketUsername = socketMethods.getSocketUsername(socket);
+                    String sessionId = socketMethods.getSessionId(socket);
+                    String timestamp = new Date().toString();
+    
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("chatId", messageData.get("chatId"));
+                    res.put("content", messageData.get("content"));
+                    res.put("sender", socketUsername);
+                    res.put("senderId", sessionId);
+                    res.put("timestamp", timestamp);
+                    return res;
+                },
+                true,
+                "new-message"
+            )
+        );
+        EventRegistry.registerAllEvents(events);
+    }
+}
