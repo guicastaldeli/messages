@@ -1,13 +1,9 @@
-//package com.app.app._root;
-import java.net.Socket;
+package com.app.main.root.app._server;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
-//import org.springframework.boot.SpringApplication;
-//import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @FunctionalInterface
-public interface SocketEventHandler {
+interface SocketEventHandler {
     void handle(
         Object socket,
         Object data,
