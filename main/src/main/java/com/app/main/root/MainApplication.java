@@ -8,7 +8,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
-public class MainApplication {
+public class MainApplication implements CommandLineRunner {
 	@Autowired
 	private ConfigSocketEvents configSocketEvents;
 

@@ -4,16 +4,16 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.util.*;
 
-@FunctionalInterface
-interface SocketEventHandler {
-    void handle(
-        Object socket,
-        Object data,
-        Object io
-    );
-}
-
 public class EventRegistry {
+    @FunctionalInterface
+    public interface SocketEventHandler {
+        Object handle(
+            Object socket,
+            Object data,
+            Object io
+        );
+    }
+
     private static final Map<String, EventHandlerConfig> events = new ConcurrentHashMap<>();
 
     public static class EventHandlerConfig {
@@ -64,7 +64,7 @@ public class EventRegistry {
     ) {
         return new EventHandlerConfig(
             eventName,
-            (socket, data, io) -> {
+            (SocketEventHandler) (socket, data, io) -> {
                 Object result = handler.handle(socket, data, io);
                 if(io != null && events.get(eventName).broadcast) {
                     String emitEventName = targetEvent != null ? targetEvent : eventName;
@@ -76,6 +76,7 @@ public class EventRegistry {
                         broadcastSelf != null ? broadcastSelf : false
                     );
                 }
+                return result;
             },
             true,
             broadcastSelf != null ? broadcastSelf : false,
@@ -99,7 +100,7 @@ public class EventRegistry {
             } else {
                 if(socket instanceof WebSocketSession) {
                     WebSocketSession currentSession = (WebSocketSession) socket;
-                    messagingTemplate.convertAndSend(dest, data);
+                    broadcastToOthers(currentSession, messagingTemplate, dest, data);
                 } else {
                     messagingTemplate.convertAndSend(dest, data);
                 }
@@ -107,7 +108,16 @@ public class EventRegistry {
         }
     }
 
-    private static void handleEvent(
+    private static void broadcastToOthers(
+        WebSocketSession curSession,
+        SimpMessagingTemplate messagingTemplate,
+        String dest,
+        Object data
+    ) {
+        messagingTemplate.convertAndSend(dest, data);
+    }
+
+    public static void handleEvent(
         String eventName,
         Object socket,
         Object data,

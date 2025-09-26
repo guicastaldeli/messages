@@ -1,11 +1,15 @@
 package com.app.main.root.app._data;
+import com.app.main.root.app.main.MessageTracker;
+import com.app.main.root.app.main.MessageLog.MessageDirection;
 import com.app.main.root.app._server.SocketClient;
 import com.app.main.root.app._server.SocketEmitter;
 import com.app.main.root.app._server.SocketEmitter.EventHandler;
 import com.app.main.root.app._server.SocketEmitter.EmitHandler;
 import org.springframework.web.socket.WebSocketSession;
-import java.util.Arrays;
 import org.springframework.stereotype.Component;
+import java.util.List;
+import java.util.Map;
+import java.util.Arrays;
 
 @Component
 public class ConfigSocketClientEvents {
@@ -24,111 +28,121 @@ public class ConfigSocketClientEvents {
         *** Event Handler
         ** 
         */
-        EventHandler[] eventHandlers = {
+        List<EventHandler> eventHandlers = Arrays.asList(
             /*
             * Update 
             */
-            new EventHandler() {
-                @Override
-                public String getEventName() {
-                    return "update";
-                }
-                @Override
-                public void handle(Object data) {
-                    messageTracker.trackMessage("update", data, "received");
+            new EventHandler(
+                "update",
+                data -> {
+                    String username = (String) data;
+                    String sessionId = session.getId();
+
+                    messageTracker.trackMessage(
+                        "update", 
+                        data, 
+                        MessageDirection.RECEIVED,
+                        sessionId,
+                        username
+                    );
                     socketClient.emitEvent("update", data);
-                }
-                @Override
-                public boolean isAutoRegister() {
-                    return true;
-                }
-            },
+                },
+                true
+            ),
 
             /*
             * Chat 
             */
-            new EventHandler() {
-                @Override
-                public String getEventName() {
-                    return "chat";
-                }
-                @Override
-                public void handle(Object data) {
-                    messageTracker.trackMessage("update", data, "received");
+            new EventHandler(
+                "chat",
+                data -> {
+                    String username = (String) data;
+                    String sessionId = session.getId();
+
+                    messageTracker.trackMessage(
+                        "chat", 
+                        data, 
+                        MessageDirection.RECEIVED,
+                        sessionId,
+                        username
+                    );
                     socketClient.emitEvent("chat", data);
-                }
-                @Override
-                public boolean isAutoRegister() {
-                    return true;
-                }
-            }
-        };
+                },
+                true
+            )
+        );
 
         /*
         **
         *** Emit Handler
         ** 
         */
-        EmitHandler[] emitHandlers = {
+        List<EmitHandler> emitHandlers = Arrays.asList(
             /*
             * New User 
             */
-            new EmitHandler() {
-                @Override
-                public String getEventName() {
-                    return "new-user";
-                }
-                @Override
-                public void emit(Object data) {
+            new EmitHandler(
+                "new-user",
+                data -> {
                     String username = (String) data;
                     String sessionId = session.getId();
 
-                    messageTracker.trackMessage("new-user", username, "sent", sessionId, username);
+                    messageTracker.trackMessage(
+                        "new-user",
+                        username,
+                        MessageDirection.SENT,
+                        sessionId,
+                        username
+                    );
                     socketEmitter.emit("new-user", username);
                 }
-            },
+            ),
 
             /*
             * Exit User 
             */
-            new EmitHandler() {
-                @Override
-                public String getEventName() {
-                    return "exit-user";
-                }
-                @Override
-                public void emit(Object data) {
+            new EmitHandler(
+                "exit-user",
+                data -> {
                     String username = (String) data;
                     String sessionId = session.getId();
 
-                    messageTracker.trackMessage("exit-user", username, "sent", sessionId, username);
+                    messageTracker.trackMessage(
+                        "exit-user",
+                        username,
+                        MessageDirection.SENT,
+                        sessionId,
+                        username
+                    );
                     socketEmitter.emit("exit-user", username);
                 }
-            },
+            ),
 
             /*
             * Chat 
             */
-            new EmitHandler() {
-                @Override
-                public String getEventName() {
-                    return "chat";
-                }
-                @Override
-                public void emit(Object data) {
+            new EmitHandler(
+                "chat",
+                data -> {
                     Map<String, Object> messageData = (Map<String, Object>) data;
                     String content = (String) messageData.get("content");
                     String username = (String) messageData.get("username");
                     String sessionId = session.getId();
 
-                    messageTracker.trackMessage("chat", content, "sent", sessionId, username);
+                    messageTracker.trackMessage(
+                        "chat",
+                        content,
+                        MessageDirection.SENT,
+                        sessionId,
+                        username
+                    );
                     socketEmitter.emit("chat", data);
                 }
-            }
-        };
+            )
+        );
 
-        socketEmitter.registerAllEventsHandlers(Arrays.asList(eventHandlers));
-        socketEmitter.registerAllEmitHandlers(Arrays.asList(emitHandlers));
+        socketEmitter.registerAllEventsHandlers(eventHandlers);
+        socketEmitter.registerAllEmitHandlers(emitHandlers);
         socketEmitter.registerAllEvents(socketClient::emitEvent);
     }
 }

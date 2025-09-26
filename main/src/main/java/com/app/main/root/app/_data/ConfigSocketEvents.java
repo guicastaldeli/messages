@@ -1,30 +1,30 @@
 package com.app.main.root.app._data;
+import com.app.main.root.app.main.MessageTracker;
+import com.app.main.root.app.main.MessageLog.MessageDirection;
 import com.app.main.root.app._server.EventRegistry;
 import com.app.main.root.app._server.ConnectionTracker;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import com.app.main.root.app._data.SocketMethods;
+import com.app.main.root.app._db.DbService;
 import java.util.*;
 
 @Component
 public class ConfigSocketEvents {
     private final MessageTracker messageTracker;
     private final ConnectionTracker connectionTracker;
-    private final DatabaseService databaseService;
+    private final DbService dbService;
     private final SocketMethods socketMethods;
 
-    @Autowired
     public ConfigSocketEvents(
         MessageTracker messageTracker,
         ConnectionTracker connectionTracker,
-        DatabaseService databaseService
+        DbService dbService,
+        SocketMethods socketMethods
     ) {
         this.messageTracker = messageTracker;
         this.connectionTracker = connectionTracker;
-        this.databaseService = databaseService;
+        this.dbService = dbService;
+        this.socketMethods = socketMethods;
     }
 
     public void configSocketEvents() {
@@ -38,21 +38,22 @@ public class ConfigSocketEvents {
 
                     messageTracker.trackMessage(
                         "new-user", 
-                        "received",
+                        user,
+                        MessageDirection.RECEIVED,
                         sessionId,
                         user
                     );
                     connectionTracker.updateUsername(sessionId, user);
 
                     try {
-                        databaseService.getUsersConfig().addUser(sessionId, user);
+                        dbService.getUsersConfig().addUser(sessionId, user);
                         ConnectionTracker.ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
                         if(connectionInfo != null) connectionTracker.logUsernameSet(connectionInfo, user);
                     } catch(Exception err) {
                         System.err.println("Failed to add user: " + err.getMessage());
                     }
 
-                    setSocketUsername(socket, user);
+                    socketMethods.setSocketUsername(socket, user);
                     return user + " joined";
                 },
                 false,
@@ -68,11 +69,11 @@ public class ConfigSocketEvents {
                     messageTracker.trackMessage(
                         "exit-user",
                         user,
-                        "received",
+                        MessageDirection.RECEIVED,
                         sessionId,
                         user
                     );
-                    setSocketUsername(socket, user);
+                    socketMethods.setSocketUsername(socket, user);
                     return user + " left";
                 },
                 false,
@@ -85,25 +86,26 @@ public class ConfigSocketEvents {
                     Map<String, Object> messageData = (Map<String, Object>) data;
                     String content = (String) messageData.get("content");
                     String chatId = (String) messageData.get("chatId");
+                    String username = socketMethods.getSocketUsername(socket);
                     String sessionId = socketMethods.getSessionId(socket);
                     String chatSocket = chatId != null ? chatId : sessionId; 
     
                     messageTracker.trackMessage(
                         "chat",
                         data,
-                        "received",
+                        MessageDirection.RECEIVED,
                         sessionId,
                         content
                     );
     
                     try {
-                        databaseService.getMessagesConfig().saveMessage(sessionId, chatSocket, content);
+                        dbService.getMessagesConfig().saveMessage(sessionId, chatSocket, content, "text");
                     } catch(Exception err) {
                         System.err.println("Failed to save message: " + err.getMessage());
                     }
     
                     Map<String, Object> res = new HashMap<>();
-                    res.put("username", getSocketUsername(socket));
+                    res.put("username", username);
                     res.put("content", data);
                     res.put("senderId", sessionId);
                     res.put("chatId", chatSocket);
@@ -121,9 +123,9 @@ public class ConfigSocketEvents {
                         String creator = (String) groupData.get("creator");
                         String creatorId = (String) groupData.get("creatorId");
                         String creationDate = new Date().toString();
-                        String format = UUID.randomUUID().toString(0, 7);
+                        String format = UUID.randomUUID().toString().substring(0, 7);
                         String id = "group_" + System.currentTimeMillis() + "_" + format;
-                        String groupName = groupData.get("groupName");
+                        String groupName = (String) groupData.get("groupName");
                         String sessionId = socketMethods.getSessionId(socket);
                         String groupCreatedScssData = "/topic/group-created-scss";
                         String groupUpdateData = "/topic/group-update";
@@ -138,14 +140,14 @@ public class ConfigSocketEvents {
                         newGroup.put("createdAt", creationDate);
 
                         try {
-                            databaseService.getGroupsConfig().createGroup(id, groupName, creatorId);
-                            databaseService.getGroupsConfig().addUserToGroup(id, creatorId);
+                            dbService.getGroupsConfig().createGroup(id, groupName, creatorId);
+                            dbService.getGroupsConfig().addUserToGroup(id, creatorId);
                         } catch(Exception err) {
                             System.err.println("Failed to save group: " + err.getMessage());
                         }
 
                         if(io instanceof SimpMessagingTemplate) {
-                            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate);
+                            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
                             messagingTemplate.convertAndSendToUser(sessionId, groupCreatedScssData, newGroup);
                         }
 
@@ -155,13 +157,13 @@ public class ConfigSocketEvents {
                         groupUpdate.put("creator", creator);
 
                         if(io instanceof SimpMessagingTemplate) {
-                            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate);
+                            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
                             messagingTemplate.convertAndSend(groupUpdateData, groupUpdate);
                         }
 
                         return newGroup;
                     } catch(Exception err) {
-                        System.err("Error creating group: " + err.getMessage());
+                        System.err.println("Error creating group: " + err.getMessage());
                         throw new RuntimeException("Group creation failed", err);
                     }
                 },

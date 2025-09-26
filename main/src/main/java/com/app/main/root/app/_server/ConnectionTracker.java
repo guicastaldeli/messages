@@ -1,15 +1,20 @@
 package com.app.main.root.app._server;
+import com.app.main.root.app._utils.ColorConverter;
+
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
+import java.util.*;
 
 public class ConnectionTracker {
     private static ConnectionTracker instance;
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
     private final Set<Consumer<ConnectionInfo>> disconnectionCallbacks = new CopyOnWriteArraySet<>();
+    private ColorConverter colorConverter;
     
     public static ConnectionTracker getInstance() {
         if(instance == null) {
@@ -46,6 +51,24 @@ public class ConnectionTracker {
             this.connectedAt = LocalDateTime.now();
             this.isConnected = true;
             this.groups = new ArrayList<>();
+        }
+
+        public long getConnectionDurationSeconds() {
+            if(disconnectedAt != null) return Duration.between(connectedAt, disconnectedAt).getSeconds();
+            return Duration.between(connectedAt, LocalDateTime.now()).getSeconds();
+        }
+
+        public String getFormattedDuration() {
+            long seconds = getConnectionDurationSeconds();
+            if(seconds < 60) {
+                return seconds + "s";
+            } else if(seconds < 3600) {
+                return (seconds / 60) + "m " + (seconds % 60) + "s";
+            } else {
+                long hours = seconds / 3600;
+                long minutes = (seconds % 3600) / 60;
+                return hours + "h " + minutes + "m";
+            }
         }
     }
 
@@ -126,11 +149,37 @@ public class ConnectionTracker {
     *** 
     */
     private void logConnection(ConnectionInfo info) {
-
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        String socket = colorConverter.style(info.socketId, "white", "bold");
+        String ip = colorConverter.style(info.ipAddress, "white", "bold");
+        String prefix = colorConverter.style(timestamp + " - CONNECTED: ", "brightGreen", "italic");
+        String suffix = colorConverter.style(" from IP: ", "brightGreen", "italic");
+        System.out.println(prefix + socket + suffix + ip);
     }
 
     private void logDisconnection(ConnectionInfo info) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        String ip = colorConverter.style(info.ipAddress, "white", "bold");
+        String socket = colorConverter.style(info.socketId, "white", "bold");
+        String durationFormatted = info.getFormattedDuration();
+        
+        String prefix = colorConverter.style(timestamp + " - DISCONNECTED: from IP: ", "brightRed", "italic");
+        String suffix = colorConverter.style("after " + durationFormatted, "brightRed", "italic");
+        System.out.println(
+            prefix + ip + 
+            colorConverter.style(" (", "brightRed", "italic") + 
+            socket + " " + suffix + 
+            colorConverter.style(")", "brightRed", "italic")
+        );
+    }
 
+    public void logUsernameSet(ConnectionInfo info, String user) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        String socket = colorConverter.style(info.socketId, "white", "bold");
+        String username = colorConverter.style(user, "white", "bold");
+        String prefix = colorConverter.style(timestamp + " - USER JOINED: ", "brightBlue", "italic");
+        String suffix = colorConverter.style(" with Socket ID: ", "brightBlue", "italic");
+        System.out.println(prefix + username + suffix + socket);
     }
 
     /* 

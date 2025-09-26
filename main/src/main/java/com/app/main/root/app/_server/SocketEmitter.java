@@ -2,10 +2,11 @@ package com.app.main.root.app._server;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
-import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
 
 public class SocketEmitter {
     private static SocketEmitter instance;
@@ -120,7 +121,7 @@ public class SocketEmitter {
         }
     }
 
-    public void registerAllEvents(Consumer<String> emitEvent) {
+    public void registerAllEvents(BiConsumer<String, Object> emitEvent) {
         for(EventHandler handler : eventHandlers.values()) {
             if(handler.isAutoRegister()) {
                 System.out.println("Registered event: " + handler.getEventName());
