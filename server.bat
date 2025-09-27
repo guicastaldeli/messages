@@ -1,3 +1,4 @@
 @echo off
-cd /d "./root/app"
-cmd /k "npm run server"
+cd /d "./main"
+.\mvnw spring-boot:run
+pause
