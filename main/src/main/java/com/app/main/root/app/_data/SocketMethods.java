@@ -1,6 +1,8 @@
 package com.app.main.root.app._data;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+@Component
 public class SocketMethods {
     /*
     **

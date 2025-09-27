@@ -9,7 +9,6 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.CloseStatus;
-import com.app.main.root.app._utils.ColorConverter;
 import com.app.main.root.app._data.ConfigSocketEvents;
 import org.springframework.web.socket.WebSocketMessage;
 
@@ -19,20 +18,16 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     private static Server instance;
     private final SimpMessagingTemplate messagingTemplate;
     private final ConnectionTracker connectionTracker;
-    private final ColorConverter colorConverter;
-    private final WebSocketSession webSocketSession;
     private final ConfigSocketEvents configSocketEvents;
+    private WebSocketSession webSocketSession;
 
-    public Server(
-        SimpMessagingTemplate messagingTemplate,
-        ColorConverter colorConverter,
-        ConfigSocketEvents configSocketEvents
-    ) {
+    private String url;
+    private String port;
+
+    public Server(SimpMessagingTemplate messagingTemplate, ConfigSocketEvents configSocketEvents) {
         this.messagingTemplate = messagingTemplate;
         this.connectionTracker = new ConnectionTracker();
-        this.colorConverter = colorConverter;
-        this.configSocketEvents = configSocketEvents;
-        //this.interface = interface;
+        this.configSocketEvents = new ConfigSocketEvents(null, connectionTracker, null, null);
         instance = this;
     }
 
@@ -40,9 +35,32 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         return instance;
     }
 
+    public void init(String port) {
+        this.port = port;
+        this.url = "http://localhost:" + port;
+        System.out.println("Server initialized on port: " + port);
+        System.out.println("endpoint avaliable at: " + this.url + "/ws");
+        initComponents();
+    }
+
     @Override
     public void run(String... args) throws Exception {
         configSockets();
+
+        if(this.port == null) {
+            String envPort = System.getenv("PORT");
+            if(envPort != null && !envPort.trim().isEmpty()) {
+                init(envPort);
+            } else {
+                init("8080");
+            }
+        }
+    }
+
+    private void initComponents() {
+        System.out.println("Server components initialized!");
+        System.out.println("Connection tracker ready: " + (connectionTracker != null));
+        System.out.println("Message template ready: " + (messagingTemplate != null));
     }
 
     @Override

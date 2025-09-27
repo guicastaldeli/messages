@@ -1,14 +1,15 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app._utils.ColorConverter;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
+@Component
 public class ConnectionTracker {
     private static ConnectionTracker instance;
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
