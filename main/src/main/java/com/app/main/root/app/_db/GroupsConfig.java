@@ -3,9 +3,9 @@ import com.app.main.root.app._db.types._User;
 import com.app.main.root.app._db.types._Group;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.*;
 
 @Component
 public class GroupsConfig {
@@ -82,7 +82,7 @@ public class GroupsConfig {
             stmt.setString(1, groupId);
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {
-                    members.add(mapUserFromResults(rs));
+                    members.add(mapUserFromResultSet(rs));
                 }
             }
         }

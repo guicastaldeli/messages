@@ -202,7 +202,7 @@ public class MessagesConfig {
 
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {
-                    messages.add(mapMessagesFromResultSet(rs));
+                    messages.add(mapMessageFromResultSet(rs));
                 }
             }
         }

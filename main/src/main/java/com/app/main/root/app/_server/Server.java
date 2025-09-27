@@ -1,5 +1,4 @@
 package com.app.main.root.app._server;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -9,10 +8,10 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.CloseStatus;
 import com.app.main.root.app._utils.ColorConverter;
-import java.util.Map;
+import com.app.main.root.app._data.ConfigSocketEvents;
+import org.springframework.web.socket.WebSocketMessage;
 
 @Component
 @EnableWebSocket
@@ -20,30 +19,20 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     private static Server instance;
     private final SimpMessagingTemplate messagingTemplate;
     private final ConnectionTracker connectionTracker;
-    private final Interface interface;
     private final ColorConverter colorConverter;
-    private final EventRegistry eventRegistry;
     private final WebSocketSession webSocketSession;
-    private final TextMessage textMessage;
-    private final WebSocketMessage webSocketMessage;
-    
-    private String url;
-    private String port;
+    private final ConfigSocketEvents configSocketEvents;
 
-    @Autowired
     public Server(
         SimpMessagingTemplate messagingTemplate,
-        ConnectionTracker connectionTracker,
-        Interface interface,
         ColorConverter colorConverter,
-        EventRegistry eventRegistry
+        ConfigSocketEvents configSocketEvents
     ) {
         this.messagingTemplate = messagingTemplate;
-        this.connectionTracker = connectionTracker;
-        this.interface = interface;
-        this.eventRegistry = eventRegistry;
-        this.url = "http://localhost:8080";
-        this.port = "8080";
+        this.connectionTracker = new ConnectionTracker();
+        this.colorConverter = colorConverter;
+        this.configSocketEvents = configSocketEvents;
+        //this.interface = interface;
         instance = this;
     }
 
@@ -52,12 +41,17 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     }
 
     @Override
+    public void run(String... args) throws Exception {
+        configSockets();
+    }
+
+    @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new SocketHandler(), "/ws").setAllowedOrigins("*");
     }
 
     private void configSockets() {
-        configSocketEvents();
+        configSocketEvents.configSocketEvents();
     }
 
     /* 
@@ -68,7 +62,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     private class SocketHandler implements WebSocketHandler {
         @Override
         public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-            String ipAddress = getClientIp();
+            String ipAddress = getClientIp(session);
             String userAgent = session.getHandshakeHeaders().getFirst("User-Agent");
             connectionTracker.trackConnection(session.getId(), ipAddress, userAgent);
             webSocketSession.getAttributes().put("username", "Anonymous");
@@ -76,8 +70,8 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
 
         @Override
         public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-            if(message instanceof TextMessage) {
-                String payload = message.getPayload();
+            if(message instanceof TextMessage textMessage) {
+                String payload = textMessage.getPayload();
                 handleWebSocketMessage(session, payload);
             }
         }
@@ -94,7 +88,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
 
         private void handleWebSocketMessage(WebSocketSession session, String payload) {
             try {
-                WebSocketMessage message = parseWebSocketMessage(payload);
+                WebSocketMessageData message = parseWebSocketMessage(payload);
                 String eventName = message.getEvent();
                 Object data = message.getData();
                 EventRegistry.EventHandlerConfig eventConfig = EventRegistry.getEvent(eventName);
@@ -109,18 +103,23 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
             }
         }
 
+        @Override
+        public boolean supportsPartialMessages() {
+            return false;
+        }
+
         /*
         **
         *** Parsers
         ** 
         */
-        private WebSocketMessage parseWebSocketMessage(String payload) {
+        private WebSocketMessageData parseWebSocketMessage(String payload) {
             try {
                 String event = extractValue(payload, "event");
                 String data = extractValue(payload, "data");
-                return new WebSocketMessage(event, data);
+                return new WebSocketMessageData(event, data);
             } catch(Exception err) {
-                return new WebSocketMessage("message", payload);
+                return new WebSocketMessageData("message", payload);
             }
         }
 
@@ -142,22 +141,6 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
 
         private String getClientIp(WebSocketSession session) {
             return session.getRemoteAddress().getAddress().getHostAddress();
-        }
-    }
-
-    private static class WebSocketMessage {
-        private final String event;
-        private final String data;
-
-        public WebSocketMessage(String event, String data) {
-            this.event = event;
-            this.data = data;
-        }
-        public String getEvent() {
-            return event;
-        }
-        public Object getData() {
-            return data;
         }
     }
 

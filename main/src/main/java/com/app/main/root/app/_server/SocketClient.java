@@ -94,7 +94,7 @@ public class SocketClient {
 
                 this.session = webSocketClient.doHandshake(handler, null, serverUri).get();
                 this.socketEmitter = new SocketEmitter(session);
-                this.socketEmitter.registerAllEvents(event -> this.emitEvent(event, null));
+                this.socketEmitter.registerAllEvents((event, data) -> this.emitEvent(event, data));
                 System.out.println("Connected to WebSocket server: " + connectionUrl);
             } catch(InterruptedException | ExecutionException err) {
                 System.err.println("Connection error: " + err.getMessage());
