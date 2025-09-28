@@ -1,7 +1,6 @@
 package com.app.main.root.app._db;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.stereotype.Service;
-import jakarta.annotation.PostConstruct;
 import javax.sql.DataSource;
 
 @Service
@@ -18,7 +17,6 @@ public class DbService {
         this.colorConverter = colorConverter;
     }
 
-    @PostConstruct
     public void alert() {
         System.out.println(
             colorConverter.style("ALERT", "red", "italic") + ", " +

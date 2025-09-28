@@ -2,6 +2,7 @@ package com.app.main.root;
 import com.app.main.root.app._db.DbService;
 import com.app.main.root.app._server.Server;
 import com.app.main.root.app._utils.ColorConverter;
+import com.app.main.root.app._config.Loading;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -17,7 +18,7 @@ import org.springframework.context.annotation.Bean;
 ***********************
 */
 
-@SpringBootApplication
+@SpringBootApplication()
 public class MainApplication {
 	private static final String PORT = 
 	System.getenv("PORT") != null ?
@@ -25,15 +26,18 @@ public class MainApplication {
 
 	public static void main(String[] args) {
 		ConfigurableApplicationContext context = SpringApplication.run(MainApplication.class, args);
-		init(context);
+		Loading.finished();
 		alert();
+		init(context);
 	}
 
 	private static void init(ConfigurableApplicationContext context) {
 		DbService dbService = context.getBean(DbService.class);
+		dbService.alert();
 		String baseUrl = buildBaseUrl();
 		Server server = Server.getInstance(baseUrl, dbService);
 		server.init(PORT);
+		server.alert();
 	}
 
 	private static String buildBaseUrl() {
@@ -41,6 +45,7 @@ public class MainApplication {
 	}
 
 	private static void alert() {
+        ColorConverter colorConverter = new ColorConverter();
 		String spaceBg = "-".repeat(81);
         String spaceText = buildString(30, "-", "~");
         String spaceTextInv = 
@@ -48,19 +53,20 @@ public class MainApplication {
         .replace("~", "-")
         .replace("temp", "~");
         
-        ColorConverter colorConverter = new ColorConverter();
+        //Content
+			String content = 
+			colorConverter.style(spaceBg + "\n", "white", "bold") +
+			colorConverter.style(spaceText, "white", "bold") +
+			colorConverter.style("   Messages Server   ", "blue", "bold") +
+			colorConverter.style(spaceTextInv + "\n", "white", "bold") +
+			colorConverter.style(spaceBg + "\n", "white", "bold") +
+
+			colorConverter.style("Server starting on port ", "magenta", "italic") +
+			colorConverter.style(buildBaseUrl(), "white", "blink") +
+			colorConverter.style("!!! ;)", "magenta", "italic");
+		//
         
-        String message = 
-            colorConverter.style(spaceBg + "\n", "white", "bold") +
-            colorConverter.style(spaceText, "white", "bold") +
-            colorConverter.style("   Messages Server   ", "blue", "bold") +
-            colorConverter.style(spaceTextInv + "\n", "white", "bold") +
-            colorConverter.style(spaceBg + "\n", "white", "bold") +
-            colorConverter.style("Server starting on port ", "magenta", "italic") +
-            colorConverter.style(buildBaseUrl(), "white", "blink") +
-            colorConverter.style("!!! ;)", "magenta", "italic");
-        
-        System.out.println(message);
+        System.out.println(content);
 	}
 
 	private static String buildString(

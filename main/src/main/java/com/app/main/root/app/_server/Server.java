@@ -38,9 +38,6 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     public void init(String port) {
         this.port = port;
         this.url = "http://localhost:" + port;
-        System.out.println("Server initialized on port: " + port);
-        System.out.println("endpoint avaliable at: " + this.url + "/ws");
-        initComponents();
     }
 
     @Override
@@ -57,7 +54,9 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         }
     }
 
-    private void initComponents() {
+    public void alert() {
+        System.out.println("Server initialized on port: " + port);
+        System.out.println("endpoint avaliable at: " + this.url + "/ws");
         System.out.println("Server components initialized!");
         System.out.println("Connection tracker ready: " + (connectionTracker != null));
         System.out.println("Message template ready: " + (messagingTemplate != null));
