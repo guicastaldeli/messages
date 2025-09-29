@@ -2,7 +2,7 @@ import './__styles/styles.scss';
 import React, { Component } from 'react';
 import { MessageManager } from './message-manager';
 import { GroupManager } from './chat/group/group-manager';
-import { SessionContext } from './session-provider';
+import { SessionContext, SessionType } from './session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { chatState } from './chat-state-service';
 
@@ -16,6 +16,7 @@ interface Props {
 }
 
 interface State {
+    currentSession: SessionType;
     groups: any[];
     chatList: any[];
     activeChat: any;
@@ -27,6 +28,7 @@ export class Dashboard extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
+            currentSession: 'dashboard',
             groups: [],
             chatList: props.chatList || [],
             activeChat: props.activeChat || null
@@ -35,6 +37,7 @@ export class Dashboard extends Component<Props, State> {
     }
 
     async componentDidMount(): Promise<void> {
+        this.setSession('dashboard');
         if(!this.groupContainerRef.current || !this.props.groupManager) return;
         this.props.groupManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
@@ -65,6 +68,10 @@ export class Dashboard extends Component<Props, State> {
         if (prevProps.activeChat !== this.props.activeChat) {
             this.setState({ activeChat: this.props.activeChat || null });
         }
+    }
+
+    private setSession = (session: SessionType): void => {
+        this.setState({ currentSession: session });
     }
 
     handleChatSelect = async (chat: any): Promise<void> => {
@@ -130,6 +137,7 @@ export class Dashboard extends Component<Props, State> {
             <SessionContext.Consumer>
                 {(sessionContext) => (
                     <>
+                        {console.log(sessionContext)}
                         {sessionContext && sessionContext.currentSession === 'dashboard' && (
                             <div className="screen main-dashboard">
                                 <header>

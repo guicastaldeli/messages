@@ -24,7 +24,6 @@ export class Main extends Component<any, State> {
     private socketClientConnect: SocketClientConnect;
     private chatManager: ChatManager;
     private dashboardInstance: Dashboard | null = null;
-    static contextType = SessionContext;
 
     constructor(props: any) {
         super(props);
@@ -74,33 +73,19 @@ export class Main extends Component<any, State> {
         }
     }
 
-    /*
-    **
-    *** Session Methods
-    **
-    */
-    private setSession = (session: SessionType): void => {
-        this.setState({ currentSession: session });
-    }
-
-    private setUserId = (userId: string | null): void => {
-        this.setState({ userId });
-    }
-
-    private setUsername = (username: string | null): void => {
-        this.setState({ username });
-    }
-
     //Join
-    private handleJoin = async (): Promise<void> => {
+    private handleJoin = async (sessionContext: any): Promise<void> => {
         try {
             const usernameInput = document.getElementById('username') as HTMLInputElement;
             const username = usernameInput.value.trim();
-            this.setUsername(username);
-            this.setUserId(`user_${Date.now()}`);
+
+            if(sessionContext) {
+                sessionContext.setUsername(username);
+                sessionContext.setUserId(`user_${Date.now()}`);
+            }
 
             await this.messageManager.handleJoin();
-            this.setSession('dashboard');
+            if(sessionContext) sessionContext.setSession('dashboard');
             this.setState({ groupManager: this.messageManager.controller.groupManager });
         } catch(err) {
             console.error(err);
@@ -113,48 +98,53 @@ export class Main extends Component<any, State> {
     }
 
     render() {
-        const { 
-            currentSession, 
-            chatList, 
-            activeChat
-        } = this.state;
+        const { chatList, activeChat } = this.state;
 
         return (
             <div className='app'>
-                <SessionProvider
-                    initialSession={currentSession}
-                >
-                    {currentSession === 'main' && (
-                        <div className='screen join-screen'>
-                            <div className='form'>
-                                <h2>Join chatroom</h2>
-                                <div className="form-input">
-                                    <label>Username</label>
-                                    <input type="text" id="username" />
-                                </div>
-                                <div className='form-input'>
-                                    <button 
-                                        id='join-user' 
-                                        onClick={this.handleJoin}
-                                    >
-                                        Join
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {currentSession === 'dashboard' && (
-                        <Dashboard 
-                            ref={this.setDashboardRef}
-                            onCreateGroup={this.handleCreateGroup}
-                            messageManager={this.messageManager}
-                            chatManager={this.chatManager}
-                            groupManager={this.state.groupManager!}
-                            chatList={chatList}
-                            activeChat={activeChat}
-                        />
-                    )}
+                <SessionProvider initialSession='main'>
+                    <SessionContext.Consumer>
+                        {(sessionContext) => {
+                            if(!sessionContext) {
+                                return <div>Loading...</div>
+                            }
+                            
+                            return (
+                                <>
+                                    {sessionContext && sessionContext.currentSession === 'main' && (
+                                        <div className='screen join-screen'>
+                                            <div className='form'>
+                                                <h2>Join chatroom</h2>
+                                                <div className="form-input">
+                                                    <label>Username</label>
+                                                    <input type="text" id="username" />
+                                                </div>
+                                                <div className='form-input'>
+                                                    <button 
+                                                        id='join-user' 
+                                                        onClick={() => this.handleJoin(sessionContext)}
+                                                    >
+                                                        Join
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {sessionContext && sessionContext.currentSession === 'dashboard' && (
+                                        <Dashboard 
+                                            ref={this.setDashboardRef}
+                                            onCreateGroup={this.handleCreateGroup}
+                                            messageManager={this.messageManager}
+                                            chatManager={this.chatManager}
+                                            groupManager={this.state.groupManager!}
+                                            chatList={chatList}
+                                            activeChat={activeChat}
+                                        />
+                                    )}
+                                </>
+                            );
+                        }}
+                    </SessionContext.Consumer>
                 </SessionProvider>
             </div>
         );

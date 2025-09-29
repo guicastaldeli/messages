@@ -16,7 +16,7 @@ public class DbService {
 
     public DbService(DataSource dataSource, ColorConverter colorConverter) {
         this.restTemplate = new RestTemplate();
-        this.apiUrl = System.getenv().getOrDefault("API_URL", "http://localhost:3001");
+        this.apiUrl = System.getenv().getOrDefault("API_URL", "http://localhost:3002");
 
         this.usersConfig = new UsersConfig(dataSource);
         this.messagesConfig = new MessagesConfig(dataSource);
@@ -28,7 +28,8 @@ public class DbService {
         System.out.println(
             colorConverter.style("ALERT", "red", "italic") + ", " +
             colorConverter.style("Database initialized :)", "orange", "bold") +
-            colorConverter.style("\nServices connected to API at: " + apiUrl, "green", "italic")
+            colorConverter.style("\nServices connected to API at: ", "green", "italic") +
+            colorConverter.style(apiUrl, "brightGreen", "italic")
         );
     }
 

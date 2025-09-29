@@ -1,3 +1,4 @@
+
 export class SocketClientConnect {
     private static instance: SocketClientConnect;
     private socket: WebSocket | null = null;
@@ -17,7 +18,7 @@ export class SocketClientConnect {
 
         this.connectionPromise = new Promise((res, rej) => {
             try {
-                const protocol = window.location.protocol === 'http:' ? '' : 'ws:';
+                const protocol = window.location.protocol === 'http:' ? 'ws:' : 'wss:';
                 const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
                 const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
                 const wsUrl = `${protocol}//${host}:${port}/ws-direct`;
@@ -84,7 +85,7 @@ export class SocketClientConnect {
     ** On
     */
     public on(event: string, callback: Function): void {
-        if(this.eventListeners.has(event)) this.eventListeners.set(event, []);
+        if(!this.eventListeners.has(event)) this.eventListeners.set(event, []);
         this.eventListeners.get(event)!.push(callback);
     }
 
@@ -104,6 +105,7 @@ export class SocketClientConnect {
     */
     public emit(event: string, data?: any): void {
         const listeners = this.eventListeners.get(event);
+        console.log('Emitted', { event, data })
         if(listeners) {
             listeners.forEach(callback => {
                 try {

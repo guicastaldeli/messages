@@ -162,7 +162,7 @@ export class GroupManager {
         chatState.setType('group');
 
         //Emit
-        this.socketClient.send('create-group', {
+        this.socketClient.emit('create-group', {
             creator: this.uname,
             creatorId: this.socketClient.getSocketId(),
             groupName: this.currentGroupName

@@ -56,7 +56,7 @@ export class MessageManager {
             this.joinHandled = true;
 
             try {
-                this.socketClient.send('new-user', usernameInput.value);
+                this.socketClient.emit('new-user', usernameInput.value);
                 this.uname = usernameInput.value;
                 this.initController();
                 this.controller.init();

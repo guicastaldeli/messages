@@ -10,6 +10,7 @@
     "node": "nodemon --exec tsx ./app/init.ts"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.2.0",
     "@types/sqlite3": "^3.1.11",
     "@types/ws": "^8.18.1",
     "dotenv": "^17.2.1",
@@ -20,6 +21,7 @@
     "react-dom": "19.1.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "sockjs-client": "^1.6.1",
     "sql.js": "^1.1.0",
     "sqlite3": "^5.1.7",
     "ws": "^8.18.3"
@@ -31,6 +33,7 @@
     "@types/react-dom": "^19",
     "@types/socket.io": "^3.0.1",
     "@types/socket.io-client": "^1.4.36",
+    "@types/sockjs-client": "^1.5.4",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
