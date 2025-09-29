@@ -1,5 +1,8 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app._data.ConfigSocketEvents;
+import com.app.main.root.app.main.MessageTracker;
+import com.app.main.root.app._db.DbService;
+import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -7,16 +10,16 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
-import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.WebSocketMessage;
 
 @Component
 @EnableWebSocket
 public class Server implements WebSocketConfigurer, CommandLineRunner {
     private static Server instance;
+    private SocketHandler socketHandler;
+    private final MessageTracker messageTracker;
+    private final DbService dbService;
+    private final SocketMethods socketMethods;
     private final SimpMessagingTemplate messagingTemplate;
     private final ConnectionTracker connectionTracker;
     private final ConfigSocketEvents configSocketEvents;
@@ -27,14 +30,26 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     private String port;
 
     public Server(
+        DbService dbService,
+        MessageTracker messageTracker,
+        SocketMethods socketMethods,
         SimpMessagingTemplate messagingTemplate,
         ConnectionTracker connectionTracker, 
         ConfigSocketEvents configSocketEvents,
         ColorConverter colorConverter
     ) {
+        this.messageTracker = MessageTracker.getInstance();
+        this.dbService = dbService;
+        this.socketMethods = new SocketMethods();
         this.messagingTemplate = messagingTemplate;
-        this.connectionTracker = new ConnectionTracker();
-        this.configSocketEvents = new ConfigSocketEvents(null, connectionTracker, null, null);
+        this.connectionTracker = ConnectionTracker.getInstance();
+        this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
+        this.configSocketEvents = new ConfigSocketEvents(
+            messageTracker, 
+            connectionTracker, 
+            dbService, 
+            socketMethods
+        );
         this.colorConverter = colorConverter;
         instance = this;
     }
@@ -78,101 +93,11 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new SocketHandler(), "/ws").setAllowedOrigins("*");
+        registry.addHandler(this.socketHandler, "/ws").setAllowedOrigins("*");
     }
 
     private void configSockets() {
         configSocketEvents.configSocketEvents();
-    }
-
-    /* 
-    **
-    *** Socket Handler
-    ** 
-    */
-    private class SocketHandler implements WebSocketHandler {
-        @Override
-        public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-            String ipAddress = getClientIp(session);
-            String userAgent = session.getHandshakeHeaders().getFirst("User-Agent");
-            connectionTracker.trackConnection(session.getId(), ipAddress, userAgent);
-            webSocketSession.getAttributes().put("username", "Anonymous");
-        }
-
-        @Override
-        public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-            if(message instanceof TextMessage textMessage) {
-                String payload = textMessage.getPayload();
-                handleWebSocketMessage(session, payload);
-            }
-        }
-
-        @Override
-        public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-            System.err.println("Transport error for session " + session.getId() + exception.getMessage());
-        }
-
-        @Override
-        public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
-            connectionTracker.trackDisconnection(session.getId());
-        }
-
-        private void handleWebSocketMessage(WebSocketSession session, String payload) {
-            try {
-                WebSocketMessageData message = parseWebSocketMessage(payload);
-                String eventName = message.getEvent();
-                Object data = message.getData();
-                EventRegistry.EventHandlerConfig eventConfig = EventRegistry.getEvent(eventName);
-
-                if(eventConfig != null) {
-                    eventConfig.handler.handle(session, data, messagingTemplate);
-                } else {
-                    System.out.println("No handler found for event: " + eventName);
-                }
-            } catch(Exception err) {
-                System.err.println("Error handling WebSocket message: " + err.getMessage());
-            }
-        }
-
-        @Override
-        public boolean supportsPartialMessages() {
-            return false;
-        }
-
-        /*
-        **
-        *** Parsers
-        ** 
-        */
-        private WebSocketMessageData parseWebSocketMessage(String payload) {
-            try {
-                String event = extractValue(payload, "event");
-                String data = extractValue(payload, "data");
-                return new WebSocketMessageData(event, data);
-            } catch(Exception err) {
-                return new WebSocketMessageData("message", payload);
-            }
-        }
-
-        private String extractValue(String json, String key) {
-            int keyIndex = json.indexOf("\"" + key + "\":");
-            if (keyIndex == -1) return "";
-            
-            int valueStart = json.indexOf(":", keyIndex) + 1;
-            int valueEnd = json.indexOf(",", valueStart);
-            if (valueEnd == -1) valueEnd = json.indexOf("}", valueStart);
-            if (valueEnd == -1) valueEnd = json.length();
-            
-            String value = json.substring(valueStart, valueEnd).trim();
-            if (value.startsWith("\"") && value.endsWith("\"")) {
-                value = value.substring(1, value.length() - 1);
-            }
-            return value;
-        }
-
-        private String getClientIp(WebSocketSession session) {
-            return session.getRemoteAddress().getAddress().getHostAddress();
-        }
     }
 
     public ConnectionTracker getConnectionTracker() {
