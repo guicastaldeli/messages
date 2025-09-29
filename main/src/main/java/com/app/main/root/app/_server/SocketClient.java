@@ -51,7 +51,7 @@ public class SocketClient {
             String protocol = "ws";
             String port = System.getenv("PORT");
             if(port == null || port.isEmpty()) {
-                port = "8080";
+                port = "3001";
             }
             if(isBrowserEnvironment()) {
                 host = getHostFromBrowser();
@@ -63,7 +63,7 @@ public class SocketClient {
             return this.url;
         } catch(Exception err) {
             System.err.println("Error getting URL: " + err.getMessage());
-            return "ws://localhost:8080/ws";
+            return "ws://localhost:3001/ws";
         }
     }
 

@@ -2,7 +2,7 @@ package com.app.main.root;
 import com.app.main.root.app._db.DbService;
 import com.app.main.root.app._server.Server;
 import com.app.main.root.app._utils.ColorConverter;
-import com.app.main.root.app._config.Loading;
+import com.app.main.root.app.__config.Loading;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -32,11 +32,11 @@ public class MainApplication {
 	}
 
 	private static void init(ConfigurableApplicationContext context) {
+		Server server = context.getBean(Server.class);
+		server.init(PORT);
+		
 		DbService dbService = context.getBean(DbService.class);
 		dbService.alert();
-		String baseUrl = buildBaseUrl();
-		Server server = Server.getInstance(baseUrl, dbService);
-		server.init(PORT);
 		server.alert();
 	}
 
@@ -52,7 +52,6 @@ public class MainApplication {
 		spaceText.replace("-", "temp")
         .replace("~", "-")
         .replace("temp", "~");
-        
         //Content
 			String content = 
 			colorConverter.style(spaceBg + "\n", "white", "bold") +

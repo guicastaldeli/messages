@@ -1,4 +1,4 @@
-package com.app.main.root.app._config;
+package com.app.main.root.app.__config;
 
 public class Loading {
     public static final String INIT_MSG = "Initializing...";

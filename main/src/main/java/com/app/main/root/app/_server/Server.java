@@ -1,4 +1,6 @@
 package com.app.main.root.app._server;
+import com.app.main.root.app._data.ConfigSocketEvents;
+import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -9,7 +11,6 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.CloseStatus;
-import com.app.main.root.app._data.ConfigSocketEvents;
 import org.springframework.web.socket.WebSocketMessage;
 
 @Component
@@ -19,15 +20,22 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     private final SimpMessagingTemplate messagingTemplate;
     private final ConnectionTracker connectionTracker;
     private final ConfigSocketEvents configSocketEvents;
+    private final ColorConverter colorConverter;
     private WebSocketSession webSocketSession;
 
     private String url;
     private String port;
 
-    public Server(SimpMessagingTemplate messagingTemplate, ConfigSocketEvents configSocketEvents) {
+    public Server(
+        SimpMessagingTemplate messagingTemplate,
+        ConnectionTracker connectionTracker, 
+        ConfigSocketEvents configSocketEvents,
+        ColorConverter colorConverter
+    ) {
         this.messagingTemplate = messagingTemplate;
         this.connectionTracker = new ConnectionTracker();
         this.configSocketEvents = new ConfigSocketEvents(null, connectionTracker, null, null);
+        this.colorConverter = colorConverter;
         instance = this;
     }
 
@@ -49,17 +57,23 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
             if(envPort != null && !envPort.trim().isEmpty()) {
                 init(envPort);
             } else {
-                init("8080");
+                init("3001");
             }
         }
+
+        configSocketEvents.configSocketEvents();
     }
 
     public void alert() {
-        System.out.println("Server initialized on port: " + port);
+        String content =
+        colorConverter.style("Server running...", "bgBlue", "italic");
+        /*
         System.out.println("endpoint avaliable at: " + this.url + "/ws");
         System.out.println("Server components initialized!");
         System.out.println("Connection tracker ready: " + (connectionTracker != null));
         System.out.println("Message template ready: " + (messagingTemplate != null));
+        */
+        System.out.println(content);
     }
 
     @Override

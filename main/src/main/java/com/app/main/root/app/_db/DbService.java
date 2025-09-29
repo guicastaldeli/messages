@@ -2,15 +2,22 @@ package com.app.main.root.app._db;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.stereotype.Service;
 import javax.sql.DataSource;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 public class DbService {
-    private final UsersConfig usersConfig;
-    private final MessagesConfig messagesConfig;
-    private final GroupsConfig groupsConfig;
-    private final ColorConverter colorConverter;
+    private final RestTemplate restTemplate;
+    private final String apiUrl;
+
+    public final UsersConfig usersConfig;
+    public final MessagesConfig messagesConfig;
+    public final GroupsConfig groupsConfig;
+    public final ColorConverter colorConverter;
 
     public DbService(DataSource dataSource, ColorConverter colorConverter) {
+        this.restTemplate = new RestTemplate();
+        this.apiUrl = System.getenv().getOrDefault("API_URL", "http://localhost:3001");
+
         this.usersConfig = new UsersConfig(dataSource);
         this.messagesConfig = new MessagesConfig(dataSource);
         this.groupsConfig = new GroupsConfig(dataSource);
@@ -20,7 +27,8 @@ public class DbService {
     public void alert() {
         System.out.println(
             colorConverter.style("ALERT", "red", "italic") + ", " +
-            colorConverter.style("Database initialized :)", "orange", "bold")
+            colorConverter.style("Database initialized :)", "orange", "bold") +
+            colorConverter.style("Services connected to API at: " + apiUrl, "green", "italic")
         );
     }
 
