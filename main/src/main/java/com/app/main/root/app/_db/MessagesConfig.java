@@ -1,6 +1,6 @@
 package com.app.main.root.app._db;
-import com.app.main.root.app._db.types._Message;
-import com.app.main.root.app._db.types._RecentChat;
+import com.app.main.root.app._types._Message;
+import com.app.main.root.app._types._RecentChat;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;

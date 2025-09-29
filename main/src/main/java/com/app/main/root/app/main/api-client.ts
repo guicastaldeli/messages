@@ -2,7 +2,7 @@ class ApiClient {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = process.env.JAVA_API_URL || 'https://localhost:3001';
+        this.baseUrl = process.env.JAVA_API_URL || 'http://localhost:3001';
     }
 
     async getMessagesByChatId(chatId: string): Promise<any[]> {
@@ -11,7 +11,7 @@ class ApiClient {
         return res.json();
     }
 
-    async getRecentChats(userId?: string): Promise<any[]> {
+    async getRecentChats(userId?: string | null): Promise<any[]> {
         const url = userId
         ? `${this.baseUrl}/api/recent-chats?userId=${userId}`
         : `${this.baseUrl}/api/recent-chats`;

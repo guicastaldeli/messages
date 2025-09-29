@@ -1,8 +1,8 @@
-import './_styles/styles.scss';
+import './__styles/styles.scss';
 import React, { Component } from 'react';
 import { MessageManager } from './message-manager';
 import { GroupManager } from './chat/group/group-manager';
-import { SessionContext } from '../.api/session-context';
+import { SessionContext } from './session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { chatState } from './chat-state-service';
 
@@ -128,9 +128,9 @@ export class Dashboard extends Component<Props, State> {
 
         return (
             <SessionContext.Consumer>
-                {({ currentSession }) => (
+                {(sessionContext) => (
                     <>
-                        {currentSession === 'dashboard' && (
+                        {sessionContext && sessionContext.currentSession === 'dashboard' && (
                             <div className="screen main-dashboard">
                                 <header>
                                     <div id="actions-bar">

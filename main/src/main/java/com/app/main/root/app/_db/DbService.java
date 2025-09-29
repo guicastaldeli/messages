@@ -28,7 +28,7 @@ public class DbService {
         System.out.println(
             colorConverter.style("ALERT", "red", "italic") + ", " +
             colorConverter.style("Database initialized :)", "orange", "bold") +
-            colorConverter.style("Services connected to API at: " + apiUrl, "green", "italic")
+            colorConverter.style("\nServices connected to API at: " + apiUrl, "green", "italic")
         );
     }
 

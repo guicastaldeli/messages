@@ -1,10 +1,10 @@
-import { SocketClient } from "../.server/socket-client";
+import { SocketClientConnect } from "./socket-client-connect";
 import { MessageManager } from "./message-manager";
 import { DirectManager } from "./chat/direct/direct-manager";
 import { GroupManager } from "./chat/group/group-manager";
 
 export class Controller {
-    private socketClient: SocketClient;
+    private socketClient: SocketClientConnect;
     private messageManager: MessageManager;
     private dashboard!: any;
     private appEl: any;
@@ -14,7 +14,7 @@ export class Controller {
     public groupManager!: GroupManager;
 
     constructor(
-        socketClient: SocketClient,
+        socketClient: SocketClientConnect,
         messageManager: MessageManager,
         dashboard: any,
         appEl: any,

@@ -1,5 +1,5 @@
 package com.app.main.root.app._db;
-import com.app.main.root.app._db.types._User;
+import com.app.main.root.app._types._User;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;

@@ -7,13 +7,13 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3001", "https://localhost:3000"],
+    allow_origins=["http://localhost:3001", "http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"]
 )
 DB_API_URL = os.getenv(
     'DB_API_URL',
-    'https://localhost:3001'
+    'http://localhost:3001'
 )
 
 class DbService:

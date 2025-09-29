@@ -1,46 +1,59 @@
-import './_styles/styles.scss';
+import './__styles/styles.scss';
 import React from 'react';
 import { Component } from 'react';
+import { apiClient } from './api-client';
 import { MessageManager } from './message-manager';
-import { SocketClient } from '../.server/socket-client';
+import { SocketClientConnect } from './socket-client-connect';
 import { Dashboard } from './dashboard';
-import { SessionContext, SessionType } from '../.api/session-context';
+import { SessionProvider, SessionType, SessionContext } from './session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { Item } from './chat/chat-manager';
 import { ActiveChat } from './chat/chat-manager';
 
 interface State {
     groupManager: MessageManager['controller']['groupManager'] | null;
-    currentSession: SessionType;
     chatList: Item[];
     activeChat: ActiveChat | null;
+    currentSession: SessionType;
+    userId: string | null;
+    username: string | null;
 }
 
 export class Main extends Component<any, State> {
     private messageManager!: MessageManager;
-    private socketClient: SocketClient;
+    private socketClientConnect: SocketClientConnect;
     private chatManager: ChatManager;
     private dashboardInstance: Dashboard | null = null;
-
     static contextType = SessionContext;
-    declare context: React.ContextType<typeof SessionContext>;
 
     constructor(props: any) {
         super(props);
-        this.socketClient = SocketClient.getInstance();
-        this.messageManager = new MessageManager(this.socketClient);
+        this.socketClientConnect = SocketClientConnect.getInstance();
+        this.messageManager = new MessageManager(this.socketClientConnect);
         this.state = { 
             groupManager: null,
-            currentSession: 'main',
             chatList: [],
-            activeChat: null
+            activeChat: null,
+            currentSession: 'main',
+            userId: null,
+            username: null
         }
         this.chatManager = new ChatManager(this.setState.bind(this));
+    }
+
+    private loadData = async(): Promise<void> => {
+        try {
+            const recentChats = await apiClient.getRecentChats(this.state.userId);
+            this.setState({ chatList: recentChats });
+        } catch(err) {
+            console.error('Failed to load chat data:', err);
+        }
     }
 
     componentDidMount(): void {
         this.connect();
         this.chatManager.mount();
+        this.loadData();
     }
 
     componentWillUnmount(): void {
@@ -48,10 +61,9 @@ export class Main extends Component<any, State> {
     }
 
     private connect(): void {
-        if(!this.socketClient || this.socketClient['isConnected']) return;
-        this.socketClient.connect();
+        if(!this.socketClientConnect) return;
+        this.socketClientConnect.connect();
         this.messageManager.init();
-       // this.setState({ groupManager: this.messageManager.controller.groupManager });
     }
 
     private setDashboardRef = (instance: Dashboard | null): void => {
@@ -62,19 +74,34 @@ export class Main extends Component<any, State> {
         }
     }
 
-    //Session
+    /*
+    **
+    *** Session Methods
+    **
+    */
     private setSession = (session: SessionType): void => {
         this.setState({ currentSession: session });
+    }
+
+    private setUserId = (userId: string | null): void => {
+        this.setState({ userId });
+    }
+
+    private setUsername = (username: string | null): void => {
+        this.setState({ username });
     }
 
     //Join
     private handleJoin = async (): Promise<void> => {
         try {
+            const usernameInput = document.getElementById('username') as HTMLInputElement;
+            const username = usernameInput.value.trim();
+            this.setUsername(username);
+            this.setUserId(`user_${Date.now()}`);
+
             await this.messageManager.handleJoin();
-            this.setState({ 
-                groupManager: this.messageManager.controller.groupManager,
-                currentSession: 'dashboard'
-            });
+            this.setSession('dashboard');
+            this.setState({ groupManager: this.messageManager.controller.groupManager });
         } catch(err) {
             console.error(err);
         }
@@ -94,10 +121,9 @@ export class Main extends Component<any, State> {
 
         return (
             <div className='app'>
-                <SessionContext.Provider value={{
-                    currentSession,
-                    setSession: this.setSession
-                }}>
+                <SessionProvider
+                    initialSession={currentSession}
+                >
                     {currentSession === 'main' && (
                         <div className='screen join-screen'>
                             <div className='form'>
@@ -129,7 +155,7 @@ export class Main extends Component<any, State> {
                             activeChat={activeChat}
                         />
                     )}
-                </SessionContext.Provider>
+                </SessionProvider>
             </div>
         );
     }

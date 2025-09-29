@@ -5,6 +5,7 @@ export class SocketClientConnect {
     private reconnectAttemps = 0;
     private maxReconnectAttemps = 5;
     private connectionPromise: Promise<void> | null = null;
+    private socketId: string | null = null;
 
     public static getInstance(): SocketClientConnect {
         if(!SocketClientConnect.instance) SocketClientConnect.instance = new SocketClientConnect;
@@ -16,10 +17,10 @@ export class SocketClientConnect {
 
         this.connectionPromise = new Promise((res, rej) => {
             try {
-                const protocol = window.location.protocol === 'https:' ? '' : 'ws:';
+                const protocol = window.location.protocol === 'http:' ? '' : 'ws:';
                 const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
-                const port = process.env.NEXT_PUBLIC_WS_HOST || '3001';
-                const wsUrl = `${protocol}//${host}:${port}/ws`;
+                const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
+                const wsUrl = `${protocol}//${host}:${port}/ws-direct`;
 
                 console.log('Connecting to WebSocket', wsUrl);
                 this.socket = new WebSocket(wsUrl);
@@ -32,8 +33,13 @@ export class SocketClientConnect {
                 this.socket.onmessage = (event) => {
                     try {
                         const message = JSON.parse(event.data);
-                        console.log('Received message:', message);
-                        this.emit(message.event, message.data);
+
+                        if(message.event === 'connect') {
+                            console.log('Received message:', message);
+                            this.socketId = message.data;
+                            res();
+                            this.emit(message.event, message.data);
+                        }
                     } catch(err) {
                         console.error('Error parsing WebSocket message:', err);
                     }
@@ -133,6 +139,14 @@ export class SocketClientConnect {
         this.connectionPromise = null;
         this.eventListeners.clear();
     }
+
+    /*
+    ** Socket Id
+    */
+    public getSocketId(): string | null {
+        return this.socketId;
+    }
+    
 
     /*
     ** Getters

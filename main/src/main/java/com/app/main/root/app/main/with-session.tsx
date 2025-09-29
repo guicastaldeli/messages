@@ -1,5 +1,5 @@
 import React from "react";
-import { SessionContext, ContextType } from "../.api/session-context";
+import { SessionContext, ContextType } from "./session-provider";
 
 export function withSession<P extends object>(
     WrappedComponent: React.ComponentType<P & ContextType>
@@ -8,8 +8,12 @@ export function withSession<P extends object>(
         render() {
             return (
                 <SessionContext.Consumer>
-                    {(sessionContext: ContextType) => (
-                        <WrappedComponent {...this.props} {...sessionContext} />
+                    {(sessionContext: ContextType | undefined) => (
+                        sessionContext ? (
+                            <WrappedComponent {...this.props} {...sessionContext} />
+                        ) : (
+                            <div>Loading session...</div>
+                        )
                     )}
                 </SessionContext.Consumer>
             )

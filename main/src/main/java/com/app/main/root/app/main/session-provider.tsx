@@ -1,5 +1,17 @@
-import React, { Component } from "react";
-import { SessionContext, SessionType, ContextType } from '../.api/session-context';
+import React, { createContext, useContext, useState, ReactNode, Component } from 'react';
+
+export type SessionType = 
+'main' |
+'dashboard';
+
+export interface ContextType {
+    currentSession: SessionType;
+    setSession: (session: SessionType) => void;
+    userId: string | null;
+    setUserId: (userId: string | null) => void;
+    username: string | null;
+    setUsername: (username: string | null) => void;
+}
 
 interface Props {
     children: React.ReactNode;
@@ -8,13 +20,19 @@ interface Props {
 
 interface State {
     currentSession: SessionType;
+    userId: string | null;
+    username: string | null;
 }
+
+export const SessionContext = createContext<ContextType | undefined>(undefined);
 
 export class SessionProvider extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
-            currentSession: props.initialSession || 'main'
+            currentSession: props.initialSession || 'main',
+            userId: null,
+            username: null
         }
     }
 
@@ -22,10 +40,22 @@ export class SessionProvider extends Component<Props, State> {
         this.setState({ currentSession: session });
     }
 
+    setUserId = (userId: string | null): void => {
+        this.setState({ userId });
+    }
+
+    setUsername = (username: string | null): void => {
+        this.setState({ username });
+    }
+
     getContextValue(): ContextType {
         return {
             currentSession: this.state.currentSession,
-            setSession: this.setSession
+            setSession: this.setSession,
+            userId: this.state.userId,
+            setUserId: this.setUserId,
+            username: this.state.username,
+            setUsername: this.setUsername
         }
     }
 
@@ -36,4 +66,10 @@ export class SessionProvider extends Component<Props, State> {
             </SessionContext.Provider>
         )
     }
+}
+
+export const useSession = (): ContextType => {
+    const context = useContext(SessionContext);
+    if(!context) throw new Error('useSession err');
+    return context;
 }

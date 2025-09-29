@@ -1,13 +1,12 @@
 import { React, ReactDOMServer } from "next/dist/server/route-modules/app-page/vendored/ssr/entrypoints";
-import { SocketClient } from "../.server/socket-client";
+import { SocketClientConnect } from "./socket-client-connect";
 import { ContentGetter } from "../content-getter";
 import { MessageTypes } from "./message-types";
-import { configSocketClientEvents } from '../.data/socket-client-events';
 import { Controller } from "./controller";
 
 export class MessageManager {
     private contentGetter: ContentGetter;
-    public socketClient: SocketClient;
+    public socketClient: SocketClientConnect;
     private messageTypes: MessageTypes;
     public controller!: Controller;
     public dashboard: any;
@@ -20,7 +19,7 @@ export class MessageManager {
     private joinHandled: boolean = false;
     private chatHandled: boolean = false;
 
-    constructor(socketClient: SocketClient) {
+    constructor(socketClient: SocketClientConnect) {
         this.contentGetter = new ContentGetter();
         this.socketClient = socketClient;
         this.messageTypes = new MessageTypes(this.contentGetter);
@@ -57,7 +56,7 @@ export class MessageManager {
             this.joinHandled = true;
 
             try {
-                this.socketClient.socketEmitter.emit('new-user', usernameInput.value);
+                this.socketClient.send('new-user', usernameInput.value);
                 this.uname = usernameInput.value;
                 this.initController();
                 this.controller.init();
@@ -85,7 +84,7 @@ export class MessageManager {
             let messageInput = messageInputEl!.value;
             if(!messageInputEl || !messageInput.length) return;
  
-            this.socketClient.socketEmitter.emit('chat', {
+            this.socketClient.send('chat', {
                 senderId: this.socketClient.getSocketId(),
                 username: this.uname,
                 content: messageInput,
@@ -113,58 +112,40 @@ export class MessageManager {
         }
     }
 
-    private async updateSocket(): Promise<void> {
-        if(this.socketClient && this.socketClient.socket) {
-            configSocketClientEvents(this.socketClient, this.socketClient.socket);
-        }
-        
+    private async updateSocket(): Promise<void> {        
         //Update
-        this.socketClient.socketEmitter.registerEventHandler({
-            eventName: 'update',
-            handler: (update: any) => {
-                this.renderMessage('update', update);
-            },
-            autoRegister: true
-        });
+        this.socketClient.on('update', (update: any) => {
+            this.renderMessage('update', update);
+        })
 
         //Chat
-        this.socketClient.socketEmitter.registerEventHandler({
-            eventName: 'chat',
-            handler: async (message: any) => {
-                const type = message.content.senderId === this.socketId;
-                this.renderMessage(type ? 'self' : 'other', {
-                    username: message.content.username,
-                    content: message.content.content
-                });
-            },
-            autoRegister: true
-        });
+        this.socketClient.on('chat', (message: any) => {
+            const type = message.senderId === this.currentUserId ? 'self' : 'other';
+            this.renderMessage(type, {
+                username: message.username,
+                content: message.content
+            });
+        })
 
         //Group
-            this.socketClient.socketEmitter.registerEventHandler({
-                eventName: 'group-creation-scss',
-                handler: (data: any) => {
-                    console.log('Group created', data);
-                    alert(`Group '${data.name}' created! :)`);
-                },
-                autoRegister: true
+            this.socketClient.on('group-creation-scss', (data: any) => {
+                console.log('Group created', data);
+            })
+
+            this.socketClient.on('group-creation-err', (data: any) => {
+                console.log('Group created', data);
+            })
+
+            this.socketClient.on('group-update', (update: any) => {
+                this.renderMessage('update', update);
             });
 
-            this.socketClient.socketEmitter.registerEventHandler({
-                eventName: 'group-creation-err',
-                handler: (err: any) => {
-                    console.error('Group creation failed', err);
-                    alert(`Failed to create group: ${err.message}`);
-                },
-                autoRegister: true
+            this.socketClient.on('user-joined', (data: any) => {
+                this.renderMessage('update', `${data.username} joined`);
             });
 
-            this.socketClient.socketEmitter.registerEventHandler({
-                eventName: 'group-update',
-                handler: (update: any) => {
-                    this.renderMessage('update', update);
-                },
-                autoRegister: true
+            this.socketClient.on('user-left', (data: any) => {
+                this.renderMessage('update', `${data.username} left`);
             });
         //
     }

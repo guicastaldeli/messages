@@ -1,4 +1,4 @@
-package com.app.main.root.app._db.types;
+package com.app.main.root.app._types;
 import java.sql.Timestamp;
 
 public class _User {

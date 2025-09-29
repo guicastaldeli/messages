@@ -1,4 +1,4 @@
-import '../../_styles/styles.scss';
+import '../../__styles/styles.scss';
 import { Component, createRef } from 'react';
 import { MessageManager } from '../../message-manager';
 import { GroupManager } from './group-manager';

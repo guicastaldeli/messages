@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
-import { SocketClient } from "@/app/.server/socket-client";
+import { SocketClientConnect } from "../../socket-client-connect";
 import { MessageManager } from "../../message-manager";
 import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat-state-service";
@@ -16,7 +16,7 @@ interface CreationData {
 }
 
 export class GroupManager {
-    private socketClient: SocketClient;
+    private socketClient: SocketClientConnect;
     private messageManager: MessageManager;
     public dashboard: Dashboard;
 
@@ -33,7 +33,7 @@ export class GroupManager {
     private onCreateError?: (error: any) => void;
 
     constructor(
-        socketClient: SocketClient,
+        socketClient: SocketClientConnect,
         messageManager: MessageManager,
         dashboard: Dashboard,
         appEl: HTMLDivElement | null = null, 
@@ -49,57 +49,52 @@ export class GroupManager {
 
     private setupSocketListeners(): void {
         //Success
-        this.socketClient.socketEmitter.registerEventHandler({
-            eventName: 'group-created-scss',
-            handler: (data: CreationData) => {
-                this.currentGroupName = data.name;
-                const name = this.currentGroupName;
-                const time = new Date().toISOString();
-                this.currentGroupId = data.id;
-                chatState.setType('group');
-
-                const chatItem = {
-                    id: this.currentGroupId,
-                    groupId: data.id,
-                    name: data.name,
-                    type: 'group',
-                    creator: data.creator,
-                    members: data.members,
-                    unreadCount: 0,
-                    lastMessage: 'No messages yet!! :(',
-                    lastMessageTime: time
-                }
-
-                //Chat Event
-                const chatEvent = new CustomEvent(
-                    'chat-item-added',
-                    { detail: chatItem }
-                );
-                window.dispatchEvent(chatEvent);
-
-                if(this.onCreateSuccess) {
-                    this.onCreateSuccess(data);
-                }
-
-                //Group Event
-                const event = new CustomEvent( 
-                    'group-creation-complete', 
-                    { detail: { name } }
-                ); 
-                window.dispatchEvent(event);
-            },
-            autoRegister: true
-        });
+        this.socketClient.on('group-creation-scss', (data: CreationData) => {
+            this.handleGroupCreationScss(data);
+        })
 
         //Error
-        this.socketClient.socketEmitter.registerEventHandler({
-            eventName: 'error',
-            handler: (error) => {
-                console.error(error);
-                if(this.onCreateError) this.onCreateError(error);
-            },
-            autoRegister: true
+        this.socketClient.on('error', (err: any) => {
+            console.error('Socket error:', err);
+            if(this.onCreateError) this.onCreateError(err);
         });
+    }
+
+    private handleGroupCreationScss(data: CreationData): void {
+        this.currentGroupName = data.name;
+        const name = this.currentGroupName;
+        const time = new Date().toISOString();
+        this.currentGroupId = data.id;
+        chatState.setType('group');
+
+        const chatItem = {
+            id: this.currentGroupId,
+            groupId: data.id,
+            name: data.name,
+            type: 'group',
+            creator: data.creator,
+            members: data.members,
+            unreadCount: 0,
+            lastMessage: 'No messages yet!! :(',
+            lastMessageTime: time
+        }
+
+        //Chat Event
+        const chatEvent = new CustomEvent(
+            'chat-item-added',
+            { detail: chatItem }
+        );
+        window.dispatchEvent(chatEvent);
+
+        if (this.onCreateSuccess) {
+            this.onCreateSuccess(data);
+        }
+
+        const event = new CustomEvent( 
+            'group-creation-complete', 
+            { detail: { name } }
+        ); 
+        window.dispatchEvent(event);
     }
 
     private renderLayout(
@@ -167,7 +162,7 @@ export class GroupManager {
         chatState.setType('group');
 
         //Emit
-        this.socketClient.socketEmitter.emit('create-group', {
+        this.socketClient.send('create-group', {
             creator: this.uname,
             creatorId: this.socketClient.getSocketId(),
             groupName: this.currentGroupName
@@ -179,6 +174,6 @@ export class GroupManager {
     }
 
     public exitChat(): void {
-        this.socketClient.socketEmitter.emit('exit-chat', this.uname);
+        this.socketClient.send('exit-chat', this.uname);
     }
 }
