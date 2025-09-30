@@ -16,7 +16,6 @@ public class SocketHandler implements WebSocketHandler {
         ConnectionTracker connectionTracker,
         WebSocketSession webSocketSession
     ) {
-        System.out.println("test socket");
         this.messagingTemplate = messagingTemplate;
         this.connectionTracker = connectionTracker;
         this.webSocketSession = webSocketSession;

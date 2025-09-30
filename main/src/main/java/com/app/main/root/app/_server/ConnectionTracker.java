@@ -6,6 +6,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.*;
 
@@ -15,6 +17,8 @@ public class ConnectionTracker {
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
     private final Set<Consumer<ConnectionInfo>> disconnectionCallbacks = new CopyOnWriteArraySet<>();
+
+    @Autowired
     private ColorConverter colorConverter;
     
     public static ConnectionTracker getInstance() {
@@ -79,6 +83,8 @@ public class ConnectionTracker {
         String userAgent
     ) {
         ConnectionInfo connectionInfo = new ConnectionInfo(socketId, ipAddress, userAgent);
+        connectionInfo.isConnected = true;
+        System.out.println(connectionInfo);
         connections.put(socketId, connectionInfo);
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);   
@@ -86,6 +92,7 @@ public class ConnectionTracker {
 
     public void trackDisconnection(String socketId) {
         ConnectionInfo connectionInfo = connections.get(socketId);
+        System.out.println(connectionInfo);
         if(connectionInfo != null) {
             connectionInfo.disconnectedAt = LocalDateTime.now();
             connectionInfo.isConnected = false;
@@ -166,6 +173,7 @@ public class ConnectionTracker {
         
         String prefix = colorConverter.style(timestamp + " - DISCONNECTED: from IP: ", "brightRed", "italic");
         String suffix = colorConverter.style("after " + durationFormatted, "brightRed", "italic");
+
         System.out.println(
             prefix + ip + 
             colorConverter.style(" (", "brightRed", "italic") + 

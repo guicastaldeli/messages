@@ -58,12 +58,12 @@ public class SocketClient {
                 protocol = getProtocolFromBrowser();
             }
 
-            String formUrl = protocol + "://" + host + ":" + port + "/ws";
+            String formUrl = protocol + "://" + host + ":" + port;
             this.url = formUrl;
             return this.url;
         } catch(Exception err) {
             System.err.println("Error getting URL: " + err.getMessage());
-            return "ws://localhost:3001/ws";
+            return "ws://localhost:3001/ws-direct";
         }
     }
 
@@ -222,4 +222,3 @@ public class SocketClient {
         }
     }
 }
-

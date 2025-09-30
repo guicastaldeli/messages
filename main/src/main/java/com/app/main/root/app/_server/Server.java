@@ -82,18 +82,14 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     public void alert() {
         String content =
         colorConverter.style("Server running...", "bgBlue", "italic");
-        /*
-        System.out.println("endpoint avaliable at: " + this.url + "/ws");
-        System.out.println("Server components initialized!");
         System.out.println("Connection tracker ready: " + (connectionTracker != null));
         System.out.println("Message template ready: " + (messagingTemplate != null));
-        */
         System.out.println(content);
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(this.socketHandler, "/ws").setAllowedOrigins("*");
+        registry.addHandler(socketHandler, "").setAllowedOrigins("*");
     }
 
     private void configSockets() {
