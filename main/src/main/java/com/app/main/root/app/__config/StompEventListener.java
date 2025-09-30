@@ -28,16 +28,13 @@ public class StompEventListener {
         String agent = userAgent != null ? userAgent : "Unknown";
 
         connectionTracker.trackConnection(sessionId, ipAddress, agent);
-        System.out.println("Client connected: " + sessionId);
     }
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headers = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headers.getSessionId();
-
         connectionTracker.trackDisconnection(sessionId);
-        System.out.println("Client disconnected: " + sessionId);
     }
 
     @EventListener

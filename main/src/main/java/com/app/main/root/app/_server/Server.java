@@ -42,8 +42,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         this.dbService = dbService;
         this.socketMethods = new SocketMethods();
         this.messagingTemplate = messagingTemplate;
-        this.connectionTracker = ConnectionTracker.getInstance();
-        this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
+        this.connectionTracker = connectionTracker;
         this.configSocketEvents = new ConfigSocketEvents(
             messageTracker, 
             connectionTracker, 
@@ -89,7 +88,9 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(socketHandler, "").setAllowedOrigins("*");
+        this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
+        registry.addHandler(socketHandler, "/ws-direct").setAllowedOrigins("*");
+        registry.addHandler(socketHandler, "").setAllowedOrigins("*").withSockJS();
     }
 
     private void configSockets() {

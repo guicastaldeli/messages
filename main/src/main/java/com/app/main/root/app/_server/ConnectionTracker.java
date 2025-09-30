@@ -22,14 +22,6 @@ public class ConnectionTracker {
     private ColorConverter colorConverter;
     
     public static ConnectionTracker getInstance() {
-        if(instance == null) {
-            synchronized(ConnectionTracker.class) {
-                if(instance == null) {
-                    instance = new ConnectionTracker();
-                }
-            }
-        }
-
         return instance;
     }
 
@@ -84,7 +76,6 @@ public class ConnectionTracker {
     ) {
         ConnectionInfo connectionInfo = new ConnectionInfo(socketId, ipAddress, userAgent);
         connectionInfo.isConnected = true;
-        System.out.println(connectionInfo);
         connections.put(socketId, connectionInfo);
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);   
@@ -92,7 +83,6 @@ public class ConnectionTracker {
 
     public void trackDisconnection(String socketId) {
         ConnectionInfo connectionInfo = connections.get(socketId);
-        System.out.println(connectionInfo);
         if(connectionInfo != null) {
             connectionInfo.disconnectedAt = LocalDateTime.now();
             connectionInfo.isConnected = false;

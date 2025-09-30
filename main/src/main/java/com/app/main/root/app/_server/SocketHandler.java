@@ -26,7 +26,10 @@ public class SocketHandler implements WebSocketHandler {
         String ipAddress = getClientIp(session);
         String userAgent = session.getHandshakeHeaders().getFirst("User-Agent");
         connectionTracker.trackConnection(session.getId(), ipAddress, userAgent);
-        webSocketSession.getAttributes().put("username", "Anonymous");
+        
+        session.getAttributes().put("username", "Anonymous");
+        session.getAttributes().put("remoteAddress", ipAddress);
+        System.out.println("Client connected: " + session.getId());
     }
 
     @Override
