@@ -156,15 +156,26 @@ export class GroupManager {
         });
     }
 
-    private create(groupName: string): void {
+    private async create(groupName: string): Promise<void> {
         if(!groupName.trim()) throw new Error('name invalid');
+
+        if(!this.socketClient.getSocketId()) {
+            try {
+                await this.socketClient.waitForSocketId();
+            } catch(err) {
+                console.error('Failed to get socket ID:', err);
+                throw new Error('Unable to establish connection');
+            }
+        }
+
         this.currentGroupName = groupName;
         chatState.setType('group');
+        const creatorId = this.socketClient.getSocketId();
 
         //Emit
         this.socketClient.emit('create-group', {
             creator: this.uname,
-            creatorId: this.socketClient.getSocketId(),
+            creatorId: creatorId,
             groupName: this.currentGroupName
         });
     }

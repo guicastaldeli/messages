@@ -8,6 +8,9 @@ export class SocketClientConnect {
     private connectionPromise: Promise<void> | null = null;
     private socketId: string | null = null;
 
+    private resConnection: ((value: void) => void) | null = null;
+    private rejConnection: ((reason?: any) => void) | null = null;
+
     public static getInstance(): SocketClientConnect {
         if(!SocketClientConnect.instance) SocketClientConnect.instance = new SocketClientConnect;
         return SocketClientConnect.instance;
@@ -17,6 +20,9 @@ export class SocketClientConnect {
         if(this.connectionPromise) return this.connectionPromise;
 
         this.connectionPromise = new Promise((res, rej) => {
+            this.resConnection = res;
+            this.rejConnection = rej;
+
             try {
                 const protocol = window.location.protocol === 'http:' ? 'ws:' : 'wss:';
                 const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
@@ -29,7 +35,6 @@ export class SocketClientConnect {
                 this.socket.onopen = () => {
                     console.log('Connected to Java Websocket server');
                     this.reconnectAttemps = 0;
-                    res();
                 }
                 this.socket.onmessage = (event) => {
                     try {
@@ -38,7 +43,7 @@ export class SocketClientConnect {
                         if(message.event === 'connect') {
                             console.log('Received message:', message);
                             this.socketId = message.data;
-                            res();
+                            if(this.resConnection) res();
                             this.emit(message.event, message.data);
                         }
                     } catch(err) {
@@ -148,7 +153,27 @@ export class SocketClientConnect {
     public getSocketId(): string | null {
         return this.socketId;
     }
-    
+
+    public async waitForSocketId(timeout: number = 5000): Promise<string> {
+        if(this.socketId) return this.socketId;
+
+        return new Promise((res, rej) => {
+            const timeoutId = setTimeout(() => {
+               rej(new Error('Timeout waiting for socket ID')); 
+            }, timeout);
+
+            const checkSocketId = () => {
+                if(this.socketId) {
+                    clearTimeout(timeoutId);
+                    res(this.socketId);
+                }
+            }
+            checkSocketId();
+
+            const intervalId = setInterval(checkSocketId, 100);
+            setTimeout(() => { clearInterval(intervalId) }, timeout);
+        });
+    }
 
     /*
     ** Getters

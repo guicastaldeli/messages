@@ -29,7 +29,6 @@ public class SocketHandler implements WebSocketHandler {
         
         session.getAttributes().put("username", "Anonymous");
         session.getAttributes().put("remoteAddress", ipAddress);
-        System.out.println("Client connected: " + session.getId());
     }
 
     @Override
