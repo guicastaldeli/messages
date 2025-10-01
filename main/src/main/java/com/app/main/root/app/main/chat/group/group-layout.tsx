@@ -1,6 +1,6 @@
 import '../../__styles/styles.scss';
 import { Component, createRef } from 'react';
-import { MessageManager } from '../../message-manager';
+import { MessageManager } from '../../_messages_config/message-manager';
 import { GroupManager } from './group-manager';
 
 interface Props {

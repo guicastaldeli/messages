@@ -1,4 +1,4 @@
-package com.app.main.root.app.main;
+package com.app.main.root.app.main._messages_config;
 import java.util.Date;
 
 public class MessageLog {

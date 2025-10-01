@@ -1,5 +1,5 @@
 import { SocketClientConnect } from "./socket-client-connect";
-import { MessageManager } from "./message-manager";
+import { MessageManager } from "./_messages_config/message-manager";
 import { DirectManager } from "./chat/direct/direct-manager";
 import { GroupManager } from "./chat/group/group-manager";
 

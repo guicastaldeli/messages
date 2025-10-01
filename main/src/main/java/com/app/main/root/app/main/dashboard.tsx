@@ -1,8 +1,8 @@
 import './__styles/styles.scss';
 import React, { Component } from 'react';
-import { MessageManager } from './message-manager';
+import { MessageManager } from './_messages_config/message-manager';
 import { GroupManager } from './chat/group/group-manager';
-import { SessionContext, SessionType } from './session-provider';
+import { SessionContext, SessionType } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { chatState } from './chat-state-service';
 

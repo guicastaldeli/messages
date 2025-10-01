@@ -1,4 +1,5 @@
 package com.app.main.root.app._server;
+import com.app.main.root.app._db.UsersConfig;
 import com.app.main.root.app._utils.ColorConverter;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -13,6 +14,8 @@ import java.util.*;
 
 @Component
 public class ConnectionTracker {
+
+    private final UsersConfig usersConfig;
     private static ConnectionTracker instance;
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
@@ -20,6 +23,10 @@ public class ConnectionTracker {
 
     @Autowired
     private ColorConverter colorConverter;
+
+    ConnectionTracker(UsersConfig usersConfig) {
+        this.usersConfig = usersConfig;
+    }
     
     public static ConnectionTracker getInstance() {
         return instance;
@@ -78,7 +85,7 @@ public class ConnectionTracker {
         connectionInfo.isConnected = true;
         connections.put(socketId, connectionInfo);
         logConnection(connectionInfo);
-        notifyConnectionCallbacks(connectionInfo);   
+        notifyConnectionCallbacks(connectionInfo);
     }
 
     public void trackDisconnection(String socketId) {
@@ -204,5 +211,36 @@ public class ConnectionTracker {
                 System.err.println("Error in disconnection callback: " + err.getMessage());
             }
         }
+    }
+
+    /*
+    **
+    *** Socket Id
+    ** 
+    */
+    public String getSocketId(String username) {
+        for(ConnectionInfo conn : connections.values()) {
+            if(username.equals(conn.username) && conn.isConnected) {
+                return conn.socketId;
+            }
+            System.out.println("GETSOCKETID: " + conn.socketId);
+        }
+        return null;
+    }
+
+    public List<String> getAllSocketIds() {
+        System.out.println("GET ALL SOCKET IDS!:" + connections.keySet());
+        return new ArrayList<>(connections.keySet());
+    }
+
+    public List<String> getActiveSocketIds() {
+        List<String> activeSocketIds = new ArrayList<>();
+        for(ConnectionInfo conn : connections.values()) {
+            if(conn.isConnected) {
+                activeSocketIds.add(conn.socketId);
+            }
+        }
+        System.out.println("GET ACTIVE SOCKET IDS :))):" + activeSocketIds);
+        return activeSocketIds;
     }
 }

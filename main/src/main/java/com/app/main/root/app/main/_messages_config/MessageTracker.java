@@ -1,5 +1,5 @@
-package com.app.main.root.app.main;
-import com.app.main.root.app.main.MessageLog.MessageDirection;
+package com.app.main.root.app.main._messages_config;
+import com.app.main.root.app.main._messages_config.MessageLog.MessageDirection;
 
 import org.springframework.stereotype.Component;
 import java.util.concurrent.CopyOnWriteArrayList;

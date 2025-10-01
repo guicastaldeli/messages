@@ -1,5 +1,5 @@
 import { ReactElement } from "react";
-import { ContentGetter } from "../content-getter";
+import { ContentGetter } from "../../content-getter";
 
 type Types = 'self' | 'other' | 'update';
 type Data = {

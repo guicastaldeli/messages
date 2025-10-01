@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
 import { SocketClientConnect } from "../../socket-client-connect";
-import { MessageManager } from "../../message-manager";
+import { MessageManager } from "../../_messages_config/message-manager";
 import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat-state-service";
 import { Dashboard } from "../../dashboard";

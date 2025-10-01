@@ -1,6 +1,6 @@
 package com.app.main.root.app._data;
-import com.app.main.root.app.main.MessageTracker;
-import com.app.main.root.app.main.MessageLog.MessageDirection;
+import com.app.main.root.app.main._messages_config.MessageTracker;
+import com.app.main.root.app.main._messages_config.MessageLog.MessageDirection;
 import com.app.main.root.app._server.EventRegistry;
 import com.app.main.root.app._server.ConnectionTracker;
 import org.springframework.stereotype.Component;

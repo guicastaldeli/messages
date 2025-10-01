@@ -1,8 +1,8 @@
 import { React, ReactDOMServer } from "next/dist/server/route-modules/app-page/vendored/ssr/entrypoints";
-import { SocketClientConnect } from "./socket-client-connect";
-import { ContentGetter } from "../content-getter";
+import { SocketClientConnect } from "../socket-client-connect";
+import { ContentGetter } from "../../content-getter";
 import { MessageTypes } from "./message-types";
-import { Controller } from "./controller";
+import { Controller } from "../controller";
 
 export class MessageManager {
     private contentGetter: ContentGetter;

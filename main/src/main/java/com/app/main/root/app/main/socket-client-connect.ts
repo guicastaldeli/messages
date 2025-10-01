@@ -29,12 +29,13 @@ export class SocketClientConnect {
                 const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
                 const wsUrl = `${protocol}//${host}:${port}/ws-direct`;
 
-                console.log('Connecting to WebSocket', wsUrl);
+                console.log('Connecting to:', wsUrl);
                 this.socket = new WebSocket(wsUrl);
 
                 this.socket.onopen = () => {
-                    console.log('Connected to Java Websocket server');
+                    console.log('Connected to Server');
                     this.reconnectAttemps = 0;
+                    setTimeout(() => this.reqSocketId(), 100);
                 }
                 this.socket.onmessage = (event) => {
                     try {
@@ -43,7 +44,10 @@ export class SocketClientConnect {
                         if(message.event === 'connect') {
                             console.log('Received message:', message);
                             this.socketId = message.data;
-                            if(this.resConnection) res();
+                            if(this.resConnection) {
+                                this.resConnection();
+                                this.resConnection = null;
+                            }
                             this.emit(message.event, message.data);
                         }
                     } catch(err) {
@@ -173,6 +177,17 @@ export class SocketClientConnect {
             const intervalId = setInterval(checkSocketId, 100);
             setTimeout(() => { clearInterval(intervalId) }, timeout);
         });
+    }
+
+    private reqSocketId(): void {
+        if(this.socket && this.socket.readyState === WebSocket.OPEN) {
+            const message = JSON.stringify({ event: 'get-socket-id' });
+            console.log('Requesting socket Id from server');
+            this.socket.send(message);
+        } else {
+            console.log('WebSocket not open...');
+            setTimeout(() => this.reqSocketId(), 100);
+        }
     }
 
     /*
