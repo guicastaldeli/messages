@@ -181,7 +181,7 @@ export class SocketClientConnect {
 
     private reqSocketId(): void {
         if(this.socket && this.socket.readyState === WebSocket.OPEN) {
-            const message = JSON.stringify({ event: 'get-socket-id' });
+            const message = JSON.stringify({ event: 'socket-id' });
             console.log('Requesting socket Id from server');
             this.socket.send(message);
         } else {

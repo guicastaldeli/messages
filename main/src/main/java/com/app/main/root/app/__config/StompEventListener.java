@@ -7,16 +7,13 @@ import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 import com.app.main.root.app._server.ConnectionTracker;
-import com.app.main.root.app.__controllers.ConnectionController;
 
 @Component
 public class StompEventListener {
     private final ConnectionTracker connectionTracker;
-    private final ConnectionController connectionController;
 
     public StompEventListener(ConnectionTracker connectionTracker) {
         this.connectionTracker = connectionTracker;
-        this.connectionController = new ConnectionController();
     }
 
     @EventListener
@@ -30,9 +27,6 @@ public class StompEventListener {
         String agent = userAgent != null ? userAgent : "Unknown";
 
         connectionTracker.trackConnection(sessionId, ipAddress, agent);
-        connectionController.getSocketId(agent);
-        connectionController.getConnectionInfo(sessionId);
-        connectionController.getActiveSocketIds();
     }
 
     @EventListener
