@@ -1,9 +1,12 @@
 package com.app.main.root.app._data;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
+import com.app.main.root.app.__controllers.SocketController;
 
 @Component
 public class SocketMethods {
+    private SocketController socketController;
+    
     /*
     **
     *** Session Id

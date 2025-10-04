@@ -1,7 +1,6 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app._db.UsersConfig;
 import com.app.main.root.app._utils.ColorConverter;
-import com.app.main.root.app.__controllers.ConnectionController;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -10,16 +9,12 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.*;
 
 @Component
-@RequestMapping("/connections")
 public class ConnectionTracker {
     private final UsersConfig usersConfig;
     private static ConnectionTracker instance;
-    private ConnectionController connectionController;
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
     private final Set<Consumer<ConnectionInfo>> disconnectionCallbacks = new CopyOnWriteArraySet<>();
@@ -27,9 +22,8 @@ public class ConnectionTracker {
     @Autowired
     private ColorConverter colorConverter;
 
-    ConnectionTracker(UsersConfig usersConfig) {
+    public ConnectionTracker(UsersConfig usersConfig) {
         this.usersConfig = usersConfig;
-        this.connectionController = new ConnectionController();
     }
     
     public static ConnectionTracker getInstance() {
@@ -90,7 +84,6 @@ public class ConnectionTracker {
         connections.put(socketId, connectionInfo);
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);
-        getSocketId(userAgent);
     }
 
     public void trackDisconnection(String socketId) {
@@ -218,35 +211,14 @@ public class ConnectionTracker {
         }
     }
 
-    /*
-    **
-    *** Socket Id
-    ** 
+    /* 
+    ***
+    **** Socket Id
+    *** 
     */
-    @GetMapping("/socket-id")
-    public String getSocketId(String username) {
-        for(ConnectionInfo conn : connections.values()) {
-            if(username.equals(conn.username) && conn.isConnected) {
-                return conn.socketId;
-            }
-            System.out.println("GETSOCKETID: " + conn.socketId);
-        }
-        return null;
-    }
-
-    public List<String> getAllSocketIds() {
-        System.out.println("GET ALL SOCKET IDS!:" + connections.keySet());
-        return new ArrayList<>(connections.keySet());
-    }
-
-    public List<String> getActiveSocketIds() {
-        List<String> activeSocketIds = new ArrayList<>();
-        for(ConnectionInfo conn : connections.values()) {
-            if(conn.isConnected) {
-                activeSocketIds.add(conn.socketId);
-            }
-        }
-        System.out.println("GET ACTIVE SOCKET IDS :))):" + activeSocketIds);
-        return activeSocketIds;
+    public String getSocketId(String sessionId) {
+        ConnectionInfo connectionInfo = connections.get(sessionId);
+        String res = connectionInfo != null ? connectionInfo.socketId : null;
+        return res;
     }
 }

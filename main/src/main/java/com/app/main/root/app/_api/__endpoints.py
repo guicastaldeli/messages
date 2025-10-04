@@ -1,17 +1,30 @@
 from fastapi import HTTPException, Query
+from fastapi.responses import HTMLResponse
 from __main import app, dbService
 from typing import Optional
 
-@app.get("/")
+HTML = """
+    <!DOCTYPE html>
+    <html>
+        <body>
+            <div class="endpoint">
+                <a href="/api/messages?chatId=example123" target="_blank">/api/messages?chatId=example123</a>
+            </div>
+            
+            <div class="endpoint">
+                <a href="/api/recent-chats" target="_blank">/api/recent-chats</a>
+            </div>
+            
+            <div class="endpoint">
+                <a href="/api/users/user123" target="_blank">/api/users/user123</a>
+            </div>
+        </body>
+    </html>
+"""
+
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return {
-        "message": "API Server is running!",
-        "endpoints": {
-            "messages": "/api/messages",
-            "recent_chats": "/api/recent-chats",
-            "users": "/api/users/{userId}"
-        }
-    }
+    return HTML
     
 ### Messages
 @app.get("/api/messages")

@@ -12,10 +12,9 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class ApiController {
-
     private final MessagesConfig messagesConfig;
+
     @Autowired
     private DbService dbService;
 

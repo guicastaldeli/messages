@@ -157,16 +157,11 @@ export class GroupManager {
     }
 
     private async create(groupName: string): Promise<void> {
-        if(!groupName.trim()) throw new Error('name invalid');
-
         if(!this.socketClient.getSocketId()) {
-            try {
-                await this.socketClient.waitForSocketId();
-            } catch(err) {
-                console.error('Failed to get socket ID:', err);
-                throw new Error('Unable to establish connection');
-            }
+            console.error('Failed to get socket ID');
+            throw new Error('Unable to establish connection');
         }
+        if(!groupName.trim()) throw new Error('name invalid');
 
         this.currentGroupName = groupName;
         chatState.setType('group');

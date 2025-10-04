@@ -1,3 +1,4 @@
+import { EventDiscovery } from "./event-discovery";
 
 export class SocketClientConnect {
     private static instance: SocketClientConnect;
@@ -7,9 +8,14 @@ export class SocketClientConnect {
     private maxReconnectAttemps = 5;
     private connectionPromise: Promise<void> | null = null;
     private socketId: string | null = null;
+    private eventDiscovery!: EventDiscovery;
 
     private resConnection: ((value: void) => void) | null = null;
     private rejConnection: ((reason?: any) => void) | null = null;
+
+    constructor() {
+        this.eventDiscovery = new EventDiscovery();
+    }
 
     public static getInstance(): SocketClientConnect {
         if(!SocketClientConnect.instance) SocketClientConnect.instance = new SocketClientConnect;
@@ -27,32 +33,19 @@ export class SocketClientConnect {
                 const protocol = window.location.protocol === 'http:' ? 'ws:' : 'wss:';
                 const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
                 const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
-                const wsUrl = `${protocol}//${host}:${port}/ws-direct`;
+                const wsUrl = 
+                `${protocol}//${host}:${port}/ws-direct` ||
+                `${protocol}//${host}:${port}`;
 
                 console.log('Connecting to:', wsUrl);
                 this.socket = new WebSocket(wsUrl);
+                this.setupEventListeners();
+                this.eventDiscovery.events().catch(console.error);
 
                 this.socket.onopen = () => {
-                    console.log('Connected to Server');
+                    console.log('Connected to the Server ;)');
                     this.reconnectAttemps = 0;
-                    setTimeout(() => this.reqSocketId(), 100);
-                }
-                this.socket.onmessage = (event) => {
-                    try {
-                        const message = JSON.parse(event.data);
-
-                        if(message.event === 'connect') {
-                            console.log('Received message:', message);
-                            this.socketId = message.data;
-                            if(this.resConnection) {
-                                this.resConnection();
-                                this.resConnection = null;
-                            }
-                            this.emit(message.event, message.data);
-                        }
-                    } catch(err) {
-                        console.error('Error parsing WebSocket message:', err);
-                    }
+                    this.reqSocketId();
                 }
                 this.socket.onclose = (event) => {
                     console.log('WebSocket connection closed:', event.code, event.reason);
@@ -62,15 +55,58 @@ export class SocketClientConnect {
                 this.socket.onerror = (err) => {
                     console.error('WebSocket error:', err);
                     this.connectionPromise = null;
-                    rej(err);
+                    if(this.rejConnection) {
+                        this.rejConnection(err);
+                        this.rejConnection = null;
+                    }
                 }
             } catch(err) {
                 this.connectionPromise = null;
-                rej(err);
+                if(this.rejConnection) {
+                    this.rejConnection(err);
+                    this.rejConnection = null;
+                }
             }
         });
 
         return this.connectionPromise;
+    }
+
+    /*
+    ** Setup Event Listeners
+    */
+    private setupEventListeners(): void {
+        if(!this.socket) throw new Error('FATAL ERR.');
+
+        this.socket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+
+                //Connect
+                if(message.event === 'connect') {
+                    console.log('Received message:', message);
+                    if(this.resConnection) {
+                        this.resConnection();
+                        this.resConnection = null;
+                    }
+                    this.emit(message.event, message.data);
+                    console.log('tst')
+                }
+                //Socket Id
+                else if(message.event === 'get-socket-id') {
+                    this.socketId = message.data;
+                    this.emit(message.event, message.data);
+                    console.log(message.data)
+                    console.log('tst')
+                }
+                //Others
+                else {
+                    this.emit(message.event, message.data);
+                }
+            } catch(err) {
+                console.error('Error parsing WebSocket message:', err);
+            }
+        }
     }
 
     /*
@@ -113,6 +149,11 @@ export class SocketClientConnect {
     ** Emit
     */
     public emit(event: string, data?: any): void {
+        if(!this.eventDiscovery.isEventValiable(event)) {
+            console.warn(`Event ${event} is not avaliable in Server.`)
+            return;
+        }
+
         const listeners = this.eventListeners.get(event);
         console.log('Emitted', { event, data })
         if(listeners) {
@@ -131,9 +172,9 @@ export class SocketClientConnect {
     */
     public send(event: string, data?: any): void {
         if(this.socket && this.socket.readyState === WebSocket.OPEN) {
-            const message = JSON.stringify({ event, data });
-            console.log('Sending message:', { event, data });
-            this.socket.send(message);
+            const content = JSON.stringify({ event, data });
+            console.log('Content:', content);
+            this.socket.send(content);
         } else {
             console.error('WebSocket not connected. Cannot send message:', event);
         }
@@ -154,40 +195,12 @@ export class SocketClientConnect {
     /*
     ** Socket Id
     */
-    public getSocketId(): string | null {
-        return this.socketId;
-    }
-
-    public async waitForSocketId(timeout: number = 5000): Promise<string> {
-        if(this.socketId) return this.socketId;
-
-        return new Promise((res, rej) => {
-            const timeoutId = setTimeout(() => {
-               rej(new Error('Timeout waiting for socket ID')); 
-            }, timeout);
-
-            const checkSocketId = () => {
-                if(this.socketId) {
-                    clearTimeout(timeoutId);
-                    res(this.socketId);
-                }
-            }
-            checkSocketId();
-
-            const intervalId = setInterval(checkSocketId, 100);
-            setTimeout(() => { clearInterval(intervalId) }, timeout);
-        });
+    public async getSocketId(): Promise<void> {
+        
     }
 
     private reqSocketId(): void {
-        if(this.socket && this.socket.readyState === WebSocket.OPEN) {
-            const message = JSON.stringify({ event: 'socket-id' });
-            console.log('Requesting socket Id from server');
-            this.socket.send(message);
-        } else {
-            console.log('WebSocket not open...');
-            setTimeout(() => this.reqSocketId(), 100);
-        }
+        
     }
 
     /*

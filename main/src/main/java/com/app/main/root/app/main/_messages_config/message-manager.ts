@@ -38,11 +38,12 @@ export class MessageManager {
     public async init(): Promise<void> {
         if(typeof document === 'undefined') return;
         this.appEl = document.querySelector<HTMLDivElement>('.app');
-        
+
         this.socketClient.on('connect', (id: string) => {
             this.socketId = id;
             this.currentUserId = id;
         });
+
         await this.socketClient.connect();
         await this.updateSocket();
     }
@@ -66,10 +67,6 @@ export class MessageManager {
                 rej(err);
             }
         });
-    }
-
-    public handleBack(): void {
-        
     }
 
     public handleSendMessage(chatId?: string): void {

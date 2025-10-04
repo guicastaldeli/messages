@@ -6,6 +6,9 @@ import com.app.main.root.app._server.ConnectionTracker;
 import org.springframework.stereotype.Component;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import com.app.main.root.app._db.DbService;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
@@ -227,6 +230,25 @@ public class ConfigSocketEvents {
                 },
                 true,
                 "new-message"
+            ),
+            //Socket Id
+            EventRegistry.createBroadcastEvent(
+                "get-socket-id",
+                (socket, data, io) -> {
+                    String sessionId = socketMethods.getSessionId(socket);
+                    ConnectionTracker.ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
+                    String connectedDate = connectionInfo != null ? 
+                    connectionInfo.connectedAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) :
+                    LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+                    System.out.println(sessionId);
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("socketId", sessionId);
+                    res.put("connectedAt", connectedDate);
+                    return res;
+                },
+                true,
+                "socket-id"
             )
         );
         EventRegistry.registerAllEvents(events);

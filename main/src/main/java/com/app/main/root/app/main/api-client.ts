@@ -2,7 +2,8 @@ class ApiClient {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = process.env.JAVA_API_URL || 'http://localhost:3001';
+        this.baseUrl = 
+        process.env.JAVA_API_URL || 'http://localhost:3002'
     }
 
     async getMessagesByChatId(chatId: string): Promise<any[]> {
@@ -12,9 +13,9 @@ class ApiClient {
     }
 
     async getRecentChats(userId?: string | null): Promise<any[]> {
-        const url = userId
-        ? `${this.baseUrl}/api/recent-chats?userId=${userId}`
-        : `${this.baseUrl}/api/recent-chats`;
+        const url = userId ? 
+        `${this.baseUrl}/api/recent-chats?userId=${userId}` : 
+        `${this.baseUrl}/api/recent-chats`;
         
         const res = await fetch(url);
         if(!res.ok) throw new Error('Failed to fetch recent chats!');
