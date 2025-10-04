@@ -166,7 +166,7 @@ public class ConfigSocketEvents {
 
                         if(io instanceof SimpMessagingTemplate) {
                             SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
-                            String groupCreatedScssData = "/group-created-scss";
+                            String groupCreatedScssData = "/topic/group-created-scss";
                             messagingTemplate.convertAndSendToUser(sessionId, groupCreatedScssData, newGroup);
                         }
 
@@ -193,15 +193,15 @@ public class ConfigSocketEvents {
                             Map<String, Object> errorRes = new HashMap<>();
                             errorRes.put("error", true);
                             errorRes.put("message", "Group creation failed: " + err.getMessage());
-                            messagingTemplate.convertAndSendToUser(sessionId, "/group-created-err", errorRes);
+                            messagingTemplate.convertAndSendToUser(sessionId, "/topic/group-created-err", errorRes);
                         }
                         
                         throw new RuntimeException("Group creation failed", err);
                     }
                 },
-                true,
-                true,
-                "chat"
+                false,
+                false,
+                null
             ),
             //Join Group Event
             EventRegistry.createBroadcastEvent(

@@ -14,7 +14,7 @@ import java.sql.Statement;
 
 @Configuration
 public class DbConfig {
-    private static final String DATA_DIR = "./_data";
+    private static final String DATA_DIR = "./src/main/java/com/app/main/root/app/_db/data";
 
     @Bean
     public DataSource dataSource() {
@@ -24,7 +24,7 @@ public class DbConfig {
             cleanupCorruptedFiles();
             ensureDataDir();
 
-            String dbPath = DATA_DIR + "/messages.db";
+            String dbPath = DATA_DIR + "/db.db";
             dataSource.setUrl("jdbc:sqlite:" + dbPath);
             initDb(dataSource);
         } catch(Exception err) {

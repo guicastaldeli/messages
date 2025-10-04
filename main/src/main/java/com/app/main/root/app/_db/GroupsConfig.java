@@ -68,7 +68,7 @@ public class GroupsConfig {
         String sql =
         """
             SELECT u.*
-            FROM groups_members gm
+            FROM group_members gm
             JOIN users u ON gm.user_id = u.id
             WHERE gm.group_id = ?        
         """;

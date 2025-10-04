@@ -51,7 +51,7 @@ export class GroupManager {
         //Success
         this.socketClient.on('group-created-scss', (data: CreationData) => {
             this.handleGroupCreationScss(data);
-        })
+        });
 
         //Error
         this.socketClient.on('error', (err: any) => {
