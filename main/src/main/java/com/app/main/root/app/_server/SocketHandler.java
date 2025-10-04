@@ -5,10 +5,14 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
+import com.app.main.root.app.__config.BufferConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class SocketHandler implements WebSocketHandler {
     private final SimpMessagingTemplate messagingTemplate;
     private final ConnectionTracker connectionTracker;
+    private final BufferConfig bufferConfig;
+    private final ObjectMapper objectMapper;
     private WebSocketSession webSocketSession;
 
     public SocketHandler(
@@ -19,6 +23,8 @@ public class SocketHandler implements WebSocketHandler {
         this.messagingTemplate = messagingTemplate;
         this.connectionTracker = connectionTracker;
         this.webSocketSession = webSocketSession;
+        this.bufferConfig = new BufferConfig();
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -46,23 +52,30 @@ public class SocketHandler implements WebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
+        bufferConfig.clearBuffer(session.getId());
         connectionTracker.trackDisconnection(session.getId());
     }
 
     private void handleWebSocketMessage(WebSocketSession session, String payload) {
         try {
-            WebSocketMessageData message = parseWebSocketMessage(payload);
-            String eventName = message.getEvent();
-            Object data = message.getData();
-            EventRegistry.EventHandlerConfig eventConfig = EventRegistry.getEvent(eventName);
+            String sessionId = session.getId();
+            String completeMessage = bufferConfig.handleMessage(sessionId, payload);
 
-            if(eventConfig != null) {
-                eventConfig.handler.handle(session, data, messagingTemplate);
-            } else {
-                System.out.println("No handler found for event: " + eventName);
+            if(completeMessage != null) {
+                WebSocketMessageData messageData = parseWebSocketMessageJson(completeMessage);
+                String eventName = messageData.getEvent();
+                Object data = messageData.getData();
+                EventRegistry.EventHandlerConfig eventConfig = EventRegistry.getEvent(eventName);
+
+                if(eventConfig != null) {
+                    eventConfig.handler.handle(session, data, messagingTemplate);
+                } else {
+                    System.out.println("No handler found for event: " + eventName);
+                }
             }
         } catch(Exception err) {
             System.err.println("Error handling WebSocket message: " + err.getMessage());
+            err.printStackTrace();
         }
     }
 
@@ -80,16 +93,25 @@ public class SocketHandler implements WebSocketHandler {
     *** Parsers
     ** 
     */
+    private WebSocketMessageData parseWebSocketMessageJson(String payload) {
+        try {
+            SocketMessage parsedMessage = objectMapper.readValue(payload, SocketMessage.class);
+            return new WebSocketMessageData(parsedMessage.getEvent(), parsedMessage.getData());
+        } catch(Exception err) {
+            new WebSocketMessageData("message", payload);
+            return parseWebSocketMessage(payload);
+        }
+    }
+
     private WebSocketMessageData parseWebSocketMessage(String payload) {
         try {
             String event = extractValue(payload, "event");
-            String data = extractValue(payload, "data");
+            Object data = extractValue(payload, "data");
             return new WebSocketMessageData(event, data);
         } catch(Exception err) {
             return new WebSocketMessageData("message", payload);
         }
     }
-
     private String extractValue(String json, String key) {
         int keyIndex = json.indexOf("\"" + key + "\":");
         if (keyIndex == -1) return "";
@@ -104,5 +126,23 @@ public class SocketHandler implements WebSocketHandler {
             value = value.substring(1, value.length() - 1);
         }
         return value;
+    }
+
+    private static class SocketMessage {
+        private String event;
+        private Object data;
+
+        public void setEvent(String event) {
+            this.event = event;
+        }
+        public String getEvent() {
+            return event;
+        }
+        public void setData(Object data) {
+            this.data = data;
+        }
+        public Object getData() {
+            return data;
+        }
     }
 }

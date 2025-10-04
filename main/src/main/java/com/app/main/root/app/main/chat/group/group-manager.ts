@@ -168,7 +168,7 @@ export class GroupManager {
         const creatorId = this.socketClient.getSocketId();
 
         //Emit
-        this.socketClient.emit('create-group', {
+        this.socketClient.send('create-group', {
             creator: this.uname,
             creatorId: '123',//creatorId,
             groupName: this.currentGroupName

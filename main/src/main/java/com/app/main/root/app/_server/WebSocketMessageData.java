@@ -2,9 +2,9 @@ package com.app.main.root.app._server;
 
 public class WebSocketMessageData {
     private final String event;
-    private final String data;
+    private final Object data;
 
-    public WebSocketMessageData(String event, String data) {
+    public WebSocketMessageData(String event, Object data) {
         this.event = event;
         this.data = data;
     }

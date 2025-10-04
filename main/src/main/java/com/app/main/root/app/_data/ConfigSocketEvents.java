@@ -1,6 +1,7 @@
 package com.app.main.root.app._data;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app.main._messages_config.MessageLog.MessageDirection;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.app.main.root.app._server.EventRegistry;
 import com.app.main.root.app._server.ConnectionTracker;
 import org.springframework.stereotype.Component;
@@ -122,17 +123,30 @@ public class ConfigSocketEvents {
                 "create-group",
                 (socket, data, io) -> {
                     try {
-                        Map<String, Object> groupData = (Map<String, Object>) data;
+                        Map<String, Object> groupData;
+
+                        if(data instanceof Map) {
+                            groupData = (Map<String, Object>) data;
+                        } else if(data instanceof String) {
+                            try {
+                                ObjectMapper mapper = new ObjectMapper();
+                                groupData = mapper.readValue((String) data, Map.class);
+                            } catch(Exception err) {
+                                System.out.println("DATATTTATATTATA::: " + data);
+                                throw new IllegalArgumentException("Invalid format for group data");
+                            }
+                        } else {
+                            throw new IllegalArgumentException("Group data must be a Map or JSON String");
+                        }
+
+
                         String creator = (String) groupData.get("creator");
                         String creatorId = (String) groupData.get("creatorId");
-                        String creationDate = new Date().toString();
-                        String format = UUID.randomUUID().toString().substring(0, 7);
-                        String id = "group_" + System.currentTimeMillis() + "_" + format;
                         String groupName = (String) groupData.get("groupName");
                         String sessionId = socketMethods.getSessionId(socket);
-                        String groupCreatedScssData = "/group-created-scss";
-                        String groupUpdateData = "/group-update";
-                        if(creator == null || creatorId == null) throw new IllegalArgumentException("Invalid group data!");
+                        String creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                        String format = UUID.randomUUID().toString().substring(0, 7);
+                        String id = "group_" + System.currentTimeMillis() + "_" + format;
 
                         Map<String, Object> newGroup = new HashMap<>();
                         newGroup.put("id", id);
@@ -147,35 +161,47 @@ public class ConfigSocketEvents {
                             dbService.getGroupsConfig().addUserToGroup(id, creatorId);
                         } catch(Exception err) {
                             System.err.println("Failed to save group: " + err.getMessage());
+                            throw new RuntimeException("Database error: " + err.getMessage(), err);
                         }
 
                         if(io instanceof SimpMessagingTemplate) {
                             SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
+                            String groupCreatedScssData = "/group-created-scss";
                             messagingTemplate.convertAndSendToUser(sessionId, groupCreatedScssData, newGroup);
                         }
 
+                        String groupUpdateData = "/group-update";
                         Map<String, Object> groupUpdate = new HashMap<>();
                         groupUpdate.put("type", "group-created");
-                        groupUpdate.put("groupName", groupData.get("groupName"));
+                        groupUpdate.put("group", newGroup);
                         groupUpdate.put("creator", creator);
 
                         if(io instanceof SimpMessagingTemplate) {
                             SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
-                            Map<String, Object> sucssRes = new HashMap<>();
-                            sucssRes.put("event", "group-created-scss");
-                            sucssRes.put("data", newGroup);
-                            messagingTemplate.convertAndSend(groupUpdateData, groupUpdate);
+                            messagingTemplate.convertAndSend(groupUpdateData, groupUpdateData);
                         }
 
+                        System.out.println("Group created successfully: " + newGroup);
                         return newGroup;
                     } catch(Exception err) {
                         System.err.println("Error creating group: " + err.getMessage());
+                        err.printStackTrace();
+
+                        String sessionId = socketMethods.getSessionId(socket);
+                        if(io instanceof SimpMessagingTemplate) {
+                            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
+                            Map<String, Object> errorRes = new HashMap<>();
+                            errorRes.put("error", true);
+                            errorRes.put("message", "Group creation failed: " + err.getMessage());
+                            messagingTemplate.convertAndSendToUser(sessionId, "/group-created-err", errorRes);
+                        }
+                        
                         throw new RuntimeException("Group creation failed", err);
                     }
                 },
-                false,
-                false,
-                null
+                true,
+                true,
+                "chat"
             ),
             //Join Group Event
             EventRegistry.createBroadcastEvent(
@@ -195,7 +221,7 @@ public class ConfigSocketEvents {
                     return res;
                 },
                 true,
-                "group-created-scss"
+                "group-update"
             ),
             //Exit Group Event
             EventRegistry.createBroadcastEvent(

@@ -203,6 +203,7 @@ export class SocketClientConnect {
             console.error(`Event ${event} is not available on the Server.`);
             return false;
         }
+        
         this.getEventSend(event, data);
         return true;
     }
