@@ -1,5 +1,5 @@
 export class EventDiscovery {
-    private avaliableEvents: Set<string> = new Set();
+    public availableEvents: Set<string> = new Set();
     private url: string;
 
     constructor() {
@@ -24,23 +24,25 @@ export class EventDiscovery {
     public async events(): Promise<void> {
         try {
             const url = `${this.url}/events`;
-            console.log(url);
-            
             const res = await fetch(url);
             if(!res.ok) throw new Error(`HTTP error!, ${res.status}`);
-
             const events: string[] = await res.json();
-            this.avaliableEvents = new Set(events);
+            this.availableEvents = new Set(events);
         } catch(err) {
             console.log(err);
         }
     }
 
     public isEventValiable(event: string): boolean {
-        return this.avaliableEvents.has(event);
+        return this.availableEvents.has(event);
     }
 
-    public getAvaliableEvents(): string[] {
-        return Array.from(this.avaliableEvents);
+    public async isEventAvailable(event: string): Promise<boolean> {
+        await this.events();
+        return this.isEventValiable(event);
+    }
+
+    public getAvailableEvents(): string[] {
+        return Array.from(this.availableEvents);
     }
 }

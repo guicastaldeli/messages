@@ -49,15 +49,19 @@ export class MessageManager {
     }
 
     public handleJoin(): Promise<'dashboard'> {
-        return new Promise((res, rej) => {
+        return new Promise(async (res, rej) => {
             if(!this.appEl || this.joinHandled) return rej('err');
-    
+            
             const usernameInput = this.appEl.querySelector<HTMLInputElement>('.join-screen #username');
             if(!usernameInput || !usernameInput.value.trim()) return rej(new Error('Username is required'));
             this.joinHandled = true;
 
             try {
-                this.socketClient.emit('new-user', usernameInput.value);
+                const ok = await this.socketClient.emit('new-user', usernameInput.value);
+                if(!ok) {
+                    this.joinHandled = false;
+                    return rej(new Error('Event err'));
+                }
                 this.uname = usernameInput.value;
                 this.initController();
                 this.controller.init();

@@ -8,7 +8,7 @@ export class SocketClientConnect {
     private maxReconnectAttemps = 5;
     private connectionPromise: Promise<void> | null = null;
     private socketId: string | null = null;
-    private eventDiscovery!: EventDiscovery;
+    public eventDiscovery: EventDiscovery;
 
     private resConnection: ((value: void) => void) | null = null;
     private rejConnection: ((reason?: any) => void) | null = null;
@@ -148,36 +148,63 @@ export class SocketClientConnect {
     /*
     ** Emit
     */
-    public emit(event: string, data?: any): void {
-        if(!this.eventDiscovery.isEventValiable(event)) {
-            console.warn(`Event ${event} is not avaliable in Server.`)
+    private async getEventEmit(event: string, data?: any): Promise<void> {
+        const available = await this.eventDiscovery.isEventAvailable(event);
+        if(available) {
+            const listeners = this.eventListeners.get(event);
+            console.log('Emitted', { event, data })
+            if(listeners) {
+                listeners.forEach(callback => {
+                    try {
+                        callback(data);
+                    } catch(err) {
+                        console.error(`Error in event listener for ${event}:`, err);
+                    }
+                });
+            }
+        } else {
+            console.error('Event not available!!');
             return;
         }
+    }
 
-        const listeners = this.eventListeners.get(event);
-        console.log('Emitted', { event, data })
-        if(listeners) {
-            listeners.forEach(callback => {
-                try {
-                    callback(data);
-                } catch(err) {
-                    console.error(`Error in event listener for ${event}:`, err);
-                }
-            });
+    public async emit(event: string, data?: any): Promise<boolean> {
+        const isValid = await this.eventDiscovery.isEventAvailable(event);
+        if(!isValid) {
+            console.error(`Event ${event} is not available on the Server.`);
+            return false;
         }
+        this.getEventEmit(event, data);
+        return true;
     }
 
     /*
     ** Send
     */
-    public send(event: string, data?: any): void {
-        if(this.socket && this.socket.readyState === WebSocket.OPEN) {
-            const content = JSON.stringify({ event, data });
-            console.log('Content:', content);
-            this.socket.send(content);
+    private async getEventSend(event: string, data?: any): Promise<void> {
+        const available = await this.eventDiscovery.isEventAvailable(event);
+        if(available) {
+            if(this.socket && this.socket.readyState === WebSocket.OPEN) {
+                const content = JSON.stringify({ event, data });
+                console.log('Content:', content);
+                this.socket.send(content);
+            } else {
+                console.error('WebSocket not connected. Cannot send message:', event);
+            }
         } else {
-            console.error('WebSocket not connected. Cannot send message:', event);
+            console.error('Event not available!!');
+            return;
         }
+    }
+
+    public async send(event: string, data?: any): Promise<boolean> {
+        const isValid = await this.eventDiscovery.isEventAvailable(event);
+        if(!isValid) {
+            console.error(`Event ${event} is not available on the Server.`);
+            return false;
+        }
+        this.getEventSend(event, data);
+        return true;
     }
 
     /*
