@@ -135,58 +135,63 @@ export class Dashboard extends Component<Props, State> {
 
         return (
             <SessionContext.Consumer>
-                {(sessionContext) => (
-                    <>
-                        {console.log(sessionContext)}
-                        {sessionContext && sessionContext.currentSession === 'dashboard' && (
-                            <div className="screen main-dashboard">
-                                <header>
-                                    <div id="actions-bar">
-                                        <button 
-                                            id="action-chat"
-                                            onClick={() => this.props.onCreateGroup()}
-                                        >
-                                            Group++++
-                                        </button>
-                                    </div>
-                                </header>
-                            </div>
-                        )}
+                {(sessionContext) => {
+                    if(!sessionContext || sessionContext.currentSession !== 'dashboard') {
+                        return null;
+                    }
 
-                        <div className="group-container" ref={this.groupContainerRef}></div>
-
-                        <div id="chat-container">
-                            <div className="chat-list">
-                                {chatList.length === 0 ? (
-                                    <p>No chats.</p>
-                                ) : (
-                                    <ul>
-                                        {chatList.map((chat, i) => (
-                                            <li
-                                                key={chat.id || i}
-                                                className={`chat-item ${
-                                                    activeChat && 
-                                                    activeChat.id === chat.id ? 'active' : ''
-                                                }`}
-                                                onClick={() => this.handleChatSelect(chat)}
+                    return (
+                        <>
+                            {sessionContext && sessionContext.currentSession === 'dashboard' && (
+                                <div className="screen main-dashboard">
+                                    <header>
+                                        <div id="actions-bar">
+                                            <button 
+                                                id="action-chat"
+                                                onClick={() => this.props.onCreateGroup()}
                                             >
-                                                <div className="chat-icon">
-                                                    {chat.type === 'group' ? 'g' : 'd'}
-                                                </div>
-                                                <div className="chat-info">
-                                                    <div id="chat-name">{chat.name}</div>
-                                                    <div id="chat-preview">
-                                                        {chat.lastMessage}
+                                                Group++++
+                                            </button>
+                                        </div>
+                                    </header>
+                                </div>
+                            )}
+
+                            <div className="group-container" ref={this.groupContainerRef}></div>
+
+                            <div id="chat-container">
+                                <div className="chat-list">
+                                    {chatList.length === 0 ? (
+                                        <p>No chats.</p>
+                                    ) : (
+                                        <ul>
+                                            {chatList.map((chat, i) => (
+                                                <li
+                                                    key={chat.id || i}
+                                                    className={`chat-item ${
+                                                        activeChat && 
+                                                        activeChat.id === chat.id ? 'active' : ''
+                                                    }`}
+                                                    onClick={() => this.handleChatSelect(chat)}
+                                                >
+                                                    <div className="chat-icon">
+                                                        {chat.type === 'group' ? 'g' : 'd'}
                                                     </div>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
+                                                    <div className="chat-info">
+                                                        <div id="chat-name">{chat.name}</div>
+                                                        <div id="chat-preview">
+                                                            {chat.lastMessage}
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </>
-                )}
+                        </>
+                    )
+                }}
             </SessionContext.Consumer>
         );
     }

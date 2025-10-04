@@ -1,5 +1,5 @@
 import './__styles/styles.scss';
-import React from 'react';
+import React, { useRef } from 'react';
 import { Component } from 'react';
 import { apiClient } from './api-client';
 import { MessageManager } from './_messages_config/message-manager';

@@ -49,7 +49,7 @@ export class GroupManager {
 
     private setupSocketListeners(): void {
         //Success
-        this.socketClient.on('group-creation-scss', (data: CreationData) => {
+        this.socketClient.on('group-created-scss', (data: CreationData) => {
             this.handleGroupCreationScss(data);
         })
 
@@ -170,7 +170,7 @@ export class GroupManager {
         //Emit
         this.socketClient.emit('create-group', {
             creator: this.uname,
-            creatorId: creatorId,
+            creatorId: '123',//creatorId,
             groupName: this.currentGroupName
         });
     }

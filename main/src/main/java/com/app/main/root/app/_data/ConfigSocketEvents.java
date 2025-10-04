@@ -130,8 +130,8 @@ public class ConfigSocketEvents {
                         String id = "group_" + System.currentTimeMillis() + "_" + format;
                         String groupName = (String) groupData.get("groupName");
                         String sessionId = socketMethods.getSessionId(socket);
-                        String groupCreatedScssData = "/topic/group-created-scss";
-                        String groupUpdateData = "/topic/group-update";
+                        String groupCreatedScssData = "/group-created-scss";
+                        String groupUpdateData = "/group-update";
                         if(creator == null || creatorId == null) throw new IllegalArgumentException("Invalid group data!");
 
                         Map<String, Object> newGroup = new HashMap<>();
@@ -161,6 +161,9 @@ public class ConfigSocketEvents {
 
                         if(io instanceof SimpMessagingTemplate) {
                             SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
+                            Map<String, Object> sucssRes = new HashMap<>();
+                            sucssRes.put("event", "group-created-scss");
+                            sucssRes.put("data", newGroup);
                             messagingTemplate.convertAndSend(groupUpdateData, groupUpdate);
                         }
 

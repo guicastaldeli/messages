@@ -27,7 +27,7 @@ export class GroupLayout extends Component<Props, State> {
     private messageManager: MessageManager;
     private groupManager: GroupManager;
 
-    private timeout: number = 5000;
+    private timeout: number = 15000;
     private nameInputRef = createRef<HTMLInputElement>();
 
     constructor(props: Props) {
