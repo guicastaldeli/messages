@@ -31,6 +31,8 @@ export class GroupManager {
     private currentGroupId: string = '';
     private onCreateSuccess?: (data: CreationData) => void;
     private onCreateError?: (error: any) => void;
+    private creationRes?: (data: CreationData) => void;
+    private creationRej?: (error: any) => void;
 
     constructor(
         socketClient: SocketClientConnect,
@@ -46,26 +48,23 @@ export class GroupManager {
         this.uname = uname;
     }
 
-    public setupSocketListeners(): void {
+    public async setupSocketListeners(): Promise<void> {
         //Success
-        this.socketClient.on('group-created', (data: CreationData) => {
-            console.log('group-created')
-            this.handleGroupCreationScss(data);
-        });
-        this.socketClient.on('group-created-scss', (data: CreationData) => {
-            console.log('group-created-scss')
+        this.socketClient.on('group-creation-scss', (data: CreationData) => {
+            if(this.creationRes) {
+                this.creationRes(data);
+                this.creationRes = undefined;
+                this.creationRej = undefined;
+            }
             this.handleGroupCreationScss(data);
         });
 
         //Error
-        this.socketClient.on('group-created-err', (err: any) => {
-            if(this.onCreateError) this.onCreateError(err);
-        });
-
-        //Update
-        this.socketClient.on('group-update', (data: any) => {
-            if(data.type === 'group-created') {
-                console.log('New group created!', data.group);
+        this.socketClient.on('group-creation-err', (err: any) => {
+            if(this.creationRej) {
+                this.creationRej(new Error(err.error));
+                this.creationRes = undefined;
+                this.creationRej = undefined;
             }
         });
     }
@@ -178,19 +177,11 @@ export class GroupManager {
         const creatorId = this.socketClient.getSocketId();
 
         //Emit
-        this.socketClient.send('create-group', {
+        await this.socketClient.send('create-group', {
             creator: this.uname,
-            creatorId: '123',//creatorId,
+            creatorId: '222',
             groupName: this.currentGroupName
         });
-        this.socketClient.emit('create-group', {
-            creator: this.uname,
-            creatorId: '123',//creatorId,
-            groupName: this.currentGroupName
-        });
-        this.socketClient.on('create-group', () => {
-            console.log('create-group')
-        })
     }
 
     public manageCreate = (groupName: string): void => {

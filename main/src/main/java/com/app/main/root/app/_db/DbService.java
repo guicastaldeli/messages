@@ -9,18 +9,18 @@ public class DbService {
     private final RestTemplate restTemplate;
     private final String apiUrl;
 
-    public final UsersConfig usersConfig;
-    public final MessagesConfig messagesConfig;
-    public final GroupsConfig groupsConfig;
+    public final UserService userService;
+    public final MessageService messageService;
+    public final GroupService groupService;
     public final ColorConverter colorConverter;
 
     public DbService(DataSource dataSource, ColorConverter colorConverter) {
         this.restTemplate = new RestTemplate();
         this.apiUrl = System.getenv().getOrDefault("API_URL", "http://localhost:3002");
 
-        this.usersConfig = new UsersConfig(dataSource);
-        this.messagesConfig = new MessagesConfig(dataSource);
-        this.groupsConfig = new GroupsConfig(dataSource);
+        this.userService = new UserService(dataSource);
+        this.messageService = new MessageService(dataSource);
+        this.groupService = new GroupService(dataSource);
         this.colorConverter = colorConverter;
     }
 
@@ -33,15 +33,15 @@ public class DbService {
         );
     }
 
-    public UsersConfig getUsersConfig() {
-        return usersConfig;
+    public UserService getUserService() {
+        return userService;
     }
 
-    public MessagesConfig getMessagesConfig() {
-        return messagesConfig;
+    public MessageService getMessageService() {
+        return messageService;
     }
 
-    public GroupsConfig getGroupsConfig() {
-        return groupsConfig;
+    public GroupService getGroupService() {
+        return groupService;
     }
 }

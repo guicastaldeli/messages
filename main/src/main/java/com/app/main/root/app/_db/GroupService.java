@@ -1,17 +1,19 @@
 package com.app.main.root.app._db;
 import com.app.main.root.app._types._User;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.app.main.root.app._types._Group;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.sql.*;
 
 @Component
-public class GroupsConfig {
+public class GroupService {
     private final DataSource dataSource;
 
-    public GroupsConfig(DataSource dataSource) {
+    public GroupService(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
@@ -138,5 +140,19 @@ public class GroupsConfig {
         user.setUsername(rs.getString("username"));
         user.setCreatedAt(rs.getTimestamp("created_at"));
         return user;
+    }
+
+    /*
+    * Parser 
+    */
+    public Map<String, Object> parseData(Object data) throws Exception {
+        if(data instanceof Map) {
+            return (Map<String, Object>) data;
+        } else if(data instanceof String) {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue((String) data, Map.class);
+        } else {
+            throw new IllegalArgumentException("Group data must be Map or JSON String!");
+        }
     }
 }

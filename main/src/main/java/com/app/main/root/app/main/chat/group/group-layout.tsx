@@ -73,7 +73,7 @@ export class GroupLayout extends Component<Props, State> {
         });
     }
 
-    handleCreate = () => {
+    handleCreate = async () => {
         const groupName = this.nameInputRef.current?.value || '';
         if(!groupName.trim()) {
             alert('Enter a group name');
@@ -87,7 +87,7 @@ export class GroupLayout extends Component<Props, State> {
         });
 
         try {
-           // this.groupManager.setupSocketListeners();
+            await this.groupManager.setupSocketListeners();
             this.groupManager.manageCreate(groupName);
 
             setTimeout(() => {

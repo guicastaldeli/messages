@@ -40,7 +40,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     ) {
         this.eventTracker = EventTracker.getInstance();
         this.dbService = dbService;
-        this.socketMethods = new SocketMethods();
+        this.socketMethods = new SocketMethods(eventTracker);
         this.messagingTemplate = messagingTemplate;
         this.connectionTracker = connectionTracker;
         this.configSocketEvents = new ConfigSocketEvents(

@@ -1,5 +1,4 @@
 package com.app.main.root.app._server;
-import com.app.main.root.app._db.UsersConfig;
 import com.app.main.root.app._utils.ColorConverter;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -13,7 +12,6 @@ import java.util.*;
 
 @Component
 public class ConnectionTracker {
-    private final UsersConfig usersConfig;
     private static ConnectionTracker instance;
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
@@ -21,10 +19,6 @@ public class ConnectionTracker {
 
     @Autowired
     private ColorConverter colorConverter;
-
-    public ConnectionTracker(UsersConfig usersConfig) {
-        this.usersConfig = usersConfig;
-    }
     
     public static ConnectionTracker getInstance() {
         return instance;

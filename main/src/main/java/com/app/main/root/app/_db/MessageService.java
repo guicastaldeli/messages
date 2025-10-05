@@ -8,10 +8,10 @@ import java.util.List;
 import java.sql.*;
 
 @Component
-public class MessagesConfig {
+public class MessageService {
     private final DataSource dataSource;
 
-    public MessagesConfig(DataSource dataSource) {
+    public MessageService(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 

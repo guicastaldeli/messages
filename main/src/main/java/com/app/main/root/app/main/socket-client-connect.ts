@@ -25,7 +25,7 @@ export class SocketClientConnect {
     public connect(): Promise<void> {
         if(this.connectionPromise) return this.connectionPromise;
 
-        this.connectionPromise = new Promise((res, rej) => {
+        this.connectionPromise = new Promise(async (res, rej) => {
             this.resConnection = res;
             this.rejConnection = rej;
 
@@ -39,7 +39,7 @@ export class SocketClientConnect {
 
                 console.log('Connecting to:', wsUrl);
                 this.socket = new WebSocket(wsUrl);
-                this.setupEventListeners();
+                await this.setupEventListeners();
                 this.eventDiscovery.events().catch(console.error);
 
                 this.socket.onopen = () => {
@@ -75,10 +75,10 @@ export class SocketClientConnect {
     /*
     ** Setup Event Listeners
     */
-    private setupEventListeners(): void {
+    private async setupEventListeners(): Promise<void> {
         if(!this.socket) throw new Error('FATAL ERR.');
 
-        this.socket.onmessage = (event) => {
+        this.socket.onmessage = async (event) => {
             try {
                 const message = JSON.parse(event.data);
 
@@ -89,20 +89,18 @@ export class SocketClientConnect {
                         this.resConnection();
                         this.resConnection = null;
                     }
-                    this.emit(message.event, message.data);
+                    await this.emit(message.event, message.data);
                     console.log('tst')
                 }
                 //Socket Id
                 else if(message.event === 'get-socket-id') {
                     this.socketId = message.data;
-                    this.emit(message.event, message.data);
+                    await this.emit(message.event, message.data);
                     console.log(message.data)
                     console.log('tst')
                 }
                 //Others
-                else {
-                    this.emit(message.event, message.data);
-                }
+                await this.emit(message.event, message.data);
             } catch(err) {
                 console.error('Error parsing WebSocket message:', err);
             }
@@ -129,12 +127,12 @@ export class SocketClientConnect {
     /*
     ** On
     */
-    public on(event: string, callback: Function): void {
+    public async on(event: string, callback: Function): Promise<void> {
         if(!this.eventListeners.has(event)) {
             this.eventListeners.set(event, []);
         }
         this.eventListeners.get(event)!.push(callback);
-        //console.log(`Listener added for event: ${event}`);
+        console.log(`Listener added for event: ${event}`);
     }
 
     /*

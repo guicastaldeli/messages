@@ -7,10 +7,10 @@ import java.util.List;
 import java.sql.*;
 
 @Component
-public class UsersConfig {
+public class UserService {
     private final DataSource dataSource;
 
-    public UsersConfig(DataSource dataSource) {
+    public UserService(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 

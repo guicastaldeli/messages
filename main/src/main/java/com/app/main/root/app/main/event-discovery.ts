@@ -1,6 +1,8 @@
 export class EventDiscovery {
     public availableEvents: Set<string> = new Set();
     private url: string;
+    private lastFetchTime: number = 0;
+    private cacheDurarion: number = 3000;
 
     constructor() {
         this.url = this.getUrl();
@@ -21,13 +23,25 @@ export class EventDiscovery {
         return url;
     }
 
-    public async events(): Promise<void> {
+    public async events(forceRefresh: boolean = false): Promise<void> {
         try {
+            const now = Date.now();
+            if(
+                !forceRefresh && 
+                (now - this.lastFetchTime) < this.cacheDurarion && 
+                this.availableEvents.size > 0
+            ) {
+                return;
+            }
+
             const url = `${this.url}/events`;
             const res = await fetch(url);
             if(!res.ok) throw new Error(`HTTP error!, ${res.status}`);
             const events: string[] = await res.json();
             this.availableEvents = new Set(events);
+            this.lastFetchTime = now;
+
+            console.log(Array.from(this.availableEvents))
         } catch(err) {
             console.log(err);
         }
