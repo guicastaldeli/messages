@@ -150,7 +150,13 @@ export class SocketClientConnect {
     ** Emit
     */
     private async getEventEmit(event: string, data?: any): Promise<void> {
-        const available = await this.eventDiscovery.isEventAvailable(event);
+        let available = await this.eventDiscovery.isEventAvailable(event);
+
+        if(!available) {
+            await this.eventDiscovery.refreshEvents();
+            available = await this.eventDiscovery.isEventAvailable(event);
+        }
+        
         if(available) {
             const listeners = this.eventListeners.get(event);
             //console.log('Emitted', { event, data })
@@ -170,11 +176,6 @@ export class SocketClientConnect {
     }
 
     public async emit(event: string, data?: any): Promise<boolean> {
-        const isValid = await this.eventDiscovery.isEventAvailable(event);
-        if(!isValid) {
-            console.error(`Event ${event} is not available on the Server.`);
-            return false;
-        }
         this.getEventEmit(event, data);
         return true;
     }
@@ -183,7 +184,13 @@ export class SocketClientConnect {
     ** Send
     */
     private async getEventSend(event: string, data?: any): Promise<void> {
-        const available = await this.eventDiscovery.isEventAvailable(event);
+        let available = await this.eventDiscovery.isEventAvailable(event);
+
+        if(!available) {
+            await this.eventDiscovery.refreshEvents();
+            available = await this.eventDiscovery.isEventAvailable(event);
+        }
+
         if(available) {
             if(this.socket && this.socket.readyState === WebSocket.OPEN) {
                 const content = JSON.stringify({ event, data });

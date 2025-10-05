@@ -46,9 +46,10 @@ export class GroupManager {
         this.dashboard = dashboard;
         this.appEl = appEl;
         this.uname = uname;
+        this.setupSocketListeners();
     }
 
-    public async setupSocketListeners(): Promise<void> {
+    public async setupSocketListeners(): Promise<void> {        
         //Success
         this.socketClient.on('group-creation-scss', (data: CreationData) => {
             if(this.creationRes) {
@@ -171,6 +172,8 @@ export class GroupManager {
             throw new Error('Unable to establish connection');
         }
         if(!groupName.trim()) throw new Error('name invalid');
+
+        await this.socketClient.eventDiscovery.refreshEvents();
 
         this.currentGroupName = groupName;
         chatState.setType('group');
