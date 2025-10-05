@@ -1,6 +1,6 @@
 package com.app.main.root.app._data;
-import com.app.main.root.app.main._messages_config.MessageTracker;
-import com.app.main.root.app.main._messages_config.MessageLog.MessageDirection;
+import com.app.main.root.app.EventTracker;
+import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.SocketClient;
 import com.app.main.root.app._server.SocketEmitter;
 import com.app.main.root.app._server.SocketEmitter.EventHandler;
@@ -13,10 +13,10 @@ import java.util.Arrays;
 
 @Component
 public class ConfigSocketClientEvents {
-    private final MessageTracker messageTracker;
+    private final EventTracker eventTracker;
 
-    public ConfigSocketClientEvents(MessageTracker messageTracker) {
-        this.messageTracker = messageTracker;
+    public ConfigSocketClientEvents(EventTracker eventTracker) {
+        this.eventTracker = eventTracker;
     }
 
     public void configSocketClientEvents(SocketClient socketClient, WebSocketSession session) {
@@ -38,10 +38,10 @@ public class ConfigSocketClientEvents {
                     String username = (String) data;
                     String sessionId = session.getId();
 
-                    messageTracker.trackMessage(
+                    eventTracker.track(
                         "update", 
                         data, 
-                        MessageDirection.RECEIVED,
+                        EventDirection.RECEIVED,
                         sessionId,
                         username
                     );
@@ -59,10 +59,10 @@ public class ConfigSocketClientEvents {
                     String username = (String) data;
                     String sessionId = session.getId();
 
-                    messageTracker.trackMessage(
+                    eventTracker.track(
                         "chat", 
                         data, 
-                        MessageDirection.RECEIVED,
+                        EventDirection.RECEIVED,
                         sessionId,
                         username
                     );
@@ -87,10 +87,10 @@ public class ConfigSocketClientEvents {
                     String username = (String) data;
                     String sessionId = session.getId();
 
-                    messageTracker.trackMessage(
+                    eventTracker.track(
                         "new-user",
                         username,
-                        MessageDirection.SENT,
+                        EventDirection.SENT,
                         sessionId,
                         username
                     );
@@ -107,10 +107,10 @@ public class ConfigSocketClientEvents {
                     String username = (String) data;
                     String sessionId = session.getId();
 
-                    messageTracker.trackMessage(
+                    eventTracker.track(
                         "exit-user",
                         username,
-                        MessageDirection.SENT,
+                        EventDirection.SENT,
                         sessionId,
                         username
                     );
@@ -129,10 +129,10 @@ public class ConfigSocketClientEvents {
                     String username = (String) messageData.get("username");
                     String sessionId = session.getId();
 
-                    messageTracker.trackMessage(
+                    eventTracker.track(
                         "chat",
                         content,
-                        MessageDirection.SENT,
+                        EventDirection.SENT,
                         sessionId,
                         username
                     );

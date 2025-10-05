@@ -1,6 +1,6 @@
 package com.app.main.root.app._data;
-import com.app.main.root.app.main._messages_config.MessageTracker;
-import com.app.main.root.app.main._messages_config.MessageLog.MessageDirection;
+import com.app.main.root.app.EventTracker;
+import com.app.main.root.app.EventLog.EventDirection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.app.main.root.app._server.EventRegistry;
 import com.app.main.root.app._server.ConnectionTracker;
@@ -14,18 +14,18 @@ import java.util.*;
 
 @Component
 public class ConfigSocketEvents {
-    private final MessageTracker messageTracker;
+    private final EventTracker eventTracker;
     private final ConnectionTracker connectionTracker;
     private final DbService dbService;
     private final SocketMethods socketMethods;
 
     public ConfigSocketEvents(
-        MessageTracker messageTracker,
+        EventTracker eventTracker,
         ConnectionTracker connectionTracker,
         DbService dbService,
         SocketMethods socketMethods
     ) {
-        this.messageTracker = messageTracker;
+        this.eventTracker = eventTracker;
         this.connectionTracker = connectionTracker;
         this.dbService = dbService;
         this.socketMethods = socketMethods;
@@ -40,10 +40,10 @@ public class ConfigSocketEvents {
                     String user = (String) data;
                     String sessionId = socketMethods.getSessionId(socket);
 
-                    messageTracker.trackMessage(
+                    eventTracker.track(
                         "new-user", 
                         user,
-                        MessageDirection.RECEIVED,
+                        EventDirection.RECEIVED,
                         sessionId,
                         user
                     );
@@ -70,10 +70,10 @@ public class ConfigSocketEvents {
                     String user = (String) data;
                     String sessionId = socketMethods.getSessionId(socket);
     
-                    messageTracker.trackMessage(
+                    eventTracker.track(
                         "exit-user",
                         user,
-                        MessageDirection.RECEIVED,
+                        EventDirection.RECEIVED,
                         sessionId,
                         user
                     );
@@ -94,10 +94,10 @@ public class ConfigSocketEvents {
                     String sessionId = socketMethods.getSessionId(socket);
                     String chatSocket = chatId != null ? chatId : sessionId; 
     
-                    messageTracker.trackMessage(
+                    eventTracker.track(
                         "chat",
                         data,
-                        MessageDirection.RECEIVED,
+                        EventDirection.RECEIVED,
                         sessionId,
                         content
                     );
@@ -132,13 +132,11 @@ public class ConfigSocketEvents {
                                 ObjectMapper mapper = new ObjectMapper();
                                 groupData = mapper.readValue((String) data, Map.class);
                             } catch(Exception err) {
-                                System.out.println("DATATTTATATTATA::: " + data);
                                 throw new IllegalArgumentException("Invalid format for group data");
                             }
                         } else {
                             throw new IllegalArgumentException("Group data must be a Map or JSON String");
                         }
-
 
                         String creator = (String) groupData.get("creator");
                         String creatorId = (String) groupData.get("creatorId");
@@ -153,7 +151,7 @@ public class ConfigSocketEvents {
                         newGroup.put("name", groupName);
                         newGroup.put("creator", creator);
                         newGroup.put("creatorId", creatorId);
-                        newGroup.put("members", Arrays.asList(creatorId));
+                        newGroup.put("members", Arrays.asList(creator));
                         newGroup.put("createdAt", creationDate);
 
                         try {
@@ -166,23 +164,32 @@ public class ConfigSocketEvents {
 
                         if(io instanceof SimpMessagingTemplate) {
                             SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
-                            String groupCreatedScssData = "/topic/group-created-scss";
-                            messagingTemplate.convertAndSendToUser(sessionId, groupCreatedScssData, newGroup);
-                        }
+                            
+                            Map<String, Object> sucssRes = new HashMap<>();
+                            sucssRes.put("success", true);
+                            sucssRes.put("message", "Group created" + groupName);
+                            sucssRes.put("group", newGroup);
+                            sucssRes.put("timestamp", creationDate);
 
-                        String groupUpdateData = "/group-update";
-                        Map<String, Object> groupUpdate = new HashMap<>();
-                        groupUpdate.put("type", "group-created");
-                        groupUpdate.put("group", newGroup);
-                        groupUpdate.put("creator", creator);
-
-                        if(io instanceof SimpMessagingTemplate) {
-                            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
-                            messagingTemplate.convertAndSend(groupUpdateData, groupUpdateData);
+                            messagingTemplate.convertAndSendToUser(sessionId, "/topic/group-created", sucssRes);
+                            messagingTemplate.convertAndSend("/topic/groups", sucssRes);
                         }
 
                         System.out.println("Group created successfully: " + newGroup);
-                        return newGroup;
+                        
+                        Map<String, Object> broadcastRes = new HashMap<>();
+                        broadcastRes.put("type", "group-created");
+                        broadcastRes.put("group", newGroup);
+                        broadcastRes.put("message", "New group" + groupName);
+
+                        eventTracker.track(
+                            "create-group", 
+                            groupName,
+                            EventDirection.RECEIVED,
+                            sessionId,
+                            groupName
+                        );
+                        return broadcastRes;
                     } catch(Exception err) {
                         System.err.println("Error creating group: " + err.getMessage());
                         err.printStackTrace();
@@ -199,9 +206,9 @@ public class ConfigSocketEvents {
                         throw new RuntimeException("Group creation failed", err);
                     }
                 },
-                false,
-                false,
-                null
+                true,
+                true,
+                "group-update"
             ),
             //Join Group Event
             EventRegistry.createBroadcastEvent(

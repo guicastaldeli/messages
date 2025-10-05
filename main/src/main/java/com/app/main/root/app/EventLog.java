@@ -1,8 +1,8 @@
-package com.app.main.root.app.main._messages_config;
+package com.app.main.root.app;
 import java.util.Date;
 
-public class MessageLog {
-    public enum MessageDirection {
+public class EventLog {
+    public enum EventDirection {
         SENT,
         RECEIVED
     }
@@ -11,16 +11,16 @@ public class MessageLog {
     private String eventName;
     private Object data;
     private Date timestamp;
-    private MessageDirection direction;
+    private EventDirection direction;
     private String senderId;
     private String username;
 
-    public MessageLog(
+    public EventLog(
         String id,
         String eventName,
         Object data,
         Date timestamp,
-        MessageDirection direction,
+        EventDirection direction,
         String senderId,
         String username
     ) {
@@ -76,10 +76,10 @@ public class MessageLog {
     /*
     * Message Direction 
     */
-    public void setDirection(MessageDirection direction) {
+    public void setDirection(EventDirection direction) {
         this.direction = direction;
     }
-    public MessageDirection getDirection() {
+    public EventDirection getDirection() {
         return direction;
     }
 
@@ -107,7 +107,7 @@ public class MessageLog {
     public String toString() {
         return String.format(
             """
-                MessageLog{
+                EventLog{
                     id='%s',
                     eventName='%s',
                     direction='%s',

@@ -87,6 +87,7 @@ export class GroupLayout extends Component<Props, State> {
         });
 
         try {
+           // this.groupManager.setupSocketListeners();
             this.groupManager.manageCreate(groupName);
 
             setTimeout(() => {

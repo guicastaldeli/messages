@@ -16,7 +16,7 @@ interface CreationData {
 }
 
 export class GroupManager {
-    private socketClient: SocketClientConnect;
+    public socketClient: SocketClientConnect;
     private messageManager: MessageManager;
     public dashboard: Dashboard;
 
@@ -44,19 +44,29 @@ export class GroupManager {
         this.dashboard = dashboard;
         this.appEl = appEl;
         this.uname = uname;
-        this.setupSocketListeners();
     }
 
-    private setupSocketListeners(): void {
+    public setupSocketListeners(): void {
         //Success
+        this.socketClient.on('group-created', (data: CreationData) => {
+            console.log('group-created')
+            this.handleGroupCreationScss(data);
+        });
         this.socketClient.on('group-created-scss', (data: CreationData) => {
+            console.log('group-created-scss')
             this.handleGroupCreationScss(data);
         });
 
         //Error
-        this.socketClient.on('error', (err: any) => {
-            console.error('Socket error:', err);
+        this.socketClient.on('group-created-err', (err: any) => {
             if(this.onCreateError) this.onCreateError(err);
+        });
+
+        //Update
+        this.socketClient.on('group-update', (data: any) => {
+            if(data.type === 'group-created') {
+                console.log('New group created!', data.group);
+            }
         });
     }
 
@@ -173,6 +183,14 @@ export class GroupManager {
             creatorId: '123',//creatorId,
             groupName: this.currentGroupName
         });
+        this.socketClient.emit('create-group', {
+            creator: this.uname,
+            creatorId: '123',//creatorId,
+            groupName: this.currentGroupName
+        });
+        this.socketClient.on('create-group', () => {
+            console.log('create-group')
+        })
     }
 
     public manageCreate = (groupName: string): void => {

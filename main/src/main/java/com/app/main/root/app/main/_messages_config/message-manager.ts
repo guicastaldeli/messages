@@ -62,6 +62,9 @@ export class MessageManager {
                     this.joinHandled = false;
                     return rej(new Error('Event err'));
                 }
+                this.socketClient.on('new-user', () => {
+                    console.log('%cNew User::::!!', "font-weight: bold; color: blue;")
+                })
                 this.uname = usernameInput.value;
                 this.initController();
                 this.controller.init();

@@ -130,8 +130,11 @@ export class SocketClientConnect {
     ** On
     */
     public on(event: string, callback: Function): void {
-        if(!this.eventListeners.has(event)) this.eventListeners.set(event, []);
+        if(!this.eventListeners.has(event)) {
+            this.eventListeners.set(event, []);
+        }
         this.eventListeners.get(event)!.push(callback);
+        //console.log(`Listener added for event: ${event}`);
     }
 
     /*
@@ -152,7 +155,7 @@ export class SocketClientConnect {
         const available = await this.eventDiscovery.isEventAvailable(event);
         if(available) {
             const listeners = this.eventListeners.get(event);
-            console.log('Emitted', { event, data })
+            //console.log('Emitted', { event, data })
             if(listeners) {
                 listeners.forEach(callback => {
                     try {
@@ -186,7 +189,7 @@ export class SocketClientConnect {
         if(available) {
             if(this.socket && this.socket.readyState === WebSocket.OPEN) {
                 const content = JSON.stringify({ event, data });
-                console.log('Content:', content);
+                //console.log('Content:', content);
                 this.socket.send(content);
             } else {
                 console.error('WebSocket not connected. Cannot send message:', event);
