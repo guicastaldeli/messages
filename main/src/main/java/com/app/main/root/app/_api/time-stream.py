@@ -2,9 +2,11 @@ import aiohttp
 import asyncio
 from datetime import datetime
 from typing import Callable, Dict, Any
-import json
-import threading
 from threading import Event
+from fastapi import APIRouter, HTTPException
+from __main import dbService
+
+router = APIRouter()
 
 class TimeStream:
     def __init__(self, url: str = ""):
@@ -16,7 +18,7 @@ class TimeStream:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    f"{self.url}/.api/time-stream?_={int(datetime.now().timestamp() * 1000)}"
+                    f"{self.url}/api/time-stream?_={int(datetime.now().timestamp() * 1000)}"
                 ) as res:
                     if(res.status != 200):
                         raise Exception("Time API not avaliable!")
@@ -39,6 +41,7 @@ class TimeStream:
     
     ##
     ## Time Update
+    @router.get("/api/time-stream")
     def timeUpdate(
         self,
         updateCallback: Callable[[str, bool], None],

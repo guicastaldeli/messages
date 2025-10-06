@@ -2,11 +2,16 @@ from fastapi import HTTPException, Query
 from fastapi.responses import HTMLResponse
 from __main import app, dbService
 from typing import Optional
+from datetime import datetime
 
 HTML = """
     <!DOCTYPE html>
     <html>
         <body>
+            <div class="endpoint">
+                <a href="/api/time-stream" target="_blank">/api/time-stream</a>
+            </div>
+            
             <div class="endpoint">
                 <a href="/api/messages?chatId=example123" target="_blank">/api/messages?chatId=example123</a>
             </div>
@@ -25,6 +30,21 @@ HTML = """
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return HTML
+
+### Time Stream
+@app.get("/api/time-stream")
+async def getTimeStream():
+    try:
+        now = datetime.now()
+        return {
+            "timestamp": int(now.timestamp() * 1000),
+            "iso": now.isoformat(),
+            "local": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "timezone": str(now.astimezone().tzinfo),
+            "serverTime": True
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 ### Messages
 @app.get("/api/messages")
