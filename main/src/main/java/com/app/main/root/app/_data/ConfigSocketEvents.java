@@ -115,7 +115,7 @@ public class ConfigSocketEvents {
                 true,
                 "chat"
             ),
-            //Create Group Event
+            //Create Group
             EventRegistry.createBroadcastEvent(
                 "create-group",
                 (socket, data, io) -> {
@@ -151,7 +151,7 @@ public class ConfigSocketEvents {
                             newGroup
                         );
                         
-                        return newGroup;
+                        return Collections.emptyMap();
                     } catch(Exception err) {
                         socketMethods.send(socket, "group-creation-err", 
                             Map.of("error", err.getMessage())
@@ -159,8 +159,29 @@ public class ConfigSocketEvents {
                         return Collections.emptyMap();
                     }
                 },
-                true,
+                false,
                 ""
+            ),
+            //Group Created
+            EventRegistry.createBroadcastEvent(
+                "group-created",
+                (socket, data, io) -> {
+                    String sessionId = socketMethods.getSessionId(socket);
+
+                    eventTracker.track(
+                        "group-created",
+                        data,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        sessionId
+                    );
+
+                    EventRegistry.removeEvent("group-creation-scss");
+
+                    return Collections.emptyMap();
+                },
+                false,
+                "create-group"
             ),
             //Join Group Event
             EventRegistry.createBroadcastEvent(

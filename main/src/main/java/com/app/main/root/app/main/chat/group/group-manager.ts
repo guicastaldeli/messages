@@ -146,6 +146,8 @@ export class GroupManager {
                     hideChat: false,
                     groupName: data.name
                 });
+
+                this.socketClient.send('group-created');
             },
             (error) => {
                 alert(`Failed to create group: ${error.message}`);

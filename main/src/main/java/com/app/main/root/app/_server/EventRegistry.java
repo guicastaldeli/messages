@@ -126,4 +126,17 @@ public class EventRegistry {
         EventHandlerConfig eventConfig = events.get(eventName);
         if(eventConfig != null) eventConfig.handler.handle(socket, data, io);
     }
+
+    /*
+    * Remove Event 
+    */
+    public static boolean removeEvent(String name) {
+        return events.remove(name) != null;
+    }
+
+    public static void removeEvents(List<String> names) {
+        for(String name : names) {
+            events.remove(name);
+        }
+    }
 }
