@@ -46,7 +46,7 @@ export class SocketClientConnect {
                         '%cConnected to the Server ;)', 'color: #004db2ff; font-weight: bold'
                     );
                     this.reconnectAttemps = 0;
-                    this.reqSocketId();
+                    this.getSocketId();
                 }
                 this.socket.onclose = (event) => {
                     console.log('WebSocket connection closed:', event.code, event.reason);
@@ -232,12 +232,16 @@ export class SocketClientConnect {
     /*
     ** Socket Id
     */
-    public async getSocketId(): Promise<void> {
-        
-    }
-
-    private reqSocketId(): void {
-        
+    public async getSocketId(): Promise<string> {
+        return new Promise((res, rej) => {
+            this.send('get-socket-id').then(scss => {
+                if(!scss) rej(new Error('Failed to send socket id request'));
+            }).catch(rej);
+            this.on("res-socket-id", (id: string) => {
+                res(id);
+            });
+            return res;
+        });
     }
 
     /*

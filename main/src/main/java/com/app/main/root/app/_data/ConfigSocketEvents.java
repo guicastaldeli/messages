@@ -245,19 +245,24 @@ public class ConfigSocketEvents {
                 "get-socket-id",
                 (socket, data, io) -> {
                     String sessionId = socketMethods.getSessionId(socket);
-                    ConnectionTracker.ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
-                    String connectedDate = connectionInfo != null ? 
-                    connectionInfo.connectedAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) :
-                    LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                    
+                    eventTracker.track(
+                        "get-socket-id",
+                        data,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        sessionId
+                    );
+                    socketMethods.send(
+                        socket,
+                        "res-socket-id",
+                        sessionId
+                    );
 
-                    System.out.println(sessionId);
-                    Map<String, Object> res = new HashMap<>();
-                    res.put("socketId", sessionId);
-                    res.put("connectedAt", connectedDate);
-                    return res;
+                    return sessionId;
                 },
                 true,
-                "socket-id"
+                ""
             )
         );
         EventRegistry.registerAllEvents(events);

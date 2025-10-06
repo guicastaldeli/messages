@@ -179,12 +179,12 @@ export class GroupManager {
 
         this.currentGroupName = groupName;
         chatState.setType('group');
-        const creatorId = this.socketClient.getSocketId();
-
+        const creatorId = await this.socketClient.getSocketId();
+        
         //Emit
         await this.socketClient.send('create-group', {
             creator: this.uname,
-            creatorId: '222',
+            creatorId: creatorId,
             groupName: this.currentGroupName
         });
     }
