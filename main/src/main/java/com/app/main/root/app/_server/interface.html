@@ -2,8 +2,8 @@
 <html xmlns:th="http://www.thymeleaf.org" th:fragment="content">
 <head>
     <title>Server</title>
-    <script th:inline="javascript" src="../../public/api-url.js"></script>
-    <script src="../../public/time-updater.js"></script>
+    <script th:inline="javascript" src="/public/api-url.js"></script>
+    <script src="/public/time-updater.js"></script>
 </head>
 <body>
     <div id="container">
@@ -18,7 +18,11 @@
             <p>CONNECTIONS: <span th:text="${connections}"></span></p>
         </div>
         <div id="ms--route">
-            <p>ROUTE: <span th:text="${url}">http://localhost:3001</span></p>
+            <p>ROUTES: 
+                <span th:text="${url}">http://localhost:3000</span>
+                <span th:text="${url}">http://localhost:3001</span>
+                <span th:text="${url}">http://localhost:3002</span>
+            </p>
         </div>
         <div id="api-status">
             <p>API Gateway: <b id="api-gateway-status">Checking...</b></p>

@@ -7,7 +7,7 @@ class TimeUpdater {
 
     async fetchServerTime() {
         try {
-            const res = await fetch(`${this.serverApiUrl}/api/time-stream`);
+            const res = await fetch(`${this.apiGatewayUrl}/api/time-stream`);
             if(res.ok) {
                 const timeData = await res.json();
                 return {
@@ -17,13 +17,11 @@ class TimeUpdater {
                 }
             }
         } catch(err) {
-            console.warn('Failed to fetch', err);
-        }
-
-        return {
-            local: new Date().toLocaleString(),
-            serverTime: false,
-            source: 'client-fallback'
+            return {
+                local: new Date().toLocaleString(),
+                serverTime: false,
+                source: 'client-fallback'
+            }
         }
     }
 
@@ -49,14 +47,15 @@ class TimeUpdater {
         }
     }
 
-    startUpdating(elementId, prefix = 'Time: ') {
+    startUpdating(elementId) {
         const element = document.getElementById(elementId);
         if(!element) return;
 
         const update = async () => {
+            await this.checkApiGatewayStatus();
             const timeData = await this.fetchServerTime();
             const timeSpan = element.querySelector('span') || element;
-            timeSpan.textContent = prefix + timeData.local;
+            timeSpan.textContent = timeData.local;
             element.setAttribute('data-time-source', timeData.source);
 
             if(timeData.serverTime) {
