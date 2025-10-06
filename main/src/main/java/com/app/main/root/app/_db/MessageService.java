@@ -23,7 +23,7 @@ public class MessageService {
     ) throws SQLException {
         String sql =
         """
-            INSERT INTO message(
+            INSERT INTO messages(
                 chat_id,
                 sender_id,
                 content,
@@ -89,7 +89,7 @@ public class MessageService {
         """
             SELECT m.*, u.username
             FROM messages m
-            LEFT JOIN users u ON m.serder_id = u.id
+            LEFT JOIN users u ON m.sender_id = u.id
             WHERE m.chat_id = ?
             ORDER BY m.created_at ASC
             LIMIT ?        
