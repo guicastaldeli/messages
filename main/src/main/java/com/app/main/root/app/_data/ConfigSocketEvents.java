@@ -110,6 +110,13 @@ public class ConfigSocketEvents {
                     res.put("content", data);
                     res.put("senderId", sessionId);
                     res.put("chatId", chatSocket);
+
+                    socketMethods.send(
+                        chatSocket, 
+                        "new-message", 
+                        data
+                    );
+
                     return res;
                 },
                 true,
@@ -219,26 +226,6 @@ public class ConfigSocketEvents {
                 },
                 false,
                 "group-update"
-            ),
-            //New Message Event
-            EventRegistry.createBroadcastEvent(
-                "new-message",
-                (socket, data, io) -> {
-                    Map<String, Object> messageData = (Map<String, Object>) data;
-                    String socketUsername = socketMethods.getSocketUsername(socket);
-                    String sessionId = socketMethods.getSessionId(socket);
-                    String timestamp = new Date().toString();
-    
-                    Map<String, Object> res = new HashMap<>();
-                    res.put("chatId", messageData.get("chatId"));
-                    res.put("content", messageData.get("content"));
-                    res.put("sender", socketUsername);
-                    res.put("senderId", sessionId);
-                    res.put("timestamp", timestamp);
-                    return res;
-                },
-                true,
-                "new-message"
             ),
             //Socket Id
             EventRegistry.createBroadcastEvent(

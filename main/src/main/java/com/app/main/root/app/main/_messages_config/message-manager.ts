@@ -73,14 +73,13 @@ export class MessageManager {
         });
     }
 
-    public handleSendMessage(chatId?: string): void {
+    public async handleSendMessage(chatId?: string): Promise<void> {
         if(!this.appEl || this.chatHandled) return;
         this.chatHandled = true;
 
         const sendBtn = this.appEl.querySelector<HTMLButtonElement>('.chat-screen #send-message');
         if(!sendBtn) throw new Error('send button err');
-
-        sendBtn.addEventListener('click', () => {
+        sendBtn.addEventListener('click', async () => {
             let messageInputEl = this.appEl!.querySelector<HTMLInputElement>('.chat-screen #message-input');
             let messageInput = messageInputEl!.value;
             if(!messageInputEl || !messageInput.length) return;
@@ -92,6 +91,7 @@ export class MessageManager {
                 chatId: chatId || this.socketId
             });
             messageInputEl.value = '';
+            await this.updateSocket();
         });
     }
 
@@ -113,41 +113,25 @@ export class MessageManager {
         }
     }
 
-    private async updateSocket(): Promise<void> {        
+    public async updateSocket(): Promise<void> {        
         //Update
         this.socketClient.on('update', (update: any) => {
             this.renderMessage('update', update);
         })
 
         //Chat
-        this.socketClient.on('chat', (message: any) => {
+        /* FIX LATER */
+        this.socketClient.on('new-message', async (message: any) => {
+            message.senderId = await this.socketClient.getSocketId();
+            this.currentUserId = await this.socketClient.getSocketId();
             const type = message.senderId === this.currentUserId ? 'self' : 'other';
+            console.log(this.currentUserId);
+            console.log(message.senderId);
+            
             this.renderMessage(type, {
                 username: message.username,
                 content: message.content
             });
-        })
-
-        //Group
-            this.socketClient.on('group-creation-scss', (data: any) => {
-                console.log('Group created', data);
-            })
-
-            this.socketClient.on('group-creation-err', (data: any) => {
-                console.log('Group created', data);
-            })
-
-            this.socketClient.on('group-update', (update: any) => {
-                this.renderMessage('update', update);
-            });
-
-            this.socketClient.on('user-joined', (data: any) => {
-                this.renderMessage('update', `${data.username} joined`);
-            });
-
-            this.socketClient.on('user-left', (data: any) => {
-                this.renderMessage('update', `${data.username} left`);
-            });
-        //
+        });
     }
 }

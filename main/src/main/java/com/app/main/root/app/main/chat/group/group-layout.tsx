@@ -205,7 +205,9 @@ export class GroupLayout extends Component<Props, State> {
                             <input type="text" id="message-input" />
                             <button 
                                 id="send-message" 
-                                onClick={() => this.messageManager.handleSendMessage()}
+                                onClick={async () => {
+                                    await this.messageManager.handleSendMessage();
+                                }}
                             >
                                 Send
                             </button>
