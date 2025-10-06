@@ -33,17 +33,18 @@ export class SocketClientConnect {
                 const protocol = window.location.protocol === 'http:' ? 'ws:' : 'wss:';
                 const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
                 const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
-                const wsUrl = 
-                `${protocol}//${host}:${port}/ws-direct` ||
+                const wsUrl = `${protocol}//${host}:${port}/ws-direct` ||
                 `${protocol}//${host}:${port}`;
 
-                console.log('Connecting to:', wsUrl);
+                console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', wsUrl);
                 this.socket = new WebSocket(wsUrl);
                 await this.setupEventListeners();
                 this.eventDiscovery.events().catch(console.error);
 
                 this.socket.onopen = () => {
-                    console.log('Connected to the Server ;)');
+                    console.log(
+                        '%cConnected to the Server ;)', 'color: #004db2ff; font-weight: bold'
+                    );
                     this.reconnectAttemps = 0;
                     this.reqSocketId();
                 }
@@ -132,7 +133,7 @@ export class SocketClientConnect {
             this.eventListeners.set(event, []);
         }
         this.eventListeners.get(event)!.push(callback);
-        console.log(`Listener added for event: ${event}`);
+        //console.log(`Listener added for event: ${event}`);
     }
 
     /*

@@ -60,14 +60,7 @@ export class GroupManager {
             this.handleGroupCreationScss(data);
         });
 
-        //Error
-        this.socketClient.on('group-creation-err', (err: any) => {
-            if(this.creationRej) {
-                this.creationRej(new Error(err.error));
-                this.creationRes = undefined;
-                this.creationRej = undefined;
-            }
-        });
+        //Update
     }
 
     private handleGroupCreationScss(data: CreationData): void {
@@ -156,6 +149,13 @@ export class GroupManager {
                     showChat: false,
                     hideChat: false,
                     groupName: ''
+                });
+                this.socketClient.on('group-creation-err', (err: any) => {
+                    if(this.creationRej) {
+                        this.creationRej(new Error(err.error));
+                        this.creationRes = undefined;
+                        this.creationRej = undefined;
+                    }
                 });
             }
         );

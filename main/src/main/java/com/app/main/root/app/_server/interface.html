@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="content">
+<head>
+    <title>Server</title>
+</head>
+<body>
+    <div id="container">
+        <p id="ms--wel" th:text="${welcome}">Welcome to Server! :)</p>
+        <p id="ms--version" th:text="${version}">Messages Server v1.0</p>
+        <p id="ms--time" data-auto-time-update th:attr="data-server-time=${serverTime}">
+            Time: <span th:text="${currentTime}">Loading...</span> (server)
+        </p>
+        <div id="ms--status">
+            <p>STATUS: running</p>
+            <p>UPTIME: <span th:text="${uptime}">0</span> seconds</p>
+            <p>CONNECTIONS: <span th:text="${connections}">0</span></p>
+        </div>
+        <div id="ms--route">
+            <p>ROUTE: <span th:text="${url}">http://localhost:3001</span></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -45,7 +45,7 @@ export class EventDiscovery {
             this.lastFetchTime = now;
             if(this.availableEvents.size !== prevCount) this.notifyEventRefresh(events);
 
-            console.log(Array.from(this.availableEvents))
+            //console.log(Array.from(this.availableEvents))
         } catch(err) {
             console.log(err);
         }
@@ -115,7 +115,6 @@ export class EventDiscovery {
             if(this.availableEvents.has(event)) return true;
             await new Promise(res => setTimeout(res, 500));
         }
-
         return false;
     }
 
