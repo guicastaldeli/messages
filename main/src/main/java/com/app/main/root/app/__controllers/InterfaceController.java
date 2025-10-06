@@ -8,17 +8,20 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import java.lang.management.ManagementFactory;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 import java.util.Date;
 
 @Controller
 public class InterfaceController {
     private final Server server;
     private final Date date = new Date();
+    private String apiUrl = "http://localhost:3002"; 
+    private TimeStreamController timeStreamController;
 
     public InterfaceController(Server server) {
         this.server = server;
+        this.timeStreamController = new TimeStreamController(server);
     }
 
     @GetMapping("/")
@@ -57,6 +60,7 @@ public class InterfaceController {
         content = content.replace("${connections}", String.valueOf(connections));
         content = content.replace("${uptime}", String.valueOf(uptime));
         content = content.replace("${currentTime}", new java.util.Date().toString());
+        content = content.replace("{apiGateway}", apiUrl);
         return content;
     }
 }

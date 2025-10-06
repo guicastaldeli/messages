@@ -1,12 +1,51 @@
 class TimeUpdater {
     constructor() {
         this.updateIntervals = new Map();
+        this.serverApiUrl = window.location.origin;
+        this.apiGatewayUrl = API_GATEWAY_URL;
     }
 
     async fetchServerTime() {
+        try {
+            const res = await fetch(`${this.serverApiUrl}/api/time-stream`);
+            if(res.ok) {
+                const timeData = await res.json();
+                return {
+                    local: timeData.local || new Date().toLocaleString(),
+                    serverTime: timeData.serverTime || false,
+                    source: timeData.source || 'unknown'
+                }
+            }
+        } catch(err) {
+            console.warn('Failed to fetch', err);
+        }
+
         return {
             local: new Date().toLocaleString(),
-            serverTime: false
+            serverTime: false,
+            source: 'client-fallback'
+        }
+    }
+
+    async checkApiGatewayStatus() {
+        try {
+            const res = await fetch(`${this.apiGatewayUrl}/api/time-stream`);
+            const statusEl = document.getElementById('api-gateway-status');
+            if(statusEl) {
+                if(res.ok) {
+                    statusEl.textContent = 'Connected';
+                    statusEl.style.color = 'green'
+                } else {
+                    statusEl.textContent = 'Disconnected';
+                    statusEl.style.color = 'red';
+                }
+            }
+        } catch(err) {
+            const statusEl = document.getElementById('api-gateway-status');
+            if(statusEl) {
+                statusEl.textContent = 'Disconnected';
+                statusEl.style.color = 'red';
+            }
         }
     }
 
@@ -16,8 +55,15 @@ class TimeUpdater {
 
         const update = async () => {
             const timeData = await this.fetchServerTime();
-            element.textContent = prefix + timeData.local;
-            element.setAttribute('data-time-source', timeData.serverTime ? 'server' : 'client');
+            const timeSpan = element.querySelector('span') || element;
+            timeSpan.textContent = prefix + timeData.local;
+            element.setAttribute('data-time-source', timeData.source);
+
+            if(timeData.serverTime) {
+                element.style.color = 'green';
+            } else {
+                element.style.color = 'red';
+            }
         }
         update();
 
