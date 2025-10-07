@@ -1,7 +1,15 @@
-#container {
-  background-color: red;
+#ms--time {
+  margin: 0;
+  border: none;
+  display: flex;
+  flex-direction: row;
 }
-
-#ms--status, #ms--route {
-  color: green;
+#ms--time p {
+  margin: 0;
+  border: none;
+  color: #000000;
+}
+#ms--time span {
+  margin: 0;
+  border: none;
 }/*# sourceMappingURL=interface.css.map */

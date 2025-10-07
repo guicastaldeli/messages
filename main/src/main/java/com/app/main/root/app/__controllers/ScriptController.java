@@ -55,6 +55,25 @@ public class ScriptController {
         }
     }
 
+    /*
+    * Server Interface Styles 
+    */
+    @GetMapping(value = "/styles/interface.css", produces = "text/css")
+    @ResponseBody
+    public ResponseEntity<String> getServerInterfaceStyles() {
+        try {
+            String content = loadFile("com/app/main/root/app/main/__styles/interface.css");
+            return ResponseEntity.ok()
+                    .contentType(MediaType.valueOf("text/css"))
+                    .body(content);
+        } catch(Exception e) {
+            System.out.println(e);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Failed to load");
+        }
+    }
+
     private String loadFile(String path) throws Exception {
         Resource resource = new ClassPathResource(path);
         if(!resource.exists()) throw new Exception("file not found!: " + path);

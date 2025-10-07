@@ -2,6 +2,8 @@
 <html xmlns:th="http://www.thymeleaf.org" th:fragment="content">
 <head>
     <title>Server</title>
+    <link rel="stylesheet" href="/styles/interface.css">
+    <link rel="stylesheet" href="../main/__styles/interface.css">
     <script th:inline="javascript" src="/public/api-url.js"></script>
     <script src="/public/time-updater.js"></script>
 </head>
@@ -9,9 +11,9 @@
     <div id="container">
         <p id="ms--wel" th:text="${welcome}">Welcome to Server! :)</p>
         <p id="ms--version" th:text="${version}">Messages Server v1.0</p>
-        <p id="ms--time" data-auto-time-update th:attr="data-server-time=${serverTime}">
-            Time: <span th:text="${currentTime}"></span>
-        </p>
+        <div id="ms--time" data-auto-time-update th:attr="data-server-time=${serverTime}">
+            <p>Time:&nbsp;</p><span th:text="${currentTime}"></span>
+        </div>
         <div id="ms--status">
             <p>STATUS: </p>
             <p>UPTIME: <span th:text="${uptime}"></span></p>

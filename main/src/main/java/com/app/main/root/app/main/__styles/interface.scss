@@ -1,7 +1,18 @@
-#container {
-    background-color: red;
-}
+#ms--time {
+    margin: 0;
+    border: none;
 
-#ms--status, #ms--route {
-    color: green;
+    display: flex;
+    flex-direction: row;
+    
+    p {
+        margin: 0;
+        border: none;
+        color: #000000;
+    }
+
+    span {
+        margin: 0;
+        border: none;
+    }
 }
