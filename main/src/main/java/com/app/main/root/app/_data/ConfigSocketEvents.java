@@ -107,12 +107,12 @@ public class ConfigSocketEvents {
     
                     Map<String, Object> res = new HashMap<>();
                     res.put("username", username);
-                    res.put("content", data);
+                    res.put("content", content);
                     res.put("senderId", sessionId);
                     res.put("chatId", chatSocket);
 
                     socketMethods.send(
-                        chatSocket, 
+                        socket, 
                         "new-message", 
                         data
                     );

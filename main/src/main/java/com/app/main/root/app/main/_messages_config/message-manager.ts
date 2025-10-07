@@ -19,10 +19,13 @@ export class MessageManager {
     private joinHandled: boolean = false;
     private chatHandled: boolean = false;
 
+    private msgHandlerCallback: ((msg: any) => void) | null = null;
+
     constructor(socketClient: SocketClientConnect) {
         this.contentGetter = new ContentGetter();
         this.socketClient = socketClient;
         this.messageTypes = new MessageTypes(this.contentGetter);
+        this.update();
     }
 
     private initController(): void {
@@ -45,7 +48,6 @@ export class MessageManager {
         });
 
         await this.socketClient.connect();
-        await this.updateSocket();
     }
 
     public handleJoin(): Promise<'dashboard'> {
@@ -78,20 +80,22 @@ export class MessageManager {
         this.chatHandled = true;
 
         const sendBtn = this.appEl.querySelector<HTMLButtonElement>('.chat-screen #send-message');
-        if(!sendBtn) throw new Error('send button err');
+        let msgInputEl = this.appEl!.querySelector<HTMLInputElement>('.chat-screen #message-input');
+        if(!sendBtn || !msgInputEl) return;
+        
         sendBtn.addEventListener('click', async () => {
-            let messageInputEl = this.appEl!.querySelector<HTMLInputElement>('.chat-screen #message-input');
-            let messageInput = messageInputEl!.value;
-            if(!messageInputEl || !messageInput.length) return;
+            const msgInput = msgInputEl.value.trim();
+            if(!msgInput.length) return; 
  
             this.socketClient.send('chat', {
                 senderId: this.socketClient.getSocketId(),
                 username: this.uname,
-                content: messageInput,
+                content: msgInput,
                 chatId: chatId || this.socketId
             });
-            messageInputEl.value = '';
-            await this.updateSocket();
+            await this.messageEventHandler();
+            msgInputEl.value = '';
+            msgInputEl.focus();
         });
     }
 
@@ -113,25 +117,34 @@ export class MessageManager {
         }
     }
 
-    public async updateSocket(): Promise<void> {        
-        //Update
+    /*
+    ** Update
+    */
+    public async update(): Promise<void> {
         this.socketClient.on('update', (update: any) => {
             this.renderMessage('update', update);
-        })
+        });
+    }
 
-        //Chat
-        /* FIX LATER */
-        this.socketClient.on('new-message', async (message: any) => {
-            message.senderId = await this.socketClient.getSocketId();
-            this.currentUserId = await this.socketClient.getSocketId();
-            const type = message.senderId === this.currentUserId ? 'self' : 'other';
-            console.log(this.currentUserId);
-            console.log(message.senderId);
+    public async messageEventHandler(): Promise<void> {
+        if(this.msgHandlerCallback) {
+            this.socketClient.off('new-message', this.msgHandlerCallback);
+        }
+
+        /* Change Id Later....!!! */
+        this.msgHandlerCallback = async (message: any) => {
+            if(!this.currentUserId || message.senderId) {
+                this.currentUserId = await this.socketClient.getSocketId();
+                message.senderId = this.currentUserId;
+            }
             
+            const type = message.senderId === this.currentUserId ? 'self' : 'other';
             this.renderMessage(type, {
                 username: message.username,
                 content: message.content
             });
-        });
+        }
+
+        this.socketClient.on('new-message', this.msgHandlerCallback);
     }
 }

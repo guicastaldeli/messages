@@ -5,7 +5,6 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import com.app.main.root.app.__controllers.SocketController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.app.main.root.app._server.EventRegistry;
 import com.app.main.root.app.EventTracker;
@@ -13,7 +12,6 @@ import com.app.main.root.app.EventLog.EventDirection;
 
 @Component
 public class SocketMethods {
-    private SocketController socketController;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final EventTracker eventTracker;
 

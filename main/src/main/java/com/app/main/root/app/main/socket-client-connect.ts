@@ -93,13 +93,6 @@ export class SocketClientConnect {
                     await this.emit(message.event, message.data);
                     console.log('tst')
                 }
-                //Socket Id
-                else if(message.event === 'get-socket-id') {
-                    this.socketId = message.data;
-                    await this.emit(message.event, message.data);
-                    console.log(message.data)
-                    console.log('tst')
-                }
                 //Others
                 await this.emit(message.event, message.data);
             } catch(err) {

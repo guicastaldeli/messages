@@ -102,8 +102,8 @@ public class ConnectionTracker {
         return connections.get(socketId);
     }
 
-    public List<ConnectionInfo> getAllConnections() {
-        return new ArrayList<>(connections.values());
+    public Map<String, ConnectionInfo> getAllConnections() {
+        return new ConcurrentHashMap<>(connections);
     }
 
     public List<ConnectionInfo> getActiveConnections() {
