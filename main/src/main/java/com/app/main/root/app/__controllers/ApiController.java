@@ -1,6 +1,5 @@
 package com.app.main.root.app.__controllers;
 import com.app.main.root.app._db.DbService;
-import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app._types._User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,17 +13,6 @@ import java.util.*;
 public class ApiController {
     @Autowired
     private DbService dbService;
-
-    @GetMapping("/messages")
-    public ResponseEntity<List<_Message>> getMessages(@RequestParam String chatId) {
-        try {
-            List<_Message> messages = dbService.getMessageService().getMessagesByChatId(chatId, 100);
-            return ResponseEntity.ok(messages);
-        } catch(Exception err) {
-            System.err.println("Error getting messages:" + err.getMessage());
-            return ResponseEntity.badRequest().body(Collections.emptyList());
-        }
-    }
 
     @GetMapping("/recent-chats")
     public ResponseEntity<List<_RecentChat>> getRecentChats(@RequestParam(required = false) String userId) {

@@ -7,7 +7,7 @@ import java.util.Map;
 
 @Component
 public class ColorConverter {
-    private static final Map<String, String> ansiColorsList = new HashMap<>();
+    public static final Map<String, String> ansiColorsList = new HashMap<>();
     static {
         // Basic colors
         ansiColorsList.put("black", "\u001B[30m");

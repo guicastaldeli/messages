@@ -1,5 +1,7 @@
 package com.app.main.root.app._data;
 import com.app.main.root.app.EventTracker;
+import com.app.main.root.app.main._messages_config.MessageLog;
+import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.EventRegistry;
 import com.app.main.root.app._server.ConnectionTracker;
@@ -12,17 +14,20 @@ import java.util.*;
 @Component
 public class ConfigSocketEvents {
     private final EventTracker eventTracker;
+    private final MessageTracker messageTracker;
     private final ConnectionTracker connectionTracker;
     private final DbService dbService;
     private final SocketMethods socketMethods;
 
     public ConfigSocketEvents(
         EventTracker eventTracker,
+        MessageTracker messageTracker,
         ConnectionTracker connectionTracker,
         DbService dbService,
         SocketMethods socketMethods
     ) {
         this.eventTracker = eventTracker;
+        this.messageTracker = messageTracker;
         this.connectionTracker = connectionTracker;
         this.dbService = dbService;
         this.socketMethods = socketMethods;
@@ -90,7 +95,21 @@ public class ConfigSocketEvents {
                     String username = socketMethods.getSocketUsername(socket);
                     String sessionId = socketMethods.getSessionId(socket);
                     String chatSocket = chatId != null ? chatId : sessionId; 
-    
+
+                    MessageLog.MessageType messageType = 
+                    chatId.startsWith("group_") ?
+                    MessageLog.MessageType.GROUP : MessageLog.MessageType.DIRECT;
+
+                    String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+                    messageTracker.track(
+                        messageId, 
+                        content, 
+                        messageId,
+                        username, 
+                        chatId, 
+                        messageType, 
+                        MessageLog.MessageDirection.SENT
+                    );
                     eventTracker.track(
                         "chat",
                         data,

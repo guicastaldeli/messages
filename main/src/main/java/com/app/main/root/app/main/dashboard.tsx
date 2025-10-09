@@ -5,6 +5,7 @@ import { GroupManager } from './chat/group/group-manager';
 import { SessionContext, SessionType } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { chatState } from './chat-state-service';
+import { apiClient } from './api-client';
 
 interface Props {
     onCreateGroup: () => void;
@@ -42,15 +43,13 @@ export class Dashboard extends Component<Props, State> {
         this.props.groupManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
 
-        /*
         try {
             const socketId = this.props.messageManager.socketClient.getSocketId() || '';
-            const chatList = await this.props.chatManager.getChatList(socketId);
+            const chatList = await apiClient.getRecentChats();
             this.setState({ chatList });
         } catch(err) {
             console.error('Error loading chat list', err);
         }
-            */
     }
 
     componentDidUpdate(prevProps: Props): void {
@@ -78,7 +77,7 @@ export class Dashboard extends Component<Props, State> {
         chatState.setType(chat.type === 'direct' ? 'direct' : 'group');
         
         try {
-            const messages = await this.props.chatManager.loadChatHistory(chat.id);
+            const messages = await apiClient.getRecentChats();
             const event = new CustomEvent('chat-activated', { detail: { chat, messages } });
             window.dispatchEvent(event);
 

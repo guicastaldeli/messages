@@ -1,6 +1,7 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app._data.ConfigSocketEvents;
 import com.app.main.root.app.EventTracker;
+import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app._db.DbService;
 import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app._utils.ColorConverter;
@@ -18,6 +19,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     private static Server instance;
     private SocketHandler socketHandler;
     private final EventTracker eventTracker;
+    private final MessageTracker messageTracker;
     private final DbService dbService;
     private final SocketMethods socketMethods;
     private final SimpMessagingTemplate messagingTemplate;
@@ -32,6 +34,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     public Server(
         DbService dbService,
         EventTracker eventTracker,
+        MessageTracker messageTracker,
         SocketMethods socketMethods,
         SimpMessagingTemplate messagingTemplate,
         ConnectionTracker connectionTracker, 
@@ -39,12 +42,14 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         ColorConverter colorConverter
     ) {
         this.eventTracker = EventTracker.getInstance();
+        this.messageTracker = MessageTracker.getInstance();
         this.dbService = dbService;
         this.socketMethods = new SocketMethods(eventTracker);
         this.messagingTemplate = messagingTemplate;
         this.connectionTracker = connectionTracker;
         this.configSocketEvents = new ConfigSocketEvents(
             eventTracker, 
+            messageTracker,
             connectionTracker, 
             dbService, 
             socketMethods
