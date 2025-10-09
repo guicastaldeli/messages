@@ -1,99 +1,70 @@
 from fastapi import HTTPException
-from routes import MessageRoutes
 import httpx
 
 class MessageService:
     def __init__(self, url: str):
         self.base_url = url
-        MessageRoutes(self)
     
     ##
-    ## Messgaes
+    ## Messages
     ##
     async def getMessages(self) -> list:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/messages")
-            if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
-            return res.json()
-        
+        return await self._request("get", "/api/message-tracker/messages")
+
     ##
     ## User
     ##
     async def getMessagesByUser(self, username: str) -> list:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/messages/user/{username}")
-            if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
-            return res.json()
-        
+        return await self._request("get", f"/api/message-tracker/messages/user/{username}")
+
     ##
-    ## Chat
+    ## Chat Id
     ##
-    async def getMessagesByChatId(self, id: str) -> list:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/messages/chat/{id}")
-            if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
-            return res.json()
-    
-    
+    async def getMessagesByChatId(self, chat_id: str) -> list:
+        return await self._request("get", f"/api/message-tracker/messages/chat/{chat_id}")
+
     ##
     ## Type
     ##
-    async def getMessagesByType(self, type: str) -> list:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/messages/type/{type}")
-            if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
-            return res.json()
-        
+    async def getMessagesByType(self, type_: str) -> list:
+        return await self._request("get", f"/api/message-tracker/messages/type/{type_}")
+
     ##
     ## Direction
     ##
     async def getMessagesByDirection(self, direction: str) -> list:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/messages/direction/{direction}")
-            if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
-            return res.json()
-        
+        return await self._request("get", f"/api/message-tracker/messages/direction/{direction}")
+
     ##
     ## Recent
     ##
-    async def getRecentMessages(self, count: str) -> list:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/messages/recent/{count}")
-            if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
-            return res.json()
-        
+    async def getRecentMessages(self, count: int) -> list:
+        return await self._request("get", f"/api/message-tracker/messages/recent/{count}")
+
     ##
     ## Count
     ##
-    async def getMessageCount(self) -> list:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/count")
-            if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
-            return res.json()
-        
+    async def getMessageCount(self) -> int:
+        return await self._request("get", "/api/message-tracker/count")
+
     ##
     ## Stats
     ##
     async def getMessageStats(self) -> list:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/stats")
-            if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
-            return res.json()
-        
+        return await self._request("get", "/api/message-tracker/stats")
+
     ##
     ## Clear
     ##
     async def clearMessages(self) -> list:
+        return await self._request("get", "/api/message-tracker/clear")
+    
+    ## -----------
+    ##   Wrapper
+    ## -----------
+    async def _request(self, method: str, path: str):
         async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/message-tracker/clear")
+            res = await client.request(method, f"{self.base_url}{path}")
             if(res.status_code != 200):
-                raise HTTPException(status_code=res.status_code, detail=res.json())
+                raise HTTPException(status_code=res.status_code, detail=res.text)
             return res.json()

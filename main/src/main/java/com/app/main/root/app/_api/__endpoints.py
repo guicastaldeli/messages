@@ -1,9 +1,9 @@
-from fastapi import HTTPException
+from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
-from __main import app, messageService
-from datetime import datetime
 
-HTML = """
+router = APIRouter()
+
+contentHTML = """
     <!DOCTYPE html>
     <html>
         <body>
@@ -11,13 +11,10 @@ HTML = """
                 <a href="/api/time-stream" target="_blank">Time</a>
             </div>
             <div class="endpoint">
-                <a href="/api/messages" target="_blank">Messages</a>
+                <a href="/api/message-tracker/messages" target="_blank">Tracked Messages</a>
             </div>
             
             <div class="message-tracker-section">
-                <div class="endpoint">
-                    <a href="/api/message-tracker/messages" target="_blank">Tracked Messages</a>
-                </div>
                 <div class="endpoint">
                     <a href="/api/message-tracker/stats" target="_blank">Stats</a>
                 </div>
@@ -42,33 +39,7 @@ HTML = """
     </html>
 """
 
-@app.get("/", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 async def root():
-    return HTML
-
-### Time Stream
-@app.get("/api/time-stream")
-async def getTimeStream():
-    try:
-        now = datetime.now()
-        return {
-            "timestamp": int(now.timestamp() * 1000),
-            "iso": now.isoformat(),
-            "local": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "timezone": str(now.astimezone().tzinfo),
-            "serverTime": True
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-### Messages
-@app.get("/api/messages")
-async def getMessages():
-    try:
-        messages = await messageService.getMessages()
-        return messages
-    except Exception as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return contentHTML
 
