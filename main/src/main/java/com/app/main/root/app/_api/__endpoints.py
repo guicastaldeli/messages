@@ -13,7 +13,7 @@ HTML = """
             </div>
             
             <div class="endpoint">
-                <a href="/api/messages?chatId=example123" target="_blank">/api/messages?chatId=example123</a>
+                <a href="/api/messages?chatId=" target="_blank">/api/messages?chatId='ID'</a>
             </div>
             
             <div class="endpoint">
@@ -21,7 +21,7 @@ HTML = """
             </div>
             
             <div class="endpoint">
-                <a href="/api/users/user123" target="_blank">/api/users/user123</a>
+                <a href="/api/users/user" target="_blank">/api/users/user</a>
             </div>
         </body>
     </html>
@@ -59,9 +59,9 @@ async def getMessages(chatId: str = Query(..., description="Chat ID")):
     
 ### Recent Chats
 @app.get("/api/recent-chats")
-async def getRecentChats(userId: Optional[str] = Query(None)):
+async def getRecentChats():
     try:
-        chats = await dbService.getRecentChats(userId or "")
+        chats = await dbService.getRecentChats()
         return chats
     except HTTPException as e:
         raise e

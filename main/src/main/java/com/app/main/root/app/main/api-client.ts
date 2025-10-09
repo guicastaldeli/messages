@@ -6,13 +6,13 @@ class ApiClient {
         process.env.JAVA_API_URL || 'http://localhost:3002'
     }
 
-    async getMessagesByChatId(chatId: string): Promise<any[]> {
+    public async getMessagesByChatId(chatId: string): Promise<any[]> {
         const res = await fetch(`${this.baseUrl}/api/messages?chatId=${chatId}`);
         if(!res.ok) throw new Error('Failed to fetch messages!');
         return res.json();
     }
 
-    async getRecentChats(userId?: string | null): Promise<any[]> {
+    public async getRecentChats(userId?: string | null): Promise<any[]> {
         const url = userId ? 
         `${this.baseUrl}/api/recent-chats?userId=${userId}` : 
         `${this.baseUrl}/api/recent-chats`;
@@ -22,7 +22,7 @@ class ApiClient {
         return res.json();
     }
 
-    async getUserId(userId: string): Promise<any> {
+    public async getUserId(userId: string): Promise<any> {
         const res = await fetch(`${this.baseUrl}/api/users/${userId}`);
         if(!res.ok) throw new Error('Failed to fetch user');
         return res.json();

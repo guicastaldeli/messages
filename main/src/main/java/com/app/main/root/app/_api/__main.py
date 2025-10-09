@@ -33,9 +33,9 @@ class DbService:
     ##
     ## Recent Chats
     ##
-    async def getRecentChats(self, userId: str = "") -> list:
+    async def getRecentChats(self) -> list:
         async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.base_url}/api/recent-chats", params={"userId": userId})
+            res = await client.get(f"{self.base_url}/api/recent-chats")
             if(res.status_code != 200):
                 raise HTTPException(status_code=res.status_code, detail=res.json())
             return res.json()
