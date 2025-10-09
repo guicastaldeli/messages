@@ -1,11 +1,11 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
+from routes import MessageRoutes
 import httpx
-import os
 
 class MessageService:
     def __init__(self, url: str):
         self.base_url = url
+        MessageRoutes(self)
     
     ##
     ## Messgaes

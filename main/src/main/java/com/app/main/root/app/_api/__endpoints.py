@@ -1,7 +1,6 @@
-from fastapi import HTTPException, Query
+from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
-from __main import app, dbService
-from typing import Optional
+from __main import app, messageService
 from datetime import datetime
 
 HTML = """
@@ -9,19 +8,35 @@ HTML = """
     <html>
         <body>
             <div class="endpoint">
-                <a href="/api/time-stream" target="_blank">/api/time-stream</a>
+                <a href="/api/time-stream" target="_blank">Time</a>
+            </div>
+            <div class="endpoint">
+                <a href="/api/messages" target="_blank">Messages</a>
             </div>
             
-            <div class="endpoint">
-                <a href="/api/messages" target="_blank">/api/messages</a>
-            </div>
-            
-            <div class="endpoint">
-                <a href="/api/recent-chats" target="_blank">/api/recent-chats</a>
-            </div>
-            
-            <div class="endpoint">
-                <a href="/api/users/user" target="_blank">/api/users/user</a>
+            <div class="message-tracker-section">
+                <div class="endpoint">
+                    <a href="/api/message-tracker/messages" target="_blank">Tracked Messages</a>
+                </div>
+                <div class="endpoint">
+                    <a href="/api/message-tracker/stats" target="_blank">Stats</a>
+                </div>
+                <div class="endpoint">
+                    <a href="/api/message-tracker/count" target="_blank">Count</a>
+                </div>
+                <div class="endpoint">
+                    <a href="/api/message-tracker/messages/recent/0" target="_blank">Recent Messages (URL NUMBER)</a>
+                </div>
+                <div class="endpoint">
+                    By Type
+                    <a href="/api/message-tracker/messages/type/DIRECT" target="_blank">DIRECT</a>
+                    <a href="/api/message-tracker/messages/type/GROUP" target="_blank">GROUP</a>
+                </div>
+                <div class="endpoint">
+                    By Direction
+                    <a href="/api/message-tracker/messages/direction/SENT" target="_blank">SENT</a>
+                    <a href="/api/message-tracker/messages/direction/RECEIVED" target="_blank">RECEIVED</a>
+                </div>
             </div>
         </body>
     </html>
@@ -50,20 +65,9 @@ async def getTimeStream():
 @app.get("/api/messages")
 async def getMessages():
     try:
-        messages = await dbService.getMessages()
+        messages = await messageService.getMessages()
         return messages
     except Exception as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-### Users
-@app.get("/api/users/{userId}")
-async def getUser(userId: str):
-    try:
-        user = await dbService.getUserById(userId)
-        return user
-    except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

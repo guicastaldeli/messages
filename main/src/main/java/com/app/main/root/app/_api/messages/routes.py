@@ -1,122 +1,127 @@
 from fastapi import APIRouter, HTTPException
+from message_service import MessageService
 
-
-router = APIRouter()
-
-##
-## All Messages
-##
-@router.get("/api/message-tracker/messages")
-async def getMessages():
-    try:
-        content = await dbService.getMessages()
-        return content
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to load messages")
+class MessageRoutes:
+    messageService = MessageService()
+    router = APIRouter()
     
-##
-## User
-##
-@router.get("/api/message-tracker/messages/user/{username}")
-async def getMessagesByUser(username: str):
-    try:
-        content = await dbService.getMessagesByUser(username)
-        return content
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to load messages for user {username}")
+    def __init__(messageService: MessageService):
+        messageService = messageService
 
-##
-## Chat Id
-##
-@router.get("/api/message-tracker/messages/chat/{chatId}")
-async def getMessagesByChatId(id: str):
-    try:
-        content = await dbService.getMessagesByChatId(id)
-        return content
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to load messages of chat {id}")
+    ##
+    ## Messages
+    ##
+    @router.get("/api/message-tracker/messages")
+    async def getMessages(self):
+        try:
+            content = await self.messageService.getMessages()
+            return content
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to load messages")
+        
+    ##
+    ## User
+    ##
+    @router.get("/api/message-tracker/messages/user/{username}")
+    async def getMessagesByUser(self, username: str):
+        try:
+            content = await self.messageService.getMessagesByUser(username)
+            return content
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to load messages for user {username}")
 
-##
-## Type
-##
-@router.get("/api/message-tracker/messages/type/{type}")
-async def getMessagesByType(type: str):
-    try:
-        content = await dbService.getMessagesByType(type)
-        return content
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to load messages of type {type}")
-    
+    ##
+    ## Chat Id
+    ##
+    @router.get("/api/message-tracker/messages/chat/{chatId}")
+    async def getMessagesByChatId(self, id: str):
+        try:
+            content = await self.messageService.getMessagesByChatId(id)
+            return content
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to load messages of chat {id}")
 
-##
-## Direction
-##
-@router.get("/api/message-tracker/messages/direction/{direction}")
-async def getMessagesByDirection(direction: str):
-    try:
-        content = await dbService.getMessagesByDirection(direction)
-        return content
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to load messages with direction {direction}")
+    ##
+    ## Type
+    ##
+    @router.get("/api/message-tracker/messages/type/{type}")
+    async def getMessagesByType(self, type: str):
+        try:
+            content = await self.messageService.getMessagesByType(type)
+            return content
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to load messages of type {type}")
+        
 
-##
-## Recent Messages
-##
-@router.get("/api/message-tracker/messages/recent/{count}")
-async def getRecentMessages(count: int):
-    try:
-        content = await dbService.getRecentMessages(count)
-        return content
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to load recent {count} messages")
+    ##
+    ## Direction
+    ##
+    @router.get("/api/message-tracker/messages/direction/{direction}")
+    async def getMessagesByDirection(self, direction: str):
+        try:
+            content = await self.messageService.getMessagesByDirection(direction)
+            return content
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to load messages with direction {direction}")
 
-##
-## Count
-##
-@router.get("/api/message-tracker/messages/count")
-async def getMessageCount():
-    try:
-        content = await dbService.getMessageCount()
-        return { "count": content }
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to get message count")
+    ##
+    ## Recent Messages
+    ##
+    @router.get("/api/message-tracker/messages/recent/{count}")
+    async def getRecentMessages(self, count: int):
+        try:
+            content = await self.messageService.getRecentMessages(count)
+            return content
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to load recent {count} messages")
 
-##
-## Stats
-##
-@router.get("/api/message-tracker/messages/stats")
-async def getMessageStats():
-    try:
-        content = await dbService.getMessageStats()
-        return content
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to get message stats")
+    ##
+    ## Count
+    ##
+    @router.get("/api/message-tracker/messages/count")
+    async def getMessageCount(self):
+        try:
+            content = await self.messageService.getMessageCount()
+            return { "count": content }
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to get message count")
 
-##
-## Clear
-## 
-@router.get("/api/message-tracker/clear")
-async def clearMessages():
-    try:
-        res = await dbService.clearMessages()
-        return { "message": res }
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        raise HTTPException(status_code=err, detail=f"Failed to clear messages")
+    ##
+    ## Stats
+    ##
+    @router.get("/api/message-tracker/messages/stats")
+    async def getMessageStats(self):
+        try:
+            content = await self.messageService.getMessageStats()
+            return content
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to get message stats")
+
+    ##
+    ## Clear
+    ## 
+    @router.get("/api/message-tracker/clear")
+    async def clearMessages(self):
+        try:
+            res = await self.messageService.clearMessages()
+            return { "message": res }
+        except HTTPException as e:
+            raise e
+        except Exception as err:
+            raise HTTPException(status_code=err, detail=f"Failed to clear messages")
