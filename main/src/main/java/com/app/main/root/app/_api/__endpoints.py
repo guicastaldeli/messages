@@ -13,7 +13,7 @@ HTML = """
             </div>
             
             <div class="endpoint">
-                <a href="/api/messages?chatId=" target="_blank">/api/messages?chatId='ID'</a>
+                <a href="/api/messages" target="_blank">/api/messages</a>
             </div>
             
             <div class="endpoint">
@@ -48,24 +48,13 @@ async def getTimeStream():
     
 ### Messages
 @app.get("/api/messages")
-async def getMessages(chatId: str = Query(..., description="Chat ID")):
+async def getMessages():
     try:
-        messages = await dbService.getMessagesByChatId(chatId)
+        messages = await dbService.getMessages()
         return messages
     except Exception as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-### Recent Chats
-@app.get("/api/recent-chats")
-async def getRecentChats():
-    try:
-        chats = await dbService.getRecentChats()
-        return chats
-    except HTTPException as e:
-        raise e
-    except HTTPException as e:
         raise HTTPException(status_code=500, detail=str(e))
     
 ### Users

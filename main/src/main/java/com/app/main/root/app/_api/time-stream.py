@@ -3,8 +3,7 @@ import asyncio
 from datetime import datetime
 from typing import Callable, Dict, Any
 from threading import Event
-from fastapi import APIRouter, HTTPException
-from __main import dbService
+from fastapi import APIRouter
 
 router = APIRouter()
 
