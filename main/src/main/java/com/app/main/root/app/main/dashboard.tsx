@@ -5,7 +5,7 @@ import { GroupManager } from './chat/group/group-manager';
 import { SessionContext, SessionType } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { chatState } from './chat-state-service';
-import { apiClient } from './api-client';
+import { ApiClient } from './_api-client/api-client';
 
 interface Props {
     onCreateGroup: () => void;
@@ -25,8 +25,9 @@ interface State {
 
 export class Dashboard extends Component<Props, State> {
     private groupContainerRef: React.RefObject<HTMLDivElement | null>;
+    private apiClient: ApiClient;
 
-    constructor(props: Props) {
+    constructor(props: Props, apiClient: ApiClient) {
         super(props);
         this.state = {
             currentSession: 'dashboard',
@@ -35,6 +36,7 @@ export class Dashboard extends Component<Props, State> {
             activeChat: props.activeChat || null
         }
         this.groupContainerRef = React.createRef();
+        this.apiClient = apiClient;
     }
 
     async componentDidMount(): Promise<void> {
@@ -44,8 +46,8 @@ export class Dashboard extends Component<Props, State> {
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
 
         try {
-            const socketId = this.props.messageManager.socketClient.getSocketId() || '';
-            const chatList = await apiClient.getRecentChats();
+            const socketId = await this.props.messageManager.socketClient.getSocketId();
+            const chatList = await this.apiClient.getMessageService().getMessagesByUser(socketId);
             this.setState({ chatList });
         } catch(err) {
             console.error('Error loading chat list', err);
@@ -77,7 +79,8 @@ export class Dashboard extends Component<Props, State> {
         chatState.setType(chat.type === 'direct' ? 'direct' : 'group');
         
         try {
-            const messages = await apiClient.getRecentChats();
+            const socketId = await this.props.messageManager.socketClient.getSocketId();
+            const messages = await this.apiClient.getMessageService().getMessagesByUser(socketId);
             const event = new CustomEvent('chat-activated', { detail: { chat, messages } });
             window.dispatchEvent(event);
 

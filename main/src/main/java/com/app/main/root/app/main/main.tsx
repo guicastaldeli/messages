@@ -1,7 +1,7 @@
 import './__styles/styles.scss';
 import React, { useRef } from 'react';
 import { Component } from 'react';
-import { apiClient } from './api-client';
+import { ApiClient } from './_api-client/api-client';
 import { MessageManager } from './_messages_config/message-manager';
 import { SocketClientConnect } from './socket-client-connect';
 import { Dashboard } from './dashboard';
@@ -24,10 +24,12 @@ export class Main extends Component<any, State> {
     private socketClientConnect: SocketClientConnect;
     private chatManager: ChatManager;
     private dashboardInstance: Dashboard | null = null;
+    private apiClient: ApiClient;
 
     constructor(props: any) {
         super(props);
         this.socketClientConnect = SocketClientConnect.getInstance();
+        this.apiClient = new ApiClient();
         this.messageManager = new MessageManager(this.socketClientConnect);
         this.state = { 
             groupManager: null,
@@ -42,8 +44,8 @@ export class Main extends Component<any, State> {
 
     private loadData = async(): Promise<void> => {
         try {
-            const recentChats = await apiClient.getRecentChats(this.state.userId);
-            this.setState({ chatList: recentChats });
+            const trackedMessages = await this.apiClient.getMessageService().getMessagesByUser(this.state.userId);
+            this.setState({ chatList: trackedMessages });
         } catch(err) {
             console.error('Failed to load chat data:', err);
         }

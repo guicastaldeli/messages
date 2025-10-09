@@ -17,7 +17,7 @@ export class MessageServiceClient {
     /*
     * Users
     */
-    public async getMessagesByUser(username: string): Promise<any[]> {
+    public async getMessagesByUser(username: string | null): Promise<any[]> {
         const res = await fetch(`${this.baseUrl}/api/message-tracker/messages/user/${username}`);
         if(!res.ok) throw new Error('Failed to fetch user messages!');
         return res.json();
