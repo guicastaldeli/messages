@@ -96,10 +96,11 @@ public class ConfigSocketEvents {
                     String sessionId = socketMethods.getSessionId(socket);
                     String chatSocket = chatId != null ? chatId : sessionId; 
 
+                    /*
                     MessageLog.MessageType messageType = 
                     chatId.startsWith("group_") ?
                     MessageLog.MessageType.GROUP : MessageLog.MessageType.DIRECT;
-
+                    */
                     String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
                     messageTracker.track(
                         messageId, 
@@ -107,7 +108,7 @@ public class ConfigSocketEvents {
                         messageId,
                         username, 
                         chatId, 
-                        messageType, 
+                        MessageLog.MessageType.GROUP, 
                         MessageLog.MessageDirection.SENT
                     );
                     eventTracker.track(

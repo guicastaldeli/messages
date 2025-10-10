@@ -14,6 +14,7 @@ interface Props {
     groupManager: GroupManager;
     chatList: any[];
     activeChat: any;
+    apiClient: ApiClient;
 }
 
 interface State {
@@ -27,7 +28,7 @@ export class Dashboard extends Component<Props, State> {
     private groupContainerRef: React.RefObject<HTMLDivElement | null>;
     private apiClient: ApiClient;
 
-    constructor(props: Props, apiClient: ApiClient) {
+    constructor(props: Props) {
         super(props);
         this.state = {
             currentSession: 'dashboard',
@@ -36,7 +37,7 @@ export class Dashboard extends Component<Props, State> {
             activeChat: props.activeChat || null
         }
         this.groupContainerRef = React.createRef();
-        this.apiClient = apiClient;
+        this.apiClient = props.apiClient;
     }
 
     async componentDidMount(): Promise<void> {
@@ -47,7 +48,8 @@ export class Dashboard extends Component<Props, State> {
 
         try {
             const socketId = await this.props.messageManager.socketClient.getSocketId();
-            const chatList = await this.apiClient.getMessageService().getMessagesByUser(socketId);
+            const messageService = await this.apiClient.getMessageService()
+            const chatList = await messageService.getMessagesByUser(socketId);
             this.setState({ chatList });
         } catch(err) {
             console.error('Error loading chat list', err);
@@ -80,7 +82,8 @@ export class Dashboard extends Component<Props, State> {
         
         try {
             const socketId = await this.props.messageManager.socketClient.getSocketId();
-            const messages = await this.apiClient.getMessageService().getMessagesByUser(socketId);
+            const messageService = await this.apiClient.getMessageService()
+            const messages = await messageService.getMessagesByUser(socketId);
             const event = new CustomEvent('chat-activated', { detail: { chat, messages } });
             window.dispatchEvent(event);
 

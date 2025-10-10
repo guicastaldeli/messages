@@ -44,7 +44,8 @@ export class Main extends Component<any, State> {
 
     private loadData = async(): Promise<void> => {
         try {
-            const trackedMessages = await this.apiClient.getMessageService().getMessagesByUser(this.state.userId);
+            const messageService = await this.apiClient.getMessageService();
+            const trackedMessages = await messageService.getMessagesByUser(this.state.userId);
             this.setState({ chatList: trackedMessages });
         } catch(err) {
             console.error('Failed to load chat data:', err);
@@ -141,6 +142,7 @@ export class Main extends Component<any, State> {
                                             groupManager={this.state.groupManager!}
                                             chatList={chatList}
                                             activeChat={activeChat}
+                                            apiClient={this.apiClient}
                                         />
                                     )}
                                 </>

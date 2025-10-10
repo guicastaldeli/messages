@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from time_stream import TimeStream
 from messages.message_service import MessageService
 from messages.message_routes import MessageRoutes
-from __endpoints import router as router
+from __index import router as router
 import os
 
 class Main:

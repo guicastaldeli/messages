@@ -18,14 +18,14 @@ export class ApiClient {
     /*
     ** Time Stream
     */
-    public getTimeStream(): TimeStreamClient {
+    public async getTimeStream(): Promise<TimeStreamClient> {
         return this.timeStream;
     }
 
     /*
     ** Message Service
     */
-    public getMessageService(): MessageServiceClient {
+    public async getMessageService(): Promise<MessageServiceClient> {
         return this.messageService;
     }  
 } 
