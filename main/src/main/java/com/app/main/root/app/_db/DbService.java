@@ -1,4 +1,7 @@
 package com.app.main.root.app._db;
+import com.app.main.root.app._service.GroupService;
+import com.app.main.root.app._service.MessageService;
+import com.app.main.root.app._service.UserService;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.stereotype.Service;
 import javax.sql.DataSource;

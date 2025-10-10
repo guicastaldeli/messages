@@ -1,4 +1,4 @@
-package com.app.main.root.app._db;
+package com.app.main.root.app._service;
 import com.app.main.root.app._types._User;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;

@@ -1,4 +1,4 @@
-package com.app.main.root.app._db;
+package com.app.main.root.app._service;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import org.springframework.stereotype.Component;
