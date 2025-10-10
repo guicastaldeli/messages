@@ -41,7 +41,7 @@ class Main:
         ## Session
         self.sessionService = SessionService(SESSION_API_URL)
         self.sessionRoutes = SessionRoutes(self.sessionService)
-        self.app.include_router(self.sessionRoutes)
+        self.app.include_router(self.sessionRoutes.router)
         
         ## Message
         self.messageService = MessageService(DB_API_URL)

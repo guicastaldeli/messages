@@ -4,7 +4,7 @@ import os
 
 router = APIRouter()
 locDir = os.path.dirname(os.path.abspath(__file__))
-htmlFilePath = os.path.join(locDir, 'index.html')
+htmlFilePath = os.path.join(locDir, '___index.html')
 
 @router.get("/", response_class=HTMLResponse)
 async def root():

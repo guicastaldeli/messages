@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from session_service import SessionService
+from session.session_service import SessionService
 
 class SessionRoutes:
     def __init__(self, service: SessionService):

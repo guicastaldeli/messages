@@ -21,7 +21,7 @@ class SessionService:
     ## Active Sessions
     ##
     async def getActiveSessions(self) -> dict:
-        return await self._request("post", "/api/session/active")
+        return await self._request("get", "/api/session/active")
     
     ##
     ## Update Session Type
@@ -43,7 +43,7 @@ class SessionService:
             "username": username,
             "sessionType": sessionType
         }
-        return await self._request("get", "/api/session/update", params=params)
+        return await self._request("post", "/api/session/update", params=params)
     
     ## -----------
     ##   Wrapper

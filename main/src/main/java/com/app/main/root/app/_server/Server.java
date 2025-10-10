@@ -3,6 +3,7 @@ import com.app.main.root.app._data.ConfigSocketEvents;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app._db.DbService;
+import com.app.main.root.app._service.SessionService;
 import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.boot.CommandLineRunner;
@@ -21,6 +22,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     private final EventTracker eventTracker;
     private final MessageTracker messageTracker;
     private final DbService dbService;
+    private final SessionService sessionService;
     private final SocketMethods socketMethods;
     private final SimpMessagingTemplate messagingTemplate;
     private final ConnectionTracker connectionTracker;
@@ -33,6 +35,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
 
     public Server(
         DbService dbService,
+        SessionService sessionService,
         EventTracker eventTracker,
         MessageTracker messageTracker,
         SocketMethods socketMethods,
@@ -44,6 +47,7 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         this.eventTracker = EventTracker.getInstance();
         this.messageTracker = MessageTracker.getInstance();
         this.dbService = dbService;
+        this.sessionService = new SessionService();
         this.socketMethods = new SocketMethods(eventTracker);
         this.messagingTemplate = messagingTemplate;
         this.connectionTracker = connectionTracker;
