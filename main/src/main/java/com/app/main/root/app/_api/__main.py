@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from time_stream import TimeStream
 from messages.message_service import MessageService
 from messages.message_routes import MessageRoutes
 from __endpoints import router as router
@@ -19,17 +20,32 @@ class Main:
             'DB_API_URL',
             'http://localhost:3001'
         )
+        TIME_API_URL = os.getenv(
+            'TIME_API_URL',
+            'http://localhost:3001'
+        )
         
+        self.timeStream = TimeStream(TIME_API_URL)
         self.messageService = MessageService(DB_API_URL)
         self.messageRoutes = MessageRoutes(self.messageService)
         
+        ##self.timeStream.update()
         self.app.include_router(router)
+        self.app.include_router(self.timeStream.router)
         self.app.include_router(self.messageRoutes.router)
 
 #Init
 instance = Main()
 app = instance.app
+timeStream = instance.timeStream
 messageService = instance.messageService
+
+def timeCallback(time: str, serverTime: bool):
+    print(f"Time: {time}")
+
+@app.on_event("startup")
+async def startTimeUpdates():
+    await timeStream.update(timeCallback, interval=1000)
     
     
                 
