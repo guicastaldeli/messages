@@ -1,5 +1,6 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app._data.ConfigSocketEvents;
+import com.app.main.root.EnvConfig;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app._db.DbService;
@@ -31,7 +32,8 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     private WebSocketSession webSocketSession;
 
     private String url;
-    private String port;
+    private String webUrl = EnvConfig.get("WEB_URL");
+    private String apiUrl = EnvConfig.get("API_URL");
 
     public Server(
         DbService dbService,
@@ -87,8 +89,8 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
-        registry.addHandler(socketHandler, "/ws-direct").setAllowedOrigins("*");
-        registry.addHandler(socketHandler, "").setAllowedOrigins("*").withSockJS();
+        registry.addHandler(socketHandler, "/ws-direct").setAllowedOrigins(webUrl, apiUrl);
+        registry.addHandler(socketHandler, "").setAllowedOrigins(webUrl, apiUrl).withSockJS();
     }
 
     private void configSockets() {

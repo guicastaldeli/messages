@@ -1,4 +1,5 @@
 package com.app.main.root.app.__config;
+import com.app.main.root.EnvConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -11,6 +12,9 @@ import java.util.List;
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private String webUrl = EnvConfig.get("WEB_URL");
+    private String apiUrl = EnvConfig.get("API_URL");
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/queue");
@@ -19,8 +23,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws-direct").setAllowedOriginPatterns("*");
-        registry.addEndpoint("").setAllowedOriginPatterns("*").withSockJS();
+        registry.addEndpoint("/ws-direct").setAllowedOriginPatterns(webUrl, apiUrl);
+        registry.addEndpoint("").setAllowedOriginPatterns(webUrl, apiUrl).withSockJS();
     }
 
     @Override
