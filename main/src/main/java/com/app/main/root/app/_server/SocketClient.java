@@ -1,14 +1,15 @@
 package com.app.main.root.app._server;
+import com.app.main.root.EnvConfig;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
-import java.net.URI;
-import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
+import java.net.URI;
+import java.util.*;
 
 public class SocketClient {
     private static SocketClient instance;
@@ -16,7 +17,7 @@ public class SocketClient {
     private SocketEmitter socketEmitter;
     private final Map<String, List<Consumer<Object>>> eventListeners = new HashMap<>();
 
-    private String url;
+    private String url = EnvConfig.get("SERVER_DEF_HTTP_URL");
     private String sessionId;
     private boolean isConnecting = false;
     private boolean isConnected = false;
@@ -47,23 +48,11 @@ public class SocketClient {
     */
     private String getUrl() {
         try {
-            String host = "localhost";
-            String protocol = "ws";
-            String port = System.getenv("PORT");
-            if(port == null || port.isEmpty()) {
-                port = "3001";
-            }
-            if(isBrowserEnvironment()) {
-                host = getHostFromBrowser();
-                protocol = getProtocolFromBrowser();
-            }
-
-            String formUrl = protocol + "://" + host + ":" + port;
-            this.url = formUrl;
             return this.url;
         } catch(Exception err) {
             System.err.println("Error getting URL: " + err.getMessage());
-            return "ws://localhost:3001/ws-direct";
+            String wsUrl = EnvConfig.get("SERVER_DIR_WS_URL");
+            return wsUrl;
         }
     }
 
@@ -74,14 +63,6 @@ public class SocketClient {
     /*
     ** Context 
     */
-    private String getHostFromBrowser() {
-        return "localhost";
-    }
-
-    private String getProtocolFromBrowser() {
-        return "ws";
-    }
-
     public CompletableFuture<Void> connect() {
         if(isConnecting || isConnected) return CompletableFuture.completedFuture(null);
         isConnecting = true;

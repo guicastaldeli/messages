@@ -20,11 +20,17 @@ import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication()
 public class MainApplication {
-	private static final String PORT = 
-	System.getenv("PORT") != null ?
-	System.getenv("PORT") : "3001";
+	private static String url;
 
 	public static void main(String[] args) {
+		/*
+		* Env Path 
+		*/
+		url = EnvConfig.get("SERVER_DEF_HTTP_URL");
+
+		/*
+		* App 
+		*/
 		ConfigurableApplicationContext context = SpringApplication.run(MainApplication.class, args);
 		Loading.finished();
 		alert();
@@ -33,7 +39,7 @@ public class MainApplication {
 
 	private static void init(ConfigurableApplicationContext context) {
 		Server server = context.getBean(Server.class);
-		server.init(PORT);
+		server.init(url);
 		
 		DbService dbService = context.getBean(DbService.class);
 		dbService.alert();
@@ -41,7 +47,7 @@ public class MainApplication {
 	}
 
 	private static String buildBaseUrl() {
-		return "http://localhost:" + PORT;
+		return url;
 	}
 
 	private static void alert() {

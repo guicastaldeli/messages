@@ -1,5 +1,6 @@
 package com.app.main.root.app.__controllers;
 import com.app.main.root.app._server.Server;
+import com.app.main.root.EnvConfig;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,7 @@ import java.util.Map;
 public class TimeStreamController {
     private final Server server;
     private final RestTemplate restTemplate;
-    private String apiUrl = "http://localhost:3002";
+    private String apiUrl = EnvConfig.get("API_URL");
 
     public TimeStreamController(Server server) {
         this.server = server;

@@ -1,5 +1,6 @@
 package com.app.main.root.app.__controllers;
 import com.app.main.root.app._server.Server;
+import com.app.main.root.EnvConfig;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -16,7 +17,7 @@ import java.util.Date;
 public class InterfaceController {
     private final Server server;
     private final Date date = new Date();
-    private String apiUrl = "http://localhost:3002"; 
+    private String apiUrl = EnvConfig.get("API_URL");
     private TimeStreamController timeStreamController;
 
     public InterfaceController(Server server) {

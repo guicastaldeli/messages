@@ -1,4 +1,5 @@
 package com.app.main.root.app._db;
+import com.app.main.root.EnvConfig;
 import com.app.main.root.app._service.GroupService;
 import com.app.main.root.app._service.MessageService;
 import com.app.main.root.app._service.UserService;
@@ -10,7 +11,7 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class DbService {
     private final RestTemplate restTemplate;
-    private final String apiUrl;
+    private final String apiUrl = EnvConfig.get("API_URL");
 
     public final UserService userService;
     public final MessageService messageService;
@@ -19,7 +20,6 @@ public class DbService {
 
     public DbService(DataSource dataSource, ColorConverter colorConverter) {
         this.restTemplate = new RestTemplate();
-        this.apiUrl = System.getenv().getOrDefault("API_URL", "http://localhost:3002");
 
         this.userService = new UserService(dataSource);
         this.messageService = new MessageService(dataSource);

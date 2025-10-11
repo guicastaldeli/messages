@@ -66,24 +66,13 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         return instance;
     }
 
-    public void init(String port) {
-        this.port = port;
-        this.url = "http://localhost:" + port;
+    public void init(String url) {
+        this.url = url;
     }
 
     @Override
     public void run(String... args) throws Exception {
         configSockets();
-
-        if(this.port == null) {
-            String envPort = System.getenv("PORT");
-            if(envPort != null && !envPort.trim().isEmpty()) {
-                init(envPort);
-            } else {
-                init("3001");
-            }
-        }
-
         configSocketEvents.configSocketEvents();
     }
 
