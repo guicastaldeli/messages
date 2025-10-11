@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Bean;
 @SpringBootApplication()
 public class MainApplication {
 	private static String url;
+	private static String test;
 
 	public static void main(String[] args) {
 		/*

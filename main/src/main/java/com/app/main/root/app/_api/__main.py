@@ -5,23 +5,17 @@ from messages.message_service import MessageService
 from messages.message_routes import MessageRoutes
 from session.session_service import SessionService
 from session.session_routes import SessionRoutes
-from dotenv import load_dotenv
 from __index import router as router
+from config import config
 import os
-
-ENV_PATH = '../___env-config/.env.dev'
-load_dotenv(ENV_PATH)
 
 class Main:
     app = FastAPI()
     
     def __init__(self):
-        # WEB URL
-        WEB_URL = os.getenv('WEB_URL')
-        
-        # Server URL
-        SERVER_URL = os.getenv('SERVER_DEF_HTTP_URL')
-        print(SERVER_URL)
+        # URLs
+        WEB_URL = config.WEB_URL
+        SERVER_URL = config.SERVER_URL
         
         self.app.add_middleware(
             CORSMiddleware,
@@ -49,6 +43,7 @@ class Main:
         self.messageService = MessageService(DB_API_URL)
         self.messageRoutes = MessageRoutes(self.messageService)
         self.app.include_router(self.messageRoutes.router)
+        print(config.TEST)
         
 
 #Init
