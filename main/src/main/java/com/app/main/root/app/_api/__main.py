@@ -5,31 +5,33 @@ from messages.message_service import MessageService
 from messages.message_routes import MessageRoutes
 from session.session_service import SessionService
 from session.session_routes import SessionRoutes
+from dotenv import load_dotenv
 from __index import router as router
 import os
+
+ENV_PATH = '../___env-config/.env.dev'
+load_dotenv(ENV_PATH)
 
 class Main:
     app = FastAPI()
     
     def __init__(self):
+        # WEB URL
+        WEB_URL = os.getenv('WEB_URL')
+        
+        # Server URL
+        SERVER_URL = os.getenv('SERVER_DEF_HTTP_URL')
+        print(SERVER_URL)
+        
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=["http://localhost:3000", "http://localhost:3001"],
+            allow_origins=[WEB_URL, SERVER_URL],
             allow_methods=["*"],
             allow_headers=["*"]
         )
-        DB_API_URL = os.getenv(
-            'DB_API_URL',
-            'http://localhost:3001'
-        )
-        TIME_API_URL = os.getenv(
-            'TIME_API_URL',
-            'http://localhost:3001'
-        )
-        SESSION_API_URL = os.getenv(
-            'SESSION_API_URL',
-            'http://localhost:3001'
-        )
+        DB_API_URL = SERVER_URL
+        TIME_API_URL = SERVER_URL
+        SESSION_API_URL = SERVER_URL
         
         ## Router
         self.app.include_router(router)
