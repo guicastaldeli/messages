@@ -1,7 +1,7 @@
 export class TimeStreamClient {
-    private baseUrl: string;
+    private baseUrl: string | undefined;
 
-    constructor(url: string) {
+    constructor(url: string | undefined) {
         this.baseUrl = url;
     }
 

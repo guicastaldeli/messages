@@ -10,17 +10,8 @@ export class EventDiscovery {
     }
 
     private getUrl(): string {
-        if(typeof window === 'undefined') {
-            const protocol = process.env.NODE_ENV === 'development' ? 'http:' : 'https:';
-            const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
-            const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
-            const url = `${protocol}//${host}:${port}`; 
-            return url;
-        }
-        const protocol = window.location.protocol === 'http:' ? 'http:' : 'https:';
-        const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
-        const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
-        const url = `${protocol}//${host}:${port}`; 
+        const url = process.env.NEXT_PUBLIC_SERVER_DEF_HTTP_URL;
+        if(!url) throw new Error('URL err');
         return url;
     }
 

@@ -30,11 +30,8 @@ export class SocketClientConnect {
             this.rejConnection = rej;
 
             try {
-                const protocol = window.location.protocol === 'http:' ? 'ws:' : 'wss:';
-                const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
-                const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
-                const wsUrl = `${protocol}//${host}:${port}/ws-direct` ||
-                `${protocol}//${host}:${port}`;
+                const wsUrl = process.env.NEXT_PUBLIC_SERVER_DIR_WS_URL;
+                if(!wsUrl) throw new Error("SERVER URL not avaliable. FATAL ERR.");
 
                 console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', wsUrl);
                 this.socket = new WebSocket(wsUrl);
