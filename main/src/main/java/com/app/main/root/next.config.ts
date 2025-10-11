@@ -8,8 +8,8 @@ const nextConfig: NextConfig = {
 };
 
 const envFile = process.env.NODE_ENV === 'production'
-? './app/___env-config/.env.prod'
-: './app/___env-config/.env.dev';
+? './.env-config/.env.prod'
+: './.env-config/.env.dev';
 
 console.log(`Loading env: ${process.env.NODE_ENV}, file: ${envFile}`);
 config({ path: envFile });

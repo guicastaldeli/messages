@@ -12,7 +12,7 @@ public class EnvConfig {
             String fileName = ".env." + env;
     
             dotenv = Dotenv.configure()
-            .directory("src/main/java/com/app/main/root/app/___env-config")
+            .directory("src/main/java/com/app/main/root/.env-config")
             .filename(fileName)
             .ignoreIfMissing()
             .load();

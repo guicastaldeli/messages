@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from typing import Dict, Any
+from typing import Any
 
 class Config:
     _instance = None
@@ -18,7 +18,7 @@ class Config:
             
     def loadEnv(self):
         self.env = os.getenv('APP_ENV', 'dev')
-        envFile = f'../___env-config/.env.{self.env}'
+        envFile = f'../../.env-config/.env.{self.env}'
         
         print(f"Loading {self.env} from: {envFile}")
         load_dotenv(envFile)
