@@ -9,6 +9,19 @@ class SessionRoutes:
         
     def setupRoutes(self):
         ##
+        ## Types
+        ##
+        @self.router.get("/types")
+        async def getSessionTypes():
+            try:
+                types = await self.service.getSessionTypes()
+                return types
+            except HTTPException as e:
+                raise e
+            except Exception as err:
+                raise HTTPException(status_code=err, detail="Failed to get session")
+            
+        ##
         ## Get Session
         ##
         @self.router.get("/{userId}")
@@ -33,19 +46,6 @@ class SessionRoutes:
                 raise e
             except Exception as err:
                 raise HTTPException(status_code=err, detail="Failed to get session stats")
-            
-        ##
-        ## Active
-        ##
-        @self.router.get("/active")
-        async def getActiveSessions():
-            try:
-                session = await self.service.getActiveSessions()
-                return session
-            except HTTPException as e:
-                raise e
-            except Exception as err:
-                raise HTTPException(status_code=err, detail="Failed to get active sessions")
             
         ##
         ## Update Session Type

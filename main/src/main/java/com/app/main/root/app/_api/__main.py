@@ -7,7 +7,6 @@ from session.session_service import SessionService
 from session.session_routes import SessionRoutes
 from __index import router as router
 from config import config
-import os
 
 class Main:
     app = FastAPI()
@@ -53,7 +52,7 @@ timeStream = instance.timeStream
 messageService = instance.messageService
 
 def timeCallback(time: str, serverTime: bool):
-    print(f"Time: {time}")
+    print(f"Time: {time}, Server Time: {serverTime}")
 
 @app.on_event("startup")
 async def startTimeUpdates():

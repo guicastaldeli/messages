@@ -35,7 +35,7 @@ export class Main extends Component<any, State> {
             groupManager: null,
             chatList: [],
             activeChat: null,
-            currentSession: 'main',
+            currentSession: 'LOGIN',
             userId: null,
             username: null
         }
@@ -88,7 +88,7 @@ export class Main extends Component<any, State> {
             }
 
             await this.messageManager.handleJoin();
-            if(sessionContext) sessionContext.setSession('dashboard');
+            if(sessionContext) sessionContext.setSession('MAIN_DASHBOARD');
             this.setState({ groupManager: this.messageManager.controller.groupManager });
         } catch(err) {
             console.error(err);
@@ -105,7 +105,10 @@ export class Main extends Component<any, State> {
 
         return (
             <div className='app'>
-                <SessionProvider initialSession='main'>
+                <SessionProvider 
+                    apiClient={this.apiClient} 
+                    initialSession='LOGIN'
+                >
                     <SessionContext.Consumer>
                         {(sessionContext) => {
                             if(!sessionContext) {
@@ -114,7 +117,8 @@ export class Main extends Component<any, State> {
                             
                             return (
                                 <>
-                                    {sessionContext && sessionContext.currentSession === 'main' && (
+                                    {console.log(sessionContext.currentSession)}
+                                    {sessionContext && sessionContext.currentSession === 'LOGIN' && (
                                         <div className='screen join-screen'>
                                             <div className='form'>
                                                 <h2>Join chatroom</h2>
@@ -133,7 +137,7 @@ export class Main extends Component<any, State> {
                                             </div>
                                         </div>
                                     )}
-                                    {sessionContext && sessionContext.currentSession === 'dashboard' && (
+                                    {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                         <Dashboard 
                                             ref={this.setDashboardRef}
                                             onCreateGroup={this.handleCreateGroup}

@@ -1,10 +1,23 @@
 import { SessionType } from "../_session/session-provider";
 
+export interface Types {
+    [key: string]: string;
+}
+
 export class SessionServiceClient {
     private baseUrl: string | undefined;
 
     constructor(url: string | undefined) {
         this.baseUrl = url;
+    }
+
+    /*
+    ** Types
+    */
+    public async getSessionTypes(): Promise<Types> {
+        const res = await fetch(`${this.baseUrl}/api/session/types`);
+        if(!res.ok) throw new Error('Failed to get session');
+        return res.json();
     }
 
     /*
@@ -38,7 +51,7 @@ export class SessionServiceClient {
     ** Update Session Type
     */
     public async updateSessionType(userId: string, type: SessionType): Promise<void> {
-        const params = new URLSearchParams({ type });
+        const params = new URLSearchParams({ sessionType: type });
         const res = await fetch(`${this.baseUrl}/api/session/${userId}/type?${params}`, {
             method: 'PUT'
         });

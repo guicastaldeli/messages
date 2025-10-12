@@ -31,7 +31,7 @@ export class Dashboard extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
-            currentSession: 'dashboard',
+            currentSession: 'MAIN_DASHBOARD',
             groups: [],
             chatList: props.chatList || [],
             activeChat: props.activeChat || null
@@ -41,7 +41,7 @@ export class Dashboard extends Component<Props, State> {
     }
 
     async componentDidMount(): Promise<void> {
-        this.setSession('dashboard');
+        this.setSession('MAIN_DASHBOARD');
         if(!this.groupContainerRef.current || !this.props.groupManager) return;
         this.props.groupManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
@@ -141,13 +141,13 @@ export class Dashboard extends Component<Props, State> {
         return (
             <SessionContext.Consumer>
                 {(sessionContext) => {
-                    if(!sessionContext || sessionContext.currentSession !== 'dashboard') {
+                    if(!sessionContext || sessionContext.currentSession !== 'MAIN_DASHBOARD') {
                         return null;
                     }
 
                     return (
                         <>
-                            {sessionContext && sessionContext.currentSession === 'dashboard' && (
+                            {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
                                     <header>
                                         <div id="actions-bar">

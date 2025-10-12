@@ -6,8 +6,18 @@ import java.util.Map;
 @Service
 public class SessionService {
     public enum SessionType {
-        MAIN,
-        DASHBOARD
+        LOGIN("LOGIN"),
+        MAIN_DASHBOARD("MAIN_DASHBOARD");
+
+        private final String value;
+
+        SessionType(String v) {
+            this.value = v;
+        }
+
+        public String getValue() {
+            return value;
+        }
     }
 
     private final Map<String, SessionData> sessions = new ConcurrentHashMap<>();
@@ -86,10 +96,6 @@ public class SessionService {
 
     public SessionData getSession(String userId) {
         return sessions.get(userId);
-    }
-
-    public Map<String, SessionData> getActiveSessions() {
-        return new ConcurrentHashMap<>(sessions);
     }
 
     public Map<SessionType, Long> getSessionStats() {

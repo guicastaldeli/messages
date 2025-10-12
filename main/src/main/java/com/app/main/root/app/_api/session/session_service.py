@@ -6,10 +6,16 @@ class SessionService:
         self.base_url = url
         
     ##
+    ## Types
+    ##
+    async def getSessionTypes(self) -> dict:
+        return await self._request("get", "/api/session/types")
+        
+    ##
     ## Get Session
     ##
     async def getSession(self, userId: str) -> dict:
-        return await self._request("get", "/api/session/{userId}")
+        return await self._request("get", f"/api/session/{userId}")
     
     ##
     ## Session Stats
@@ -18,16 +24,10 @@ class SessionService:
         return await self._request("get", "/api/session/stats")
     
     ##
-    ## Active Sessions
-    ##
-    async def getActiveSessions(self) -> dict:
-        return await self._request("get", "/api/session/active")
-    
-    ##
     ## Update Session Type
     ##
     async def updateSessionType(self, userId: str, sessionType: str) -> dict:
-        return await self._request("put", "/api/session/{userId}/type", params={"sessionType": sessionType})
+        return await self._request("put", f"/api/session/{userId}/type", params={"sessionType": sessionType})
     
     ##
     ## Update Session
@@ -48,9 +48,10 @@ class SessionService:
     ## -----------
     ##   Wrapper
     ## -----------
-    async def _request(self, method: str, path: str):
+    async def _request(self, method: str, path: str, **kwargs):
         async with httpx.AsyncClient() as client:
-            res = await client.request(method, f"{self.base_url}{path}")
+            url = f"{self.base_url}{path}"
+            res = await client.request(method, url, **kwargs)
             if(res.status_code != 200):
                 raise HTTPException(status_code=res.status_code, detail=res.text)
             return res.json()

@@ -41,5 +41,5 @@ export class ApiClient {
     */
     public async getMessageService(): Promise<MessageServiceClient> {
         return this.messageService;
-    }  
+    }
 } 

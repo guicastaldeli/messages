@@ -12,6 +12,12 @@ public class SessionController {
         this.service = service;
     }
 
+    @GetMapping("/types")
+    public List<SessionService.SessionType> getSessionTypes() {
+        List<SessionService.SessionType> types = Arrays.asList(SessionService.SessionType.values());
+        return types;
+    }
+
     @PostMapping("/update")
     public Map<String, Object> updateSession(
         @RequestParam String userId,
@@ -45,16 +51,6 @@ public class SessionController {
             return Map.of("error", "Session not found");
         }
         return createSessionResponse(sessionData);
-    }
-
-    @GetMapping("/active")
-    public Map<String, Object> getActiveSessions() {
-        Map<String, SessionService.SessionData> sessions = service.getActiveSessions();
-        Map<String, Object> res = new HashMap<>();
-        sessions.forEach((userId, sessionData) -> {
-            res.put(userId, createSessionResponse(sessionData));
-        });
-        return res;
     }
 
     @GetMapping("/stats")
