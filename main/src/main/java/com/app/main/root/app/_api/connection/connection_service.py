@@ -39,10 +39,10 @@ class ConnectionService:
     
     def __init__(self):
         self.connections: Dict[str, ConnectionInfo] = {}
-        self.connectionCallbacks: List[Callable[ConnectionInfo], Any] = []
-        self.disconnectionCallbacks: List[Callable[ConnectionInfo], Any] = []
+        self.connectionCallbacks: List[Callable[[ConnectionInfo], Any]] = []
+        self.disconnectionCallbacks: List[Callable[[ConnectionInfo], Any]] = []
         self._lock = asyncio.Lock()
-        self.logger = logging.setLoggerClass(__name__)
+        self.logger = logging.getLogger(__name__)
         
     @classmethod
     def getInstance(cls) -> 'ConnectionService':
@@ -95,7 +95,7 @@ class ConnectionService:
     ##
     ## Get Connection
     ##
-    def getConnection(self, socketId: str) -> Optional[ConnectionInfo]:
+    def getConnectionSocketId(self, socketId: str) -> Optional[ConnectionInfo]:
         return self.connections.get(socketId)
     
     ##

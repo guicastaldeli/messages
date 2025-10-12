@@ -30,7 +30,7 @@
             <a href="/api/session/stats" target="_blank">Stats</a>
         </div>
         <div class="endpoint">
-            <a href="/api/session/TESTUSER" target="_blank">Get User Session (URL USERNAME)</a>
+            <a href="/api/session/USER_USERNAME" target="_blank">Get User Session (URL USERNAME)</a>
         </div>
         <span>----------------------------</span>
     </div>
@@ -41,7 +41,25 @@
     <div class="connection-tracker-section">
         <span>---- Connection Tracker ----</span>
         <div class="endpoint">
-            <a href="/api/message-tracker/messages" target="_blank">Tracked Messages</a>
+            <a href="/api/connection-tracker/connections" target="_blank">All Connections</a>
+        </div>
+        <div class="endpoint">
+            <a href="/api/connection-tracker/connections/active" target="_blank">Active Connections</a>
+        </div>
+        <div class="endpoint">
+            <a href="/api/connection-tracker/connections/count" target="_blank">Count</a>
+        </div>
+        <div class="endpoint">
+            <a href="/api/connection-tracker/connections/USER_SOCKET_ID" target="_blank">By Socket ID (URL ID)</a>
+        </div>
+        <div class="endpoint">
+            <a href="/api/connection-tracker/connections/ip/USER_IP" target="_blank">By Ip (URL IP)</a>
+        </div>
+        <div class="endpoint">
+            <a href="/api/connection-tracker/connections/user/USER_USERNAME||USER_ID" target="_blank">By User (URL USERNAME || ID)</a>
+        </div>
+        <div class="endpoint">
+            <a href="/api/connection-tracker/connections/track" target="_blank">Track Connection</a>
         </div>
         <span>----------------------------------</span>
     </div>

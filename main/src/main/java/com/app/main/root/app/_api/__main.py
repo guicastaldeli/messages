@@ -39,6 +39,7 @@ class Main:
         self.connectionService = ConnectionService.getInstance()
         self.connectionRoutes = ConnectionRoutes()
         self.app.include_router(self.connectionRoutes.router)
+        self.setupConnectionTracking()
         
         ## Session
         self.sessionService = SessionService(SESSION_API_URL)

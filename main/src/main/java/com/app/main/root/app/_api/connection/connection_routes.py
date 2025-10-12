@@ -1,10 +1,10 @@
-from connection_service import ConnectionService, ConnectionInfo
+from connection.connection_service import ConnectionService, ConnectionInfo
 from fastapi import APIRouter, HTTPException, Request
 from typing import List, Dict, Any
 
 class ConnectionRoutes:
     def __init__(self):
-        self.router = APIRouter(prefix="/connections", tags=["connections"])
+        self.router = APIRouter(prefix="/connection-tracker/connections", tags=["connections"])
         self.connectionService = ConnectionService.getInstance()
         self.setupRoutes()
         
@@ -12,7 +12,7 @@ class ConnectionRoutes:
         ##
         ## Get All Connections
         ##
-        @self.routes.get("/")
+        @self.router.get("/")
         async def getAllConnections() -> Dict[str, ConnectionInfo]:
             return self.connectionService.getAllConnections()
         
@@ -34,11 +34,11 @@ class ConnectionRoutes:
             }
             
         ##
-        ## Get Connection
+        ## Get Connection Socket Id
         ##
         @self.router.get("/{socketId}")
-        async def getConnection(id: str) -> ConnectionInfo:
-            conn = self.connectionService.getConnection(id)
+        async def getConnectionSocketId(id: str) -> ConnectionInfo:
+            conn = self.connectionService.getConnectionSocketId(id)
             if(not conn):
                 raise HTTPException(status_code=400, detail="Connection not found!")
             return conn
