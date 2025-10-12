@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 
 class ConnectionRoutes:
     def __init__(self):
-        self.router = APIRouter(prefix="/connection-tracker/connections", tags=["connections"])
+        self.router = APIRouter(prefix="/api/connection-tracker/connections", tags=["connections"])
         self.connectionService = ConnectionService.getInstance()
         self.setupRoutes()
         
@@ -12,7 +12,7 @@ class ConnectionRoutes:
         ##
         ## Get All Connections
         ##
-        @self.router.get("/")
+        @self.router.get("/all")
         async def getAllConnections() -> Dict[str, ConnectionInfo]:
             return self.connectionService.getAllConnections()
         

@@ -18,7 +18,7 @@ public class ConnectionTrackerController {
     /*
     * All Connections 
     */
-    @GetMapping("/connections")
+    @GetMapping("/connections/all")
     public Map<String, ConnectionInfo> getAllConnections() {
         return connectionTracker.getAllConnections();
     }
@@ -109,7 +109,7 @@ public class ConnectionTrackerController {
     /*
     * Clear 
     */
-    @DeleteMapping("/clear")
+    @DeleteMapping("/connections/clear")
     public String clearConnections() {
         return "Add clear later...";
     }

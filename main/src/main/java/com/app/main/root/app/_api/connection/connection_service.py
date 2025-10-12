@@ -101,11 +101,11 @@ class ConnectionService:
     ##
     ## Get All Connections
     ##
-    def getAllConnections(self) -> List[ConnectionInfo]:
-        return [
-            conn for conn in self.connections.values()
+    def getAllConnections(self) -> Dict[str, ConnectionInfo]:
+        return {
+            id: conn for id, conn in self.connections.values()
             if(conn.isConnected)
-        ]
+        }
     
     ##
     ## Get Active Connections
