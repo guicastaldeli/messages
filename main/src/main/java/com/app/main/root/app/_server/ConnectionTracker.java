@@ -66,6 +66,30 @@ public class ConnectionTracker {
                 return hours + "h " + minutes + "m";
             }
         }
+
+        @Override
+        public String toString() {
+            return String.format(
+                """
+                    ConnectionInfo{
+                        socketId='%s',
+                        username='%s',
+                        ipAddress='%s',
+                        userAgent='%s',
+                        connectedAt='%s',
+                        isConnected='%s',
+                        duration=%s
+                    }
+                """,
+                socketId,
+                username,
+                ipAddress,
+                userAgent,
+                connectedAt,
+                isConnected,
+                getFormattedDuration()
+            );
+        }
     }
 
     public void trackConnection(
@@ -103,6 +127,7 @@ public class ConnectionTracker {
     }
 
     public Map<String, ConnectionInfo> getAllConnections() {
+        System.out.println("CONS: " + connections);
         return new ConcurrentHashMap<>(connections);
     }
 
@@ -113,6 +138,7 @@ public class ConnectionTracker {
                 activeConnections.add(conn);
             }
         }
+        System.out.println("Active Connections: " + activeConnections);
         return activeConnections;
     }
 

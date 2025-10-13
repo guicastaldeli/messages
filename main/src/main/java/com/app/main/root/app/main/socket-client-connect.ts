@@ -30,11 +30,11 @@ export class SocketClientConnect {
             this.rejConnection = rej;
 
             try {
-                const wsUrl = process.env.NEXT_PUBLIC_SERVER_DIR_WS_URL;
-                if(!wsUrl) throw new Error("SERVER URL not avaliable. FATAL ERR.");
+                const url = process.env.NEXT_PUBLIC_SERVER_DIR_WS_URL;
+                if(!url) throw new Error("SERVER URL not avaliable. FATAL ERR.");
 
-                console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', wsUrl);
-                this.socket = new WebSocket(wsUrl);
+                console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', url);
+                this.socket = new WebSocket(url);
                 await this.setupEventListeners();
                 this.eventDiscovery.events().catch(console.error);
 

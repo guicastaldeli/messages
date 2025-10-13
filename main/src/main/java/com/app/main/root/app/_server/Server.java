@@ -8,6 +8,7 @@ import com.app.main.root.app._service.SessionService;
 import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -86,11 +87,15 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         System.out.println(content);
     }
 
+    @Bean
+    public SocketHandler socketHandler() {
+        return this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
+    }
+
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
-        registry.addHandler(socketHandler, "/ws-direct").setAllowedOrigins(webUrl, apiUrl);
-        registry.addHandler(socketHandler, "").setAllowedOrigins(webUrl, apiUrl).withSockJS();
+        registry.addHandler(socketHandler(), "/ws-direct").setAllowedOrigins(webUrl, apiUrl);
+        registry.addHandler(socketHandler(), "").setAllowedOrigins(webUrl, apiUrl).withSockJS();
     }
 
     private void configSockets() {

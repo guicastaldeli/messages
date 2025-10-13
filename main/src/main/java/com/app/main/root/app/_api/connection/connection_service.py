@@ -17,7 +17,7 @@ class ConnectionInfo:
     
     def getConnectionDuration(self) -> int:
         endTime = self.disconnectedAt or datetime.now()
-        duration = endTime - self.disconnectedAt
+        duration = endTime - self.connectedAt
         return int(duration.total_seconds())
     
     def getFormattedDuration(self) -> str:
@@ -102,9 +102,13 @@ class ConnectionService:
     ## Get All Connections
     ##
     def getAllConnections(self) -> Dict[str, ConnectionInfo]:
+        for id, conn in self.connections.items():
+            print(f"Connection {id}: {conn}")
+            
         return {
-            id: conn for id, conn in self.connections.values()
-            if(conn.isConnected)
+            id: conn 
+            for id, conn in self.connections.items()
+            if conn.isConnected
         }
     
     ##

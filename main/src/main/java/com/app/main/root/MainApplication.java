@@ -40,8 +40,6 @@ public class MainApplication {
 
 	private static void init(ConfigurableApplicationContext context) {
 		Server server = context.getBean(Server.class);
-		server.init(url);
-		
 		DbService dbService = context.getBean(DbService.class);
 		dbService.alert();
 		server.alert();
