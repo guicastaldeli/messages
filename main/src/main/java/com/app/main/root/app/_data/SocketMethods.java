@@ -37,7 +37,7 @@ public class SocketMethods {
             );
             messagingTemplate.convertAndSendToUser(
                 sessionId,
-                "/queue" + event,
+                "/queue/" + event,
                 data
             );
         } catch(Exception err) {
@@ -58,7 +58,7 @@ public class SocketMethods {
                 "system"
             );
             messagingTemplate.convertAndSend(
-                "/topic" + event,
+                "/topic/" + event,
                 data
             );
         } catch(Exception err) {

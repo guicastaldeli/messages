@@ -271,6 +271,7 @@ export class SocketClientConnect {
                 this.off('res-socket-id', handle);
                 rej(err);
             });
+            console.log(this.socketId)
         });
     }
 
