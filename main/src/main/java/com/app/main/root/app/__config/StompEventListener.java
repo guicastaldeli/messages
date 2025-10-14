@@ -51,10 +51,22 @@ public class StompEventListener {
 
         if(ip == null || ip.isEmpty()) {
             Map<String, Object> sessionAttr = headers.getSessionAttributes();
-            if(sessionAttr != null) ip = (String) sessionAttr.get("remoteAddress");
+            if(sessionAttr != null) {
+                ip = (String) sessionAttr.get("remoteAddress");
+                if(ip == null && headers.getMessage() != null) {
+                    Map<String, Object> messageHeaders = headers.getMessageHeaders();
+                    Object nativeHeaders = messageHeaders.get("nativeHeaders");
+                    if(nativeHeaders instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> nativeHeadersMap = (Map<String, Object>) nativeHeaders;
+                        Object remoteAddr = nativeHeadersMap.get("remoteAddress");
+                        if(remoteAddr != null) ip = remoteAddr.toString();
+                    }
+                }
+            }
         }
 
-        String returnIp = ip != null ? ip : "Unknown";
-        return returnIp;
+        String resIp = ip != null ? ip : "Unknown";
+        return resIp;
     }
 }

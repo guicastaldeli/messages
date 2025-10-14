@@ -12,6 +12,7 @@ import java.util.List;
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private WebSocketHandshakeInterceptor interceptor = new WebSocketHandshakeInterceptor();
     private String webUrl = EnvConfig.get("WEB_URL");
     private String apiUrl = EnvConfig.get("API_URL");
 
@@ -24,8 +25,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/main/direct").setAllowedOriginPatterns(webUrl, apiUrl);
-        registry.addEndpoint("/main").setAllowedOriginPatterns(webUrl, apiUrl).withSockJS();
+        registry.addEndpoint("/main/direct")
+            .addInterceptors(interceptor)
+            .setAllowedOriginPatterns(webUrl, apiUrl);
+        registry.addEndpoint("/main")
+            .addInterceptors(interceptor)
+            .setAllowedOriginPatterns(webUrl, apiUrl)
+            .withSockJS();
     }
 
     @Override

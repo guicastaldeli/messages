@@ -80,6 +80,7 @@ public class ConfigSocketEvents implements ApplicationListener<BrokerAvailabilit
             String eventName = entry.getKey();
             EventConfig config = entry.getValue();
             registerEventHandler(eventName, config);
+            useEventRegistry(eventName, config);
             System.out.println("Dynamically Registered handler for: /app/" + eventName);
         }
         System.out.println("Total handlers registered: " + eventConfigs.size());
@@ -87,6 +88,21 @@ public class ConfigSocketEvents implements ApplicationListener<BrokerAvailabilit
 
     private void registerEventHandler(String eventName, EventConfig config) {
         eventConfigs.put(eventName, config);
+    }
+
+    private void useEventRegistry(String eventName, EventConfig config) {
+        EventRegistry.EventHandlerConfig registryConfig =
+        new EventRegistry.EventHandlerConfig(
+            eventName,
+            (sessionId, data, messagingTemplate) -> {
+                return config.getHandler().handle(sessionId, data, null);
+            },
+            config.isBroadcast(),
+            false,
+            eventName,
+            config.getDestination()
+        );
+        EventRegistry.registerEvent(registryConfig);
     }
 
     @MessageMapping("{eventName}")

@@ -102,7 +102,6 @@ export class Main extends Component<any, State> {
 
     render() {
         const { chatList, activeChat } = this.state;
-        console.log(this.socketClientConnect.isConnected)
 
         return (
             <div className='app'>

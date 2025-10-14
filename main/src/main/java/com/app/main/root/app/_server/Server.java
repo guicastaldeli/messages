@@ -8,7 +8,6 @@ import com.app.main.root.app._service.SessionService;
 import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler;
@@ -17,8 +16,6 @@ import org.springframework.web.socket.WebSocketSession;
 @Component
 public class Server implements CommandLineRunner {
     private static Server instance;
-    private SocketHandler socketHandler;
-    private final SimpAnnotationMethodMessageHandler messageHandler;
     private final EventRegistry eventRegistry;
     private final EventTracker eventTracker;
     private final MessageTracker messageTracker;
@@ -29,6 +26,7 @@ public class Server implements CommandLineRunner {
     private final ConnectionTracker connectionTracker;
     private final ConfigSocketEvents configSocketEvents;
     private final ColorConverter colorConverter;
+    private SimpAnnotationMethodMessageHandler messageHandler;
     private WebSocketSession webSocketSession;
 
     private String url;
@@ -38,9 +36,8 @@ public class Server implements CommandLineRunner {
     public Server(
         DbService dbService,
         SessionService sessionService,
-        SimpAnnotationMethodMessageHandler messageHandler,
-        EventRegistry eventRegistry,
         EventTracker eventTracker,
+        EventRegistry eventRegistry,
         SimpMessagingTemplate messagingTemplate,
         MessageTracker messageTracker,
         SocketMethods socketMethods,
@@ -48,8 +45,7 @@ public class Server implements CommandLineRunner {
         ConfigSocketEvents configSocketEvents,
         ColorConverter colorConverter
     ) {
-        this.messageHandler = messageHandler;
-        this.eventRegistry = new EventRegistry();
+        this.eventRegistry = eventRegistry;
         this.eventTracker = EventTracker.getInstance();
         this.messageTracker = MessageTracker.getInstance();
         this.dbService = dbService;
@@ -63,7 +59,7 @@ public class Server implements CommandLineRunner {
             eventTracker, 
             messageTracker,
             connectionTracker, 
-            dbService,
+            dbService, 
             socketMethods
         );
         this.colorConverter = colorConverter;
@@ -80,6 +76,7 @@ public class Server implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        
     }
 
     public void alert() {
@@ -88,11 +85,6 @@ public class Server implements CommandLineRunner {
         System.out.println("Connection tracker ready: " + (connectionTracker != null));
         System.out.println("Message template ready: " + (messagingTemplate != null));
         System.out.println(content);
-    }
-
-    @Bean
-    public SocketHandler socketHandler() {
-        return this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
     }
 
     public ConnectionTracker getConnectionTracker() {

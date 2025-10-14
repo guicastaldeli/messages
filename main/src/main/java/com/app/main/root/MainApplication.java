@@ -39,10 +39,15 @@ public class MainApplication {
 	}
 
 	private static void init(ConfigurableApplicationContext context) {
-		Server server = context.getBean(Server.class);
-		DbService dbService = context.getBean(DbService.class);
-		dbService.alert();
-		server.alert();
+		try {
+			Server server = context.getBean(Server.class);
+			DbService dbService = context.getBean(DbService.class);
+			dbService.alert();
+			server.alert();
+		} catch(Exception err) {
+			System.err.println(err);
+			err.printStackTrace();
+		}
 	}
 
 	private static String buildBaseUrl() {

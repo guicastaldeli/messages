@@ -53,8 +53,8 @@ export class SocketClientConnect {
                         this.reconnectAttemps = 0;
 
                         this.setupSubscriptions();
-                        this.getSocketId();
                         this.eventDiscovery.events();
+                        this.getSocketId();
 
                         if(this.resConnection) {
                             this.resConnection();
@@ -97,11 +97,11 @@ export class SocketClientConnect {
     */
     private async setupSubscriptions(): Promise<void> {
         if(!this.client || !this.client.connected) return;
-        console.log('working!')
 
         this.client.subscribe('/queue/socket-id', async (msg: IMessage) => {
             await this.handleMessage('res-socket-id', msg);
         });
+        console.log(this.socketId)
         this.client.subscribe('/topic/chat', async (msg: IMessage) => {
             await this.handleMessage('chat', msg);
         });
@@ -278,7 +278,6 @@ export class SocketClientConnect {
                 this.off('res-socket-id', handle);
                 rej(err);
             });
-            console.log(this.socketId)
         });
     }
 
