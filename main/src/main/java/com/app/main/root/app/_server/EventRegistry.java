@@ -2,8 +2,10 @@ package com.app.main.root.app._server;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
+@Component
 public class EventRegistry {
     @FunctionalInterface
     public interface SocketEventHandler {

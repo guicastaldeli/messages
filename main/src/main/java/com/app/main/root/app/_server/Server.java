@@ -49,7 +49,7 @@ public class Server implements CommandLineRunner {
         ColorConverter colorConverter
     ) {
         this.messageHandler = messageHandler;
-        this.eventRegistry = eventRegistry;
+        this.eventRegistry = new EventRegistry();
         this.eventTracker = EventTracker.getInstance();
         this.messageTracker = MessageTracker.getInstance();
         this.dbService = dbService;
@@ -80,7 +80,6 @@ public class Server implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        configSocketEvents.onApplicationEvent(null);
     }
 
     public void alert() {
