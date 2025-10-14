@@ -40,9 +40,9 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         DbService dbService,
         SessionService sessionService,
         EventTracker eventTracker,
+        SimpMessagingTemplate messagingTemplate,
         MessageTracker messageTracker,
         SocketMethods socketMethods,
-        SimpMessagingTemplate messagingTemplate,
         ConnectionTracker connectionTracker, 
         ConfigSocketEvents configSocketEvents,
         ColorConverter colorConverter
@@ -51,15 +51,16 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
         this.messageTracker = MessageTracker.getInstance();
         this.dbService = dbService;
         this.sessionService = new SessionService();
-        this.socketMethods = new SocketMethods(eventTracker);
         this.messagingTemplate = messagingTemplate;
+        this.socketMethods = new SocketMethods(messagingTemplate, eventTracker);
         this.connectionTracker = connectionTracker;
         this.configSocketEvents = new ConfigSocketEvents(
             eventTracker, 
             messageTracker,
             connectionTracker, 
             dbService, 
-            socketMethods
+            socketMethods,
+            messagingTemplate
         );
         this.colorConverter = colorConverter;
         instance = this;
@@ -94,8 +95,8 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(socketHandler(), "/ws-direct").setAllowedOrigins(webUrl, apiUrl);
-        registry.addHandler(socketHandler(), "").setAllowedOrigins(webUrl, apiUrl).withSockJS();
+        registry.addHandler(socketHandler(), "/direct").setAllowedOrigins(webUrl, apiUrl);
+        registry.addHandler(socketHandler(), "/main").setAllowedOrigins(webUrl, apiUrl).withSockJS();
     }
 
     private void configSockets() {

@@ -8,9 +8,9 @@ public class EventRegistry {
     @FunctionalInterface
     public interface SocketEventHandler {
         Object handle(
-            Object socket,
+            String sessionId,
             Object data,
-            Object io
+            SimpMessagingTemplate messagingTemplate
         );
     }
 
@@ -22,19 +22,22 @@ public class EventRegistry {
         public boolean broadcast;
         public boolean broadcastSelf;
         public String targetEvent;
+        public String destination;
 
         public EventHandlerConfig(
             String eventName,
             SocketEventHandler handler,
             boolean broadcast,
             boolean broadcastSelf,
-            String targetEvent
+            String targetEvent,
+            String destination
         ) {
             this.eventName = eventName;
             this.handler = handler;
             this.broadcast = broadcast;
             this.broadcastSelf = broadcastSelf;
             this.targetEvent = targetEvent;
+            this.destination = destination;
         }
     }
 
@@ -59,53 +62,28 @@ public class EventRegistry {
     public static EventHandlerConfig createBroadcastEvent(
         String eventName,
         SocketEventHandler handler,
-        Boolean broadcastSelf,
-        String targetEvent
+        String destination,
+        boolean broadcast
     ) {
         return new EventHandlerConfig(
             eventName,
-            (SocketEventHandler) (socket, data, io) -> {
-                Object result = handler.handle(socket, data, io);
-                if(io != null && events.get(eventName).broadcast) {
-                    String emitEventName = targetEvent != null ? targetEvent : eventName;
-                    broadcastMessage(
-                        socket, 
-                        io, 
-                        emitEventName, 
-                        result, 
-                        broadcastSelf != null ? broadcastSelf : false
-                    );
-                }
-                return result;
-            },
-            true,
-            broadcastSelf != null ? broadcastSelf : false,
-            targetEvent
+            handler,
+            broadcast,
+            false,
+            eventName,
+            destination
         );
     }
 
     private static void broadcastMessage(
-        Object socket,
-        Object io,
+        String sessionId,
+        SimpMessagingTemplate messagingTemplate,
         String eventName,
         Object data,
         boolean broadcastSelf
     ) {
-        if(io instanceof SimpMessagingTemplate) {
-            SimpMessagingTemplate messagingTemplate = (SimpMessagingTemplate) io;
-            String dest = "/topic/" + eventName;
-
-            if(broadcastSelf) {
-                messagingTemplate.convertAndSend(dest, data);
-            } else {
-                if(socket instanceof WebSocketSession) {
-                    WebSocketSession currentSession = (WebSocketSession) socket;
-                    broadcastToOthers(currentSession, messagingTemplate, dest, data);
-                } else {
-                    messagingTemplate.convertAndSend(dest, data);
-                }
-            }
-        }
+        String dest = "/topic" + eventName;
+        messagingTemplate.convertAndSend(dest, data);
     }
 
     private static void broadcastToOthers(
@@ -119,24 +97,37 @@ public class EventRegistry {
 
     public static void handleEvent(
         String eventName,
-        Object socket,
+        String sessionId,
         Object data,
-        Object io
+        SimpMessagingTemplate messagingTemplate
     ) {
         EventHandlerConfig eventConfig = events.get(eventName);
-        if(eventConfig != null) eventConfig.handler.handle(socket, data, io);
-    }
-
-    /*
-    * Remove Event 
-    */
-    public static boolean removeEvent(String name) {
-        return events.remove(name) != null;
-    }
-
-    public static void removeEvents(List<String> names) {
-        for(String name : names) {
-            events.remove(name);
+        if(eventConfig != null && eventConfig.destination != null) {
+            try {
+                Object result = eventConfig.handler.handle(sessionId, data, messagingTemplate);
+    
+                if(eventConfig.destination != null) {
+                    if(eventConfig.broadcast) {
+                        messagingTemplate.convertAndSend(eventConfig.destination, result);
+                    } else {
+                        messagingTemplate.convertAndSendToUser(sessionId, eventConfig.destination, result);
+                    }
+                }
+            } catch(Exception err) {
+                System.err.println("Error handling event " + eventName + ": " + err.getMessage());
+                messagingTemplate.convertAndSendToUser(
+                    sessionId,
+                    "/queue/errors",
+                    Map.of(
+                        "error",
+                        "Failed to process" + eventName,
+                        "details",
+                        err.getMessage()
+                    )
+                );
+            }
+        } else {
+            System.err.println("No handler found for event: " + eventName);
         }
     }
 }

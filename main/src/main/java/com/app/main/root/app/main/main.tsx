@@ -52,8 +52,8 @@ export class Main extends Component<any, State> {
         }
     }
 
-    componentDidMount(): void {
-        this.connect();
+    async componentDidMount(): Promise<void> {
+        await this.connect();
         this.chatManager.mount();
         this.loadData();
     }
@@ -62,9 +62,9 @@ export class Main extends Component<any, State> {
         this.chatManager.unmount();
     }
 
-    private connect(): void {
+    private async connect(): Promise<void> {
         if(!this.socketClientConnect) return;
-        this.socketClientConnect.connect();
+        await this.socketClientConnect.connect();
         this.messageManager.init();
     }
 

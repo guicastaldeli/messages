@@ -6,7 +6,7 @@ import java.util.*;
 
 @RestController
 public class EventController {
-    @GetMapping("/events")
+    @GetMapping("/main/events")
     public List<String> getRegisteredEvents() {
         List<EventRegistry.EventHandlerConfig> events = EventRegistry.getAllEvents();
         List<String> names = new ArrayList<>();

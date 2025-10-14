@@ -67,6 +67,7 @@ public class ConnectionTracker {
             }
         }
 
+        /*
         @Override
         public String toString() {
             return String.format(
@@ -90,6 +91,7 @@ public class ConnectionTracker {
                 getFormattedDuration()
             );
         }
+            */
     }
 
     public void trackConnection(
@@ -127,7 +129,6 @@ public class ConnectionTracker {
     }
 
     public Map<String, ConnectionInfo> getAllConnections() {
-        System.out.println("CONS: " + connections);
         return new ConcurrentHashMap<>(connections);
     }
 
@@ -138,7 +139,6 @@ public class ConnectionTracker {
                 activeConnections.add(conn);
             }
         }
-        System.out.println("Active Connections: " + activeConnections);
         return activeConnections;
     }
 
@@ -186,7 +186,7 @@ public class ConnectionTracker {
         String socket = colorConverter.style(info.socketId, "white", "bold");
         String durationFormatted = info.getFormattedDuration();
         
-        String prefix = colorConverter.style(timestamp + " - DISCONNECTED: from IP: ", "brightRed", "italic");
+        String prefix = colorConverter.style(timestamp + " - DISCONNECTED ~ from IP: ", "brightRed", "italic");
         String suffix = colorConverter.style("after " + durationFormatted, "brightRed", "italic");
 
         System.out.println(

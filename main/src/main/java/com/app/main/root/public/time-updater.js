@@ -1,7 +1,7 @@
 class TimeUpdater {
     constructor() {
         this.updateIntervals = new Map();
-        this.serverApiUrl = window.location.origin;
+        this.serverApiUrl = SERVER_API_URL;
         this.apiGatewayUrl = API_GATEWAY_URL;
     }
 

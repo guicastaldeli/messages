@@ -1,8 +1,10 @@
 import { EventDiscovery } from "./event-discovery";
+import { Client, IMessage } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 export class SocketClientConnect {
     private static instance: SocketClientConnect;
-    private socket: WebSocket | null = null;
+    private client: Client | null = null;
     private eventListeners: Map<string, Function[]> = new Map();
     private reconnectAttemps = 0;
     private maxReconnectAttemps = 5;
@@ -22,7 +24,7 @@ export class SocketClientConnect {
         return SocketClientConnect.instance;
     }
 
-    public connect(): Promise<void> {
+    public async connect(): Promise<void> {
         if(this.connectionPromise) return this.connectionPromise;
 
         this.connectionPromise = new Promise(async (res, rej) => {
@@ -30,34 +32,50 @@ export class SocketClientConnect {
             this.rejConnection = rej;
 
             try {
-                const url = process.env.NEXT_PUBLIC_SERVER_DIR_WS_URL;
+                const url = process.env.NEXT_PUBLIC_SERVER_DEF_HTTP_URL;
                 if(!url) throw new Error("SERVER URL not avaliable. FATAL ERR.");
-
                 console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', url);
-                this.socket = new WebSocket(url);
-                await this.setupEventListeners();
-                this.eventDiscovery.events().catch(console.error);
+                
+                this.client = new Client({
+                    webSocketFactory: () => new SockJS(url),
+                    reconnectDelay: 5000,
+                    heartbeatIncoming: 4000,
+                    heartbeatOutgoing: 4000,
 
-                this.socket.onopen = () => {
-                    console.log(
-                        '%cConnected to the Server ;)', 'color: #004db2ff; font-weight: bold'
-                    );
-                    this.reconnectAttemps = 0;
-                    this.getSocketId();
-                }
-                this.socket.onclose = (event) => {
-                    console.log('WebSocket connection closed:', event.code, event.reason);
-                    this.connectionPromise = null;
-                    if(event.code !== 1000) this.handleReconnect();
-                }
-                this.socket.onerror = (err) => {
-                    console.error('WebSocket error:', err);
-                    this.connectionPromise = null;
-                    if(this.rejConnection) {
-                        this.rejConnection(err);
-                        this.rejConnection = null;
+                    onConnect: async () => {
+                        console.log('%cConnected to Server ;)', 'color: #004db2ff; font-weight: bold');
+                        /*
+                        this.reconnectAttemps = 0;
+
+                        await this.setupSubscriptions();
+                        await this.getSocketId();
+
+                        if(this.resConnection) {
+                            this.resConnection();
+                            this.resConnection = null;
+                        }
+                            */
+                    },
+                    onStompError: (frame) => {
+                        console.error('Server error!: ', frame.headers['message'], frame.body);
+                    },
+                    onWebSocketClose: (e) => {
+                        console.log('%cConnection closed ;(: ', 'color: #992a24ff; font-weight: bold', e);
+                        this.connectionPromise = null;
+                        if(e.code !== 1000) this.handleReconnect();
+                    },
+                    onWebSocketError: (e) => {
+                        console.error('Connection Error!: ', e);
+                        this.connectionPromise = null;
+                        if(this.rejConnection) {
+                            this.rejConnection(e);
+                            this.rejConnection = null;
+                        }
                     }
-                }
+                });
+
+                this.client.activate();
+                await this.eventDiscovery.events();
             } catch(err) {
                 this.connectionPromise = null;
                 if(this.rejConnection) {
@@ -71,30 +89,38 @@ export class SocketClientConnect {
     }
 
     /*
-    ** Setup Event Listeners
+    ** Setup Subscriptions
     */
-    private async setupEventListeners(): Promise<void> {
-        if(!this.socket) throw new Error('FATAL ERR.');
+    private async setupSubscriptions(): Promise<void> {
+        if(!this.client || !this.client.connected) return;
+        console.log('working!')
 
-        this.socket.onmessage = async (event) => {
-            try {
-                const message = JSON.parse(event.data);
+        this.client.subscribe('/queue/socket-id', async (msg: IMessage) => {
+            await this.handleMessage('res-socket-id', msg);
+        });
+        this.client.subscribe('/topic/chat', async (msg: IMessage) => {
+            await this.handleMessage('chat', msg);
+        });
+        this.client.subscribe('/topic/update', async (msg: IMessage) => {
+            await this.handleMessage('update', msg);
+        });
+        this.client.subscribe('/topic/users', async (msg: IMessage) => {
+            await this.handleMessage('users', msg);
+        });
+        this.client.subscribe('/user/queue/errors', async (msg: IMessage) => {
+            await this.handleMessage('error', msg);
+        });
+    }
 
-                //Connect
-                if(message.event === 'connect') {
-                    console.log('Received message:', message);
-                    if(this.resConnection) {
-                        this.resConnection();
-                        this.resConnection = null;
-                    }
-                    await this.emit(message.event, message.data);
-                    console.log('tst')
-                }
-                //Others
-                await this.emit(message.event, message.data);
-            } catch(err) {
-                console.error('Error parsing WebSocket message:', err);
-            }
+    /*
+    ** Handle Message
+    */
+    private async handleMessage(e: string, msg: any): Promise<void> {
+        try {
+            const data = JSON.parse(msg.body);
+            this.emit(e, data);
+        } catch(err) {
+            console.error('STOMP FATAL ERR.', err);
         }
     }
 
@@ -119,11 +145,8 @@ export class SocketClientConnect {
     ** On
     */
     public async on(event: string, callback: Function): Promise<void> {
-        if(!this.eventListeners.has(event)) {
-            this.eventListeners.set(event, []);
-        }
+        if(!this.eventListeners.has(event)) this.eventListeners.set(event, []);
         this.eventListeners.get(event)!.push(callback);
-        //console.log(`Listener added for event: ${event}`);
     }
 
     /*
@@ -150,7 +173,6 @@ export class SocketClientConnect {
         
         if(available) {
             const listeners = this.eventListeners.get(event);
-            //console.log('Emitted', { event, data })
             if(listeners) {
                 listeners.forEach(callback => {
                     try {
@@ -183,15 +205,19 @@ export class SocketClientConnect {
         }
 
         if(available) {
-            if(this.socket && this.socket.readyState === WebSocket.OPEN) {
-                const content = JSON.stringify({ event, data });
-                //console.log('Content:', content);
-                this.socket.send(content);
+            if(this.client && this.client.connected) {
+                const destination = `/${event}`;
+                const msgBody = JSON.stringify(data);
+                console.log('Sending: ', destination, " data: ", data);
+                this.client.publish({
+                    destination: destination,
+                    body: msgBody
+                });
             } else {
-                console.error('WebSocket not connected. Cannot send message:', event);
+                console.error('Client not connected!, message error', event);
             }
         } else {
-            console.error('Event not available!!');
+            console.error('Event not available');
             return;
         }
     }
@@ -211,9 +237,9 @@ export class SocketClientConnect {
     ** Disconnect
     */
     public disconnect(): void {
-        if(this.socket) {
-            this.socket.close(1000, 'Manual disconnect');
-            this.socket = null;
+        if(this.client) {
+            this.client.deactivate();
+            this.client = null;
         }
         this.connectionPromise = null;
         this.eventListeners.clear();
@@ -224,13 +250,28 @@ export class SocketClientConnect {
     */
     public async getSocketId(): Promise<string> {
         return new Promise((res, rej) => {
-            this.send('get-socket-id').then(scss => {
-                if(!scss) rej(new Error('Failed to send socket id request'));
-            }).catch(rej);
-            this.on("res-socket-id", (id: string) => {
-                res(id);
+            const handle = (data: any) => {
+                console.log('Received socket ID', data);
+                if(data && data.socketId) {
+                    this.socketId = data.socketId;
+                    this.off('res-socket-id', handle);
+                    res(data.socketId);
+                } else {
+                    rej(new Error('Invalid socket id'))
+                }
+            }
+
+            this.on('res-socket-id', handle);
+
+            this.send('get-socket-id', {}).then(sucss => {
+                if(!sucss) {
+                    this.off('res-socket-id', handle);
+                    rej(new Error('Failed to send socket request'));
+                }
+            }).catch(err => {
+                this.off('res-socket-id', handle);
+                rej(err);
             });
-            return res;
         });
     }
 
@@ -238,10 +279,13 @@ export class SocketClientConnect {
     ** Getters
     */
     public get isConnected(): boolean {
-        return this.socket?.readyState === WebSocket.OPEN;
+        return this.client?.connected || false;
     }
 
     public get readyState(): number {
-        return this.socket?.readyState || WebSocket.CLOSED;
+        const connected = this.client?.connected;
+        const OPEN = 1;
+        const CLOSED = 3;
+        return connected ? OPEN : CLOSED;
     }
 }

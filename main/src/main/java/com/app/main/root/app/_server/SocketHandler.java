@@ -32,6 +32,7 @@ public class SocketHandler implements WebSocketHandler {
         String ipAddress = getClientIp(session);
         String userAgent = session.getHandshakeHeaders().getFirst("User-Agent");
         connectionTracker.trackConnection(session.getId(), ipAddress, userAgent);
+        connectionTracker.getAllConnections();
         
         session.getAttributes().put("username", "Anonymous");
         session.getAttributes().put("remoteAddress", ipAddress);
@@ -68,7 +69,7 @@ public class SocketHandler implements WebSocketHandler {
                 EventRegistry.EventHandlerConfig eventConfig = EventRegistry.getEvent(eventName);
 
                 if(eventConfig != null) {
-                    eventConfig.handler.handle(session, data, messagingTemplate);
+                    eventConfig.handler.handle(sessionId, data, messagingTemplate);
                 } else {
                     System.out.println("No handler found for event: " + eventName);
                 }

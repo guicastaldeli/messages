@@ -2,9 +2,16 @@
 <html xmlns:th="http://www.thymeleaf.org" th:fragment="content">
 <head>
     <title>Server</title>
-    <link rel="stylesheet" href="/styles/interface.css">
-    <script th:inline="javascript" src="/public/api-url.js"></script>
-    <script src="/public/time-updater.js"></script>
+    <!-- <link rel="stylesheet" href="../main/__styles/interface.css"> -->
+    <link rel="stylesheet" href="/main/styles/interface.css">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        window.API_GATEWAY_URL = /*[[${apiGateway}]]*/ 'http://localhost:3002';
+        window.SERVER_API_URL = /*[[${serverUrl}]]*/ 'http://localhost:3001/main';
+        /*]]>*/
+    </script>
+    <script th:inline="javascript" src="/main/public/api-url.js"></script>
+    <script src="/main/public/time-updater.js"></script>
 </head>
 <body>
     <div id="container">
@@ -19,11 +26,20 @@
             <p>CONNECTIONS: <span th:text="${connections}"></span></p>
         </div>
         <div id="ms--route">
-            <p>ROUTES: 
-                <span th:text="${url}">http://localhost:3000</span>
-                <span th:text="${url}">http://localhost:3001</span>
-                <span th:text="${url}">http://localhost:3002</span>
-            </p>
+            <div>ROUTES: 
+                <div>
+                    <span>- Web:</span> 
+                    <a th:text="${webUrl}"></a>
+                </div>
+                <div>
+                    <span>- Server:</span> 
+                    <a th:text="${serverUrl}"></a>
+                </div>
+                <div>
+                    <span>- API:</span> 
+                    <a th:text="${apiGateway}"></a>
+                </div>
+            </div>
         </div>
         <div id="api-status">
             <p>API Gateway: <b id="api-gateway-status">Checking...</b></p>

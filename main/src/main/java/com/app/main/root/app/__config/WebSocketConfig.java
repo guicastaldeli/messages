@@ -19,12 +19,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/queue");
         config.setApplicationDestinationPrefixes("/app");
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws-direct").setAllowedOriginPatterns(webUrl, apiUrl);
-        registry.addEndpoint("").setAllowedOriginPatterns(webUrl, apiUrl).withSockJS();
+        registry.addEndpoint("/direct").setAllowedOriginPatterns(webUrl, apiUrl);
+        registry.addEndpoint("/main").setAllowedOriginPatterns(webUrl, apiUrl).withSockJS();
     }
 
     @Override

@@ -1,2 +1,2 @@
-const API_GATEWAY_URL = /*[[${apiUrl}]]*/ 'http://localhost:3002'; 
-const SERVER_API_URL = window.location.origin;
+const API_GATEWAY_URL =  /*[[${apiGateway}]]*/ window.API_GATEWAY_URL; 
+const SERVER_API_URL = /*[[${serverUrl}]]*/ window.SERVER_API_URL;
