@@ -11,12 +11,15 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler;
 import org.springframework.web.socket.WebSocketSession;
 
 @Component
 public class Server implements CommandLineRunner {
     private static Server instance;
     private SocketHandler socketHandler;
+    private final SimpAnnotationMethodMessageHandler messageHandler;
+    private final EventRegistry eventRegistry;
     private final EventTracker eventTracker;
     private final MessageTracker messageTracker;
     private final DbService dbService;
@@ -35,6 +38,8 @@ public class Server implements CommandLineRunner {
     public Server(
         DbService dbService,
         SessionService sessionService,
+        SimpAnnotationMethodMessageHandler messageHandler,
+        EventRegistry eventRegistry,
         EventTracker eventTracker,
         SimpMessagingTemplate messagingTemplate,
         MessageTracker messageTracker,
@@ -43,6 +48,8 @@ public class Server implements CommandLineRunner {
         ConfigSocketEvents configSocketEvents,
         ColorConverter colorConverter
     ) {
+        this.messageHandler = messageHandler;
+        this.eventRegistry = eventRegistry;
         this.eventTracker = EventTracker.getInstance();
         this.messageTracker = MessageTracker.getInstance();
         this.dbService = dbService;
@@ -51,12 +58,13 @@ public class Server implements CommandLineRunner {
         this.socketMethods = new SocketMethods(messagingTemplate, eventTracker);
         this.connectionTracker = connectionTracker;
         this.configSocketEvents = new ConfigSocketEvents(
+            messageHandler,
+            eventRegistry,
             eventTracker, 
             messageTracker,
             connectionTracker, 
-            dbService, 
-            socketMethods,
-            messagingTemplate
+            dbService,
+            socketMethods
         );
         this.colorConverter = colorConverter;
         instance = this;
@@ -72,8 +80,7 @@ public class Server implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        configSockets();
-        configSocketEvents.configSocketEvents();
+        configSocketEvents.onApplicationEvent(null);
     }
 
     public void alert() {
@@ -87,10 +94,6 @@ public class Server implements CommandLineRunner {
     @Bean
     public SocketHandler socketHandler() {
         return this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
-    }
-
-    private void configSockets() {
-        configSocketEvents.configSocketEvents();
     }
 
     public ConnectionTracker getConnectionTracker() {

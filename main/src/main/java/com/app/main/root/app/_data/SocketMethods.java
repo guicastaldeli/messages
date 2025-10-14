@@ -1,4 +1,6 @@
 package com.app.main.root.app._data;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import com.app.main.root.app.EventTracker;
@@ -21,19 +23,17 @@ public class SocketMethods {
     ** Send 
     */
     public void send(
-        Object socket,
+        String sessionId,
         String event,
         Object data
     ) {
         try {
-            String sessionId = getSessionId(socket);
-
             eventTracker.track(
                 event,
                 data,
                 EventDirection.SENT,
                 sessionId,
-                event
+                "system"
             );
             messagingTemplate.convertAndSendToUser(
                 sessionId,
@@ -67,10 +67,37 @@ public class SocketMethods {
     }
 
     /*
+    * Broadcast to Destination 
+    */
+    public void broadcastToDestination(String destination, Object data) {
+        try {
+            eventTracker.track(
+                "broadcast-" + destination,
+                data,
+                EventDirection.SENT,
+                "broadcast",
+                "system"
+            );
+            messagingTemplate.convertAndSend(destination, data);
+        } catch(Exception err) {
+            System.err.println("Error broadcasting to " + destination + ": " + err.getMessage());
+        }
+    }
+
+    /*
     ** Session Id 
     */
-    public String getSessionId(Object socket) {
-        if(socket instanceof String) return (String) socket;
+    public String getSessionId(Object src) {
+        if(src instanceof String) {
+            return (String) src;
+        } else if(src instanceof SimpMessageHeaderAccessor) {
+            SimpMessageHeaderAccessor accessor = (SimpMessageHeaderAccessor) src;
+            return accessor.getSessionId();
+        } else if(src instanceof Message) {
+            Message<?> message = (Message<?>) src;
+            SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.wrap(message);
+            return accessor.getSessionId();
+        }
         return "unknown";
     }
 

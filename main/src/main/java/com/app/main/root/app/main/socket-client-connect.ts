@@ -37,6 +37,11 @@ export class SocketClientConnect {
                 if(!url) throw new Error("SERVER URL not avaliable. FATAL ERR.");
                 console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', url);
                 
+                if(this.client) {
+                    this.client.deactivate();
+                    this.client = null;
+                }
+
                 this.client = new Client({
                     webSocketFactory: () => new SockJS(url),
                     reconnectDelay: 5000,
@@ -248,6 +253,8 @@ export class SocketClientConnect {
     ** Socket Id
     */
     public async getSocketId(): Promise<string> {
+        if(this.socketId) return this.socketId;
+        
         return new Promise((res, rej) => {
             const handle = (data: any) => {
                 console.log('Received socket ID', data);
