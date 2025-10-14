@@ -17,8 +17,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 import org.springframework.web.socket.WebSocketSession;
 
 @Component
-@EnableWebSocket
-public class Server implements WebSocketConfigurer, CommandLineRunner {
+public class Server implements CommandLineRunner {
     private static Server instance;
     private SocketHandler socketHandler;
     private final EventTracker eventTracker;
@@ -91,12 +90,6 @@ public class Server implements WebSocketConfigurer, CommandLineRunner {
     @Bean
     public SocketHandler socketHandler() {
         return this.socketHandler = new SocketHandler(messagingTemplate, connectionTracker, webSocketSession);
-    }
-
-    @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(socketHandler(), "/direct").setAllowedOrigins(webUrl, apiUrl);
-        registry.addHandler(socketHandler(), "/main").setAllowedOrigins(webUrl, apiUrl).withSockJS();
     }
 
     private void configSockets() {

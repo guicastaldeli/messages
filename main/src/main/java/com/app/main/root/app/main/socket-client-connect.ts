@@ -24,6 +24,7 @@ export class SocketClientConnect {
         return SocketClientConnect.instance;
     }
 
+
     public async connect(): Promise<void> {
         if(this.connectionPromise) return this.connectionPromise;
 
@@ -42,25 +43,24 @@ export class SocketClientConnect {
                     heartbeatIncoming: 4000,
                     heartbeatOutgoing: 4000,
 
-                    onConnect: async () => {
+                    onConnect: () => {
                         console.log('%cConnected to Server ;)', 'color: #004db2ff; font-weight: bold');
-                        /*
                         this.reconnectAttemps = 0;
 
-                        await this.setupSubscriptions();
-                        await this.getSocketId();
+                        this.setupSubscriptions();
+                        this.getSocketId();
+                        this.eventDiscovery.events();
 
                         if(this.resConnection) {
                             this.resConnection();
                             this.resConnection = null;
                         }
-                            */
                     },
                     onStompError: (frame) => {
                         console.error('Server error!: ', frame.headers['message'], frame.body);
                     },
                     onWebSocketClose: (e) => {
-                        console.log('%cConnection closed ;(: ', 'color: #992a24ff; font-weight: bold', e);
+                        console.log('%cConnection closed ;(', 'color: #992a24ff; font-weight: bold', e);
                         this.connectionPromise = null;
                         if(e.code !== 1000) this.handleReconnect();
                     },
@@ -75,7 +75,6 @@ export class SocketClientConnect {
                 });
 
                 this.client.activate();
-                await this.eventDiscovery.events();
             } catch(err) {
                 this.connectionPromise = null;
                 if(this.rejConnection) {
@@ -206,7 +205,7 @@ export class SocketClientConnect {
 
         if(available) {
             if(this.client && this.client.connected) {
-                const destination = `/${event}`;
+                const destination = `/app/${event}`;
                 const msgBody = JSON.stringify(data);
                 console.log('Sending: ', destination, " data: ", data);
                 this.client.publish({

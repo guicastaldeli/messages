@@ -52,8 +52,8 @@ export class Main extends Component<any, State> {
         }
     }
 
-    async componentDidMount(): Promise<void> {
-        await this.connect();
+    componentDidMount(): void {
+        this.connect();
         this.chatManager.mount();
         this.loadData();
     }
@@ -62,9 +62,9 @@ export class Main extends Component<any, State> {
         this.chatManager.unmount();
     }
 
-    private async connect(): Promise<void> {
+    private connect(): void {
         if(!this.socketClientConnect) return;
-        await this.socketClientConnect.connect();
+        this.socketClientConnect.connect();
         this.messageManager.init();
     }
 
@@ -102,6 +102,7 @@ export class Main extends Component<any, State> {
 
     render() {
         const { chatList, activeChat } = this.state;
+        console.log(this.socketClientConnect.isConnected)
 
         return (
             <div className='app'>
@@ -117,7 +118,6 @@ export class Main extends Component<any, State> {
                             
                             return (
                                 <>
-                                    {console.log(sessionContext.currentSession)}
                                     {sessionContext && sessionContext.currentSession === 'LOGIN' && (
                                         <div className='screen join-screen'>
                                             <div className='form'>
