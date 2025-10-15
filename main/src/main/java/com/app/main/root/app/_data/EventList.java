@@ -136,6 +136,12 @@ public class EventList {
                 response.put("messageId", messageId);
                 response.put("timestamp", time);
 
+                socketMethods.send(
+                    sessionId,
+                    "/queue/message-sent",
+                    response
+                );
+
                 //socketMethods.broadcast("chat", response);
                 return response;
             },

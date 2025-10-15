@@ -48,6 +48,7 @@ export class MessageManager {
         });
 
         await this.socketClient.connect();
+        await this.update();
     }
 
     public handleJoin(): Promise<'dashboard'> {
@@ -59,10 +60,14 @@ export class MessageManager {
             this.joinHandled = true;
 
             try {
-                const ok = await this.socketClient.emit('new-user', usernameInput.value);
-                if(!ok) {
+                const sucss = await this.socketClient.sendToDestination(
+                    '/app/new-user',
+                    usernameInput.value.trim(),
+                    '/queue/join-response'
+                );
+                if(!sucss) {
                     this.joinHandled = false;
-                    return rej(new Error('Event err'));
+                    return rej(new Error('Failed to send join request!'));
                 }
                 this.uname = usernameInput.value;
                 this.initController();
@@ -79,6 +84,7 @@ export class MessageManager {
         if(!this.appEl || this.chatHandled) return;
         this.chatHandled = true;
 
+        const senderId = await this.socketClient.getSocketId();
         const sendBtn = this.appEl.querySelector<HTMLButtonElement>('.chat-screen #send-message');
         let msgInputEl = this.appEl!.querySelector<HTMLInputElement>('.chat-screen #message-input');
         if(!sendBtn || !msgInputEl) return;
@@ -87,15 +93,70 @@ export class MessageManager {
             const msgInput = msgInputEl.value.trim();
             if(!msgInput.length) return; 
  
-            this.socketClient.send('chat', {
-                senderId: this.socketClient.getSocketId(),
-                username: this.uname,
-                content: msgInput,
-                chatId: chatId || this.socketId
-            });
-            await this.messageEventHandler();
-            msgInputEl.value = '';
-            msgInputEl.focus();
+            try {
+                await this.sendMessage({
+                    senderId: senderId,
+                    username: this.uname,
+                    content: msgInput,
+                    chatId: chatId || senderId
+                });
+                msgInputEl.value = '';
+                msgInputEl.focus();
+            } catch(err) {
+                console.error(err);
+            }
+        });
+    }
+
+    /*
+    ** Send Message Method
+    */
+    private async sendMessage(data: any): Promise<void> {
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/message-sent';
+            const errDestination = '/queue/message-err';
+
+            /* Success */
+            const handleSucss = (response: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+
+                this.renderMessage('self', {
+                    username: data.username,
+                    content: data.content,
+                    messageId: response.messageId,
+                    timestamp: response.timestamp
+                });
+
+                res();
+            }
+
+            /* Error */
+            const handleErr = (err: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(err.error || err.mesage || 'Failed to send message'));
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(errDestination, handleErr);
+
+                const sucss = await this.socketClient.sendToDestination(
+                    '/app/chat',
+                    data
+                );
+
+                if(!sucss) {
+                    this.socketClient.offDestination(sucssDestination, handleSucss);
+                    this.socketClient.offDestination(errDestination, handleErr);
+                    rej(new Error('Failed to send message request!'));
+                }
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
         });
     }
 
@@ -121,30 +182,31 @@ export class MessageManager {
     ** Update
     */
     public async update(): Promise<void> {
-        this.socketClient.on('update', (update: any) => {
-            this.renderMessage('update', update);
+        const destination = '/queue/new-messages';
+
+        const handleIncomingMessage = async (msg: any) => {
+            if(!this.currentUserId) this.currentUserId = await this.socketClient.getSocketId();
+
+            const type = msg.senderId === this.currentUserId ? 'self' : 'other';
+            this.renderMessage(type, {
+                username: msg.username,
+                content: msg.content,
+                messageId: msg.messageId,
+                timestamp: msg.timestamp
+            });
+        }
+
+        await this.socketClient.onDestination(destination, handleIncomingMessage, {
+            autoSubscribe: true,
+            eventName: 'new-message'
         });
     }
 
     public async messageEventHandler(): Promise<void> {
         if(this.msgHandlerCallback) {
             this.socketClient.off('new-message', this.msgHandlerCallback);
+            this.msgHandlerCallback = null;
         }
-
-        /* Change Id Later....!!! */
-        this.msgHandlerCallback = async (message: any) => {
-            if(!this.currentUserId || message.senderId) {
-                this.currentUserId = await this.socketClient.getSocketId();
-                message.senderId = this.currentUserId;
-            }
-            
-            const type = message.senderId === this.currentUserId ? 'self' : 'other';
-            this.renderMessage(type, {
-                username: message.username,
-                content: message.content
-            });
-        }
-
-        this.socketClient.on('new-message', this.msgHandlerCallback);
+        await this.update();
     }
 }
