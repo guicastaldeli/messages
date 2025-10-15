@@ -26,9 +26,13 @@ public class ConnectionTracker {
 
     public static class ConnectionInfo {
         public String socketId;
+        public String sessionId;
         public String username;
+        public String account;
         public String ipAddress;
         public String userAgent;
+        public String device;
+        public String browser;
         public LocalDateTime connectedAt;
         public LocalDateTime disconnectedAt;
         public boolean isConnected;
@@ -41,9 +45,13 @@ public class ConnectionTracker {
             String userAgent
         ) {
             this.socketId = socketId;
+            this.sessionId = socketId;
             this.username = "Anonymous";
+            this.account = "Unknown";
             this.ipAddress = ipAddress;
             this.userAgent = userAgent;
+            this.device = extractDevice(userAgent);
+            this.browser = extractBrowser(userAgent);
             this.connectedAt = LocalDateTime.now();
             this.isConnected = true;
             this.groups = new ArrayList<>();
@@ -68,30 +76,84 @@ public class ConnectionTracker {
         }
 
         /*
+        * Device 
+        */
+        private String extractDevice(String userAgent) {
+            if(userAgent == null || userAgent.isEmpty()) return "Unknown";
+
+            userAgent = userAgent.toLowerCase();
+            if(
+                userAgent.contains("mobile") ||
+                userAgent.contains("android") ||
+                userAgent.contains("iphone")
+            ) {
+                return "Mobile";
+            } else if(
+                userAgent.contains("tablet") || 
+                userAgent.contains("ipad")
+            ) {
+                return "Tablet";
+            } else {
+                return "Desktop";
+            }
+        } 
+
+        /*
+        * Browser 
+        */
+        private String extractBrowser(String userAgent) {
+            if(userAgent == null || userAgent.isEmpty()) return "Unknown";
+
+            userAgent = userAgent.toLowerCase();
+            if (userAgent.contains("chrome") && !userAgent.contains("edg")) {
+                return "Chrome";
+            } else if (userAgent.contains("firefox")) {
+                return "Firefox";
+            } else if (userAgent.contains("safari") && !userAgent.contains("chrome")) {
+                return "Safari";
+            } else if (userAgent.contains("edg")) {
+                return "Edge";
+            } else if (userAgent.contains("opera")) {
+                return "Opera";
+            } else {
+                return "Other";
+            }
+        }
+
+        /*
+        * ***Log
+        */
         @Override
         public String toString() {
             return String.format(
                 """
                     ConnectionInfo{
                         socketId='%s',
+                        sessionId='%s',
                         username='%s',
+                        account='%s',
                         ipAddress='%s',
                         userAgent='%s',
+                        device='%s',
+                        browser='%s',
                         connectedAt='%s',
                         isConnected='%s',
                         duration=%s
                     }
                 """,
                 socketId,
+                sessionId,
                 username,
+                account,
                 ipAddress,
                 userAgent,
+                device,
+                browser,
                 connectedAt,
                 isConnected,
                 getFormattedDuration()
             );
         }
-            */
     }
 
     public void trackConnection(
@@ -104,6 +166,7 @@ public class ConnectionTracker {
         connections.put(socketId, connectionInfo);
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);
+        System.out.println(connectionInfo.toString());
     }
 
     public void trackDisconnection(String socketId) {
