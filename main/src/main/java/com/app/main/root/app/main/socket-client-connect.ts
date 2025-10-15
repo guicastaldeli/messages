@@ -48,13 +48,13 @@ export class SocketClientConnect {
                     heartbeatIncoming: 4000,
                     heartbeatOutgoing: 4000,
 
-                    onConnect: () => {
+                    onConnect: async () => {
                         console.log('%cConnected to Server ;)', 'color: #004db2ff; font-weight: bold');
                         this.reconnectAttemps = 0;
 
-                        this.setupSubscriptions();
+                        await this.setupSubscriptions();
                         this.eventDiscovery.events();
-                        this.getSocketId();
+                        await this.getSocketId();
 
                         if(this.resConnection) {
                             this.resConnection();
@@ -101,7 +101,6 @@ export class SocketClientConnect {
         this.client.subscribe('/queue/socket-id', async (msg: IMessage) => {
             await this.handleMessage('res-socket-id', msg);
         });
-        console.log(this.socketId)
         this.client.subscribe('/topic/chat', async (msg: IMessage) => {
             await this.handleMessage('chat', msg);
         });
@@ -122,7 +121,7 @@ export class SocketClientConnect {
     private async handleMessage(e: string, msg: any): Promise<void> {
         try {
             const data = JSON.parse(msg.body);
-            this.emit(e, data);
+            await this.emit(e, data);
         } catch(err) {
             console.error('STOMP FATAL ERR.', err);
         }
@@ -268,6 +267,7 @@ export class SocketClientConnect {
             }
 
             this.on('res-socket-id', handle);
+            console.log(this.socketId)
 
             this.send('get-socket-id', {}).then(sucss => {
                 if(!sucss) {

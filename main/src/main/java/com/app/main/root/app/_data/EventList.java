@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.stereotype.Component;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._db.DbService;
@@ -13,6 +14,7 @@ import com.app.main.root.app._server.ConnectionTracker;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 
+@Component
 public class EventList {
     private final DbService dbService;
     private final EventTracker eventTracker;
@@ -54,7 +56,6 @@ public class EventList {
                 res.put("socketId", sessionId);
                 res.put("timestamp", time);
                 res.put("status", "success");
-                socketMethods.send(sessionId, "socket-id", res);
                 return res;
             },
             "/queue/socket-id",
@@ -88,8 +89,6 @@ public class EventList {
                 updateMessage.put("username", username);
                 updateMessage.put("sessionId", sessionId);
                 updateMessage.put("timestamp", time);
-
-                socketMethods.broadcast("users", updateMessage);
                 return updateMessage;
             },
             "/topic/users",
@@ -115,7 +114,6 @@ public class EventList {
                     MessageLog.MessageType.GROUP, 
                     MessageLog.MessageDirection.SENT
                 );
-                
                 eventTracker.track(
                     "chat",
                     payload,
@@ -138,7 +136,7 @@ public class EventList {
                 response.put("messageId", messageId);
                 response.put("timestamp", time);
 
-                socketMethods.broadcast("chat", response);
+                //socketMethods.broadcast("chat", response);
                 return response;
             },
             "/topic/chat",
@@ -157,8 +155,6 @@ public class EventList {
                 updateMessage.put("username", user);
                 updateMessage.put("sessionId", sessionId);
                 updateMessage.put("timestamp", time);
-
-                socketMethods.broadcast("users", updateMessage);
                 return updateMessage;
             },
             "/topic/users",

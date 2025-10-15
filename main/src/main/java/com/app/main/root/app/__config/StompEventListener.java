@@ -1,12 +1,12 @@
 package com.app.main.root.app.__config;
-import java.util.Map;
+import com.app.main.root.app._server.ConnectionTracker;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
-import com.app.main.root.app._server.ConnectionTracker;
+import java.util.Map;
 
 @Component
 public class StompEventListener {
@@ -26,6 +26,7 @@ public class StompEventListener {
         String userAgent = headers.getFirstNativeHeader("User-Agent");
         String agent = userAgent != null ? userAgent : "Unknown";
 
+        //Track Connection
         connectionTracker.trackConnection(sessionId, ipAddress, agent);
     }
 

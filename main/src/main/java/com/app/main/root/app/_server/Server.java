@@ -7,6 +7,7 @@ import com.app.main.root.app._db.DbService;
 import com.app.main.root.app._service.SessionService;
 import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app._utils.ColorConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -26,8 +27,10 @@ public class Server implements CommandLineRunner {
     private final ConnectionTracker connectionTracker;
     private final ConfigSocketEvents configSocketEvents;
     private final ColorConverter colorConverter;
-    private SimpAnnotationMethodMessageHandler messageHandler;
     private WebSocketSession webSocketSession;
+
+    @Autowired
+    private SimpAnnotationMethodMessageHandler messageHandler;
 
     private String url;
     private String webUrl = EnvConfig.get("WEB_URL");
@@ -46,22 +49,14 @@ public class Server implements CommandLineRunner {
         ColorConverter colorConverter
     ) {
         this.eventRegistry = eventRegistry;
-        this.eventTracker = EventTracker.getInstance();
+        this.eventTracker = eventTracker;
         this.messageTracker = MessageTracker.getInstance();
         this.dbService = dbService;
         this.sessionService = new SessionService();
         this.messagingTemplate = messagingTemplate;
         this.socketMethods = new SocketMethods(messagingTemplate, eventTracker);
         this.connectionTracker = connectionTracker;
-        this.configSocketEvents = new ConfigSocketEvents(
-            messageHandler,
-            eventRegistry,
-            eventTracker, 
-            messageTracker,
-            connectionTracker, 
-            dbService, 
-            socketMethods
-        );
+        this.configSocketEvents = configSocketEvents;
         this.colorConverter = colorConverter;
         instance = this;
     }

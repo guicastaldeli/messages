@@ -20,9 +20,9 @@ public class SocketMethods {
     }
 
     /*
-    ** Send 
+    ** Send To User
     */
-    public void send(
+    public void sendToUser(
         String sessionId,
         String event,
         Object data
@@ -38,6 +38,31 @@ public class SocketMethods {
             messagingTemplate.convertAndSendToUser(
                 sessionId,
                 "/queue/" + event,
+                data
+            );
+        } catch(Exception err) {
+            System.err.println("Error sending message: " + err.getMessage());
+        }
+    }
+
+    /*
+    ** Send
+    */
+    public void send(
+        String sessionId,
+        String destination,
+        Object data
+    ) {
+        try {
+            eventTracker.track(
+                destination,
+                data,
+                EventDirection.SENT,
+                sessionId,
+                "system"
+            );
+            messagingTemplate.convertAndSend(
+                destination,
                 data
             );
         } catch(Exception err) {

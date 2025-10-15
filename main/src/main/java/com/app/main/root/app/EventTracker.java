@@ -1,5 +1,8 @@
 package com.app.main.root.app;
 import com.app.main.root.app.EventLog.EventDirection;
+
+import jakarta.annotation.PostConstruct;
+
 import org.springframework.stereotype.Component;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -12,15 +15,9 @@ public class EventTracker {
     private List<Consumer<EventLog>> listeners = new CopyOnWriteArrayList<>();
     private final int maxLogs = 1000;
 
-    public static EventTracker getInstance() {
-        if(instance == null) {
-            synchronized(EventTracker.class) {
-                if(instance == null) {
-                    instance = new EventTracker();
-                }
-            }
-        }
-        return instance;
+    @PostConstruct
+    public void init() {
+        System.out.println("Event Tracker initialized");
     }
 
     public void track(
@@ -160,6 +157,5 @@ public class EventTracker {
             "%s%s %s %s @ %s\u001B[0m%n", 
             colorCode, direction, log.getEventName(), userInfo, timestamp
         );
-        
     }
 }

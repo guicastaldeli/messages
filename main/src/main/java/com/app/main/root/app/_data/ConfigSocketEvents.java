@@ -26,7 +26,7 @@ public class ConfigSocketEvents implements ApplicationListener<BrokerAvailabilit
         );
     }
 
-    private final EventList eventList;
+    private EventList eventList;
     private final SimpAnnotationMethodMessageHandler messageHandler;
     private final EventRegistry eventRegistry;
     private final EventTracker eventTracker;
@@ -44,7 +44,8 @@ public class ConfigSocketEvents implements ApplicationListener<BrokerAvailabilit
         MessageTracker messageTracker,
         ConnectionTracker connectionTracker,
         DbService dbService,
-        SocketMethods socketMethods
+        SocketMethods socketMethods,
+        EventList eventList
     ) {
         this.messageHandler = messageHandler;
         this.eventRegistry = eventRegistry;
@@ -53,13 +54,7 @@ public class ConfigSocketEvents implements ApplicationListener<BrokerAvailabilit
         this.connectionTracker = connectionTracker;
         this.dbService = dbService;
         this.socketMethods = socketMethods;
-        this.eventList = new EventList(
-            dbService, 
-            eventTracker, 
-            connectionTracker, 
-            socketMethods, 
-            messageTracker
-        );
+        this.eventList = eventList;
     }
 
     @Override
@@ -112,13 +107,11 @@ public class ConfigSocketEvents implements ApplicationListener<BrokerAvailabilit
         SimpMessageHeaderAccessor headerAccessor
     ) {
         EventConfig config = eventConfigs.get(eventName);
+        String sessionId = headerAccessor.getSessionId();
         if(config == null) {
             System.err.println("No handler found for event: " + eventName);
             return;
         }
-
-        String sessionId = headerAccessor.getSessionId();
-        System.out.println("Handling event: " + eventName + " from session: " + sessionId);
 
         try {
             Object res = config.getHandler().handle(sessionId, payload, headerAccessor);
