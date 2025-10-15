@@ -1,9 +1,11 @@
 import { EventDiscovery } from "./event-discovery";
 import { Client, IMessage } from '@stomp/stompjs';
+import { SubscriptionManager, SubscriptionOptions } from "./subscription-manager";
 import SockJS from 'sockjs-client';
 
 export class SocketClientConnect {
     private static instance: SocketClientConnect;
+    private subscriptionManager: SubscriptionManager;
     private client: Client | null = null;
     private eventListeners: Map<string, Function[]> = new Map();
     private reconnectAttemps = 0;
@@ -17,6 +19,7 @@ export class SocketClientConnect {
 
     constructor() {
         this.eventDiscovery = new EventDiscovery();
+        this.subscriptionManager = new SubscriptionManager(this.client!);
     }
 
     public static getInstance(): SocketClientConnect {
@@ -52,7 +55,9 @@ export class SocketClientConnect {
                         console.log('%cConnected to Server ;)', 'color: #004db2ff; font-weight: bold');
                         this.reconnectAttemps = 0;
 
-                        await this.setupSubscriptions();
+                        this.subscriptionManager.updateClient(this.client);
+                        await this.subscriptionManager.resubscribeAutoSubscriptions();
+
                         this.eventDiscovery.events();
                         await this.getSocketId();
 
@@ -95,36 +100,46 @@ export class SocketClientConnect {
     /*
     ** Setup Subscriptions
     */
-    private async setupSubscriptions(): Promise<void> {
-        if(!this.client || !this.client.connected) return;
-
-        this.client.subscribe('/queue/socket-id', async (msg: IMessage) => {
-            await this.handleMessage('res-socket-id', msg);
-        });
-        this.client.subscribe('/topic/chat', async (msg: IMessage) => {
-            await this.handleMessage('chat', msg);
-        });
-        this.client.subscribe('/topic/update', async (msg: IMessage) => {
-            await this.handleMessage('update', msg);
-        });
-        this.client.subscribe('/topic/users', async (msg: IMessage) => {
-            await this.handleMessage('users', msg);
-        });
-        this.client.subscribe('/user/queue/errors', async (msg: IMessage) => {
-            await this.handleMessage('error', msg);
-        });
+    public async onDestination(
+        destination: string,
+        callback: Function,
+        options?: SubscriptionOptions
+    ): Promise<void> {
+        return this.subscriptionManager.onDestination(destination, callback, options);
     }
 
-    /*
-    ** Handle Message
-    */
-    private async handleMessage(e: string, msg: any): Promise<void> {
-        try {
-            const data = JSON.parse(msg.body);
-            await this.emit(e, data);
-        } catch(err) {
-            console.error('STOMP FATAL ERR.', err);
+    public offDestination(destination: string, callback: Function): void {
+        this.subscriptionManager.offDestination(destination, callback);
+    }
+
+    public async sendToDestination(
+        destination: string,
+        data?: any,
+        resDestination?: string
+    ): Promise<boolean> {
+        if(!this.client || !this.client.connected) {
+            console.error('Client not connected!');
+            return false;
         }
+
+        console.log('Sending to:', destination, data);
+
+        this.client.publish({
+            destination: destination,
+            body: JSON.stringify(data),
+            headers: {
+                'content-type': 'application/json'
+            }
+        });
+
+        if(resDestination) {
+            const resEvent = `res-${this.subscriptionManager.destinationToEventName(destination)}`;
+            await this.onDestination(resDestination, (data: any) => {
+                this.subscriptionManager.emitToEvent(resEvent, data);
+            });
+        }
+
+        return true;
     }
 
     /*
@@ -252,30 +267,31 @@ export class SocketClientConnect {
     ** Socket Id
     */
     public async getSocketId(): Promise<string> {
-        if(this.socketId) return this.socketId;
+        if(this.socketId) return Promise.resolve(this.socketId);
         
-        return new Promise((res, rej) => {
+        return new Promise(async (res, rej) => {
+            const resDestination = '/queue/socket-id';
+
             const handle = (data: any) => {
-                console.log('Received socket ID', data);
                 if(data && data.socketId) {
                     this.socketId = data.socketId;
-                    this.off('res-socket-id', handle);
-                    res(data.socketId);
+                    this.offDestination(resDestination, handle);
+                    res(this.socketId!);
+                    console.log(this.socketId)
                 } else {
-                    rej(new Error('Invalid socket id'))
+                    this.offDestination(resDestination, handle);
+                    rej(new Error('Invalid socked id response'));
                 }
             }
 
-            this.on('res-socket-id', handle);
-            console.log(this.socketId)
-
-            this.send('get-socket-id', {}).then(sucss => {
+            await this.onDestination(resDestination, handle);
+            this.sendToDestination('/app/get-socket-id', {}).then(sucss => {
                 if(!sucss) {
-                    this.off('res-socket-id', handle);
+                    this.offDestination(resDestination, handle);
                     rej(new Error('Failed to send socket request'));
                 }
             }).catch(err => {
-                this.off('res-socket-id', handle);
+                this.offDestination(resDestination, handle);
                 rej(err);
             });
         });
