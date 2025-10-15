@@ -84,24 +84,6 @@ class ConnectionService:
         return await self._request("get", "/api/connection-tracker/connections/registry/os")
     
     ##
-    ## Train
-    ##
-    async def addTraining(
-        self,
-        userAgent: str,
-        browser: str,
-        os: str,
-        device: str
-    ) -> Dict:
-        data = {
-            "userAgent": userAgent,
-            "browser": browser,
-            "os": os,
-            "device": device
-        }
-        return await self._request("post", "/api/connection-tracker/connections/registry/train", json=data)
-    
-    ##
     ## Clear Connections
     ##
     async def clearConnections(self) -> str:
