@@ -77,6 +77,11 @@
 			<artifactId>dotenv-java</artifactId>
 			<version>3.0.0</version>
 		</dependency>
+		<dependency>
+			<groupId>com.github.ua-parser</groupId>
+			<artifactId>uap-java</artifactId>
+			<version>1.5.4</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>

@@ -1,8 +1,9 @@
 package com.app.main.root.app._server;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.ArrayList;
 import java.time.Duration;
+import java.util.List;
+import ua_parser.*;
 
 public class ConnectionInfo {
     public String socketId;
@@ -12,12 +13,20 @@ public class ConnectionInfo {
     public String ipAddress;
     public String userAgent;
     public String device;
+    private String deviceType;
+    private String deviceBrand;
+    private String deviceModel;
     public String browser;
+    private String browserVersion;
+    public String os;
+    private String osVersion;
     public LocalDateTime connectedAt;
     public LocalDateTime disconnectedAt;
     public boolean isConnected;
     public String room;
     public List<String> groups;
+    
+    private final Parser uaParser = new Parser();
 
     public ConnectionInfo(
         String socketId,
@@ -30,8 +39,7 @@ public class ConnectionInfo {
         this.account = "Unknown";
         this.ipAddress = ipAddress;
         this.userAgent = userAgent;
-        this.device = extractDevice(userAgent);
-        this.browser = extractBrowser(userAgent);
+        parseUserAgent(userAgent);
         this.connectedAt = LocalDateTime.now();
         this.isConnected = true;
         this.groups = new ArrayList<>();
@@ -56,17 +64,34 @@ public class ConnectionInfo {
     }
 
     /*
-    * Device 
+    * Parse User Agent 
     */
-    private String extractDevice(String userAgent) {
-        return "TEST";
-    } 
+    private void parseUserAgent(String userAgent) {
+        if(userAgent == null || userAgent.isEmpty()) System.err.println("User Agent error!");
 
-    /*
-    * Browser 
-    */
-    private String extractBrowser(String userAgent) {
-        return "TEST";
+        try {
+            Client client = uaParser.parse(userAgent);
+            
+            /* Device Info */
+            Device deviceInfo = client.device;
+            this.deviceBrand = capitalize
+        }
+    }
+
+    private String capitalize(String str) {
+        if(str == null || str.isEmpty()) return "Unknown";
+        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
+    }
+
+    private void setDefaultValues() {
+        this.device = "Unknown";
+        this.deviceType = "Unknown";
+        this.deviceBrand = "Unknown";
+        this.deviceModel = "Unknown";
+        this.browser = "Unknown";
+        this.browserVersion = "Unknown";
+        this.os = "Unknown";
+        this.osVersion = "Unknown";
     }
 
     /*
