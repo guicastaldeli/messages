@@ -1,6 +1,6 @@
 package com.app.main.root.app.__controllers;
 import com.app.main.root.app._server.ConnectionTracker;
-import com.app.main.root.app._server.ConnectionTracker.ConnectionInfo;
+import com.app.main.root.app._server.ConnectionInfo;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;

@@ -11,6 +11,7 @@ import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._db.DbService;
 import com.app.main.root.app._server.ConnectionTracker;
+import com.app.main.root.app._server.ConnectionInfo;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 
@@ -78,7 +79,7 @@ public class EventList {
 
                 try {
                     dbService.getUserService().addUser(sessionId, username);
-                    ConnectionTracker.ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
+                    ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
                     if(connectionInfo != null) connectionTracker.logUsernameSet(connectionInfo, username);
                 } catch(Exception err) {
                     System.out.println("Failed to add user: " + err.getMessage());
