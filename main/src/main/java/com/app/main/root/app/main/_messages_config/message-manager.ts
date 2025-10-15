@@ -25,7 +25,6 @@ export class MessageManager {
         this.contentGetter = new ContentGetter();
         this.socketClient = socketClient;
         this.messageTypes = new MessageTypes(this.contentGetter);
-        this.update();
     }
 
     private initController(): void {

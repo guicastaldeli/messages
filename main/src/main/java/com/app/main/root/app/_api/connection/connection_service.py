@@ -1,54 +1,52 @@
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Callable, Any
-import asyncio
-from dataclasses import dataclass, field
-from uuid import uuid4
-import logging
-
-@dataclass
-class ConnectionInfo:
-    socketId: str
-    username: str = "Anonymous"
-    ipAddress: str = ""
-    userAgent: str = ""
-    connectedAt: datetime = field(default_factory=datetime.now)
-    disconnectedAt: Optional[datetime] = None
-    isConnected: bool = True
-    
-    def getConnectionDuration(self) -> int:
-        endTime = self.disconnectedAt or datetime.now()
-        duration = endTime - self.connectedAt
-        return int(duration.total_seconds())
-    
-    def getFormattedDuration(self) -> str:
-        secs = self.getConnectionDuration()
+from fastapi import HTTPException
+import httpx
         
-        if(secs < 60):
-            return f"{secs}s"
-        elif(secs < 3600):
-            mins = secs // 60
-            remSecs = secs % 60
-            return f"{mins}m {remSecs}s"
-        else:
-            hours = secs // 3600
-            mins = (secs % 3600) // 60
-            return f"{hours}h {mins}m"
-        
-class ConnectionService:
-    _instance: Optional['ConnectionService'] = None
+class ConnectionService:    
+    def __init__(self, url: str):
+        self.base_url = url
     
-    def __init__(self):
-        self.connections: Dict[str, ConnectionInfo] = {}
-        self.connectionCallbacks: List[Callable[[ConnectionInfo], Any]] = []
-        self.disconnectionCallbacks: List[Callable[[ConnectionInfo], Any]] = []
-        self._lock = asyncio.Lock()
-        self.logger = logging.getLogger(__name__)
-        
-    @classmethod
-    def getInstance(cls) -> 'ConnectionService':
-        if(cls._instance is None):
-            cls._instance = cls()
-        return cls._instance
+    ##
+    ## All Connections
+    ##
+    async def getAllConnections(self) -> dict:
+        return await self._request("get", "/api/connection-tracker/connections/all")
+    
+    ##
+    ## Active Connections
+    ##
+    async def getActiveConnections(self) -> list:
+        return await self._request("get", "/api/connection-tracker/connections/active")
+    
+    
+    ##
+    ## By Socket Id
+    ##
+    async def getConnectionBySocketId(self, socketId: str) -> dict:
+        return await self._request("get", f"/api/connection-tracker/connections/{socketId}")
+    
+    ##
+    ## By Ip
+    ##
+    async def getConnectionsByIp(self, ipAddress: str) -> dict:
+        return await self._request("get", f"/api/connection-tracker/connections/ip/{ipAddress}")
+    
+    ##
+    ## By Username
+    ##
+    async def getConnectionsByUsername(self, username: str) -> list:
+        return await self._request("get", f"/api/connection-tracker/connections/user/{username}")
+    
+    ##
+    ## Update Username
+    ##
+    async def updateUsername(self, socketId: str, username: str) -> dict:
+        return await self._request("put", f"/api/connection-tracker/connections/{socketId}/username/{username}")
+    
+    ##
+    ## Count
+    ##
+    async def getConnectionsCount(self) -> int:
+        return await self._request("get", "/api/connection-tracker/count")
     
     ##
     ## Track Connection
@@ -58,132 +56,27 @@ class ConnectionService:
         socketId: str,
         ipAddress: str,
         userAgent: str = ""
-    ) -> ConnectionInfo:
-        async with self._lock:
-            connectionInfo = ConnectionInfo(
-                socketId=socketId,
-                ipAddress=ipAddress,
-                userAgent=userAgent
-            )
-            
-            self.connections[socketId] = connectionInfo
-            await self.notifyConnectionCallbacks(connectionInfo)
-            return connectionInfo
-     
-    ##
-    ## Track Disconnection
-    ##   
-    async def trackDisconnection(self, socketId: str) -> Optional[ConnectionInfo]:
-        async with self._lock:
-            connectionInfo = self.connections.get(socketId)
-            if(connectionInfo):
-                connectionInfo.disconnectedAt = datetime.now()
-                connectionInfo.isConnected = False
-                await self.notifyDisconnectionCallbacks(connectionInfo)
-            return connectionInfo
-        
-    ##
-    ## Update Username
-    ##
-    async def updateUsername(self, socketId: str, username: str) -> Optional[ConnectionInfo]:
-        async with self._lock:
-            connectionInfo = self.connections.get(socketId)
-            if(connectionInfo):
-                connectionInfo.username = username
-            return connectionInfo
-        
-    ##
-    ## Get Connection
-    ##
-    def getConnectionSocketId(self, socketId: str) -> Optional[ConnectionInfo]:
-        return self.connections.get(socketId)
-    
-    ##
-    ## Get All Connections
-    ##
-    def getAllConnections(self) -> Dict[str, ConnectionInfo]:
-        for id, conn in self.connections.items():
-            print(f"Connection {id}: {conn}")
-            
-        return {
-            id: conn 
-            for id, conn in self.connections.items()
-            if conn.isConnected
+    ) -> dict:
+        params = {
+            "socketId": socketId,
+            "ipAddress": ipAddress,
+            "userAgent": userAgent
         }
+        return await self._request("post", "/api/connection-tracker/connections/track", params=params)
     
     ##
-    ## Get Active Connections
+    ## Clear Connections
     ##
-    def getActiveConnections(self) -> List[ConnectionInfo]:
-        return [
-            conn for conn in self.connections.values()
-            if(conn.isConnected)
-        ]
-        
-    ##
-    ## Get Connections Count
-    ##
-    def getConnectionsCount(self) -> int:
-        return len(self.connections)
-    
-    ##
-    ## Get Active Connections Count
-    ##
-    def getActiveConnectionsCount(self) -> int:
-        return len(self.getActiveConnections())
-    
-    ##
-    ## Get Connections Ip
-    ##
-    async def getConnectionsIp(self, ip: str) -> List[ConnectionInfo]:
-        return [
-            conn for conn in self.connections.values()
-            if(conn.ipAddress == ip)
-        ]
-        
-    ##
-    ## ***Callbacks
-    ##
-    def onConnection(self, callback: Callable[[ConnectionInfo], Any]):
-        self.connectionCallbacks.append(callback)
-        
-    def onDisconnection(self, callback: Callable[[ConnectionInfo], Any]):
-        self.disconnectionCallbacks.append(callback)
-        
-    ##
-    ## ***Notifications
-    ##
-    async def notifyConnectionCallbacks(self, info: ConnectionInfo):
-        for callback in self.connectionCallbacks:
-            try:
-                if(asyncio.iscoroutinefunction(callback)):
-                    await callback(info)
-                else:
-                    callback(info)
-            except Exception as e:
-                self.logger.error(f"Error in connection callback: {e}")
+    async def clearConnections(self) -> str:
+        return await self._request("delete", "/api/connection-tracker/connections/clear")
                 
-    async def notifyDisconnectionCallbacks(self, info: ConnectionInfo):
-        for callback in self.disconnectionCallbacks:
-            try:
-                if(asyncio.iscoroutinefunction(callback)):
-                    await callback(info)
-                else:
-                    callback(info)
-            except Exception as e:
-                self.logger.error(f"Error in disconnection callback: {e}")
-                
-    ##
-    ## Clear Old Connections
-    ##
-    async def clearOldConnections(self, hoursOld: int = 48):
-        async with self._lock:
-            cutoffTime = datetime.now() - timedelta(hours=hoursOld)
-            toRemove = [
-                socketId for socketId, conn in self.connections.items()
-                if(not conn.isConnected and conn.disconnectedAt and conn.disconnectedAt < cutoffTime)
-            ]
-            for socketId in toRemove:
-                del self.connections[socketId]
-            if(toRemove):
-                self.logger.info(f"Cleaned up {len(toRemove)} old connection(s)")
+    ## -----------
+    ##   Wrapper
+    ## -----------
+    async def _request(self, method: str, path: str, **kwargs):
+        async with httpx.AsyncClient() as client:
+            url = f"{self.base_url}{path}"
+            res = await client.request(method, url, **kwargs)
+            if(res.status_code != 200):
+                raise HTTPException(status_code=res.status_code, detail=res.text)
+            return res.json()

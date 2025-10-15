@@ -1,11 +1,11 @@
-from connection.connection_service import ConnectionService, ConnectionInfo
+from connection.connection_service import ConnectionService
 from fastapi import APIRouter, HTTPException, Request
-from typing import List, Dict, Any
+from typing import Dict
 
 class ConnectionRoutes:
-    def __init__(self):
-        self.router = APIRouter(prefix="/api/connection-tracker/connections", tags=["connections"])
-        self.connectionService = ConnectionService.getInstance()
+    def __init__(self, connectionService: ConnectionService):
+        self.connectionService = connectionService
+        self.router = APIRouter(prefix="/api/connection-tracker/connections")
         self.setupRoutes()
         
     def setupRoutes(self):
@@ -13,15 +13,15 @@ class ConnectionRoutes:
         ## Get All Connections
         ##
         @self.router.get("/all")
-        async def getAllConnections() -> Dict[str, ConnectionInfo]:
-            return self.connectionService.getAllConnections()
+        async def getAllConnections() -> dict:
+            return await self.connectionService.getAllConnections()
         
         ##
         ## Get Active Connections
         ##
         @self.router.get("/active")
-        async def getActiveConnections() -> List[ConnectionInfo]:
-            return self.connectionService.getActiveConnections()
+        async def getActiveConnections() -> list:
+            return await self.connectionService.getActiveConnections()
         
         ##
         ## Count
@@ -29,16 +29,16 @@ class ConnectionRoutes:
         @self.router.get("/count")
         async def getConnectionsCount() -> Dict[str, int]:
             return {
-                "total": self.connectionService.getConnectionsCount(),
-                "active": self.connectionService.getActiveConnectionsCount()
+                "total": await self.connectionService.getConnectionsCount(),
+                "active": await self.connectionService.getActiveConnections()
             }
             
         ##
         ## Get Connection Socket Id
         ##
         @self.router.get("/{socketId}")
-        async def getConnectionSocketId(id: str) -> ConnectionInfo:
-            conn = self.connectionService.getConnectionSocketId(id)
+        async def getConnectionSocketId(id: str) -> dict:
+            conn = await self.connectionService.getConnectionSocketId(id)
             if(not conn):
                 raise HTTPException(status_code=400, detail="Connection not found!")
             return conn
@@ -47,14 +47,14 @@ class ConnectionRoutes:
         ## Get Connections Ip
         ##
         @self.router.get("/ip/{ipAddress}")
-        async def getConnectionsIp(ip: str) -> List[ConnectionInfo]:
-            return self.connectionService.getConnectionsIp(ip)
+        async def getConnectionsIp(ip: str) -> dict:
+            return await self.connectionService.getConnectionsIp(ip)
         
         ##
         ## Update Username
         ##
         @self.router.get("/{socketId}/username")
-        async def updateUsername(id: str, username: str) -> ConnectionInfo:
+        async def updateUsername(id: str, username: str) -> dict:
             conn = await self.connectionService.updateUsername(id, username)
             if(not conn):
                 raise HTTPException(status_code=400, detail="Connection not found!")
@@ -64,7 +64,7 @@ class ConnectionRoutes:
         ## Track Connection
         ##
         @self.router.post("/track")
-        async def trackConnection(req: Request) -> ConnectionInfo:
+        async def trackConnection(req: Request) -> dict:
             clientHost = req.client.host if req.client else "unknown"
             userAgent = req.headers.get("user-agent", "")
             socketId = f"http_{clientHost}_{id(req)}"
@@ -74,4 +74,6 @@ class ConnectionRoutes:
                 ipAddress=clientHost,
                 userAgent=userAgent
             )
+            
+        
                 

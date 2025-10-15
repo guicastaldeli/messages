@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from time_stream import TimeStream
 from messages.message_service import MessageService
 from messages.message_routes import MessageRoutes
-from connection.connection_service import ConnectionService, ConnectionInfo
+from connection.connection_service import ConnectionService
 from connection.connection_routes import ConnectionRoutes
 from session.session_service import SessionService
 from session.session_routes import SessionRoutes
@@ -27,6 +27,7 @@ class Main:
         DB_API_URL = SERVER_URL
         TIME_API_URL = SERVER_URL
         SESSION_API_URL = SERVER_URL
+        CONNECTIONS_API_URL = SERVER_URL
         
         ## Router
         self.app.include_router(router)
@@ -36,10 +37,9 @@ class Main:
         self.app.include_router(self.timeStream.router)
         
         ## Connection
-        self.connectionService = ConnectionService.getInstance()
-        self.connectionRoutes = ConnectionRoutes()
+        self.connectionService = ConnectionService(CONNECTIONS_API_URL)
+        self.connectionRoutes = ConnectionRoutes(self.connectionService)
         self.app.include_router(self.connectionRoutes.router)
-        self.setupConnectionTracking()
         
         ## Session
         self.sessionService = SessionService(SESSION_API_URL)
@@ -50,17 +50,6 @@ class Main:
         self.messageService = MessageService(DB_API_URL)
         self.messageRoutes = MessageRoutes(self.messageService)
         self.app.include_router(self.messageRoutes.router)
-        
-    # Connection Tracking
-    def setupConnectionTracking(self):
-        async def onNewConnection(connectionInfo: ConnectionInfo):
-            print(f"New Connection: {connectionInfo.username} from {connectionInfo.ipAddress}")
-            
-        async def onDisconnectedConnection(connectionInfo: ConnectionInfo):
-            print(f"Connection Lost: {connectionInfo.username} was connected for {connectionInfo.getFormattedDuration()}")
-            
-        self.connectionService.onConnection(onNewConnection)
-        self.connectionService.onDisconnection(onDisconnectedConnection)
         
 
 # Init
