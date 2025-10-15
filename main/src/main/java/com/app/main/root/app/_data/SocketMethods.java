@@ -97,7 +97,7 @@ public class SocketMethods {
     public void broadcastToDestination(String destination, Object data) {
         try {
             eventTracker.track(
-                "broadcast-" + destination,
+                "broadcast" + destination,
                 data,
                 EventDirection.SENT,
                 "broadcast",

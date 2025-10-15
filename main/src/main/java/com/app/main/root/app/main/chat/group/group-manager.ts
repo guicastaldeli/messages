@@ -51,7 +51,7 @@ export class GroupManager {
 
     public async setupSocketListeners(): Promise<void> {        
         //Success
-        this.socketClient.on('group-creation-scss', (data: CreationData) => {
+        this.socketClient.onDestination('group-creation-scss', (data: CreationData) => {
             if(this.creationRes) {
                 this.creationRes(data);
                 this.creationRes = undefined;
@@ -168,7 +168,7 @@ export class GroupManager {
         });
     }
 
-    private async create(groupName: string): Promise<void> {
+    private async create(groupName: string): Promise<CreationData> {
         if(!this.socketClient.getSocketId()) {
             console.error('Failed to get socket ID');
             throw new Error('Unable to establish connection');
@@ -176,16 +176,58 @@ export class GroupManager {
         if(!groupName.trim()) throw new Error('name invalid');
 
         await this.socketClient.eventDiscovery.refreshEvents();
-
         this.currentGroupName = groupName;
         chatState.setType('group');
         const creatorId = await this.socketClient.getSocketId();
-        
-        //Emit
-        await this.socketClient.send('create-group', {
+
+        const reqData = {
             creator: this.uname,
             creatorId: creatorId,
-            groupName: this.currentGroupName
+            groupName: this.currentGroupName.trim()
+        }
+
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/group-creation-scss';
+            const errDestination = '/queue/group-creation-err';
+
+            /* Success */ 
+            const handleSucss = (data: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                if(data && data.id) {
+                    res(data as CreationData);
+                } else {
+                    rej(new Error('Inavlid response data'));
+                }
+            }
+
+            /* Error */
+            const handleErr = (err: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(err.error || err.message || 'Group creation failed'));
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(errDestination, handleErr);
+
+                const sucss = await this.socketClient.sendToDestination(
+                    '/app/create-group',
+                    reqData,
+                    sucssDestination
+                );
+
+                if(!sucss) {
+                    this.socketClient.offDestination(sucssDestination, handleSucss);
+                    this.socketClient.offDestination(errDestination, handleErr);
+                    rej(new Error('Failed to send group creation request!'));
+                }
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
         });
     }
 

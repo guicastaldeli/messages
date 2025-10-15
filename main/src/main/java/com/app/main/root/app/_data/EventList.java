@@ -148,7 +148,13 @@ public class EventList {
                 String user = (String) payload;
                 long time = System.currentTimeMillis();
                 
-                eventTracker.track("exit-user", user, EventDirection.RECEIVED, sessionId, user);
+                eventTracker.track(
+                    "exit-user", 
+                    user, 
+                    EventDirection.RECEIVED, 
+                    sessionId, 
+                    user
+                );
                 
                 Map<String, Object> updateMessage = new HashMap<>();
                 updateMessage.put("type", "USER_LEFT");
@@ -180,15 +186,26 @@ public class EventList {
                     newGroup.put("members", Arrays.asList(creator));
                     newGroup.put("createdAt", creationDate);
 
-                    eventTracker.track("create-group", newGroup, EventDirection.RECEIVED, sessionId, creator);
-                    socketMethods.send(sessionId, "group-created", newGroup);
+                    eventTracker.track(
+                        "create-group", 
+                        newGroup, 
+                        EventDirection.RECEIVED, 
+                        sessionId, 
+                        creator
+                    );
+
+                    dbService.getGroupService().createGroup(sessionId, groupName, creatorId);
                     return newGroup;
                 } catch(Exception err) {
-                    socketMethods.send(sessionId, "group-error", err.getMessage());
+                    socketMethods.send(
+                        sessionId, 
+                        "/user/topic/group-creation-err", 
+                        err.getMessage()
+                    );
                     return Collections.emptyMap();
                 }
             },
-            "/queue/groups",
+            "/queue/group-creation-scss",
             false
         ));
 

@@ -39,11 +39,13 @@ public class StompEventListener {
 
     @EventListener
     public void handleSubscription(SessionSubscribeEvent event) {
+        /*
         StompHeaderAccessor headers = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headers.getSessionId();
         String destination = headers.getDestination();
 
         System.out.println("Client " + sessionId + " subscribed to: " + destination);
+        */
     }
 
     private String getClientIp(StompHeaderAccessor headers) {

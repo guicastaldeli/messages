@@ -277,7 +277,6 @@ export class SocketClientConnect {
                     this.socketId = data.socketId;
                     this.offDestination(resDestination, handle);
                     res(this.socketId!);
-                    console.log(this.socketId)
                 } else {
                     this.offDestination(resDestination, handle);
                     rej(new Error('Invalid socked id response'));
