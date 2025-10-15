@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from typing import Dict, List
 import httpx
         
 class ConnectionService:    
@@ -63,6 +64,42 @@ class ConnectionService:
             "userAgent": userAgent
         }
         return await self._request("post", "/api/connection-tracker/connections/track", params=params)
+    
+    ##
+    ## Devices
+    ##
+    async def getDevices(self) -> List[Dict]:
+        return await self._request("get", "/api/connection-tracker/connections/registry/devices")
+    
+    ##
+    ## Browsers
+    ##
+    async def getBrowsers(self) -> List[Dict]:
+        return await self._request("get", "/api/connection-tracker/connections/registry/browsers")
+    
+    ##
+    ## OS
+    ##
+    async def getOS(self) -> List[Dict]:
+        return await self._request("get", "/api/connection-tracker/connections/registry/os")
+    
+    ##
+    ## Train
+    ##
+    async def addTraining(
+        self,
+        userAgent: str,
+        browser: str,
+        os: str,
+        device: str
+    ) -> Dict:
+        data = {
+            "userAgent": userAgent,
+            "browser": browser,
+            "os": os,
+            "device": device
+        }
+        return await self._request("post", "/api/connection-tracker/connections/registry/train", json=data)
     
     ##
     ## Clear Connections

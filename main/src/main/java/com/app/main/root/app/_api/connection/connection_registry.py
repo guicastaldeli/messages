@@ -1,18 +1,15 @@
 from connection.connection_service import ConnectionService
-from connection.connection_routes import ConnectionRoutes
-from fastapi import APIRouter, HTTPException, Request
 from typing import Dict, List
-import json
+from fastapi import APIRouter
 
 class ConnectionRegistry:
     def __init__(
         self, 
-        connectionRoutes: ConnectionRoutes, 
+        router: APIRouter, 
         connectionService: ConnectionService
     ):
-        self.connectionRoutes = connectionRoutes
+        self.router = router
         self.connectionService = connectionService
-        self.router = self.connectionRoutes.router
         
         self.devices()
         self.browsers()

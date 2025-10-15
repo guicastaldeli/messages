@@ -1,4 +1,5 @@
 from connection.connection_service import ConnectionService
+from connection.connection_registry import ConnectionRegistry
 from fastapi import APIRouter, HTTPException, Request
 from typing import Dict
 
@@ -7,6 +8,7 @@ class ConnectionRoutes:
         self.connectionService = connectionService
         self.router = APIRouter(prefix="/api/connection-tracker/connections")
         self.setupRoutes()
+        self.connectionRegistry = ConnectionRegistry(self.router, self.connectionService)
         
     def setupRoutes(self):
         ##
