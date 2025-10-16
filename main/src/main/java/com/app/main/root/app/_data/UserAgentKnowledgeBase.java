@@ -1,5 +1,225 @@
 package com.app.main.root.app._data;
+import com.app.main.root.app.__controllers.UserAgentParserPrediction;
+import com.app.main.root.app._data.UserAgentParserRegistryData;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class UserAgentKnowledgeBase {
-    
+    private final Map<String, List<InferenceRule>> rules = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Object>> devices = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Object>> browsers = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Object>> os = new ConcurrentHashMap<>();
+    private final AtomicInteger ruleCount = new AtomicInteger(0);
+
+    public void buildFromApi(UserAgentParserRegistryData registry) {
+        rules.clear();
+        devices.clear();
+        browsers.clear();
+        os.clear();
+        ruleCount.set(0);
+
+        storeDevices(registry.getDevices());
+        storeBrowsers(registry.getBrowsers());
+        storeOs(registry.getOs());
+        buildRulesFromApi(registry);
+        
+        System.out.println("Knowledge base build from API");
+    }
+
+    private void buildFallbackKnowledge() {
+        addRule("browser", "IF contains 'chrome' AND NOT contains 'edg' THEN 'Chrome' WITH confidence 0.9");
+        addRule("browser", "IF contains 'firefox' THEN 'Firefox' WITH confidence 0.9");
+        addRule("browser", "IF contains 'safari' AND NOT contains 'chrome' THEN 'Safari' WITH confidence 0.8");
+        addRule("os", "IF contains 'windows' THEN 'Windows' WITH confidence 0.9");
+        addRule("os", "IF contains 'android' THEN 'Android' WITH confidence 0.95");
+        addRule("os", "IF contains 'iphone' OR contains 'ipad' THEN 'iOS' WITH confidence 0.9");
+        addRule("device", "IF contains 'mobile' THEN device_type='mobile' WITH confidence 0.7");
+        addRule("device", "IF contains 'tablet' THEN device_type='tablet' WITH confidence 0.8");
+        System.out.println("Using fallback knowledge base...");
+    }
+
+    /*
+    * Store Devices 
+    */
+    private void storeDevices(List<Map<String, Object>> list) {
+        for(Map<String, Object> d : list) {
+            String brand = (String) d.get("brand");
+            d.put(brand.toLowerCase(), d);
+        }
+    }
+
+    /*
+    * Store Browsers 
+    */
+    private void storeBrowsers(List<Map<String, Object>> list) {
+        for(Map<String, Object> b : list) {
+            String name = (String) b.get("name");
+            b.put(name.toLowerCase(), b);
+        }
+    }
+
+    /*
+    * Store OS 
+    */
+    public void storeOs(List<Map<String, Object>> list) {
+        for(Map<String, Object> os : list) {
+            String name = (String) os.get("name");
+            os.put(name.toLowerCase(), os);
+        }
+    }
+
+    private void buildRulesFromApi(UserAgentParserRegistryData registry) {
+        /* Device */
+        for(Map<String, Object> d : registry.getDevices()) {
+            List<String> rules = (List<String>) d.get("rules");
+            if(rules != null) {
+                for(String rule : rules) {
+                    addRule("device", rule);
+                }
+            }
+        }
+
+        /* Browser */
+        for(Map<String, Object> b : registry.getDevices()) {
+            List<String> rules = (List<String>) b.get("rules");
+            if(rules != null) {
+                for(String rule : rules) {
+                    addRule("browser", rule);
+                }
+            }
+        }
+
+        /* OS */
+        for(Map<String, Object> os : registry.getDevices()) {
+            List<String> rules = (List<String>) os.get("rules");
+            if(rules != null) {
+                for(String rule : rules) {
+                    addRule("os", rule);
+                }
+            }
+        }
+
+        /* AI Rules */
+        for(Map<String, Object> ruleCategory : registry.getRules()) {
+            String category = (String) ruleCategory.get("category");
+            List<String> ruleStrings = (List<String>) ruleCategory.get("rules");
+            if(ruleStrings != null) {
+                for(String rule : ruleStrings) {
+                    addRule(category, rule);
+                }
+            } 
+        }
+    }
+
+    /*
+    * Infer 
+    */
+    public UserAgentParserPrediction inferWithRules(PatternAnalysis analysis, Context context) {
+        UserAgentParserPrediction prediction = new UserAgentParserPrediction();
+
+        prediction.setBrowser(applyRules("browser", analysis, context));
+        prediction.setOs(applyRules("os", analysis, context));
+        prediction.setDeviceType(applyRules("device_type", analysis, context));
+        prediction.setDeviceBrand(applyRules("device_brand", analysis, context));
+        applyValidationRules(prediction, analysis, context);
+
+        prediction.setConfidence(calculateRuleConfidence(analysis));
+        prediction.setReasoning("API Rules Engine");
+        return prediction;
+    }
+
+    /*
+    * Apply Rules 
+    */
+    private String applyRules(
+        String category,
+        PatternAnalysis analysis,
+        Context context
+    ) {
+        List<InferenceRule> categoryRules = rules.get(category);
+        Map<String, Double> candidates = new HashMap<>();
+        if(categoryRules == null) return "Unknown";
+
+        for(InferenceRule rule : categoryRules) {
+            RuleResult result = rule.evaluate(analysis, context);
+            if(result.matches()) {
+                candidates.merge(
+                    result.getConclusion(),
+                    result.getConfidence(),
+                    (old, newConf) -> Math.max(old, newConf)
+                );
+            }
+        }
+
+        return candidates.entrySet().stream()
+            .max(Map.Entry.comparingByValue())
+            .map(Map.Entry::getKey)
+            .orElse("Unknown");
+    }
+
+    /*
+    * Validation Rules 
+    */
+    private void applyValidationRules(
+        UserAgentParserPrediction prediction,
+        PatternAnalysis analysis,
+        Context context
+    ) {
+        List<InferenceRule> validationRules = rules.get("impossible_combinations");
+        if(validationRules != null) {
+            for(InferenceRule rule : validationRules) {
+                RuleResult result = rule.evaluate(analysis, context);
+                if(result.matches() && result.getConclusion().contains("IMPOSSIBLE")) {
+                    prediction.adjustConfidence(-0.3);
+                    prediction.setReasoning(prediction.getReasoning() + " | " + result.getConclusion());
+                }
+            }
+        }
+    }
+
+    /*
+    * Calculate Rule Confidence 
+    */
+    private double calculateRuleConfidence(PatternAnalysis analysis) {
+        double baseConfidence = analysis.getPatternStrength();
+        if(analysis.hasVersionInformation()) baseConfidence += 0.2;
+        if(analysis.hasStrongEvidence()) baseConfidence += 0.15;
+        return Math.min(0.95, Math.max(0.1, baseConfidence));
+    }
+
+    /*
+    * Add Rule 
+    */
+    private void addRule(String category, String rule) {
+        rules.computeIfAbsent(category, k -> new ArrayList<>())
+            .add(new InferenceRule(rule));
+        ruleCount.incrementAndGet();
+    }
+
+    /* Get Rule Count */
+    public int getRuleCount() {
+        return ruleCount.get();
+    }
+
+    /* Get Device Count */
+    public int getDeviceCount() {
+        return devices.size();
+    }
+
+    /* Get Browser Count */
+    public int getBrowserCount() {
+        return browsers.size();
+    }
+
+    /* Get OS Count */
+    public int getOsCount() {
+        return os.size();
+    }
 }
+
+ 
