@@ -1,21 +1,12 @@
 package com.app.main.root.app.__controllers;
 import org.springframework.stereotype.Component;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.app.main.root.app._data.UserAgentKnowledgeBase;
 import com.app.main.root.app._data.UserAgentParserRegistryData;
+import com.app.main.root.app._utils.Context;
 import com.app.main.root.app._utils.ContextualReasoner;
+import com.app.main.root.app._utils.PatternAnalysis;
 import com.app.main.root.app._utils.PatternInterfaceEngine;
 import com.app.main.root.app._utils.UserAgentParserApiClient;
-import com.fasterxml.jackson.core.type.TypeReference;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
-import java.net.URI;
 import java.util.*;
 
 @Component
@@ -45,7 +36,7 @@ public class UserAgentParserController {
                 knowledgeBase.getRuleCount() + " rules, " +
                 knowledgeBase.getDeviceCount() + " devices, " +
                 knowledgeBase.getBrowserCount() + " browsers, " +
-                knowledgeBase.getOSCount() + "OS"
+                knowledgeBase.getOsCount() + "OS"
             );
         } catch(Exception err) {
             System.err.println("Failed to init UAP..." + err.getMessage());
@@ -56,13 +47,14 @@ public class UserAgentParserController {
         if(userAgent == null || userAgent.isEmpty()) return UserAgentParserPrediction.unknown();
 
         try {
-            PatternAnalysis patternAnalysis = interfaceEngine.analizeWithPatterns(userAgent);
+            PatternAnalysis patternAnalysis = interfaceEngine.analyzeWithPatterns(userAgent);
             Context context = contextualReasoner.buildContext(patternAnalysis, userAgent);
             UserAgentParserPrediction prediction = knowledgeBase.inferWithRules(patternAnalysis, context);
             prediction = calibrateConfidence(prediction, patternAnalysis, context);
             return prediction; 
         } catch(Exception err) {
             System.err.println("Analysis failed: " + err.getMessage());
+            return fallbackAnalysis(userAgent);
         }
     }
 

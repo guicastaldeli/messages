@@ -1,9 +1,12 @@
 package com.app.main.root.app._server;
+import com.app.main.root.app.__controllers.UserAgentParserController;
+import com.app.main.root.app.__controllers.UserAgentParserPrediction;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.time.Duration;
 import java.util.List;
-import ua_parser.*;
 
 public class ConnectionInfo {
     public String socketId;
@@ -20,13 +23,17 @@ public class ConnectionInfo {
     private String browserVersion;
     public String os;
     private String osVersion;
+    private double detectionConfidence;
+    private String detectionMethod;
+    private String reasoning;
     public LocalDateTime connectedAt;
     public LocalDateTime disconnectedAt;
     public boolean isConnected;
     public String room;
     public List<String> groups;
     
-    private final Parser uaParser = new Parser();
+    @Autowired
+    private transient UserAgentParserController userAgentParserController;
 
     public ConnectionInfo(
         String socketId,
@@ -67,15 +74,17 @@ public class ConnectionInfo {
     * Parse User Agent 
     */
     private void parseUserAgent(String userAgent) {
-        if(userAgent == null || userAgent.isEmpty()) System.err.println("User Agent error!");
+        if(userAgentParserController == null) userAgentParserController = new UserAgentParserController();
+        UserAgentParserPrediction prediction = userAgentParserController.analyze(userAgent);
 
-        try {
-            Client client = uaParser.parse(userAgent);
-            
-            /* Device Info */
-            Device deviceInfo = client.device;
-            this.deviceBrand = capitalize
-        }
+        this.browser = prediction.getBrowser();
+        this.os = prediction.getOs();
+        this.deviceType = prediction.getDeviceType();
+        this.deviceBrand = prediction.getDeviceBrand();
+        this.detectionConfidence = prediction.getConfidence();
+        this.detectionMethod = "API AI UAP";
+        this.reasoning = prediction.getReasoning();
+        //REMINDER: Extract Versions (OS, Browser, etc, later...)
     }
 
     private String capitalize(String str) {
