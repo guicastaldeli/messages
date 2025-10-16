@@ -100,6 +100,6 @@ public class UserAgentParserApiClient {
             return objectMapper.readValue(response.body(),
                 new TypeReference<List<Map<String, Object>>>() {});
         }
-        throw new RuntimeException("Registry API: " + endpoint + " returned: " + response.statusCode());
+        throw new RuntimeException("\nRegistry API: " + endpoint + " returned: " + response.statusCode());
     }
 }

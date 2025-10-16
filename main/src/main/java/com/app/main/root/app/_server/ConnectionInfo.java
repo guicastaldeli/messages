@@ -32,24 +32,33 @@ public class ConnectionInfo {
     public String room;
     public List<String> groups;
     
-    @Autowired
     private transient UserAgentParserController userAgentParserController;
 
-    public ConnectionInfo(
+    @Autowired
+    public ConnectionInfo(UserAgentParserController userAgentParserController) {
+        this.userAgentParserController = userAgentParserController;
+    }
+
+    public static ConnectionInfo create(
         String socketId,
         String ipAddress,
-        String userAgent
+        String userAgent,
+        UserAgentParserController userAgentParserController
     ) {
-        this.socketId = socketId;
-        this.sessionId = socketId;
-        this.username = "Anonymous";
-        this.account = "Unknown";
-        this.ipAddress = ipAddress;
-        this.userAgent = userAgent;
-        parseUserAgent(userAgent);
-        this.connectedAt = LocalDateTime.now();
-        this.isConnected = true;
-        this.groups = new ArrayList<>();
+        ConnectionInfo connectionInfo = new ConnectionInfo(userAgentParserController);
+        
+        connectionInfo.socketId = socketId;
+        connectionInfo.sessionId = socketId;
+        connectionInfo.username = "Anonymous";
+        connectionInfo.account = "Unknown";
+        connectionInfo.ipAddress = ipAddress;
+        connectionInfo.userAgent = userAgent;
+        connectionInfo.parseUserAgent(userAgent);
+        connectionInfo.connectedAt = LocalDateTime.now();
+        connectionInfo.isConnected = true;
+        connectionInfo.groups = new ArrayList<>();
+
+        return connectionInfo;
     }
 
     public long getConnectionDurationSeconds() {

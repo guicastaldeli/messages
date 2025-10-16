@@ -15,14 +15,14 @@ public class UserAgentKnowledgeBase {
     private final Map<String, List<InferenceRule>> rules = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Object>> devices = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Object>> browsers = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, Object>> os = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Object>> osList = new ConcurrentHashMap<>();
     private final AtomicInteger ruleCount = new AtomicInteger(0);
 
     public void buildFromApi(UserAgentParserRegistryData registry) {
         rules.clear();
         devices.clear();
         browsers.clear();
-        os.clear();
+        osList.clear();
         ruleCount.set(0);
 
         storeDevices(registry.getDevices());
@@ -49,9 +49,13 @@ public class UserAgentKnowledgeBase {
     * Store Devices 
     */
     private void storeDevices(List<Map<String, Object>> list) {
-        for(Map<String, Object> d : list) {
-            String brand = (String) d.get("brand");
-            d.put(brand.toLowerCase(), d);
+        if(list != null) {
+            for(Map<String, Object> d : list) {
+                String brand = (String) d.get("brand");
+                if(brand != null) {
+                    devices.put(brand.toLowerCase(), d);
+                }
+            }
         }
     }
 
@@ -59,9 +63,13 @@ public class UserAgentKnowledgeBase {
     * Store Browsers 
     */
     private void storeBrowsers(List<Map<String, Object>> list) {
-        for(Map<String, Object> b : list) {
-            String name = (String) b.get("name");
-            b.put(name.toLowerCase(), b);
+        if(list != null) {
+            for(Map<String, Object> b : list) {
+                String name = (String) b.get("name");
+                if(name != null) {
+                    browsers.put(name.toLowerCase(), b);
+                }
+            }
         }
     }
 
@@ -69,52 +77,64 @@ public class UserAgentKnowledgeBase {
     * Store OS 
     */
     public void storeOs(List<Map<String, Object>> list) {
-        for(Map<String, Object> os : list) {
-            String name = (String) os.get("name");
-            os.put(name.toLowerCase(), os);
+        if(list != null) {
+            for(Map<String, Object> os : list) {
+                String name = (String) os.get("name");
+                if(name != null) {
+                    osList.put(name.toLowerCase(), os);
+                }
+            }
         }
     }
 
     private void buildRulesFromApi(UserAgentParserRegistryData registry) {
         /* Device */
-        for(Map<String, Object> d : registry.getDevices()) {
-            List<String> rules = (List<String>) d.get("rules");
-            if(rules != null) {
-                for(String rule : rules) {
-                    addRule("device", rule);
+        if(registry.getDevices() != null) {
+            for(Map<String, Object> d : registry.getDevices()) {
+                List<String> rules = (List<String>) d.get("ai_rules");
+                if(rules != null) {
+                    for(String rule : rules) {
+                        addRule("device", rule);
+                    }
                 }
             }
         }
 
         /* Browser */
-        for(Map<String, Object> b : registry.getDevices()) {
-            List<String> rules = (List<String>) b.get("rules");
-            if(rules != null) {
-                for(String rule : rules) {
-                    addRule("browser", rule);
+        if(registry.getBrowsers() != null) {
+            for(Map<String, Object> b : registry.getBrowsers()) {
+                List<String> rules = (List<String>) b.get("ai_rules");
+                if(rules != null) {
+                    for(String rule : rules) {
+                        addRule("browser", rule);
+                    }
                 }
             }
         }
 
         /* OS */
-        for(Map<String, Object> os : registry.getDevices()) {
-            List<String> rules = (List<String>) os.get("rules");
-            if(rules != null) {
-                for(String rule : rules) {
-                    addRule("os", rule);
+        if(registry.getOs() != null) {
+            for(Map<String, Object> os : registry.getOs()) {
+                List<String> rules = (List<String>) os.get("ai_rules");
+                if(rules != null) {
+                    for(String rule : rules) {
+                        addRule("os", rule);
+                    }
                 }
             }
         }
 
         /* AI Rules */
-        for(Map<String, Object> ruleCategory : registry.getRules()) {
-            String category = (String) ruleCategory.get("category");
-            List<String> ruleStrings = (List<String>) ruleCategory.get("rules");
-            if(ruleStrings != null) {
-                for(String rule : ruleStrings) {
-                    addRule(category, rule);
-                }
-            } 
+        if(registry.getRules() != null) {
+            for(Map<String, Object> ruleCategory : registry.getRules()) {
+                String category = (String) ruleCategory.get("category");
+                List<String> ruleStrings = (List<String>) ruleCategory.get("rules");
+                if(ruleStrings != null) {
+                    for(String rule : ruleStrings) {
+                        addRule(category, rule);
+                    }
+                } 
+            }
         }
     }
 
@@ -220,7 +240,7 @@ public class UserAgentKnowledgeBase {
 
     /* Get OS Count */
     public int getOsCount() {
-        return os.size();
+        return osList.size();
     }
 }
 

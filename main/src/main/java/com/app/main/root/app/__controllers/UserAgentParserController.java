@@ -7,6 +7,7 @@ import com.app.main.root.app._utils.ContextualReasoner;
 import com.app.main.root.app._utils.PatternAnalysis;
 import com.app.main.root.app._utils.PatternInterfaceEngine;
 import com.app.main.root.app._utils.UserAgentParserApiClient;
+import jakarta.annotation.PostConstruct;
 import java.util.*;
 
 @Component
@@ -17,13 +18,13 @@ public class UserAgentParserController {
     private final UserAgentParserApiClient apiClient;
 
     public UserAgentParserController() {
+        this.apiClient = new UserAgentParserApiClient();
         this.knowledgeBase = new UserAgentKnowledgeBase();
         this.interfaceEngine = new PatternInterfaceEngine();
         this.contextualReasoner = new ContextualReasoner();
-        this.apiClient = new UserAgentParserApiClient();
-        init();
     }
 
+    @PostConstruct
     private void init() {
         try {
             System.out.println("Initializing UAP...");
@@ -36,7 +37,7 @@ public class UserAgentParserController {
                 knowledgeBase.getRuleCount() + " rules, " +
                 knowledgeBase.getDeviceCount() + " devices, " +
                 knowledgeBase.getBrowserCount() + " browsers, " +
-                knowledgeBase.getOsCount() + "OS"
+                knowledgeBase.getOsCount() + " OS "
             );
         } catch(Exception err) {
             System.err.println("Failed to init UAP..." + err.getMessage());

@@ -1,4 +1,5 @@
 package com.app.main.root.app._server;
+import com.app.main.root.app.__controllers.UserAgentParserController;
 import com.app.main.root.app._utils.ColorConverter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -18,6 +19,9 @@ public class ConnectionTracker {
 
     @Autowired
     private ColorConverter colorConverter;
+
+    @Autowired
+    private UserAgentParserController userAgentParserController;
     
     public static ConnectionTracker getInstance() {
         return instance;
@@ -28,9 +32,15 @@ public class ConnectionTracker {
         String ipAddress,
         String userAgent
     ) {
-        ConnectionInfo connectionInfo = new ConnectionInfo(socketId, ipAddress, userAgent);
+        ConnectionInfo connectionInfo = ConnectionInfo.create(
+            socketId, 
+            ipAddress, 
+            userAgent, 
+            userAgentParserController
+        );
         connectionInfo.isConnected = true;
         connections.put(socketId, connectionInfo);
+        
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);
         System.out.println(connectionInfo.toString());

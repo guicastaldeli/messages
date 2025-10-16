@@ -14,6 +14,8 @@ class ConnectionRegistry:
         self.devices()
         self.browsers()
         self.os()
+        self.rules()
+        self.status()
         self.train()
         
     ## Devices
@@ -294,8 +296,8 @@ class ConnectionRegistry:
             
     ## Rules
     def rules(self):
-        @self.router.post("/registry/rules")
-        async def exec(ex: Dict):
+        @self.router.get("/registry/rules")
+        async def exec() -> List[Dict]:
             return [
                 {
                     "category": "impossible_combinations",
@@ -333,9 +335,33 @@ class ConnectionRegistry:
                 }
             ]
             
+    ## Status
+    def status(self):
+        @self.router.get("/registry/status")
+        async def exec() -> Dict:
+            return {
+                "status": "active",
+                "version": "1.0.0",
+                "registry_entries": {
+                    "devices": 8,
+                    "browsers": 6,
+                    "operating_systems": 5,
+                    "ai_rules": 4
+                },
+                "capabilities": [
+                    "device_detection",
+                    "browser_detection", 
+                    "os_detection",
+                    "version_extraction",
+                    "impossible_combination_detection",
+                    "confidence_scoring"
+                ],
+                "last_updated": "10-16-2025"
+            }
+            
     ## Train
     async def train(self):
-        @self.router.get("/registry/train")
+        @self.router.post("/registry/train")
         async def exec(trainingData: Dict):
             user_agent = trainingData.get("userAgent")
             browser = trainingData.get("browser")

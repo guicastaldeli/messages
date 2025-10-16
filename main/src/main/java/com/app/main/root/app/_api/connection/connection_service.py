@@ -84,6 +84,18 @@ class ConnectionService:
         return await self._request("get", "/api/connection-tracker/connections/registry/os")
     
     ##
+    ## Rules
+    ##
+    async def getRules(self) -> List[Dict]:
+        return await self._request("get", "/api/connection-tracker/connections/registry/rules")
+    
+    ##
+    ## Status
+    ##
+    async def getStatus(self) -> List[Dict]:
+        return await self._request("get", "/api/connection-tracker/connections/registry/status")
+    
+    ##
     ## Clear Connections
     ##
     async def clearConnections(self) -> str:
