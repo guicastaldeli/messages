@@ -146,13 +146,39 @@ public class UserAgentKnowledgeBase {
 
         prediction.setBrowser(applyRules("browser", analysis, context));
         prediction.setOs(applyRules("os", analysis, context));
-        prediction.setDeviceType(applyRules("device_type", analysis, context));
-        prediction.setDeviceBrand(applyRules("device_brand", analysis, context));
+        String deviceResult = applyRules("device", analysis, context);
+        extractDeviceTypeAndBrand(deviceResult, prediction);
         applyValidationRules(prediction, analysis, context);
 
         prediction.setConfidence(calculateRuleConfidence(analysis));
         prediction.setReasoning("API Rules Engine");
         return prediction;
+    }
+
+    /*
+    * Extract Type and Brand 
+    */
+    private void extractDeviceTypeAndBrand(
+        String deviceResult,
+        UserAgentParserPrediction prediction
+    ) {
+        if(deviceResult == null || deviceResult.startsWith("Unknown")) {
+            String msg = "Unknown **Extract Fail";
+            prediction.setDeviceType(msg);
+            prediction.setDeviceBrand(msg);
+            return;
+        }
+
+        if(deviceResult.contains("device_brand=")) {
+            String brand = deviceResult.replace("device_brand=", "").replace("'", "").trim();
+            prediction.setDeviceBrand(brand);
+        } else if(deviceResult.contains("device_type=")) {
+            String type = deviceResult.replace("device_type=", "").replace("'", "").trim();
+            prediction.setDeviceType(type);
+        } else {
+            prediction.setDeviceType(deviceResult);
+            prediction.setDeviceBrand("Unknown **Cond");
+        }
     }
 
     /*
@@ -165,7 +191,7 @@ public class UserAgentKnowledgeBase {
     ) {
         List<InferenceRule> categoryRules = rules.get(category);
         Map<String, Double> candidates = new HashMap<>();
-        if(categoryRules == null) return "Unknown";
+        if(categoryRules == null) return "Unknown **Rules Null";
 
         for(InferenceRule rule : categoryRules) {
             RuleResult result = rule.evaluate(analysis, context);
@@ -181,7 +207,7 @@ public class UserAgentKnowledgeBase {
         return candidates.entrySet().stream()
             .max(Map.Entry.comparingByValue())
             .map(Map.Entry::getKey)
-            .orElse("Unknown");
+            .orElse("Unknown **Value Null");
     }
 
     /*

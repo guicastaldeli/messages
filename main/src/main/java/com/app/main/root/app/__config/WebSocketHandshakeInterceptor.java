@@ -18,6 +18,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
         if(request instanceof ServletServerHttpRequest) {
             ServletServerHttpRequest serverHttpRequest = (ServletServerHttpRequest) request;
             HttpServletRequest httpServletRequest = serverHttpRequest.getServletRequest();
+            attr.put("userAgent", httpServletRequest.getHeader("User-Agent"));
             attr.put("remoteAddress", httpServletRequest.getRemoteAddr());
         }
         return true;

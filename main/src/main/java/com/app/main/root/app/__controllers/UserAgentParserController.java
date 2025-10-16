@@ -112,12 +112,15 @@ public class UserAgentParserController {
 
     private UserAgentParserPrediction fallbackAnalysis(String userAgent) {
         UserAgentParserPrediction prediction = new UserAgentParserPrediction();
-        prediction.setBrowser("Unknown");
-        prediction.setOs("Unknown");
-        prediction.setDeviceType("Unknown");
-        prediction.setDeviceBrand("Unknown");
+        String msg = "Unknown **Fallback Controller Server";
+
+        prediction.setBrowser(msg);
+        prediction.setOs(msg);
+        prediction.setDeviceType(msg);
+        prediction.setDeviceBrand(msg);
         prediction.setConfidence(0.1);
         prediction.setReasoning("Fallback analysis - API unavailable");
+
         return prediction;
     }
 }

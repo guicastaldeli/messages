@@ -23,7 +23,7 @@ public class StompEventListener {
 
         //Client info
         String ipAddress = getClientIp(headers);
-        String userAgent = headers.getFirstNativeHeader("User-Agent");
+        String userAgent = getUserAgent(headers);
         String agent = userAgent != null ? userAgent : "Unknown";
 
         //Track Connection
@@ -48,6 +48,30 @@ public class StompEventListener {
         */
     }
 
+    private String getUserAgent(StompHeaderAccessor headers) {
+        String userAgent = headers.getFirstNativeHeader("User-Agent");
+
+        if(userAgent == null || userAgent.isEmpty()) {
+            Map<String, Object> sessionAttr = headers.getSessionAttributes();
+            if(sessionAttr != null) {
+                userAgent = (String) sessionAttr.get("userAgent");
+                if(userAgent == null && headers.getMessage() != null) {
+                    Map<String, Object> messageHeaders = headers.getMessageHeaders();
+                    Object nativeHeaders = messageHeaders.get("nativeHeaders");
+                    if(nativeHeaders instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> nativeHeadersMap = (Map<String, Object>) nativeHeaders;
+                        Object header = nativeHeadersMap.get("userAgent");
+                        if(header != null) header = header.toString();
+                    }
+                }
+            }
+        }
+
+        String resUa = userAgent != null ? userAgent : "Unknown **Get User Agent";
+        return resUa;
+    }
+
     private String getClientIp(StompHeaderAccessor headers) {
         String ip = headers.getFirstNativeHeader("X-Forwarded-For");
         if(ip == null || ip.isEmpty()) ip = headers.getFirstNativeHeader("X-Real-IP");
@@ -69,7 +93,7 @@ public class StompEventListener {
             }
         }
 
-        String resIp = ip != null ? ip : "Unknown";
+        String resIp = ip != null ? ip : "Unknown **Get Ip Client";
         return resIp;
     }
 }

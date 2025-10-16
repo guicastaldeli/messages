@@ -1,13 +1,13 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app.__controllers.UserAgentParserController;
 import com.app.main.root.app.__controllers.UserAgentParserPrediction;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.time.Duration;
 import java.util.List;
 
+@Component
 public class ConnectionInfo {
     public String socketId;
     public String sessionId;
@@ -18,7 +18,6 @@ public class ConnectionInfo {
     public String device;
     private String deviceType;
     private String deviceBrand;
-    private String deviceModel;
     public String browser;
     private String browserVersion;
     public String os;
@@ -34,7 +33,6 @@ public class ConnectionInfo {
     
     private transient UserAgentParserController userAgentParserController;
 
-    @Autowired
     public ConnectionInfo(UserAgentParserController userAgentParserController) {
         this.userAgentParserController = userAgentParserController;
     }
@@ -83,33 +81,41 @@ public class ConnectionInfo {
     * Parse User Agent 
     */
     private void parseUserAgent(String userAgent) {
-        if(userAgentParserController == null) userAgentParserController = new UserAgentParserController();
-        UserAgentParserPrediction prediction = userAgentParserController.analyze(userAgent);
+        if(userAgentParserController == null) {
+            setDefaultValues();
+            return;
+        }
 
-        this.browser = prediction.getBrowser();
-        this.os = prediction.getOs();
-        this.deviceType = prediction.getDeviceType();
-        this.deviceBrand = prediction.getDeviceBrand();
-        this.detectionConfidence = prediction.getConfidence();
-        this.detectionMethod = "API AI UAP";
-        this.reasoning = prediction.getReasoning();
+        try {
+            UserAgentParserPrediction prediction = userAgentParserController.analyze(userAgent);
+    
+            this.browser = prediction.getBrowser();
+            this.os = prediction.getOs();
+            this.deviceType = prediction.getDeviceType();
+            this.deviceBrand = prediction.getDeviceBrand();
+            this.detectionConfidence = prediction.getConfidence();
+            this.detectionMethod = "API AI UAP";
+            this.reasoning = prediction.getReasoning();
+        } catch(Exception err) {
+            System.err.println("Analysis failed: " + err.getMessage());
+            setDefaultValues();
+        }
         //REMINDER: Extract Versions (OS, Browser, etc, later...)
     }
 
     private String capitalize(String str) {
-        if(str == null || str.isEmpty()) return "Unknown";
+        if(str == null || str.isEmpty()) return "Unknown **Capitalize";
         return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
 
     private void setDefaultValues() {
-        this.device = "Unknown";
-        this.deviceType = "Unknown";
-        this.deviceBrand = "Unknown";
-        this.deviceModel = "Unknown";
-        this.browser = "Unknown";
-        this.browserVersion = "Unknown";
-        this.os = "Unknown";
-        this.osVersion = "Unknown";
+        String msg = "Unknown **Fallback Connection Info";
+
+        this.browser = msg;
+        this.os = msg;
+        this.deviceType = msg;
+        this.deviceBrand = msg;
+        this.device = msg;
     }
 
     /*
@@ -126,8 +132,10 @@ public class ConnectionInfo {
                     account='%s',
                     ipAddress='%s',
                     userAgent='%s',
-                    device='%s',
                     browser='%s',
+                    os='%s',
+                    deviceType='%s',
+                    deviceBrand='%s',
                     connectedAt='%s',
                     isConnected='%s',
                     duration=%s
@@ -139,8 +147,10 @@ public class ConnectionInfo {
             account,
             ipAddress,
             userAgent,
-            device,
             browser,
+            os,
+            deviceType,
+            deviceBrand,
             connectedAt,
             isConnected,
             getFormattedDuration()

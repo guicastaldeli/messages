@@ -11,7 +11,7 @@ public class InferenceRule {
         if(rule.contains("contains") && rule.contains("THEN")) {
             return parseContainsRule(rule, analysis);
         }
-        return new RuleResult(false, "Unknown", 0.0);
+        return new RuleResult(false, "Unknown **Rule", 0.0);
     }
 
     private RuleResult parseContainsRule(String rule, PatternAnalysis analysis) {

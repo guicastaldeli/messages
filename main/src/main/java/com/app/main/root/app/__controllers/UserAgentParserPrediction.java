@@ -15,10 +15,12 @@ public class UserAgentParserPrediction {
 
     public static UserAgentParserPrediction unknown() {
         UserAgentParserPrediction prediction = new UserAgentParserPrediction();
-        prediction.browser = "Unknown";
-        prediction.os = "Unknown";
-        prediction.deviceType = "Unknown";
-        prediction.deviceBrand = "Unknown";
+        String msg = "Unknown **Fallback Prediction Server";
+
+        prediction.browser = msg;
+        prediction.os = msg;
+        prediction.deviceType = msg;
+        prediction.deviceBrand = msg;
         prediction.confidence = 0.1;
         prediction.reasoning = "API analysis failed!";
         return prediction;
