@@ -1,6 +1,7 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._types._User;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Group;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
@@ -22,11 +23,11 @@ public class GroupService {
         String name,
         String creatorId
     ) throws SQLException {
-        String sql = "INSERT INTO GROUPS (id, name, creator_id) VALUES (?, ?, ?)";
+        String query = CommandQueryManager.CREATE_GROUP.get();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, id);
             stmt.setString(2, name);
@@ -36,11 +37,11 @@ public class GroupService {
     }
 
     public void addUserToGroup(String groupId, String userId) throws SQLException {
-        String sql = "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)";
+        String query = CommandQueryManager.ADD_USER_TO_GROUP.get();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, groupId);
             stmt.setString(2, userId);
@@ -49,11 +50,11 @@ public class GroupService {
     }
 
     public _Group getGroupId(String id) throws SQLException {
-        String sql = "SELECT * FROM groups WHERE id = ?";
+        String query = CommandQueryManager.GET_GROUP_BY_ID.get();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, id);
             try(ResultSet rs = stmt.executeQuery()) {
@@ -67,19 +68,13 @@ public class GroupService {
     }
 
     public List<_User> getGroupMembers(String groupId) throws SQLException {
-        String sql =
-        """
-            SELECT u.*
-            FROM group_members gm
-            JOIN users u ON gm.user_id = u.id
-            WHERE gm.group_id = ?        
-        """;
+        String query = CommandQueryManager.GET_GROUP_MEMBERS.get();
 
         List<_User> members = new ArrayList<>();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, groupId);
             try(ResultSet rs = stmt.executeQuery()) {
@@ -93,19 +88,13 @@ public class GroupService {
     }
 
     public List<_Group> getUserGroups(String userId) throws SQLException {
-        String sql =
-        """
-            SELECT g.*
-            FROM group_members gm
-            JOIN groups g ON gm.group_id = g.id
-            WHERE gm.user_id = ?        
-        """;
+        String query = CommandQueryManager.GET_USER_GROUPS.get();
 
         List<_Group> groups = new ArrayList<>();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, userId);
             try(ResultSet rs = stmt.executeQuery()) {

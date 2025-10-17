@@ -66,7 +66,8 @@ public class DbConfig {
             Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getPath());
             Statement stmt = conn.createStatement();
         ) {
-            stmt.execute("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1");
+            String query = CommandQueryManager.VALIDATE_DATABASE.get();
+            stmt.execute(query);
             return true;
         } catch(SQLException err) {
             return false;

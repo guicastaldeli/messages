@@ -1,4 +1,5 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import org.springframework.stereotype.Component;
@@ -21,20 +22,11 @@ public class MessageService {
         String content,
         String type
     ) throws SQLException {
-        String sql =
-        """
-            INSERT INTO messages(
-                chat_id,
-                sender_id,
-                content,
-                message_type
-            )        
-            VALUES (?, ?, ?, ?)
-        """;
+        String query = CommandQueryManager.SAVE_MESSAGE.get();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
+            PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)
         ) {
             String fType = type != null ? type : "text";
 
@@ -56,21 +48,13 @@ public class MessageService {
         }
     }
 
-    public List<_Message> getMessages(String chatId) throws SQLException {
-        String sql =
-        """
-            SELECT m.*, u.username
-            FROM messages m
-            JOIN users u ON m.sender_id = u.id
-            WHERE m.chat_id = ?
-            ORDER BY m.created_at DESC        
-        """;
-
+    public List<_Message> getMessagesByChat(String chatId) throws SQLException {
+        String query = CommandQueryManager.GET_MESSAGES_BY_CHAT.get();
         List<_Message> messages = new ArrayList<>();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, chatId);
 
@@ -85,21 +69,12 @@ public class MessageService {
     }
 
     public List<_Message> getMessagesByChatId(String chatId, int limit) throws SQLException {
-        String sql =
-        """
-            SELECT m.*, u.username
-            FROM messages m
-            LEFT JOIN users u ON m.sender_id = u.id
-            WHERE m.chat_id = ?
-            ORDER BY m.created_at ASC
-            LIMIT ?        
-        """;
-
+        String query = CommandQueryManager.GET_MESSAGES_BY_CHAT_WITH_LIMIT.get();
         List<_Message> messages = new ArrayList<>();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, chatId);
             stmt.setInt(2, limit);
@@ -115,55 +90,12 @@ public class MessageService {
     }
 
     public List<_RecentChat> getRecentChats(String userId, int limit) throws SQLException {
-        String sql =
-        """
-            SELECT
-                chat_id,
-                MAX(created_at) as last_message_time,
-                (
-                    SELECT content FROM messages m2
-                    WHERE m2.chat_id = m.chat_id
-                    ORDER BY created_at DESC LIMIT 1
-                ) as last_message,
-                (
-                    SELECT username FROM users u
-                    JOIN messages m3 ON m3.sender_id = u.id
-                    WHERE m3.chat_id = m.chat_id
-                    ORDER BY m3.created_at DESC LIMIT 1
-                ) as last_sender,
-                CASE
-                    WHEN chat_id LIKE 'group_%' THEN 'group'
-                    ELSE 'direct'
-                END as chat_type,
-                CASE
-                    WHEN chat_id LIKE 'group_%' THEN
-                        (SELECT name FROM groups WHERE id = chat_id)
-                    ELSE
-                        (
-                            SELECT username FROM users WHERE id =
-                            CASE
-                                WHEN chat_id = ? THEN sender_id
-                                ELSE chat_id
-                            END
-                        ) 
-                END as chat_name
-            FROM messages m
-            WHERE chat_id IN 
-            (
-                SELECT DISTINCT chat_id
-                FROM messages
-                WHERE sender_id = ? OR chat_id = ?
-            )
-            GROUP BY chat_id
-            ORDER BY last_message_time DESC
-            LIMIT ?
-        """;
-
+        String query = CommandQueryManager.GET_RECENT_CHATS.get();
         List<_RecentChat> recentChats = new ArrayList<>();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, userId);
             stmt.setString(2, userId);
@@ -181,21 +113,12 @@ public class MessageService {
     }
 
     public List<_Message> getRecentMessages(String chatId, int limit) throws SQLException {
-        String sql =
-        """
-            SELECT m.*, u.username
-            FROM messages m
-            LEFT JOIN users u ON m.sender_id = u.id
-            WHERE m.chat_id = ?
-            ORDER BY m.created_at DESC
-            LIMIT ?      
-        """;
-
+        String query = CommandQueryManager.GET_RECENT_MESSAGES.get();
         List<_Message> messages = new ArrayList<>();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, chatId);
             stmt.setInt(2, limit);

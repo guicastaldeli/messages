@@ -1,4 +1,5 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._User;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
@@ -15,11 +16,11 @@ public class UserService {
     }
 
     public void addUser(String id, String username) throws SQLException {
-        String sql = "INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)";
+        String query = CommandQueryManager.ADD_USER.get();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, id);
             stmt.setString(2, username);
@@ -28,11 +29,11 @@ public class UserService {
     }
 
     public _User getUserById(String id) throws SQLException {
-        String sql = "SELECT * FROM users WHERE id = ?";
+        String query = CommandQueryManager.GET_USER_BY_ID.get();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, id);
 
@@ -47,11 +48,11 @@ public class UserService {
     }
 
     public _User getUserByUsername(String username) throws SQLException {
-        String sql = "SELECT * FROM users WHERE username = ?";
+        String query = CommandQueryManager.GET_USER_BY_USERNAME.get();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
+            PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, username);
 
@@ -66,12 +67,12 @@ public class UserService {
     }
 
     public List<_User> getAllUsers() throws SQLException {
-        String sql = "SELECT * FROM users ORDER BY created_at DESC";
+        String query = CommandQueryManager.GET_ALL_USERS.get();
         List<_User> users = new ArrayList<>();
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql);
+            PreparedStatement stmt = conn.prepareStatement(query);
             ResultSet rs = stmt.executeQuery()
         ) {
             while(rs.next()) {
