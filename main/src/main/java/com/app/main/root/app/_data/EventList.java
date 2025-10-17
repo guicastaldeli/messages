@@ -273,8 +273,8 @@ public class EventList {
                     String inviteCode = UUID.randomUUID().toString().substring(0, 8);
                     String inviteLink = webUrl + groupId + "?code=" + inviteCode;
                     long expireTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
-                    dbService.getGroupService().storeInviteCode(groupId, inviteCode, username);
-
+                    dbService.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, sessionId);
+                    
                     Map<String, Object> res = new HashMap<>();
                     res.put("inviteLink", inviteLink);
                     res.put("inviteCode", inviteCode);

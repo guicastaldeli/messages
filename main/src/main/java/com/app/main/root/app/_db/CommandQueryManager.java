@@ -35,6 +35,57 @@ public enum CommandQueryManager {
             WHERE gm.user_id = ?        
         """
     ),
+    GET_GROUP_INFO(
+        "SELECT * FROM groups FROM id = ?"
+    ),
+    GET_GROUP_INFO_MEMBERS(
+        """
+            SELECT u.id, u.sername FROM group_members gm
+            JOIN users u ON gm.user_id = u.id
+            WHERE gm.group_id = ?        
+        """
+    ),
+    STORE_INVITE_CODE(
+        """
+            INVITE INTO group_invite_codes (group_id, invite_code, created_by, expires_at)
+            VALUES (?, ?, ?, ?)            
+        """
+    ),
+    VALIDATE_INVITE_CODE(
+        """
+            SELECT COUNT(*) FROM group_invite_codes
+            WHERE group_id ? AND invite_code = ? AND is_used = 0 AND expires_at > ?
+        """
+    ),
+    INVITE_CODE_IS_USED(
+        """
+            UPDATE group_invite_codes SET is_used = 1, used_at = ?
+            WHERE group_id = ? AND invite_code = ?
+        """
+    ),
+    GET_ACTIVE_INVITE_CODES(
+        """
+            SELECT invite_code, created_by, created_at, expires_at
+            FROM group_invite_codes
+            WHERE group_id = ? AND is_used = 0 AND expires_at > ?
+        """
+    ),
+    IS_GROUP_MEMBER(
+        """
+            SELECT COUNT(*) FROM group_members gm
+            JOIN users u ON gm.user_id = u.id
+            WHERE gm.group_id = ? AND u.username = ?
+        """
+    ),
+    EXEC_INDEX_GROUP_INVITE_CODE(
+        "CREATE INDEX IF NOT EXISTS idx_group_invite_code ON group_invite_codes(group_id, invite_code)"
+    ),
+    EXEC_INDEX_INVITE_EXPIRES(
+        "CREATE INDEX IF NOT EXISTS idx_invite_expires ON group_invite_codes(expires_at)"
+    ),
+    EXEC_INDEX_INVITE_USED(
+        "CREATE INDEX IF NOT EXISTS idx_invite_used ON group_invide_codes(is_used)"
+    ),
 
     /*
     * ~~~ USER SERVICE ~~~ 

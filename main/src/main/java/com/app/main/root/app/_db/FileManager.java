@@ -12,7 +12,8 @@ public class FileManager {
         "./user-service.sql",
         "./group-service.sql",
         "./group-members-service.sql",
-        "./message-service.sql"
+        "./message-service.sql",
+        "./invite-codes.sql"
     );
 
     public void initDb(Statement stmt) throws SQLException, IOException {
