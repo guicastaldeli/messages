@@ -81,4 +81,9 @@ public class PatternAnalysis {
     public Map<String, String> getVersions() {
         return versions;
     }
+
+    /* Get User Agent */
+    public String getUserAgent() {
+        return userAgent;
+    }
 }

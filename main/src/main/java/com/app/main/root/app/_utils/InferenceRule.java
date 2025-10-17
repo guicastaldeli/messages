@@ -11,10 +11,7 @@ public class InferenceRule {
     }
 
     public RuleResult evaluate(PatternAnalysis analysis, Context context) {
-        if(rule.contains("contains") && rule.contains("THEN")) {
-            return parseContainsRule(rule, analysis);
-        }
-        return new RuleResult(false, "Unknown **Rule", 0.0);
+        return parseContainsRule(rule, analysis);
     }
 
     private RuleResult parseContainsRule(String rule, PatternAnalysis analysis) {
@@ -75,29 +72,55 @@ public class InferenceRule {
         }
     }
 
+    private boolean evaluateContains(String pattern, PatternAnalysis analysis) {
+        String lowercasePattern = pattern.toLowerCase();
+        String userAgent = analysis.getUserAgent().toLowerCase();
+        if(userAgent.contains(lowercasePattern)) return true;
+
+        return analysis.getEvidence().values().stream()
+            .flatMap(evidenceMap -> evidenceMap.keySet().stream())
+            .anyMatch(key -> containsMatch(key.toLowerCase(), lowercasePattern));
+    }
+
     private boolean evaluateWithOperator(
-        String patter,
+        String pattern,
         String operator,
         PatternAnalysis analysis
     ) {
-        String lowercasePattern = patter.toLowerCase();
+        String lowercasePattern = pattern.toLowerCase();
+        String userAgent = analysis.getUserAgent().toLowerCase();
+
+        switch(operator) {
+            case "matches":
+                return Pattern.compile(lowercasePattern, Pattern.CASE_INSENSITIVE)
+                            .matcher(userAgent).matches();
+            case "startswith":
+                return userAgent.startsWith(lowercasePattern);
+            case "endswith":
+                return userAgent.endsWith(lowercasePattern);
+            case "contains":
+                return userAgent.contains(lowercasePattern);
+            default:
+                break;
+        }
+
         return analysis.getEvidence().values().stream()
             .flatMap(evidenceMap -> evidenceMap.keySet().stream())
             .anyMatch(key -> {
                 String lowercaseKey = key.toLowerCase();
-
                 switch(operator) {
-                    case "contains":
-                    return containsMatch(lowercaseKey, lowercasePattern);
                     case "matches":
-                        return Pattern.compile(lowercasePattern).matcher(lowercaseKey).matches();
+                        return Pattern.compile(lowercasePattern, Pattern.CASE_INSENSITIVE)
+                                    .matcher(lowercaseKey).matches();
                     case "startswith":
                         return lowercaseKey.startsWith(lowercasePattern);
                     case "endswith":
                         return lowercaseKey.endsWith(lowercasePattern);
+                    case "contains":
+                        return containsMatch(lowercaseKey, lowercasePattern);
                     default:
                         return false;
-                    }
+                }
             });
     }
 

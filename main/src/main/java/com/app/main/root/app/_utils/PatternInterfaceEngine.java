@@ -24,7 +24,7 @@ public class PatternInterfaceEngine {
         analyzeWithDevices(ua, analysis);
         analyzeWithBrowsers(ua, analysis);
         analyzeWithOs(ua, analysis);
-        //analyzeWithBasicPatterns(ua, analysis);
+        analyzeWithBasicPatterns(ua, analysis);
 
         analysis.calculatePatternStrength();
         return analysis;

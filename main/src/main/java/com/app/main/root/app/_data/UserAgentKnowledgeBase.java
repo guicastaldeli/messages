@@ -169,7 +169,6 @@ public class UserAgentKnowledgeBase {
             String msg = "Unknown **Extract Fail";
             prediction.setDeviceType(msg);
             prediction.setDeviceBrand(msg);
-            return;
         }
 
         prediction.setDeviceType("Unknown Type");
@@ -201,6 +200,12 @@ public class UserAgentKnowledgeBase {
         } else {
             processConclusion(result, prediction);
         }
+        if("Unknown".equals(prediction.getDeviceType()) && !result.contains("'")) {
+            prediction.setDeviceType(result);
+        }
+        if("Unknown".equals(prediction.getDeviceBrand()) && !result.contains("'")) {
+            prediction.setDeviceBrand(result);
+        }
     }
 
     /*
@@ -225,6 +230,15 @@ public class UserAgentKnowledgeBase {
         }
         else if(!conclusion.contains("'") && !conclusion.contains("=")) {
             prediction.setDeviceType(conclusion);
+        }
+        else if (!conclusion.contains("'") && !conclusion.contains("=")) {
+            if (conclusion.toLowerCase().contains("mobile") || 
+                conclusion.toLowerCase().contains("tablet") || 
+                conclusion.toLowerCase().contains("desktop")) {
+                prediction.setDeviceType(conclusion);
+            } else {
+                prediction.setDeviceBrand(conclusion);
+            }
         }
     }
 
