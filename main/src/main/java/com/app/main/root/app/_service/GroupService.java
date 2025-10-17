@@ -155,4 +155,26 @@ public class GroupService {
             throw new IllegalArgumentException("Group data must be Map or JSON String!");
         }
     }
+
+    /*
+    * Get Group Info 
+    */
+    public Map<String, Object> getGroupInfo(String id) {
+        
+    }
+
+    /*
+    * Store Invite Code 
+    */
+    public void storeInviteCode(
+        String groupId,
+        String inviteCode,
+        String createdBy
+    ) {
+
+    }
+
+    public boolean isUserGroupMember(String id, String username) {
+        
+    }
 }

@@ -5,6 +5,7 @@ import org.sqlite.SQLiteDataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import javax.sql.DataSource;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -80,57 +81,13 @@ public class DbConfig {
         try(
             Connection conn = dataSource.getConnection();
             Statement stmt = conn.createStatement();
-        ) {
-            //Users Table
-            stmt.execute(
-            """
-                CREATE TABLE IF NOT EXISTS users (
-                    id TEXT PRIMARY KEY,
-                    username TEXT UNIQUE NOT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """);
-            
-            //Groups Table (Groups)
-            stmt.execute(
-            """
-                CREATE TABLE IF NOT EXISTS groups (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    creator_id TEXT NOT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (creator_id) REFERENCES users(id)
-                )
-            """);
-            
-            //Groups Table (Members)
-            stmt.execute(
-            """
-                CREATE TABLE IF NOT EXISTS group_members (
-                    group_id TEXT NOT NULL,
-                    user_id TEXT NOT NULL,
-                    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (group_id, user_id),
-                    FOREIGN KEY (group_id) REFERENCES groups(id),
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            """);
-            
-            //Messages Table
-            stmt.execute(
-            """
-                CREATE TABLE IF NOT EXISTS messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    chat_id TEXT NOT NULL,
-                    sender_id TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    message_type TEXT DEFAULT 'text',
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (sender_id) REFERENCES users(id)
-                )
-            """);
+        ) {            
+            FileManager manager = new FileManager();
+            manager.initDb(stmt);    
         } catch(SQLException err) {
             throw new RuntimeException("Failed to initialize database", err);
+        } catch(IOException err) {
+            throw new RuntimeException("Failed to read SQL files", err);
         }
     }
 }
