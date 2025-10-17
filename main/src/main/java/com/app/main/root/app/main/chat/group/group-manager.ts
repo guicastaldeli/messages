@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot, Root } from "react-dom/client";
 import { SocketClientConnect } from "../../socket-client-connect";
 import { MessageManager } from "../../_messages_config/message-manager";
+import { InviteCodeManager } from "./invite-code-manager";
 import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat-state-service";
 import { Dashboard } from "../../dashboard";
@@ -19,6 +20,7 @@ export class GroupManager {
     public socketClient: SocketClientConnect;
     private messageManager: MessageManager;
     public dashboard: Dashboard;
+    private inviteCodeManager: InviteCodeManager;
 
     public appEl: HTMLDivElement | null = null;
     private layoutRef = React.createRef<GroupLayout>();
@@ -47,6 +49,7 @@ export class GroupManager {
         this.appEl = appEl;
         this.uname = uname;
         this.setupSocketListeners();
+        this.inviteCodeManager = new InviteCodeManager(socketClient);
     }
 
     public async setupSocketListeners(): Promise<void> {        
@@ -168,6 +171,9 @@ export class GroupManager {
         });
     }
 
+    /*
+    ** Create Group
+    */
     private async create(groupName: string): Promise<CreationData> {
         if(!this.socketClient.getSocketId()) {
             console.error('Failed to get socket ID');
@@ -235,7 +241,95 @@ export class GroupManager {
         this.create(groupName);
     }
 
-    public exitChat(): void {
-        this.socketClient.send('exit-chat', this.uname);
+    /*
+    ** Join Group
+    */
+    public async join(id: string, inviteCode?: string): Promise<any> {
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/join-group-scss';
+            const errDestination = '/queue/join-group-err';
+
+            /* Success */
+            const handleSucss = (data: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                res(data);
+            }
+
+            /* Error */
+            const handleErr = (error: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(error.message));
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(sucssDestination, handleErr);
+                
+                const data = {
+                    groupId: id,
+                    inviteCode: inviteCode,
+                    username: this.uname
+                }
+
+                await this.socketClient.sendToDestination(
+                    '/app/join-group',
+                    data,
+                    sucssDestination
+                );
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
+        });
+    }
+
+    /*
+    ** Group Info 
+    */
+    public async info(id: string): Promise<any> {
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/group-info-scss';
+            const errDestination = '/queue/group-info-err';
+
+            /* Success */
+            const handleSucss = (data: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                res(data);
+            }
+
+            /* Error */
+            const handleErr = (error: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(error.message));
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(sucssDestination, handleErr);
+                const data = { groupId: id }
+
+                await this.socketClient.sendToDestination(
+                    '/app/get-group-info',
+                    data,
+                    sucssDestination
+                );
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
+        });
+    }
+
+    /*
+    ** Get Invite Code Manager
+    */
+    public getInviteCodeManager(): InviteCodeManager {
+        return this.inviteCodeManager;
     }
 }

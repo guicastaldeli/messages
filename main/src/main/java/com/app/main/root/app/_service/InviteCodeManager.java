@@ -1,5 +1,7 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._db.CommandQueryManager;
 import java.sql.Connection;
+import java.sql.Statement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -8,7 +10,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import javax.sql.DataSource;
-import com.app.main.root.app._db.CommandQueryManager;
 import java.util.*;
 
 public class InviteCodeManager {
@@ -16,6 +17,27 @@ public class InviteCodeManager {
 
     public InviteCodeManager(DataSource dataSource) {
         this.dataSource = dataSource;
+        this.createIdx();
+    }
+
+    /*
+    * Create Indexes 
+    */
+    public void createIdx() {
+        String groupInviteCode = CommandQueryManager.EXEC_INDEX_GROUP_INVITE_CODE.get();
+        String inviteExpires = CommandQueryManager.EXEC_INDEX_INVITE_EXPIRES.get();
+        String inviteCodeUsed = CommandQueryManager.EXEC_INDEX_INVITE_USED.get();
+
+        try(
+            Connection conn = dataSource.getConnection();
+            Statement stmt = conn.createStatement();
+        ) {
+            stmt.execute(groupInviteCode);
+            stmt.execute(inviteExpires);
+            stmt.execute(inviteCodeUsed);
+        } catch(Exception SQLException) {
+            System.err.println("Idx Error");
+        }  
     }
 
     /*
