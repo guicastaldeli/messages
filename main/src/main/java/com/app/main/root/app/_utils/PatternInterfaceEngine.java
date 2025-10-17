@@ -24,7 +24,7 @@ public class PatternInterfaceEngine {
         analyzeWithDevices(ua, analysis);
         analyzeWithBrowsers(ua, analysis);
         analyzeWithOs(ua, analysis);
-        analyzeWithBasicPatterns(ua, analysis);
+        //analyzeWithBasicPatterns(ua, analysis);
 
         analysis.calculatePatternStrength();
         return analysis;
@@ -97,6 +97,7 @@ public class PatternInterfaceEngine {
 
     private void analyzeWithBasicPatterns(String ua, PatternAnalysis analysis) {
         if(ua.contains("chrome") && !ua.contains("edg")) analysis.addEvidence("browser", "Chrome", 0.7);
+        if(ua.contains("chrome") && ua.contains("edg")) analysis.addEvidence("browser", "Edge", 0.9);
         if(ua.contains("firefox")) analysis.addEvidence("browser", "Firefox", 0.7);
         if(ua.contains("safari") && !ua.contains("chrome")) analysis.addEvidence("browser", "Safari", 0.6);
         if(ua.contains("windows")) analysis.addEvidence("os", "Windows", 0.7);

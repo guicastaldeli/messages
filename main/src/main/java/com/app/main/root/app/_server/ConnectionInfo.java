@@ -96,6 +96,7 @@ public class ConnectionInfo {
             this.detectionConfidence = prediction.getConfidence();
             this.detectionMethod = "API AI UAP";
             this.reasoning = prediction.getReasoning();
+            
         } catch(Exception err) {
             System.err.println("Analysis failed: " + err.getMessage());
             setDefaultValues();
@@ -132,10 +133,10 @@ public class ConnectionInfo {
                     account='%s',
                     ipAddress='%s',
                     userAgent='%s',
-                    browser='%s',
-                    os='%s',
-                    deviceType='%s',
-                    deviceBrand='%s',
+                    ~~browser='%s',
+                    ~~os='%s',
+                    ~~deviceType='%s',
+                    ~~deviceBrand='%s',
                     connectedAt='%s',
                     isConnected='%s',
                     duration=%s

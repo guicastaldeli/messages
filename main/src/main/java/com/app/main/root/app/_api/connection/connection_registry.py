@@ -85,7 +85,10 @@ class ConnectionRegistry:
                     "type": "desktop",
                     "ai_rules": [
                         "IF contains 'windows nt' THEN device_type='desktop' WITH confidence 0.9",
-                        "IF contains 'macintosh' THEN device_type='desktop' WITH confidence 0.8"
+                        "IF contains 'macintosh' THEN device_type='desktop' WITH confidence 0.8",
+                        "IF contains 'windows nt' THEN device_brand='Desktop' WITH confidence 0.8",
+                        "IF contains 'macintosh' THEN device_brand='Apple' WITH confidence 0.9",
+                        "IF device_type='desktop' THEN device_brand='Desktop' WITH confidence 0.7"
                     ],
                     "common_os": ["Windows", "macOS", "Linux"]
                 },
@@ -96,7 +99,8 @@ class ConnectionRegistry:
                     "type": "tablet",
                     "ai_rules": [
                         "IF contains 'tablet' THEN device_type='tablet' WITH confidence 0.9",
-                        "IF contains 'ipad' THEN device_type='tablet' WITH confidence 0.95"
+                        "IF contains 'ipad' THEN device_type='tablet' WITH confidence 0.95",
+                        "IF contains 'ipad' THEN device_brand='Apple' WITH confidence 0.95"
                     ],
                     "common_os": ["iOS", "Android", "Windows"]
                 },
@@ -106,7 +110,8 @@ class ConnectionRegistry:
                     "patterns": ["bot", "crawler", "spider", "slurp"],
                     "type": "bot",
                     "ai_rules": [
-                        "IF contains 'bot' OR contains 'crawler' THEN device_type='bot' WITH confidence 0.95"
+                        "IF contains 'bot' OR contains 'crawler' THEN device_type='bot' WITH confidence 0.95",
+                        "IF device_type='bot' THEN device_brand='Bot' WITH confidence 0.8"
                     ],
                     "common_os": ["Linux"]
                 }
@@ -314,7 +319,10 @@ class ConnectionRegistry:
                         "IF os='iOS' THEN device_brand='Apple' WITH confidence 0.95",
                         "IF os='Android' THEN device_type='mobile' WITH confidence 0.8",
                         "IF contains 'mobile' THEN device_type='mobile' WITH confidence 0.7",
-                        "IF contains 'tablet' THEN device_type='tablet' WITH confidence 0.8"
+                        "IF contains 'tablet' THEN device_type='tablet' WITH confidence 0.8",
+                        "IF contains 'windows nt' THEN device_type='desktop' WITH confidence 0.8",
+                        "IF contains 'macintosh' THEN device_type='desktop' WITH confidence 0.8",
+                        "IF contains 'x11' THEN device_type='desktop' WITH confidence 0.7"
                     ]
                 },
                 {

@@ -1,9 +1,6 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app.__controllers.UserAgentParserController;
 import com.app.main.root.app._utils.ColorConverter;
-
-import jakarta.servlet.http.HttpServletRequest;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;

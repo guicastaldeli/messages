@@ -42,6 +42,9 @@ public class UserAgentKnowledgeBase {
         addRule("os", "IF contains 'iphone' OR contains 'ipad' THEN 'iOS' WITH confidence 0.9");
         addRule("device", "IF contains 'mobile' THEN device_type='mobile' WITH confidence 0.7");
         addRule("device", "IF contains 'tablet' THEN device_type='tablet' WITH confidence 0.8");
+        addRule("device", "IF contains 'windows nt' THEN device_brand='Desktop' WITH confidence 0.8");
+        addRule("device", "IF contains 'macintosh' THEN device_brand='Apple' WITH confidence 0.9");
+        addRule("device", "IF device_type='desktop' AND device_brand='Unknown' THEN device_brand='Desktop' WITH confidence 0.6");
         System.out.println("Using fallback knowledge base...");
     }
 
@@ -153,31 +156,75 @@ public class UserAgentKnowledgeBase {
         prediction.setConfidence(calculateRuleConfidence(analysis));
         prediction.setReasoning("API Rules Engine");
         return prediction;
-    }
+    } 
 
     /*
     * Extract Type and Brand 
     */
     private void extractDeviceTypeAndBrand(
-        String deviceResult,
+        String result,
         UserAgentParserPrediction prediction
     ) {
-        if(deviceResult == null || deviceResult.startsWith("Unknown")) {
+        if(result == null || result.startsWith("Unknown")) {
             String msg = "Unknown **Extract Fail";
             prediction.setDeviceType(msg);
             prediction.setDeviceBrand(msg);
             return;
         }
 
-        if(deviceResult.contains("device_brand=")) {
-            String brand = deviceResult.replace("device_brand=", "").replace("'", "").trim();
-            prediction.setDeviceBrand(brand);
-        } else if(deviceResult.contains("device_type=")) {
-            String type = deviceResult.replace("device_type=", "").replace("'", "").trim();
-            prediction.setDeviceType(type);
+        prediction.setDeviceType("Unknown Type");
+        prediction.setDeviceBrand("Unknown Brand");
+
+        /* Brand */
+        if(result.contains("device_brand='")) {
+            String[] parts = result.split("device_brand='");
+            if(parts.length > 1) {
+                String brand = parts[1].split("'")[0];
+                prediction.setDeviceBrand(brand);
+            }
+        }
+
+        /* Type */
+        if(result.contains("device_type='")) {
+            String[] parts = result.split("device_type='");
+            if(parts.length > 1) {
+                String type = parts[1].split("'")[0];
+                prediction.setDeviceType(type);
+            }
+        }
+
+        if(result.contains(" AND ")) {
+            String[] conclusions = result.split(" AND ");
+            for(String conclusion : conclusions) {
+                processConclusion(conclusion.trim(), prediction);
+            }
         } else {
-            prediction.setDeviceType(deviceResult);
-            prediction.setDeviceBrand("Unknown **Cond");
+            processConclusion(result, prediction);
+        }
+    }
+
+    /*
+    * Process Conclusion
+    */
+    private void processConclusion(String conclusion, UserAgentParserPrediction prediction) {
+        if(conclusion.startsWith("device_brand='") && conclusion.endsWith("'")) {
+            String brand = conclusion.substring(14, conclusion.length() - 1);
+            prediction.setDeviceBrand(brand);
+        } 
+        else if(conclusion.startsWith("device_type='") && conclusion.endsWith("'")) {
+            String type = conclusion.substring(13, conclusion.length() - 1);
+            prediction.setDeviceType(type);
+        }
+        else if(conclusion.startsWith("browser='") && conclusion.endsWith("'")) {
+            String browser = conclusion.substring(9, conclusion.length() - 1);
+            prediction.setBrowser(browser);
+        }
+        else if(conclusion.startsWith("os='") && conclusion.endsWith("'")) {
+            String os = conclusion.substring(4, conclusion.length() - 1);
+            prediction.setOs(os);
+        }
+        else if(!conclusion.contains("'") && !conclusion.contains("=")) {
+            prediction.setDeviceType(conclusion);
         }
     }
 
