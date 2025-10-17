@@ -1,7 +1,9 @@
 import '../../__styles/styles.scss';
+import React, { useState } from 'react';
 import { Component, createRef } from 'react';
 import { MessageManager } from '../../_messages_config/message-manager';
 import { GroupManager } from './group-manager';
+import { JoinGroupLayout } from './join-group-layout';
 
 interface Props {
     messageManager: MessageManager;
@@ -15,8 +17,11 @@ interface State {
     groupName: string;
     isLoading: boolean;
     error: string | null;
+    generatedLink: string;
     managerState: {
         showForm: boolean;
+        showJoinForm: boolean;
+        showInviteLink: boolean;
         showChat: boolean;
         hideChat: boolean;
         groupName: string;
@@ -40,8 +45,11 @@ export class GroupLayout extends Component<Props, State> {
             groupName: '',
             isLoading: false,
             error: null,
+            generatedLink: '',
             managerState: {
                 showForm: true,
+                showJoinForm: false,
+                showInviteLink: false,
                 showChat: false,
                 hideChat: false,
                 groupName: ''
@@ -73,6 +81,7 @@ export class GroupLayout extends Component<Props, State> {
         });
     }
 
+    /* Create */
     handleCreate = async () => {
         const groupName = this.nameInputRef.current?.value || '';
         if(!groupName.trim()) {
@@ -117,8 +126,9 @@ export class GroupLayout extends Component<Props, State> {
         });
     }
 
-    handleExitChat = () => {
-        this.groupManager.exitChat();
+    /* Exit */
+    handleExitGroup = () => {
+       // this.groupManager.exitGroup();
         this.resetForm();
         this.groupManager.dashboard.updateState({
             showForm: false,
@@ -128,6 +138,7 @@ export class GroupLayout extends Component<Props, State> {
         });
     }
 
+    /* Back */
     handleBack = () => {
         this.groupManager.dashboard.updateState({
             showForm: false,
@@ -137,6 +148,43 @@ export class GroupLayout extends Component<Props, State> {
         });
     }
 
+    /* Generated Link Handler */
+    handleGenerateInviteLink = async () => {
+        if(!this.groupManager.currentGroupId) {
+            console.error('No active group selected!')
+            return;
+        }
+
+        try {
+            const groupId = this.groupManager.currentGroupId;
+            const link = await this.groupManager.getInviteCodeManager().generate(groupId);
+            this.setState({
+                generatedLink: link
+            })
+            this.state.managerState.showInviteLink = true;
+        } catch(err: any) {
+            console.error('Failed to generate invite link:', err);
+        }
+    }
+
+    /* Join Group Success */
+    handleJoinSuccess = (data: any) => {
+        this.state.managerState.showJoinForm = false;
+        this.groupManager.dashboard.updateState({
+            showForm: false,
+            showChat: true,
+            hideChat: false,
+            groupName: data.groupName
+        });
+        this.groupManager.currentGroupId = data.groupId;
+    }
+
+    /* Show Join Form */
+    handleShowJoinForm = () => {
+        this.state.managerState.showJoinForm = true;
+    }
+
+    /* Render */
     render() {
         const { isLoading, error } = this.state;
         const { 
@@ -187,6 +235,12 @@ export class GroupLayout extends Component<Props, State> {
                     <div className="screen chat-screen">
                         <div className="header">
                             <div id="group-name">{groupName}</div>
+                            <button
+                                onClick={this.handleGenerateInviteLink}
+                                id='invite-button'
+                            >
+                                Invite
+                            </button>
                             <button 
                                 id="exit-chat"
                                 onClick={this.handleBack}
@@ -195,7 +249,7 @@ export class GroupLayout extends Component<Props, State> {
                             </button>
                             <button 
                                 id="exit-chat"
-                                onClick={this.handleExitChat}
+                                onClick={this.handleExitGroup}
                             >
                                 Exit Group
                             </button>
@@ -210,6 +264,21 @@ export class GroupLayout extends Component<Props, State> {
                                 }}
                             >
                                 Send
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Invite Link Container */}
+                {this.state.managerState.showInviteLink && (
+                    <div className="invite-link-container">
+                        <div id="header">
+                            <h3>Invite Link Generated</h3>
+                            <button
+                                onClick={() => this.state.managerState.showInviteLink = false}
+                                id='close-button'
+                            >
+
                             </button>
                         </div>
                     </div>

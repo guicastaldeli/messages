@@ -30,7 +30,7 @@ export class GroupManager {
     private container!: HTMLElement;
 
     private currentGroupName: string = '';
-    private currentGroupId: string = '';
+    public currentGroupId: string = '';
     private onCreateSuccess?: (data: CreationData) => void;
     private onCreateError?: (error: any) => void;
     private creationRes?: (data: CreationData) => void;

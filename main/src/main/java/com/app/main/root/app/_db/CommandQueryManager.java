@@ -84,7 +84,7 @@ public enum CommandQueryManager {
         "CREATE INDEX IF NOT EXISTS idx_invite_expires ON group_invite_codes(expires_at)"
     ),
     EXEC_INDEX_INVITE_USED(
-        "CREATE INDEX IF NOT EXISTS idx_invite_used ON group_invide_codes(is_used)"
+        "CREATE INDEX IF NOT EXISTS idx_invite_used ON group_invite_codes(is_used)"
     ),
 
     /*
