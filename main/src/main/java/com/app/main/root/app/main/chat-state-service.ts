@@ -1,4 +1,4 @@
-export type Type = 'direct' | 'group'| null;
+export type Type = 'direct' | 'group' | null;
 
 class ChatStateService {
     private current: Type = null;

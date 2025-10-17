@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
+
+import com.app.main.root.EnvConfig;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._db.DbService;
@@ -213,6 +215,81 @@ public class EventList {
                 }
             },
             "/queue/group-creation-scss",
+            false
+        ));
+        /* Join Group */
+        configs.put("join-group", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    long time = System.currentTimeMillis();
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String groupId = (String) data.get("groupId");
+                    String username = socketMethods.getSocketUsername(sessionId);
+                    if(groupId == null || username == null) throw new Exception("Group Id and username required!");
+
+                    boolean success = dbService.getGroupService().addUserToGroup(groupId, username, sessionId);
+                    if(!success) throw new Exception("Failed to join group :(");
+
+                    Map<String, Object> groupInfo = dbService.getGroupService().getGroupInfo(groupId);
+                    eventTracker.track(
+                        "join-group",
+                        data,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        username
+                    );
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("groupId", groupId);
+                    res.put("groupName", groupInfo.get("name"));
+                    res.put("username", username);
+                    res.put("joined", true);
+                    res.put("timestamp", time);
+                    res.put("members", groupInfo.get("members"));
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "JOIN_FAILED");
+                    errRes.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/join-group-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/join-group-scss",
+            false
+        ));
+        /* Generate Group Link */
+        configs.put("generate-invite-link", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> reqData = (Map<String, Object>) payload;
+                    String groupId = (String) reqData.get("groupId");
+                    String username = socketMethods.getSocketUsername(sessionId);
+
+                    boolean isMember = dbService.getGroupService().isUserGroupMember(groupId, username);
+                    if(!isMember) throw new Exception("Invite link err");
+
+                    String webUrl = EnvConfig.get("WEB_URL");
+                    String inviteCode = UUID.randomUUID().toString().substring(0, 8);
+                    String inviteLink = webUrl + groupId + "?code=" + inviteCode;
+                    long expireTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
+                    dbService.getGroupService().storeInviteCode(groupId, inviteCode, username);
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("inviteLink", inviteLink);
+                    res.put("inviteCode", inviteCode);
+                    res.put("groupId", groupId);
+                    res.put("expiresAt", expireTime);
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "LINK_FAILED");
+                    errRes.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/invite-link-err", errRes);
+                    return Collections.emptyList();
+                }
+            },
+            "/queue/invite-link-scss",
             false
         ));
 
