@@ -58,11 +58,17 @@ export class MessageManager {
             if(!usernameInput || !usernameInput.value.trim()) return rej(new Error('Username is required'));
             this.joinHandled = true;
 
+            const data = {
+                userId: await this.socketClient.getSocketId(),
+                username: usernameInput.value.trim(),
+                sessionId: await this.socketClient.getSocketId()
+            }
+
             try {
                 const sucss = await this.socketClient.sendToDestination(
                     '/app/new-user',
-                    usernameInput.value.trim(),
-                    '/queue/join-response'
+                    data,
+                    '/topic/user'
                 );
                 if(!sucss) {
                     this.joinHandled = false;

@@ -35,7 +35,8 @@ public class InviteCodeManager {
             stmt.execute(groupInviteCode);
             stmt.execute(inviteExpires);
             stmt.execute(inviteCodeUsed);
-        } catch(Exception SQLException) {
+        } catch(Exception err) {
+            err.printStackTrace();
             System.err.println("Idx Error");
         }  
     }

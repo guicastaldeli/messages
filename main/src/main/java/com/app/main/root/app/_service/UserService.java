@@ -15,7 +15,7 @@ public class UserService {
         this.dataSource = dataSource;
     }
 
-    public void addUser(String id, String username) throws SQLException {
+    public void addUser(String id, String username, String sessionId) throws SQLException {
         String query = CommandQueryManager.ADD_USER.get();
 
         try(
@@ -24,6 +24,7 @@ public class UserService {
         ) {
             stmt.setString(1, id);
             stmt.setString(2, username);
+            stmt.setString(3, sessionId);
             stmt.executeUpdate();
         }
     }

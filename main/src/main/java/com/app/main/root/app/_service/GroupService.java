@@ -39,7 +39,7 @@ public class GroupService {
         }
     }
 
-    public boolean addUserToGroup(String groupId, String userId, String sessionId) throws SQLException {
+    public boolean addUserToGroup(String groupId, String userId) throws SQLException {
         String query = CommandQueryManager.ADD_USER_TO_GROUP.get();
 
         try(
@@ -48,7 +48,6 @@ public class GroupService {
         ) {
             stmt.setString(1, groupId);
             stmt.setString(2, userId);
-            stmt.setString(3, sessionId);
             stmt.executeUpdate();
         }
 
@@ -75,7 +74,6 @@ public class GroupService {
 
     public List<_User> getGroupMembers(String groupId) throws SQLException {
         String query = CommandQueryManager.GET_GROUP_MEMBERS.get();
-
         List<_User> members = new ArrayList<>();
 
         try(
@@ -171,7 +169,7 @@ public class GroupService {
         return info;
     }
 
-    public boolean isUserGroupMember(String id, String username) throws SQLException {
+    public boolean isUserGroupMember(String id, String userId) throws SQLException {
         String query = CommandQueryManager.IS_GROUP_MEMBER.get();
 
         try(
@@ -179,7 +177,7 @@ public class GroupService {
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, id);
-            stmt.setString(2, username);
+            stmt.setString(2, userId);
             try(ResultSet rs = stmt.executeQuery()) {
                 if(rs.next()) {
                     return rs.getInt(1) > 0;

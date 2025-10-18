@@ -142,8 +142,6 @@ export class GroupManager {
                     hideChat: false,
                     groupName: data.name
                 });
-
-                this.socketClient.send('group-created');
             },
             (error) => {
                 alert(`Failed to create group: ${error.message}`);
@@ -187,7 +185,7 @@ export class GroupManager {
         const creatorId = await this.socketClient.getSocketId();
 
         const reqData = {
-            creator: this.uname,
+            creator: creatorId,
             creatorId: creatorId,
             groupName: this.currentGroupName.trim()
         }
@@ -265,7 +263,7 @@ export class GroupManager {
 
             try {
                 await this.socketClient.onDestination(sucssDestination, handleSucss);
-                await this.socketClient.onDestination(sucssDestination, handleErr);
+                await this.socketClient.onDestination(errDestination, handleErr);
                 
                 const data = {
                     groupId: id,
@@ -310,7 +308,7 @@ export class GroupManager {
 
             try {
                 await this.socketClient.onDestination(sucssDestination, handleSucss);
-                await this.socketClient.onDestination(sucssDestination, handleErr);
+                await this.socketClient.onDestination(errDestination, handleErr);
                 const data = { groupId: id }
 
                 await this.socketClient.sendToDestination(

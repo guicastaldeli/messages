@@ -130,6 +130,6 @@ public class SocketMethods {
     * Socket Username 
     */
     public String getSocketUsername(String sessionId) {
-        return "Anonymous";
+        return sessionId;
     }
 }

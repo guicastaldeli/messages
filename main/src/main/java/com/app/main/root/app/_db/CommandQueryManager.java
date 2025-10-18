@@ -7,11 +7,12 @@ public enum CommandQueryManager {
     VALIDATE_DATABASE(
         "SELECT name FROM sqlite_master WHERE type='table' LIMIT 1"
     ),
+    
     /*
     * ~~~ GROUP SERVICE ~~~ 
     */
     CREATE_GROUP(
-        "INSERT INTO GROUPS (id, name, creator_id) VALUES (?, ?, ?)"
+        "INSERT INTO groups (id, name, creator_id) VALUES (?, ?, ?)"
     ),
     ADD_USER_TO_GROUP(
         "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)"
@@ -36,25 +37,25 @@ public enum CommandQueryManager {
         """
     ),
     GET_GROUP_INFO(
-        "SELECT * FROM groups FROM id = ?"
+        "SELECT * FROM groups WHERE id = ?"
     ),
     GET_GROUP_INFO_MEMBERS(
         """
-            SELECT u.id, u.sername FROM group_members gm
+            SELECT u.id, u.username FROM group_members gm
             JOIN users u ON gm.user_id = u.id
             WHERE gm.group_id = ?        
         """
     ),
     STORE_INVITE_CODE(
         """
-            INVITE INTO group_invite_codes (group_id, invite_code, created_by, expires_at)
+            INSERT INTO group_invite_codes (user_id, group_id, invite_code, created_by, expires_at)
             VALUES (?, ?, ?, ?)            
         """
     ),
     VALIDATE_INVITE_CODE(
         """
             SELECT COUNT(*) FROM group_invite_codes
-            WHERE group_id ? AND invite_code = ? AND is_used = 0 AND expires_at > ?
+            WHERE user_id = ? AND group_id = ? AND invite_code = ? AND is_used = 0 AND expires_at > ?
         """
     ),
     INVITE_CODE_IS_USED(
@@ -90,8 +91,8 @@ public enum CommandQueryManager {
     /*
     * ~~~ USER SERVICE ~~~ 
     */
-    ADD_USER(
-        "INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)"
+    ADD_USER( //Switch the ID later...
+        "INSERT OR IGNORE INTO users (id, username, id) VALUES (?, ?, ?)"
     ),
     GET_USER_BY_ID(
         "SELECT * FROM users WHERE id = ?"
