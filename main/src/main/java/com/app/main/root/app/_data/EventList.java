@@ -67,7 +67,7 @@ public class EventList {
                 long time = System.currentTimeMillis();
                 Map<String, Object> data = (Map<String, Object>) payload;
                 String username = (String) data.get("username");
-                String userId = (String) data.get("id");
+                String userId = (String) data.get("userId");
 
                 eventTracker.track(
                     "new-user",
@@ -79,7 +79,7 @@ public class EventList {
                 connectionTracker.updateUsername(sessionId, username);
 
                 try {
-                    String actualUserId = userId != null ? userId : socketMethods.getSocketUsername(sessionId);
+                    String actualUserId = userId != null ? userId : sessionId;
                     dbService.getUserService().addUser(actualUserId, username, sessionId);
                     ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
                     if(connectionInfo != null) connectionTracker.logUsernameSet(connectionInfo, username);
@@ -89,7 +89,7 @@ public class EventList {
 
                 Map<String, Object> res = new HashMap<>();
                 res.put("type", "USER_JOINED");
-                res.put("id", userId);
+                res.put("userId", userId);
                 res.put("username", username);
                 res.put("sessionId", sessionId);
                 res.put("timestamp", time);
@@ -187,19 +187,20 @@ public class EventList {
                     String creatorId = (String) groupData.get("creatorId");
                     String groupName = (String) groupData.get("groupName");
                     String creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                    List<_User> members = dbService.getGroupService().getGroupMembers(id);
-                    List<String> memberUserId = new ArrayList<>();
-                    for(_User member : members) memberUserId.add(member.getId());
 
                     dbService.getGroupService().createGroup(id, groupName, creatorId);
                     dbService.getGroupService().addUserToGroup(id, creatorId);
+
+                    List<_User> members = dbService.getGroupService().getGroupMembers(id);
+                    List<String> memberUserId = new ArrayList<>();
+                    for(_User member : members) memberUserId.add(member.getId());
 
                     Map<String, Object> newGroup = new HashMap<>();
                     newGroup.put("id", id);
                     newGroup.put("name", groupName);
                     newGroup.put("creator", creator);
                     newGroup.put("creatorId", creatorId);
-                    newGroup.put("members", memberUserId);
+                    newGroup.put("members", memberUserId); //Arrays.asList(creatorId)
                     newGroup.put("createdAt", creationDate);
 
                     eventTracker.track(
@@ -289,7 +290,7 @@ public class EventList {
                     String inviteCode = UUID.randomUUID().toString().substring(0, 8);
                     String inviteLink = webUrl + groupId + "?code=" + inviteCode;
                     long expireTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
-                    dbService.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, sessionId);
+                    dbService.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, userId);
                     
                     res.put("userId", userId);
                     res.put("inviteLink", inviteLink);

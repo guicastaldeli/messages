@@ -184,8 +184,8 @@ export class GroupManager {
         chatState.setType('group');
         const creatorId = await this.socketClient.getSocketId();
 
-        const reqData = {
-            creator: creatorId,
+        const data = {
+            creator: this.uname,
             creatorId: creatorId,
             groupName: this.currentGroupName.trim()
         }
@@ -218,7 +218,7 @@ export class GroupManager {
 
                 const sucss = await this.socketClient.sendToDestination(
                     '/app/create-group',
-                    reqData,
+                    data,
                     sucssDestination
                 );
 

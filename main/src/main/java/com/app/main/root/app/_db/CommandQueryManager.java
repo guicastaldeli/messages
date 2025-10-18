@@ -48,7 +48,7 @@ public enum CommandQueryManager {
     ),
     STORE_INVITE_CODE(
         """
-            INSERT INTO group_invite_codes (user_id, group_id, invite_code, created_by, expires_at)
+            INSERT INTO group_invite_codes (group_id, invite_code, created_by, expires_at)
             VALUES (?, ?, ?, ?)            
         """
     ),
@@ -75,7 +75,7 @@ public enum CommandQueryManager {
         """
             SELECT COUNT(*) FROM group_members gm
             JOIN users u ON gm.user_id = u.id
-            WHERE gm.group_id = ? AND u.username = ?
+            WHERE gm.group_id = ? AND u.id = ?
         """
     ),
     EXEC_INDEX_GROUP_INVITE_CODE(
@@ -91,8 +91,8 @@ public enum CommandQueryManager {
     /*
     * ~~~ USER SERVICE ~~~ 
     */
-    ADD_USER( //Switch the ID later...
-        "INSERT OR IGNORE INTO users (id, username, id) VALUES (?, ?, ?)"
+    ADD_USER(
+        "INSERT OR IGNORE INTO users (id, username, session_id) VALUES (?, ?, ?)"
     ),
     GET_USER_BY_ID(
         "SELECT * FROM users WHERE id = ?"

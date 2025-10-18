@@ -44,7 +44,7 @@ public class GroupService {
 
         try(
             Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query)
+            PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, groupId);
             stmt.setString(2, userId);
