@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS group_invite_codes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
     group_id TEXT NOT NULL,
     invite_code TEXT NOT NULL UNIQUE,
     created_by TEXT NOT NULL,

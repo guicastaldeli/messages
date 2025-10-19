@@ -4,7 +4,8 @@ import java.util.Date;
 public class MessageLog {
     public enum MessageType {
         DIRECT,
-        GROUP
+        GROUP,
+        SYSTEM
     }
 
     public enum MessageDirection {

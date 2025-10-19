@@ -9,13 +9,14 @@ import java.util.List;
 
 @Component
 public class FileManager {
-    private static final String BASE_PATH = "./src/main/java/com/app/main/root/app/_db/";
+    private static final String BASE_PATH = "./src/main/java/com/app/main/root/app/_db/src/";
     private final List<String> tables = List.of(
         BASE_PATH + "user-service.sql",
         BASE_PATH + "group-service.sql",
         BASE_PATH + "group-members-service.sql",
         BASE_PATH + "message-service.sql",
-        BASE_PATH + "invite-codes.sql"
+        BASE_PATH + "invite-codes.sql",
+        BASE_PATH + "system-messages.sql"
     );
 
     public void initDb(Statement stmt) throws SQLException, IOException {

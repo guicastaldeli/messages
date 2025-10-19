@@ -101,23 +101,62 @@ public class EventList {
         /* Chat */
         configs.put("chat", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
+                Map<String, Object> res = new HashMap<>();
+
                 Map<String, Object> messageData = (Map<String, Object>) payload;
                 String content = (String) messageData.get("content");
                 String chatId = (String) messageData.get("chatId");
                 String username = socketMethods.getSocketUsername(sessionId);
                 String chatSocket = chatId != null ? chatId : sessionId; 
                 String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+                boolean isSystemMessage = "sys".equals(messageData.get("messageType"));
                 long time = System.currentTimeMillis();
 
-                messageTracker.track(
-                    messageId, 
-                    content, 
-                    messageId,
-                    username, 
-                    chatId, 
-                    MessageLog.MessageType.GROUP, 
-                    MessageLog.MessageDirection.SENT
-                );
+                if(isSystemMessage) {
+                    messageTracker.track(
+                        messageId,
+                        content,
+                        messageId,
+                        username,
+                        chatId,
+                        MessageLog.MessageType.SYSTEM,
+                        MessageLog.MessageDirection.SENT
+                    );
+
+                    try {
+                        dbService.getMessageService().saveSystemMessage(content, "system-text");
+                    } catch(Exception err) {
+                        System.err.print("Failed to save join message: " + err.getMessage());
+                    }
+
+                    res.put("content", content);
+                    res.put("type", "SYSTEM_MESSAGE");
+                } else {
+                    messageTracker.track(
+                        messageId, 
+                        content, 
+                        messageId,
+                        username, 
+                        chatId, 
+                        MessageLog.MessageType.GROUP, 
+                        MessageLog.MessageDirection.SENT
+                    );
+
+                    try {
+                        dbService.getMessageService().saveMessage(sessionId, chatSocket, content, "text");
+                    } catch(Exception err) {
+                        System.err.println("Failed to save message: " + err.getMessage());
+                    }
+
+                    res.put("username", username);
+                    res.put("content", content);
+                    res.put("senderId", sessionId);
+                    res.put("chatId", chatSocket);
+                    res.put("messageId", messageId);
+                    res.put("timestamp", time);
+                    res.put("type", "MESSAGE");
+                }
+
                 eventTracker.track(
                     "chat",
                     payload,
@@ -125,29 +164,13 @@ public class EventList {
                     sessionId,
                     content
                 );
-
-                try {
-                    dbService.getMessageService().saveMessage(sessionId, chatSocket, content, "text");
-                } catch(Exception err) {
-                    System.err.println("Failed to save message: " + err.getMessage());
-                }
-
-                Map<String, Object> response = new HashMap<>();
-                response.put("username", username);
-                response.put("content", content);
-                response.put("senderId", sessionId);
-                response.put("chatId", chatSocket);
-                response.put("messageId", messageId);
-                response.put("timestamp", time);
-
                 socketMethods.send(
                     sessionId,
                     "/queue/message-sent",
-                    response
+                    res
                 );
 
-                //socketMethods.broadcast("chat", response);
-                return response;
+                return res;
             },
             "/topic/chat",
             true
@@ -230,13 +253,15 @@ public class EventList {
                 try {
                     long time = System.currentTimeMillis();
                     Map<String, Object> data = dbService.getGroupService().parseData(payload);
-                    String userId = socketMethods.getSocketUsername(sessionId);
+                    String userId = (String) data.get("userId");
                     String inviteCode = (String) data.get("inviteCode");
                     String username = (String) data.get("username");
+
                     String groupId = dbService.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
                     Map<String, Object> groupInfo = dbService.getGroupService().getGroupInfo(groupId);
                     
-                    if(groupId == null || userId == null) throw new Exception("Group Id or User Id are required!");
+                    if(groupId == null) throw new Exception("Group Id is required!");
+                    if(userId == null) throw new Exception("User Id is required!");
                     if(username == null || username.trim().isEmpty()) throw new Exception("Username is required!");
 
                     boolean isValid = dbService.getGroupService().getInviteCodes().validateInviteCode(inviteCode);
@@ -244,6 +269,9 @@ public class EventList {
 
                     boolean success = dbService.getGroupService().addUserToGroup(groupId, sessionId);
                     if(!success) throw new Exception("Failed to join group :(");
+
+                    System.out.println("User '" + username + "' (ID: " + userId + ") joined group '" + 
+                             groupInfo.get("name") + "' (ID: " + groupId + ")");
 
                     eventTracker.track(
                         "join-group",
@@ -253,15 +281,30 @@ public class EventList {
                         userId
                     );
 
+                    /* System Message */
+                    Map<String, Object> systemMessageData = new HashMap<>();
+                    systemMessageData.put("content", username + " joined the group");
+                    systemMessageData.put("chatId", groupId);
+                    systemMessageData.put("messageType", "sys");
+                    socketMethods.broadcastToDestination("/topic/chat", systemMessageData);
+
+                    /* Event Response */
                     Map<String, Object> res = new HashMap<>();
                     res.put("groupId", groupId);
                     res.put("groupName", groupInfo.get("name"));
-                    res.put("userId", username);
+                    res.put("userId", userId);
                     res.put("joined", true);
                     res.put("timestamp", time);
                     res.put("members", groupInfo.get("members"));
+
+                    socketMethods.send(
+                        sessionId,
+                        "/queue/join-group-scss",
+                        res
+                    );
                     return res;
                 } catch(Exception err) {
+                    err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
                     errRes.put("error", "JOIN_FAILED");
                     errRes.put("message", err.getMessage());
@@ -270,7 +313,7 @@ public class EventList {
                 }
             },
             "/queue/join-group-scss",
-            false
+            true
         ));
         /* Generate Group Link */
         configs.put("generate-invite-link", new EventConfig(
@@ -278,9 +321,9 @@ public class EventList {
                 Map<String, Object> res = new HashMap<>();
 
                 try {
-                    Map<String, Object> reqData = (Map<String, Object>) payload;
-                    String groupId = (String) reqData.get("groupId");
-                    String userId = socketMethods.getSocketUsername(sessionId);
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String groupId = (String) data.get("groupId");
+                    String userId = (String) data.get("userId");
                     boolean isMember = dbService.getGroupService().isUserGroupMember(groupId, userId);
 
                     if(groupId == null || groupId.trim().isEmpty()) {
@@ -297,7 +340,7 @@ public class EventList {
                     String inviteCode = UUID.randomUUID().toString().substring(0, 16);
                     String inviteLink = webUrl + "/join?c=" + inviteCode;
                     long expireTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
-                    dbService.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, userId);
+                    dbService.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, userId, userId);
                     
                     res.put("userId", userId);
                     res.put("inviteLink", inviteLink);

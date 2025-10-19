@@ -80,7 +80,7 @@ export class GroupManager {
             this.handleJoinGroupScss(data);
         });
     }
-
+    
     /*
     **
     *** Group Creation
@@ -389,9 +389,10 @@ export class GroupManager {
             try {
                 await this.socketClient.onDestination(sucssDestination, handleSucss);
                 await this.socketClient.onDestination(errDestination, handleErr);
+                const userId = await this.socketClient.getSocketId();
                 
                 const data = {
-                    groupId: id,
+                    userId: userId,
                     inviteCode: inviteCode,
                     username: this.uname
                 }

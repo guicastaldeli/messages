@@ -102,10 +102,11 @@ export class SocketClientConnect {
     */
     public async onDestination(
         destination: string,
-        callback: Function,
+        fCallback: Function,
+        sCallback?: Function,
         options?: SubscriptionOptions
     ): Promise<void> {
-        return this.subscriptionManager.onDestination(destination, callback, options);
+        return this.subscriptionManager.onDestination(destination, fCallback, sCallback, options);
     }
 
     public offDestination(destination: string, callback: Function): void {

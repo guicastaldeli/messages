@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS system_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    message_type VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
+)

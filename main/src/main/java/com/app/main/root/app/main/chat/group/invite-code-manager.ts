@@ -98,7 +98,11 @@ export class InviteCodeManager {
         try {
             await this.socketClient.onDestination(sucssDest, sucssHandler);
             await this.socketClient.onDestination(errorDest, errHandler);
-            const reqData = { groupId: id }
+            const userId = await this.socketClient.getSocketId();
+            const reqData = {
+                userId: userId,
+                groupId: id 
+            }
 
             await this.socketClient.sendToDestination(
                 '/app/generate-invite-link',

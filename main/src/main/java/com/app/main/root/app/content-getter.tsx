@@ -37,6 +37,16 @@ export class ContentGetter {
         return content;
     }
 
+    //System Message Content
+    __systemMessageContent(
+        data: any,
+        type: string
+    ): ReactElement {
+        console.log(`${type} RECEIVED`);
+        const content = <div className="system-message-content">{data}</div>
+        return content;
+    }
+
     //Message Content
     __messageContent(
         messageTypes: Record<string, (data: any) => React.ReactNode>,

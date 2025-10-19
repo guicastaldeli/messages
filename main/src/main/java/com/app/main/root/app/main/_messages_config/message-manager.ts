@@ -165,6 +165,25 @@ export class MessageManager {
         });
     }
 
+    /* Render System Messages */
+    private renderSystemMessage(type: any) {
+        if(!this.appEl) return;
+
+        let messageContainer = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
+        if(!messageContainer) throw new Error('message container err');
+
+        const content = this.contentGetter.__systemMessageContent(
+            this.messageTypes.content, 
+            type
+        );
+
+        if(React.isValidElement(content)) {
+            const render = ReactDOMServer.renderToStaticMarkup(content);
+            messageContainer.insertAdjacentHTML('beforeend', render);
+        }
+    }
+
+    /* Render Messages */
     private renderMessage(type: any, data: any) {
         if(!this.appEl) return;
 
@@ -189,6 +208,15 @@ export class MessageManager {
     public async update(): Promise<void> {
         const destination = '/queue/new-messages';
 
+        /* System Messages */
+        const handleSystemMessages = async (data: any) => {
+            this.renderSystemMessage({
+                content: data.content,
+                type: 'SYSTEM_MESSAGE'
+            });
+        }
+
+        /* Messages */
         const handleIncomingMessage = async (msg: any) => {
             if(!this.currentUserId) this.currentUserId = await this.socketClient.getSocketId();
 
@@ -197,11 +225,16 @@ export class MessageManager {
                 username: msg.username,
                 content: msg.content,
                 messageId: msg.messageId,
-                timestamp: msg.timestamp
+                timestamp: msg.timestamp,
+                type: 'MESSAGE'
             });
         }
 
-        await this.socketClient.onDestination(destination, handleIncomingMessage, {
+        await this.socketClient.onDestination(
+            destination, 
+            handleSystemMessages,
+            handleIncomingMessage, 
+        {
             autoSubscribe: true,
             eventName: 'new-message'
         });

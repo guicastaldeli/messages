@@ -7,8 +7,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
 import javax.sql.DataSource;
 import java.util.*;
 
@@ -47,7 +45,8 @@ public class InviteCodeManager {
     public void storeInviteCode(
         String groupId,
         String inviteCode,
-        String createdBy
+        String createdBy,
+        String userId
     ) throws SQLException {
         String query = CommandQueryManager.STORE_INVITE_CODE.get();
 
@@ -56,10 +55,13 @@ public class InviteCodeManager {
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             LocalDateTime expiresAt = LocalDateTime.now().plusHours(24);
+            Timestamp time = Timestamp.valueOf(expiresAt);
+            
             stmt.setString(1, groupId);
             stmt.setString(2, inviteCode);
             stmt.setString(3, createdBy);
-            stmt.setTimestamp(4, Timestamp.valueOf(expiresAt));
+            stmt.setString(4, userId);
+            stmt.setTimestamp(5, time);
             stmt.executeUpdate();
         }
     }
@@ -72,7 +74,7 @@ public class InviteCodeManager {
         if(groupId == null) throw new RuntimeException("Group id is null");
 
         String query = CommandQueryManager.VALIDATE_INVITE_CODE.get();
-        Timestamp timestamp = Timestamp.valueOf(LocalDateTime.now());
+        Timestamp time = Timestamp.valueOf(LocalDateTime.now());
 
         try(
             Connection conn = dataSource.getConnection();
@@ -80,7 +82,7 @@ public class InviteCodeManager {
         ) {
             stmt.setString(1, groupId);
             stmt.setString(2, code);
-            stmt.setTimestamp(3, timestamp);
+            stmt.setTimestamp(3, time);
 
             try(ResultSet rs = stmt.executeQuery()) {
                 if(rs.next()) {

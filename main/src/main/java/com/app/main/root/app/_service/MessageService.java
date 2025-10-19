@@ -16,6 +16,9 @@ public class MessageService {
         this.dataSource = dataSource;
     }
 
+    /*
+    * Save Message Database 
+    */
     public int saveMessage(
         String chatId,
         String senderId,
@@ -34,6 +37,32 @@ public class MessageService {
             stmt.setString(2, senderId);
             stmt.setString(3, content);
             stmt.setString(4, fType);
+
+            int affectedRows = stmt.executeUpdate();
+            if(affectedRows > 0) {
+                try(ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if(generatedKeys.next()) {
+                        return generatedKeys.getInt(1);
+                    }
+                }
+            }
+
+            return -1;
+        }
+    }
+
+    /*
+    * Save System Message 
+    */
+    public int saveSystemMessage(String content,String messageType) throws SQLException {
+        String query = CommandQueryManager.SAVE_MESSAGE.get();
+
+        try(
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        ) {
+            stmt.setString(1, content);
+            stmt.setString(2, messageType);
 
             int affectedRows = stmt.executeUpdate();
             if(affectedRows > 0) {

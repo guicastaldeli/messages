@@ -7,6 +7,13 @@ public enum CommandQueryManager {
     VALIDATE_DATABASE(
         "SELECT name FROM sqlite_master WHERE type='table' LIMIT 1"
     ),
+
+    /*
+    * ~~~ SYSTEM MESSAGES ~~~ 
+    */
+    SAVE_SYSTEM_MESSAGE(
+        "INSERT INTO system_messages (content, message_type) VALUES (?, ?)"
+    ),
     
     /*
     * ~~~ GROUP SERVICE ~~~ 
@@ -48,14 +55,14 @@ public enum CommandQueryManager {
     ),
     STORE_INVITE_CODE(
         """
-            INSERT INTO group_invite_codes (group_id, invite_code, created_by, expires_at)
-            VALUES (?, ?, ?, ?)            
+            INSERT INTO group_invite_codes (group_id, invite_code, created_by, user_id, expires_at)
+            VALUES (?, ?, ?, ?, ?)            
         """
     ),
     VALIDATE_INVITE_CODE(
         """
             SELECT COUNT(*) FROM group_invite_codes
-            WHERE user_id = ? AND group_id = ? AND invite_code = ? AND is_used = 0 AND expires_at > ?
+            WHERE group_id = ? AND invite_code = ? AND is_used = 0 AND expires_at > ?
         """
     ),
     INVITE_CODE_IS_USED(
