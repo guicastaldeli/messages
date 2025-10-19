@@ -109,7 +109,7 @@ public class EventList {
                 String username = socketMethods.getSocketUsername(sessionId);
                 String chatSocket = chatId != null ? chatId : sessionId; 
                 String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
-                boolean isSystemMessage = "sys".equals(messageData.get("messageType"));
+                boolean isSystemMessage = "sys".equals(messageData.get("type"));
                 long time = System.currentTimeMillis();
 
                 if(isSystemMessage) {
@@ -225,6 +225,7 @@ public class EventList {
                     newGroup.put("creatorId", creatorId);
                     newGroup.put("members", memberUserId);
                     newGroup.put("createdAt", creationDate);
+                    newGroup.put("sessionId", sessionId);
 
                     eventTracker.track(
                         "create-group", 
@@ -233,18 +234,19 @@ public class EventList {
                         sessionId, 
                         creator
                     );
-
-                    return newGroup;
-                } catch(Exception err) {
-                    socketMethods.send(
-                        sessionId, 
-                        "/user/topic/group-creation-err", 
-                        err.getMessage()
+                    socketMethods.sendToUser(
+                        sessionId,
+                        "group-creation-scss",
+                        newGroup
                     );
+
+                    return Collections.emptyMap();
+                } catch(Exception err) {
+                    socketMethods.sendToUser(sessionId, "group-creation-err", err.getMessage());
                     return Collections.emptyMap();
                 }
             },
-            "/queue/group-creation-scss",
+            "/user/queue/group-creation-scss",
             false
         ));
         /* Join Group */
@@ -278,24 +280,25 @@ public class EventList {
                         userId
                     );
 
-                    /* System Message 
+                    /* System Message */ 
                     Map<String, Object> systemMessageData = new HashMap<>();
                     systemMessageData.put("content", username + " joined the group");
                     systemMessageData.put("chatId", groupId);
-                    systemMessageData.put("messageType", "sys");
+                    systemMessageData.put("type", "SYSTEM_MESSAGE");
                     socketMethods.broadcastToDestination("/topic/chat", systemMessageData);
-                    */
+
                     /* Event Response */
                     Map<String, Object> res = new HashMap<>();
                     res.put("id", groupId);
                     res.put("name", groupInfo.get("name"));
-                    res.put("groupId", groupId);
-                    res.put("groupName", groupInfo.get("name"));
                     res.put("userId", userId);
                     res.put("joined", true);
                     res.put("timestamp", time);
                     res.put("members", groupInfo.get("members"));
-                    return res;
+                    res.put("sessionId", sessionId);
+
+                    socketMethods.sendToUser(sessionId, "join-group-scss", res);
+                    return Collections.emptyMap();
                 } catch(Exception err) {
                     err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();

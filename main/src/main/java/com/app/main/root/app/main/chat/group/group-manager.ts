@@ -13,6 +13,8 @@ interface Data {
     name: string;
     creator: string;
     creatorId: string;
+    userId: string;
+    sessionId: string;
     members: string[];
     createdAt: string;
 }
@@ -56,32 +58,43 @@ export class GroupManager {
         this.dashboard = dashboard;
         this.appEl = appEl;
         this.uname = uname;
-        this.setupSocketListeners();
         this.inviteCodeManager = new InviteCodeManager(socketClient);
         this.socketId = this.socketClient.getSocketId();
+        this.setupSocketListeners();
     }
 
     public async setupSocketListeners(): Promise<void> {        
+        const client = await this.socketId;
+
         /* Creation Success */
-        this.socketClient.onDestination('group-creation-scss', (data: Data) => {
-            if(this.creationRes) {
-                this.creationRes(data);
-                this.creationRes = undefined;
-                this.creationRej = undefined;
+        const groupScssDestination = `/user/${client}/queue/group-creation-scss`;
+        this.socketClient.onDestination(groupScssDestination, (data: Data) => {
+            console.log(data.sessionId === client)
+            if(data.sessionId === client) {
+                if(this.creationRes) {
+                    this.creationRes(data);
+                    this.creationRes = undefined;
+                    this.creationRej = undefined;
+                }
+                this.handleGroupCreationScss(data);
+            } else {
+                console.error('Group creation err...');
             }
-            this.handleGroupCreationScss(data);
         });
 
         /* Join Success */
-        const client = await this.socketId;
-        const joinDestination = `/user/${client}/queue/join-group-scss`;
-        this.socketClient.onDestination(joinDestination, (data: Data) => {
-            if(this.joinRes) {
-                this.joinRes(data);
-                this.joinRes = undefined;
-                this.joinRej = undefined;
+        const joinScssDestination = `/user/${client}/queue/join-group-scss`;
+        this.socketClient.onDestination(joinScssDestination, (data: Data) => {
+            if(data.sessionId === client) {
+                if(this.joinRes) {
+                    this.joinRes(data);
+                    this.joinRes = undefined;
+                    this.joinRej = undefined;
+                }
+                this.handleJoinGroupScss(data);
+            } else {
+                console.error('Join group err...');
             }
-            this.handleJoinGroupScss(data);
         });
     }
     
@@ -209,17 +222,18 @@ export class GroupManager {
         await this.socketClient.eventDiscovery.refreshEvents();
         this.currentGroupName = groupName;
         chatState.setType('group');
-        const creatorId = await this.socketId;
+        const client = await this.socketId;
 
         const data = {
+            sessionId: client,
             creator: this.uname,
-            creatorId: creatorId,
+            creatorId: client,
             groupName: this.currentGroupName.trim()
         }
 
         return new Promise(async (res, rej) => {
-            const sucssDestination = '/queue/group-creation-scss';
-            const errDestination = '/queue/group-creation-err';
+            const sucssDestination = `/user/${client}/queue/group-creation-scss`;
+            const errDestination = `/user/${client}/queue/group-creation-err`;
 
             /* Success */ 
             const handleSucss = (data: any) => {
