@@ -26,6 +26,7 @@ export class GroupManager {
     public appEl: HTMLDivElement | null = null;
     private layoutRef = React.createRef<GroupLayout>();
     private uname: any;
+    private socketId: Promise<string>;
     
     private root: Root | null = null;
     private container!: HTMLElement;
@@ -57,10 +58,11 @@ export class GroupManager {
         this.uname = uname;
         this.setupSocketListeners();
         this.inviteCodeManager = new InviteCodeManager(socketClient);
+        this.socketId = this.socketClient.getSocketId();
     }
 
     public async setupSocketListeners(): Promise<void> {        
-        //Creation Success
+        /* Creation Success */
         this.socketClient.onDestination('group-creation-scss', (data: Data) => {
             if(this.creationRes) {
                 this.creationRes(data);
@@ -70,8 +72,10 @@ export class GroupManager {
             this.handleGroupCreationScss(data);
         });
 
-        //Join Success
-        this.socketClient.onDestination('join-group-scss', (data: Data) => {
+        /* Join Success */
+        const client = await this.socketId;
+        const joinDestination = `/user/${client}/queue/join-group-scss`;
+        this.socketClient.onDestination(joinDestination, (data: Data) => {
             if(this.joinRes) {
                 this.joinRes(data);
                 this.joinRes = undefined;
@@ -196,7 +200,7 @@ export class GroupManager {
 
     /* Create Method */
     public async create(groupName: string): Promise<Data> {
-        if(!this.socketClient.getSocketId()) {
+        if(!this.socketId) {
             console.error('Failed to get socket ID');
             throw new Error('Unable to establish connection');
         }
@@ -205,7 +209,7 @@ export class GroupManager {
         await this.socketClient.eventDiscovery.refreshEvents();
         this.currentGroupName = groupName;
         chatState.setType('group');
-        const creatorId = await this.socketClient.getSocketId();
+        const creatorId = await this.socketId;
 
         const data = {
             creator: this.uname,
@@ -369,8 +373,8 @@ export class GroupManager {
     /* Join Method */
     public async join(inviteCode: string, id?: string): Promise<any> {
         return new Promise(async (res, rej) => {
-            const sucssDestination = '/queue/join-group-scss';
-            const errDestination = '/queue/join-group-err';
+            const sucssDestination = '/user/queue/join-group-scss';
+            const errDestination = '/user/queue/join-group-err';
 
             /* Success */
             const handleSucss = (data: any) => {
@@ -389,7 +393,7 @@ export class GroupManager {
             try {
                 await this.socketClient.onDestination(sucssDestination, handleSucss);
                 await this.socketClient.onDestination(errDestination, handleErr);
-                const userId = await this.socketClient.getSocketId();
+                const userId = await this.socketId;
                 
                 const data = {
                     userId: userId,
@@ -399,8 +403,7 @@ export class GroupManager {
 
                 await this.socketClient.sendToDestination(
                     '/app/join-group',
-                    data,
-                    sucssDestination
+                    data
                 );
             } catch(err) {
                 this.socketClient.offDestination(sucssDestination, handleSucss);

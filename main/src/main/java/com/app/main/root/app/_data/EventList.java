@@ -270,9 +270,6 @@ public class EventList {
                     boolean success = dbService.getGroupService().addUserToGroup(groupId, sessionId);
                     if(!success) throw new Exception("Failed to join group :(");
 
-                    System.out.println("User '" + username + "' (ID: " + userId + ") joined group '" + 
-                             groupInfo.get("name") + "' (ID: " + groupId + ")");
-
                     eventTracker.track(
                         "join-group",
                         data,
@@ -281,39 +278,35 @@ public class EventList {
                         userId
                     );
 
-                    /* System Message */
+                    /* System Message 
                     Map<String, Object> systemMessageData = new HashMap<>();
                     systemMessageData.put("content", username + " joined the group");
                     systemMessageData.put("chatId", groupId);
                     systemMessageData.put("messageType", "sys");
                     socketMethods.broadcastToDestination("/topic/chat", systemMessageData);
-
+                    */
                     /* Event Response */
                     Map<String, Object> res = new HashMap<>();
+                    res.put("id", groupId);
+                    res.put("name", groupInfo.get("name"));
                     res.put("groupId", groupId);
                     res.put("groupName", groupInfo.get("name"));
                     res.put("userId", userId);
                     res.put("joined", true);
                     res.put("timestamp", time);
                     res.put("members", groupInfo.get("members"));
-
-                    socketMethods.send(
-                        sessionId,
-                        "/queue/join-group-scss",
-                        res
-                    );
                     return res;
                 } catch(Exception err) {
                     err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
                     errRes.put("error", "JOIN_FAILED");
                     errRes.put("message", err.getMessage());
-                    socketMethods.send(sessionId, "/queue/join-group-err", errRes);
+                    socketMethods.sendToUser(sessionId, "join-group-err", errRes);
                     return Collections.emptyMap();
                 }
             },
-            "/queue/join-group-scss",
-            true
+            "/user/queue/join-group-scss",
+            false
         ));
         /* Generate Group Link */
         configs.put("generate-invite-link", new EventConfig(
