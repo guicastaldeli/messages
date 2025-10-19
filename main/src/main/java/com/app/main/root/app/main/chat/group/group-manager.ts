@@ -367,7 +367,7 @@ export class GroupManager {
     }
 
     /* Join Method */
-    public async join(id: string, inviteCode: string): Promise<any> {
+    public async join(inviteCode: string, id?: string): Promise<any> {
         return new Promise(async (res, rej) => {
             const sucssDestination = '/queue/join-group-scss';
             const errDestination = '/queue/join-group-err';
@@ -412,7 +412,7 @@ export class GroupManager {
     /*
     ** Group Info 
     */
-    public async info(id: string): Promise<any> {
+    public async info(code: string): Promise<any> {
         return new Promise(async (res, rej) => {
             const sucssDestination = '/queue/group-info-scss';
             const errDestination = '/queue/group-info-err';
@@ -434,7 +434,7 @@ export class GroupManager {
             try {
                 await this.socketClient.onDestination(sucssDestination, handleSucss);
                 await this.socketClient.onDestination(errDestination, handleErr);
-                const data = { groupId: id }
+                const data = { inviteCode: code }
 
                 await this.socketClient.sendToDestination(
                     '/app/get-group-info',

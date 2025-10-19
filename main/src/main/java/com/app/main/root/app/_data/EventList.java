@@ -228,16 +228,23 @@ public class EventList {
         configs.put("join-group", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 try {
-                    Map<String, Object> data = dbService.getGroupService().parseData(payload);
-                    String groupId = (String) data.get("groupId");
-                    String userId = socketMethods.getSocketUsername(sessionId);
                     long time = System.currentTimeMillis();
+                    Map<String, Object> data = dbService.getGroupService().parseData(payload);
+                    String userId = socketMethods.getSocketUsername(sessionId);
+                    String inviteCode = (String) data.get("inviteCode");
+                    String username = (String) data.get("username");
+                    String groupId = dbService.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
+                    Map<String, Object> groupInfo = dbService.getGroupService().getGroupInfo(groupId);
+                    
                     if(groupId == null || userId == null) throw new Exception("Group Id or User Id are required!");
+                    if(username == null || username.trim().isEmpty()) throw new Exception("Username is required!");
+
+                    boolean isValid = dbService.getGroupService().getInviteCodes().validateInviteCode(inviteCode);
+                    if(!isValid) throw new Exception("Invalid invite code");
 
                     boolean success = dbService.getGroupService().addUserToGroup(groupId, sessionId);
                     if(!success) throw new Exception("Failed to join group :(");
 
-                    Map<String, Object> groupInfo = dbService.getGroupService().getGroupInfo(groupId);
                     eventTracker.track(
                         "join-group",
                         data,
@@ -249,7 +256,7 @@ public class EventList {
                     Map<String, Object> res = new HashMap<>();
                     res.put("groupId", groupId);
                     res.put("groupName", groupInfo.get("name"));
-                    res.put("userId", userId);
+                    res.put("userId", username);
                     res.put("joined", true);
                     res.put("timestamp", time);
                     res.put("members", groupInfo.get("members"));
@@ -287,8 +294,8 @@ public class EventList {
                     }
 
                     String webUrl = EnvConfig.get("WEB_URL");
-                    String inviteCode = UUID.randomUUID().toString().substring(0, 8);
-                    String inviteLink = webUrl + "/" + groupId + "?code=" + inviteCode;
+                    String inviteCode = UUID.randomUUID().toString().substring(0, 16);
+                    String inviteLink = webUrl + "/join?c=" + inviteCode;
                     long expireTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
                     dbService.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, userId);
                     
@@ -311,6 +318,55 @@ public class EventList {
                 return res;
             },
             "/queue/invite-link-scss",
+            false
+        ));
+        /* Get Group Info */
+        configs.put("get-group-info", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String inviteCode = (String) data.get("inviteCode");
+                    String groupId = dbService.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
+                    Map<String, Object> groupInfo = dbService.getGroupService().getGroupInfo(groupId);
+                    List<_User> members = dbService.getGroupService().getGroupMembers(groupId);
+                    List<String> memberNames = new ArrayList<>();
+                    List<String> memberIds = new ArrayList<>();
+                    for(_User member : members) {
+                        memberNames.add(member.getUsername());
+                        memberIds.add(member.getId());
+                    }
+                    
+                    if(inviteCode == null || inviteCode.trim().isEmpty()) throw new Exception("Invite code is required");
+                    if(groupId == null) throw new Exception("Invalid or expired invite code");
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("id", groupId);
+                    res.put("name", groupInfo.get("name"));
+                    res.put("creator", groupInfo.get("creator"));
+                    res.put("creatorId", groupInfo.get("creatorId"));
+                    res.put("members", memberNames);
+                    res.put("memberIds", memberIds);
+                    res.put("member", members.size());
+                    res.put("status", "success");
+
+                    eventTracker.track(
+                        "get-group-info",
+                        data,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        groupId
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "GROUP_INFO_FAILED");
+                    errRes.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/group-info-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/group-info-scss",
             false
         ));
 

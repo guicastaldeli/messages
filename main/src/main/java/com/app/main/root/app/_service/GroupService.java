@@ -145,7 +145,6 @@ public class GroupService {
                     info.put("id", groupRs.getString("id"));
                     info.put("name", groupRs.getString("name"));
                     info.put("creatorId", groupRs.getString("creator_id"));
-                    info.put("createdAt", groupRs.getString("createdAt"));
                 } else {
                     throw new SQLException("Group not found: " + id);
                 }

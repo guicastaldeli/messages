@@ -52,7 +52,7 @@ public class DynamicEventController {
                     System.out.println(err);
                 }
             } else {
-                System.err.println("FATAL ERR.");
+                System.err.println("FATAL ERR. **DynamicEventController");
             }
         }
     }

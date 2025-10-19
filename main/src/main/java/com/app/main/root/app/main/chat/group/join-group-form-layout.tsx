@@ -42,7 +42,7 @@ export const JoinGroupLayout: React.FC<Props> = ({
         setError(null);
 
         try {
-            const info = await groupManager.info(groupId);
+            const info = await groupManager.info(inviteCode);
             setGroupInfo(info);
             setShowGroupPreview(true);
         } catch(err: any) {
@@ -57,10 +57,11 @@ export const JoinGroupLayout: React.FC<Props> = ({
     */
     const handleJoin = async () => {
         try {
-            await groupManager.join(groupId, inviteCode);
+            const result = await groupManager.join(inviteCode);
+            if(onSuccess) onSuccess(result);
         } catch(err) {
             console.log(err);
-            throw new Error('Failed to create');
+            throw new Error('Failed to join');
         }
     }
 
@@ -131,18 +132,12 @@ export const JoinGroupLayout: React.FC<Props> = ({
                                     <div id="group-name">{groupInfo.name}</div>
                                     <div id="group-details">
                                         <div id="detail-item">
-                                            <h2>Group ID:</h2>
-                                            <span>{groupInfo.id}</span>
+                                            <h2>Group Name:</h2>
+                                            <span>{groupInfo.name}</span>
                                         </div>
                                         <div id="detail-item">
                                             <h2>Members:</h2>
                                             <span>{groupInfo.memberCount || groupInfo.members?.length}</span>
-                                        </div>
-                                        <div id="detail-item">
-                                            <h2>Created:</h2>
-                                            <span>
-                                                {new Date(groupInfo.createdAt).toLocaleDateString()}
-                                            </span>
                                         </div>
                                     </div>
                                 </div>

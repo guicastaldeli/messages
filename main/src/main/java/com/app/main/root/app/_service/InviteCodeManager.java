@@ -65,9 +65,12 @@ public class InviteCodeManager {
     }
 
     /*
-    * Validate 
+    * Validate
     */
-    public boolean validateInviteCode(String groupId, String code) throws SQLException {
+    public boolean validateInviteCode(String code) throws SQLException {
+        String groupId = findGroupByCode(code);
+        if(groupId == null) throw new RuntimeException("Group id is null");
+
         String query = CommandQueryManager.VALIDATE_INVITE_CODE.get();
         Timestamp timestamp = Timestamp.valueOf(LocalDateTime.now());
 
@@ -92,7 +95,10 @@ public class InviteCodeManager {
     /*
     * Mark as Used 
     */
-    public void markInviteCodeAsUsed(String groupId, String code) throws SQLException {
+    public void markInviteCodeAsUsed(String code) throws SQLException {
+        String groupId = findGroupByCode(code);
+        if(groupId == null) throw new RuntimeException("Group id is null");
+        
         String query = CommandQueryManager.INVITE_CODE_IS_USED.get();
         Timestamp timestamp = Timestamp.valueOf(LocalDateTime.now());
 
@@ -135,5 +141,29 @@ public class InviteCodeManager {
         }
 
         return codes;
+    }
+
+    /*
+    * Find Group by Code 
+    */
+    public String findGroupByCode(String inviteCode) throws SQLException {
+        String query = CommandQueryManager.FIND_GROUP_ID_BY_INVITE_CODE.get();
+        Timestamp currentTime = Timestamp.valueOf(LocalDateTime.now());
+
+        try(
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, inviteCode);
+            stmt.setTimestamp(2, currentTime);
+
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getString("group_id");
+                }
+            }
+        }
+
+        return null;
     }
 }

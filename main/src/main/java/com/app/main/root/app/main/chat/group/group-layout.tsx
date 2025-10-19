@@ -160,7 +160,7 @@ export class GroupLayout extends Component<Props, State> {
             const link = await this.groupManager.getInviteCodeManager().generate(groupId);
             this.setState({
                 generatedLink: link
-            })
+            });
         } catch(err: any) {
             console.error('Failed to generate invite link:', err);
         }
