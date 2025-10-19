@@ -8,7 +8,6 @@ import { chatState } from './chat-state-service';
 import { ApiClient } from './_api-client/api-client';
 
 interface Props {
-    onCreateGroup: () => void;
     messageManager: MessageManager;
     chatManager: ChatManager;
     groupManager: GroupManager;
@@ -88,9 +87,10 @@ export class Dashboard extends Component<Props, State> {
             window.dispatchEvent(event);
 
             this.updateState({
-                showForm: false,
-                showChat: true,
-                hideChat: false,
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: true,
+                hideGroup: false,
                 groupName: chat.name
             });
             this.setState({
@@ -108,32 +108,46 @@ export class Dashboard extends Component<Props, State> {
         this.props.messageManager.handleSendMessage(chatId);
     }
 
-    //State Related
-        public onStateChange?: (
-            state: {
-                showForm: boolean;
-                showChat: boolean;
-                hideChat: boolean;
-                groupName: string;
-            }
-        ) => void;
+    /*
+    ** Group Actions
+    */
+    onCreateGroup = () => {
+        this.props.groupManager.showCreationMenu();
+    }
 
-        private currentState = {
-            showForm: false,
-            showChat: false,
-            hideChat: false,
-            groupName: ''
-        }
+    onJoinGroup = () => {
+        this.props.groupManager.showJoinMenu();
+    }
 
-        public setStateChange(callback: (state: any) => void): void {
-            this.onStateChange = callback;
+    /*
+    ** State Related
+    */
+    public onStateChange?: (
+        state: {
+            showCreationForm: boolean;
+            showJoinForm: boolean;
+            showGroup: boolean;
+            hideGroup: boolean;
+            groupName: string;
         }
+    ) => void;
 
-        public updateState(newState: Partial<typeof this.currentState>): void {
-            this.currentState = { ...this.currentState, ...newState }
-            if(this.onStateChange) this.onStateChange(this.currentState);
-        }
-    //
+    private currentState = {
+        showCreationForm: false,
+        showJoinForm: false,
+        showGroup: false,
+        hideGroup: false,
+        groupName: ''
+    }
+
+    public setStateChange(callback: (state: any) => void): void {
+        this.onStateChange = callback;
+    }
+
+    public updateState(newState: Partial<typeof this.currentState>): void {
+        this.currentState = { ...this.currentState, ...newState }
+        if(this.onStateChange) this.onStateChange(this.currentState);
+    }
 
     render() {
         const { chatList, activeChat } = this.props;
@@ -152,10 +166,16 @@ export class Dashboard extends Component<Props, State> {
                                     <header>
                                         <div id="actions-bar">
                                             <button 
-                                                id="action-chat"
-                                                onClick={() => this.props.onCreateGroup()}
+                                                id="action-create-group"
+                                                onClick={() => this.onCreateGroup()}
                                             >
                                                 Group++++
+                                            </button>
+                                            <button 
+                                                id="action-join-group"
+                                                onClick={() => this.onJoinGroup()}
+                                            >
+                                                Join :))
                                             </button>
                                         </div>
                                     </header>

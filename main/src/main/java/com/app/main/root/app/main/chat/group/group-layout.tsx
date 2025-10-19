@@ -3,13 +3,13 @@ import React, { useState } from 'react';
 import { Component, createRef } from 'react';
 import { MessageManager } from '../../_messages_config/message-manager';
 import { GroupManager } from './group-manager';
-import { JoinGroupLayout } from './join-group-layout';
 
-interface Props {
+export interface Props {
     messageManager: MessageManager;
     groupManager: GroupManager;
     onSuccess?: (data: any) => void;
     onError?: (error: any) => void;
+    mode: 'create' | 'join';
 }
 
 interface State {
@@ -19,11 +19,10 @@ interface State {
     error: string | null;
     generatedLink: string;
     managerState: {
-        showForm: boolean;
+        showCreationForm: boolean;
         showJoinForm: boolean;
-        showInviteLink: boolean;
-        showChat: boolean;
-        hideChat: boolean;
+        showGroup: boolean;
+        hideGroup: boolean;
         groupName: string;
     }
 }
@@ -47,11 +46,10 @@ export class GroupLayout extends Component<Props, State> {
             error: null,
             generatedLink: '',
             managerState: {
-                showForm: true,
+                showCreationForm: true,
                 showJoinForm: false,
-                showInviteLink: false,
-                showChat: false,
-                hideChat: false,
+                showGroup: false,
+                hideGroup: false,
                 groupName: ''
             }
         }
@@ -96,7 +94,7 @@ export class GroupLayout extends Component<Props, State> {
         });
 
         try {
-            this.groupManager.manageCreate(groupName);
+            await this.groupManager.create(groupName);
 
             setTimeout(() => {
                 if(this.state.isLoading && !this.state.creationComplete) {
@@ -131,9 +129,10 @@ export class GroupLayout extends Component<Props, State> {
        // this.groupManager.exitGroup();
         this.resetForm();
         this.groupManager.dashboard.updateState({
-            showForm: false,
-            showChat: false,
-            hideChat: false,
+            showCreationForm: false,
+            showJoinForm: false,
+            showGroup: false,
+            hideGroup: false,
             groupName: ''
         });
     }
@@ -141,9 +140,10 @@ export class GroupLayout extends Component<Props, State> {
     /* Back */
     handleBack = () => {
         this.groupManager.dashboard.updateState({
-            showForm: false,
-            showChat: false,
-            hideChat: true,
+            showCreationForm: false,
+            showJoinForm: false,
+            showGroup: false,
+            hideGroup: true,
             groupName: ''
         });
     }
@@ -161,7 +161,6 @@ export class GroupLayout extends Component<Props, State> {
             this.setState({
                 generatedLink: link
             })
-            this.state.managerState.showInviteLink = true;
         } catch(err: any) {
             console.error('Failed to generate invite link:', err);
         }
@@ -171,33 +170,33 @@ export class GroupLayout extends Component<Props, State> {
     handleJoinSuccess = (data: any) => {
         this.state.managerState.showJoinForm = false;
         this.groupManager.dashboard.updateState({
-            showForm: false,
-            showChat: true,
-            hideChat: false,
+            showCreationForm: false,
+            showJoinForm: false,
+            showGroup: true,
+            hideGroup: false,
             groupName: data.groupName
         });
         this.groupManager.currentGroupId = data.groupId;
-    }
-
-    /* Show Join Form */
-    handleShowJoinForm = () => {
-        this.state.managerState.showJoinForm = true;
     }
 
     /* Render */
     render() {
         const { isLoading, error } = this.state;
         const { 
-            showForm, 
-            showChat,
-            hideChat, 
+            showCreationForm,
+            showJoinForm, 
+            showGroup,
+            hideGroup, 
             groupName 
         } = this.state.managerState;
         
         return (
             <>
                 {/* Info */}
-                {showForm && (
+                {this.props.mode === 'create' && 
+                    showCreationForm && 
+                    !showJoinForm && 
+                (
                     <div className="group-info form">
                         <input 
                             type="text" 
@@ -231,7 +230,7 @@ export class GroupLayout extends Component<Props, State> {
                 )}
 
                 {/* Layout */}
-                {showChat && (
+                {showGroup && (
                     <div className="screen chat-screen">
                         <div className="header">
                             <div id="group-name">{groupName}</div>
@@ -264,21 +263,6 @@ export class GroupLayout extends Component<Props, State> {
                                 }}
                             >
                                 Send
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Invite Link Container */}
-                {this.state.managerState.showInviteLink && (
-                    <div className="invite-link-container">
-                        <div id="header">
-                            <h3>Invite Link Generated</h3>
-                            <button
-                                onClick={() => this.state.managerState.showInviteLink = false}
-                                id='close-button'
-                            >
-
                             </button>
                         </div>
                     </div>

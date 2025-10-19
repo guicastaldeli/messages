@@ -6,8 +6,9 @@ import { InviteCodeManager } from "./invite-code-manager";
 import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat-state-service";
 import { Dashboard } from "../../dashboard";
+import { JoinGroupLayout } from "./join-group-form-layout";
 
-interface CreationData {
+interface Data {
     id: string;
     name: string;
     creator: string;
@@ -31,10 +32,16 @@ export class GroupManager {
 
     private currentGroupName: string = '';
     public currentGroupId: string = '';
-    private onCreateSuccess?: (data: CreationData) => void;
+
+    private onCreateSuccess?: (data: Data) => void;
     private onCreateError?: (error: any) => void;
-    private creationRes?: (data: CreationData) => void;
+    private creationRes?: (data: Data) => void;
     private creationRej?: (error: any) => void;
+
+    private onJoinSuccess?: (data: Data) => void;
+    private onJoinError?: (error: any) => void;
+    private joinRes?: (data: Data) => void;
+    private joinRej?: (error: any) => void;
 
     constructor(
         socketClient: SocketClientConnect,
@@ -53,8 +60,8 @@ export class GroupManager {
     }
 
     public async setupSocketListeners(): Promise<void> {        
-        //Success
-        this.socketClient.onDestination('group-creation-scss', (data: CreationData) => {
+        //Creation Success
+        this.socketClient.onDestination('group-creation-scss', (data: Data) => {
             if(this.creationRes) {
                 this.creationRes(data);
                 this.creationRes = undefined;
@@ -63,10 +70,23 @@ export class GroupManager {
             this.handleGroupCreationScss(data);
         });
 
-        //Update
+        //Join Success
+        this.socketClient.onDestination('join-group-scss', (data: Data) => {
+            if(this.joinRes) {
+                this.joinRes(data);
+                this.joinRes = undefined;
+                this.joinRej = undefined;
+            }
+            this.handleJoinGroupScss(data);
+        });
     }
 
-    private handleGroupCreationScss(data: CreationData): void {
+    /*
+    **
+    *** Group Creation
+    **
+    */
+    private handleGroupCreationScss(data: Data): void {
         this.currentGroupName = data.name;
         const name = this.currentGroupName;
         const time = new Date().toISOString();
@@ -103,8 +123,8 @@ export class GroupManager {
         window.dispatchEvent(event);
     }
 
-    private renderLayout(
-        onCreateSuccess: (data: CreationData) => void,
+    private renderCreationLayout(
+        onCreateSuccess: (data: Data) => void,
         onCreateError: (error: any) => void,
     ): void {
         if(!this.container) return;
@@ -117,7 +137,8 @@ export class GroupManager {
             messageManager: this.messageManager,
             groupManager: this,
             onSuccess: onCreateSuccess,
-            onError: onCreateError
+            onError: onCreateError,
+            mode: 'create'
         });
         if(!this.root) this.root = createRoot(this.container);
         this.root.render(content);
@@ -127,28 +148,31 @@ export class GroupManager {
         this.container = container;
     }
 
-    public showMenu(): void {
+    /* Creation Menu */
+    public showCreationMenu(): void {
         if(!this.appEl) return;
         if(this.root) {
             this.root.unmount();
             this.root = null;
         }
         
-        this.renderLayout(
+        this.renderCreationLayout(
             (data) => {
                 this.dashboard.updateState({
-                    showForm: false,
-                    showChat: true,
-                    hideChat: false,
+                    showCreationForm: false,
+                    showJoinForm: false,
+                    showGroup: true,
+                    hideGroup: false,
                     groupName: data.name
                 });
             },
             (error) => {
                 alert(`Failed to create group: ${error.message}`);
                 this.dashboard.updateState({
-                    showForm: true,
-                    showChat: false,
-                    hideChat: false,
+                    showCreationForm: true,
+                    showJoinForm: false,
+                    showGroup: false,
+                    hideGroup: false,
                     groupName: ''
                 });
                 this.socketClient.on('group-creation-err', (err: any) => {
@@ -162,17 +186,16 @@ export class GroupManager {
         );
         
         this.dashboard.updateState({
-            showForm: true,
-            showChat: false,
-            hideChat: false,
+            showCreationForm: true,
+            showJoinForm: false,
+            showGroup: false,
+            hideGroup: false,
             groupName: ''
         });
     }
 
-    /*
-    ** Create Group
-    */
-    private async create(groupName: string): Promise<CreationData> {
+    /* Create Method */
+    public async create(groupName: string): Promise<Data> {
         if(!this.socketClient.getSocketId()) {
             console.error('Failed to get socket ID');
             throw new Error('Unable to establish connection');
@@ -199,7 +222,7 @@ export class GroupManager {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
                 if(data && data.id) {
-                    res(data as CreationData);
+                    res(data as Data);
                 } else {
                     rej(new Error('Inavlid response data'));
                 }
@@ -235,14 +258,116 @@ export class GroupManager {
         });
     }
 
-    public manageCreate = (groupName: string): void => {
-        this.create(groupName);
+    /*
+    **
+    *** Join Group
+    **
+    */
+    private handleJoinGroupScss(data: Data): void {
+        this.currentGroupName = data.name;
+        const name = this.currentGroupName;
+        const time = new Date().toISOString();
+        this.currentGroupId = data.id;
+        chatState.setType('group');
+
+        const chatItem = {
+            id: this.currentGroupId,
+            groupId: data.id,
+            name: data.name,
+            type: 'group',
+            creator: data.creator,
+            members: data.members,
+            unreadCount: 0,
+            lastMessage: 'No messages yet!! :(',
+            lastMessageTime: time
+        }
+
+        //Chat Event
+        const chatEvent = new CustomEvent(
+            'chat-item-added',
+            { detail: chatItem }
+        );
+        window.dispatchEvent(chatEvent);
+
+        if (this.onCreateSuccess) {
+            this.onCreateSuccess(data);
+        }
+
+        const event = new CustomEvent( 
+            'chat-activated', 
+            { detail: { name } }
+        ); 
+        window.dispatchEvent(event);
     }
 
-    /*
-    ** Join Group
-    */
-    public async join(id: string, inviteCode?: string): Promise<any> {
+    private renderJoinLayout(
+        onJoinSuccess: (data: Data) => void,
+        onJoinError: (error: any) => void,
+    ): void {
+        if(!this.container) return;
+
+        this.onJoinSuccess = onJoinSuccess;
+        this.onJoinError = onJoinError;
+
+        const content = React.createElement(JoinGroupLayout, {
+            messageManager: this.messageManager,
+            groupManager: this,
+            onSuccess: onJoinSuccess,
+            onError: onJoinError,
+            mode: 'join'
+        });
+        if(!this.root) this.root = createRoot(this.container);
+        this.root.render(content);
+    }
+
+    /* Join Menu */
+    public showJoinMenu(): void {
+        if(!this.appEl) return;
+        if(this.root) {
+            this.root.unmount();
+            this.root = null;
+        }
+        
+        this.renderJoinLayout(
+            (data) => {
+                this.dashboard.updateState({
+                    showCreationForm: false,
+                    showJoinForm: false,
+                    showGroup: true,
+                    hideGroup: false,
+                    groupName: data.name
+                });
+            },
+            (error) => {
+                alert(`Failed to join group: ${error.message}`);
+                this.dashboard.updateState({
+                    showCreationForm: false,
+                    showJoinForm: true,
+                    showGroup: false,
+                    hideGroup: false,
+                    groupName: ''
+                });
+                this.socketClient.on('join-group-err', (err: any) => {
+                    if(this.joinRej) {
+                        this.joinRej(new Error(err.error));
+                        this.joinRes = undefined;
+                        this.joinRej = undefined;
+                    }
+                });
+            }
+        );
+        
+        this.dashboard.updateState({
+            showCreationForm: false,
+            showJoinForm: true,
+            showGroup: false,
+            hideGroup: false,
+            groupName: ''
+        });
+    }
+
+    /* Join Method */
+    public async join(id: string, inviteCode: string): Promise<any> {
         return new Promise(async (res, rej) => {
             const sucssDestination = '/queue/join-group-scss';
             const errDestination = '/queue/join-group-err';

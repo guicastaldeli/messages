@@ -95,11 +95,6 @@ export class Main extends Component<any, State> {
         }
     }
 
-    //Create Group
-    private handleCreateGroup = (): void => {
-        this.messageManager.controller.groupManager.showMenu();
-    }
-
     render() {
         const { chatList, activeChat } = this.state;
 
@@ -139,7 +134,6 @@ export class Main extends Component<any, State> {
                                     {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                         <Dashboard 
                                             ref={this.setDashboardRef}
-                                            onCreateGroup={this.handleCreateGroup}
                                             messageManager={this.messageManager}
                                             chatManager={this.chatManager}
                                             groupManager={this.state.groupManager!}

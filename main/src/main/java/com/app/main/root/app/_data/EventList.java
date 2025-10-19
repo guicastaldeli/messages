@@ -200,7 +200,7 @@ public class EventList {
                     newGroup.put("name", groupName);
                     newGroup.put("creator", creator);
                     newGroup.put("creatorId", creatorId);
-                    newGroup.put("members", memberUserId); //Arrays.asList(creatorId)
+                    newGroup.put("members", memberUserId);
                     newGroup.put("createdAt", creationDate);
 
                     eventTracker.track(
@@ -288,7 +288,7 @@ public class EventList {
 
                     String webUrl = EnvConfig.get("WEB_URL");
                     String inviteCode = UUID.randomUUID().toString().substring(0, 8);
-                    String inviteLink = webUrl + groupId + "?code=" + inviteCode;
+                    String inviteLink = webUrl + "/" + groupId + "?code=" + inviteCode;
                     long expireTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
                     dbService.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, userId);
                     
