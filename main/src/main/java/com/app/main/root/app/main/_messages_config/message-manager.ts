@@ -3,8 +3,10 @@ import { SocketClientConnect } from "../socket-client-connect";
 import { ContentGetter } from "../../content-getter";
 import { MessageTypes } from "./message-types";
 import { Controller } from "../controller";
+import { QueueManager } from "./queue-manager";
 
 export class MessageManager {
+    private queueManager: QueueManager;
     private contentGetter: ContentGetter;
     public socketClient: SocketClientConnect;
     private messageTypes: MessageTypes;
@@ -29,6 +31,7 @@ export class MessageManager {
         this.contentGetter = new ContentGetter();
         this.socketClient = socketClient;
         this.messageTypes = new MessageTypes(this.contentGetter);
+        this.queueManager = new QueueManager(socketClient);
     }
 
     private initController(): void {
@@ -53,6 +56,41 @@ export class MessageManager {
 
         await this.socketClient.connect();
         await this.update();
+    }
+
+    /*
+    ** Setup Subscriptions
+    */
+    private async setupSubscriptions(): Promise<void> {
+        await this.queueManager.subscribeToMessageType('CHAT', this.handleChatMessage.bind(this));
+        await this.queueManager.subscribeToMessageType('SYSTEM', this.handleSystemMessage.bind(this));
+    }
+
+    /* Handle Chat Message */
+    private handleChatMessage(data: any): void {
+        const isSelfMessage = 
+        data._metadata?.queue?.includes('self') ||
+        data.senderId === this.currentUserId;
+        const type = isSelfMessage ? 'self' : 'other';
+
+        this.renderMessage(type, {
+            username: data.username,
+            content: data.content,
+            messageId: data.messageId,
+            timestamp: data.timestamp,
+            type: 'MESSAGE',
+            isOwnMessage: isSelfMessage
+        });
+    }
+
+    /* Handle System Message */
+    private handleSystemMessage(data: any): void {
+        this.renderSystemMessage({
+            content: data.content,
+            type: 'SYSTEM_MESSAGE',
+            timestamp: data.timestamp,
+            isOwnMessage: false
+        });
     }
 
     public handleJoin(): Promise<'dashboard'> {
@@ -167,51 +205,20 @@ export class MessageManager {
     ** Send Message Method
     */
     private async send(data: any): Promise<void> {
-        return new Promise(async (res, rej) => {
-            const destination = '/queue/messages';
-
-            /* Success */
-            const handleSucss = () => {
-                this.socketClient.offDestination(destination, handleSucss);
-                this.socketClient.offDestination(destination, handleErr);
-                this.renderMessage('self', {
-                    username: data.username,
-                    content: data.content,
-                    messageId: data.messageId,
-                    timestamp: data.timestamp,
-                    type: 'MESSAGE',
-                    isOwnMessage: true
-                });
-                res();
-            }
-
-            /* Error */
-            const handleErr = (err: any) => {
-                this.socketClient.offDestination(destination, handleSucss);
-                this.socketClient.offDestination(destination, handleErr);
-                rej(new Error(err.error || err.mesage || 'Failed to send message'));
-            }
-
-            try {
-                await this.socketClient.onDestination(destination, handleSucss);
-                await this.socketClient.onDestination(destination, handleErr);
-
-                const sucss = await this.socketClient.sendToDestination(
-                    '/app/chat',
-                    data
-                );
-
-                if(!sucss) {
-                    this.socketClient.offDestination(destination, handleSucss);
-                    this.socketClient.offDestination(destination, handleErr);
-                    rej(new Error('Failed to send message request!'));
+        try {
+            const success = await this.queueManager.sendWithRouting(
+                data,
+                'CHAT',
+                {
+                    routing: 'STANDARD',
+                    priority: 'HIGH'
                 }
-            } catch(err) {
-                this.socketClient.offDestination(destination, handleSucss);
-                this.socketClient.offDestination(destination, handleErr);
-                rej(err);
-            }
-        });
+            );
+            if(!success) throw new Error('Failed to send message');
+        } catch(err) {
+            console.error('Send message err', err);
+            throw err;
+        }
     }
 
     /* Render System Messages */

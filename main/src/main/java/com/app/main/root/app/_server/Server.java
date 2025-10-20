@@ -28,9 +28,7 @@ public class Server implements CommandLineRunner {
     private final ConfigSocketEvents configSocketEvents;
     private final ColorConverter colorConverter;
     private WebSocketSession webSocketSession;
-
-    @Autowired
-    private SimpAnnotationMethodMessageHandler messageHandler;
+    @Autowired private SimpAnnotationMethodMessageHandler messageHandler;
 
     private String url;
     private String webUrl = EnvConfig.get("WEB_URL");

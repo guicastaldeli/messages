@@ -1,4 +1,5 @@
 package com.app.main.root.app._data;
+import com.app.main.root.app._server.MessageRouter;
 import com.app.main.root.EnvConfig;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
@@ -6,7 +7,6 @@ import com.app.main.root.app._db.DbService;
 import com.app.main.root.app._server.ConnectionTracker;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app._server.ConnectionInfo;
-import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -20,19 +20,22 @@ public class EventList {
     private final ConnectionTracker connectionTracker;
     private final SocketMethods socketMethods;
     private final MessageTracker messageTracker;
+    private final MessageRouter messageRouter;
 
     public EventList(
         DbService dbService,
         EventTracker eventTracker,
         ConnectionTracker connectionTracker,
         SocketMethods socketMethods,
-        MessageTracker messageTracker
+        MessageTracker messageTracker,
+        MessageRouter messageRouter
     ) {
         this.eventTracker = eventTracker;
         this.dbService = dbService;
         this.connectionTracker = connectionTracker;
         this.socketMethods = socketMethods;
         this.messageTracker = messageTracker;
+        this.messageRouter = messageRouter;
     }
 
     public Map<String, EventConfig> list() {
@@ -105,6 +108,7 @@ public class EventList {
                 String chatId = (String) messageData.get("chatId");
                 String username = socketMethods.getSocketUsername(sessionId);
                 String chatSocket = chatId != null ? chatId : sessionId; 
+                String chatType = chatId != null && chatId.startsWith("group_") ? "GROUP" : "DIRECT";
                 String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
                 long time = System.currentTimeMillis();
                 
@@ -114,14 +118,27 @@ public class EventList {
                     System.err.println("Failed to save message: " + err.getMessage());
                 }
                 
-                Map<String, Object> res = new HashMap<>();
-                res.put("username", username);
-                res.put("content", content);
-                res.put("senderId", sessionId);
-                res.put("chatId", chatSocket);
-                res.put("messageId", messageId);
-                res.put("timestamp", time);
-                res.put("type", "MESSAGE");
+                Map<String, Object> message = new HashMap<>();
+                message.put("username", username);
+                message.put("content", content);
+                message.put("senderId", sessionId);
+                message.put("chatId", chatSocket);
+                message.put("messageId", messageId);
+                message.put("timestamp", time);
+                message.put("type", "MESSAGE");
+                message.put("routingMetadata", Map.of(
+                    "sessionId", sessionId,
+                    "chatType", chatType,
+                    "timestamp", time
+                ));
+
+                String[] routes;
+                if(chatId != null && chatId.startsWith("group_")) {
+                    routes = new String[]{"SELF", "GROUP"};
+                } else {
+                    routes = new String[]{"SELF", "OTHERS"};
+                }
+                messageRouter.routeMessage(sessionId, payload, message, routes);
 
                 eventTracker.track(
                     "chat",
