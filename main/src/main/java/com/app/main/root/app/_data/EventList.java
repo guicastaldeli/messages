@@ -106,7 +106,7 @@ public class EventList {
                 Map<String, Object> messageData = (Map<String, Object>) payload;
                 String content = (String) messageData.get("content");
                 String chatId = (String) messageData.get("chatId");
-                String username = socketMethods.getSocketUsername(sessionId);
+                String username = (String) messageData.get("username");
                 String chatSocket = chatId != null ? chatId : sessionId; 
                 String chatType = chatId != null && chatId.startsWith("group_") ? "GROUP" : "DIRECT";
                 String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);

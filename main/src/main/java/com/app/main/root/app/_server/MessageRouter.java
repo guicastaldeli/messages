@@ -2,12 +2,15 @@ package com.app.main.root.app._server;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import com.app.main.root.app.EventTracker;
+import com.app.main.root.app._db.DbService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.RouteContext.RouteHandler;
 import java.util.*;
 
 @Component
 public class MessageRouter {
+
+    private final DbService dbService;
     private final SimpMessagingTemplate messagingTemplate;
     private final EventTracker eventTracker;
     private final ConnectionTracker connectionTracker;
@@ -17,12 +20,13 @@ public class MessageRouter {
         SimpMessagingTemplate messagingTemplate,
         EventTracker eventTracker,
         ConnectionTracker connectionTracker
-    ) {
+    , DbService dbService) {
         this.messagingTemplate = messagingTemplate;
         this.eventTracker = eventTracker;
         this.connectionTracker = connectionTracker;
         this.routeHandlers = new HashMap<>();
         registerDefaultHandlers();
+        this.dbService = dbService;
     }
 
     /*
@@ -79,7 +83,7 @@ public class MessageRouter {
 
     /* User */
     private void handleUserRoute(RouteContext context) {
-        String targetUserId = (String) context.message.get("taregetUserId");
+        String targetUserId = (String) context.message.get("targetUserId");
         if(targetUserId != null) {
             String targetSession = connectionTracker.userService.getSessionByUserId(targetUserId);
             if(targetSession != null) {
@@ -110,12 +114,13 @@ public class MessageRouter {
 
         for(String targetSession : context.targetSessions) {
             String finalQueue = baseQueue;
-            if(
-                finalQueue.startsWith("/queue/") && 
-                !targetSession.equals(context.sessionId)
-            ) {
-                finalQueue = "/queue/messages/others";
+            if(targetSession.equals(context.sessionId)) {
+                finalQueue = "/user/queue/messages/self";
+            } else {
+                finalQueue = "/user/queue/messages/others";
             }
+
+            System.out.println("Sending to session " + targetSession + " via queue: " + finalQueue);
             sendToUser(targetSession, finalQueue, context.message);
         }
 
@@ -134,7 +139,12 @@ public class MessageRouter {
         Object data
     ) {
         try {
-            messagingTemplate.convertAndSendToUser(sessionId, destination, data);
+            if(destination.startsWith("/user/")) {
+                messagingTemplate.convertAndSendToUser(sessionId, destination, data);
+            } else {
+                messagingTemplate.convertAndSend(destination, data);
+            }
+            messagingTemplate.convertAndSend(destination, data);
         } catch(Exception err) {
             System.err.println("Error routing message: " + err.getMessage());
         }

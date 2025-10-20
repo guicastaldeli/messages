@@ -12,20 +12,15 @@ export class MessageManager {
     private messageTypes: MessageTypes;
     public controller!: Controller;
     public dashboard: any;
-    private messageSent: boolean = false;
 
     private uname: any;
     private appEl: HTMLDivElement | null = null;
     private socketId: string | null = null;
     private currentUserId: string | null = null;
-
     private joinHandled: boolean = false;
-    private chatHandled: boolean = false;
-    private msgHandlerCallback: ((msg: any) => void) | null = null;
 
     private isSending: boolean = false;
     private sendQueue: Array<() => Promise<void>> = [];
-    private processingQueue: boolean = false;
 
     constructor(socketClient: SocketClientConnect) {
         this.contentGetter = new ContentGetter();
@@ -55,7 +50,7 @@ export class MessageManager {
         });
 
         await this.socketClient.connect();
-        await this.update();
+        await this.setupSubscriptions();
     }
 
     /*
@@ -67,11 +62,17 @@ export class MessageManager {
     }
 
     /* Handle Chat Message */
-    private handleChatMessage(data: any): void {
+    private async handleChatMessage(data: any): Promise<void> {
+        const client = await this.socketClient.getSocketId();
+
         const isSelfMessage = 
-        data._metadata?.queue?.includes('self') ||
-        data.senderId === this.currentUserId;
+            data._metadata?.queue?.includes('self') ||
+            data.senderId === this.socketId ||
+            data.senderId === this.currentUserId ||
+            data.senderId === client;
         const type = isSelfMessage ? 'self' : 'other';
+
+        console.log(`Message type: ${type}, isSelf: ${isSelfMessage}, sender: ${data.senderId}, currentUser: ${this.currentUserId}`);
 
         this.renderMessage(type, {
             username: data.username,
@@ -211,7 +212,7 @@ export class MessageManager {
                 'CHAT',
                 {
                     routing: 'STANDARD',
-                    priority: 'HIGH'
+                    priority: 'NORMAL'
                 }
             );
             if(!success) throw new Error('Failed to send message');
@@ -256,34 +257,5 @@ export class MessageManager {
             const render = ReactDOMServer.renderToStaticMarkup(content);
             messageContainer.insertAdjacentHTML('beforeend', render);
         }
-    }
-
-    /*
-    ** Update
-    */
-    private async update(): Promise<void> {
-        const destination = '/queue/messages'; 
-        this.socketClient.offDestination(destination);
-        /* Incoming */
-        const handleIncomingMessage = async (data: any) => {
-            if(data.type === 'SYSTEM_MESSAGE') {
-                this.renderSystemMessage({
-                    content: data.content,
-                    type: 'SYSTEM_MESSAGE',
-                    isOwnMessage: false
-                });
-            } else if(data.type === 'MESSAGE') {
-                const type = data.senderId === this.currentUserId ? 'self' : 'other';
-                this.renderMessage(type, {
-                    username: data.username,
-                    content: data.content,
-                    messageId: data.messageId,
-                    timestamp: data.timestamp,
-                    type: 'MESSAGE'
-                });
-            }
-        }
-
-        await this.socketClient.onDestination(destination, handleIncomingMessage);
     }
 }

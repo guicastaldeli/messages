@@ -72,9 +72,9 @@ export const JoinGroupLayout: React.FC<Props> = ({
         <>
             {mode === 'join' && (
                 <div className="join-group-form">
+                    <button onClick={handleClose} id="back-button">Back</button>
                     {!showGroupPreview ? (
                         <div className="form-content">
-                            <button onClick={handleClose} id="back-button">Back</button>
                             <div id="header">
                                 <h3 style={{ fontFamily: 'Comic Sans MS', color: '#4716c6ff' }}>Join Group</h3>
                             </div>

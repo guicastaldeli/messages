@@ -3,35 +3,26 @@ import com.app.main.root.app.__controllers.UserAgentParserController;
 import com.app.main.root.app._service.GroupService;
 import com.app.main.root.app._service.UserService;
 import com.app.main.root.app._utils.ColorConverter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import java.util.*;
 
 @Component
 public class ConnectionTracker {
-    private final Server server;
-    private static ConnectionTracker instance;
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
     private final Set<Consumer<ConnectionInfo>> disconnectionCallbacks = new CopyOnWriteArraySet<>();
 
     @Autowired private ColorConverter colorConverter;
     @Autowired private UserAgentParserController userAgentParserController;
-    @Autowired public UserService userService;
-    @Autowired public GroupService groupService;
-
-    ConnectionTracker(Server server) {
-        this.server = server;
-    }
-    
-    public static ConnectionTracker getInstance() {
-        return instance;
-    }
+    @Autowired @Lazy public UserService userService;
+    @Autowired @Lazy public GroupService groupService;
 
     /*
     * Track Connection 

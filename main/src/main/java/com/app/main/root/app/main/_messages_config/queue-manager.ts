@@ -12,10 +12,21 @@ export class QueueManager {
     ** Setup Routing
     */
     private setupRoutingConfig() {
-        this.routingConfig.set('CHAT', ['/user/queue/messages/self', '/user/queue/messages/others']);
-        this.routingConfig.set('GROUP_CHAT', ['/user/queue/messages/self', '/user/queue/messages/group']);
-        this.routingConfig.set('DIRECT_MESSAGE', ['/user/queue/messages/self', '/user/queue/messages/direct']);
-        this.routingConfig.set('SYSTEM', ['/user/queue/messages/system']);
+        this.routingConfig.set('CHAT', [
+            '/user/queue/messages/self', 
+            '/user/queue/messages/others',
+        ]);
+        this.routingConfig.set('GROUP_CHAT', [
+            '/user/queue/messages/self', 
+            '/user/queue/messages/group'
+        ]);
+        this.routingConfig.set('DIRECT_MESSAGE', [
+            '/user/queue/messages/self', 
+            '/user/queue/messages/direct'
+        ]);
+        this.routingConfig.set('SYSTEM', [
+            '/user/queue/messages/system'
+        ]);
     }
 
     /*
@@ -66,7 +77,7 @@ export class QueueManager {
 
         const res = 
         await this.socketClient.sendToDestination(
-            `/app/${messageType.toLowerCase}`,
+            `/app/${messageType.toLowerCase()}`,
             updPayload
         );
         return res;

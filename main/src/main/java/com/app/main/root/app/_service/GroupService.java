@@ -17,13 +17,17 @@ import java.sql.*;
 @Component
 public class GroupService {
     private final DataSource dataSource;
-    private InviteCodeManager inviteCodeManager;
+    private final InviteCodeManager inviteCodeManager;
     public final Map<String, Set<String>> groupSessions = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> userGroups = new ConcurrentHashMap<>();
 
     public GroupService(DataSource dataSource) {
         this.dataSource = dataSource;
-        this.inviteCodeManager = new InviteCodeManager(dataSource);
+        try {
+            this.inviteCodeManager = new InviteCodeManager(dataSource);
+        } catch(Exception err) {
+            throw new RuntimeException("Failed to init InviteCodeManager", err);
+        }
     }
 
     public void createGroup(
