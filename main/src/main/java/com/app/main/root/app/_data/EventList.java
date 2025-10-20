@@ -10,7 +10,6 @@ import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
 import org.springframework.stereotype.Component;
 import java.util.*;
 
@@ -101,8 +100,6 @@ public class EventList {
         /* Chat */
         configs.put("chat", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
-                Map<String, Object> res = new HashMap<>();
-
                 Map<String, Object> messageData = (Map<String, Object>) payload;
                 String content = (String) messageData.get("content");
                 String chatId = (String) messageData.get("chatId");
@@ -111,6 +108,8 @@ public class EventList {
                 String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
                 boolean isSystemMessage = "sys".equals(messageData.get("type"));
                 long time = System.currentTimeMillis();
+
+                Map<String, Object> res = new HashMap<>();
 
                 if(isSystemMessage) {
                     messageTracker.track(
@@ -132,18 +131,8 @@ public class EventList {
                     res.put("content", content);
                     res.put("type", "SYSTEM_MESSAGE");
                 } else {
-                    messageTracker.track(
-                        messageId, 
-                        content, 
-                        messageId,
-                        username, 
-                        chatId, 
-                        MessageLog.MessageType.GROUP, 
-                        MessageLog.MessageDirection.SENT
-                    );
-
                     try {
-                        dbService.getMessageService().saveMessage(sessionId, chatSocket, content, "text");
+                        dbService.getMessageService().saveMessage(chatSocket, sessionId, content, "text");
                     } catch(Exception err) {
                         System.err.println("Failed to save message: " + err.getMessage());
                     }
@@ -164,13 +153,8 @@ public class EventList {
                     sessionId,
                     content
                 );
-                socketMethods.send(
-                    sessionId,
-                    "/queue/message-sent",
-                    res
-                );
 
-                return res;
+                return Collections.emptyList();
             },
             "/topic/chat",
             true
@@ -282,10 +266,10 @@ public class EventList {
 
                     /* System Message */ 
                     Map<String, Object> systemMessageData = new HashMap<>();
-                    systemMessageData.put("content", username + " joined the group");
+                    systemMessageData.put("content", username + " joined");
                     systemMessageData.put("chatId", groupId);
                     systemMessageData.put("type", "SYSTEM_MESSAGE");
-                    socketMethods.broadcastToDestination("/topic/chat", systemMessageData);
+                    //socketMethods.broadcastToDestination("/topic/chat", systemMessageData);
 
                     /* Event Response */
                     Map<String, Object> res = new HashMap<>();
@@ -367,6 +351,7 @@ public class EventList {
                     String inviteCode = (String) data.get("inviteCode");
                     String groupId = dbService.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
                     Map<String, Object> groupInfo = dbService.getGroupService().getGroupInfo(groupId);
+                    Object creator = groupInfo.get("creator") != null ? groupInfo.get("creator") : groupInfo.get("creatorId");
                     List<_User> members = dbService.getGroupService().getGroupMembers(groupId);
                     List<String> memberNames = new ArrayList<>();
                     List<String> memberIds = new ArrayList<>();
@@ -381,7 +366,7 @@ public class EventList {
                     Map<String, Object> res = new HashMap<>();
                     res.put("id", groupId);
                     res.put("name", groupInfo.get("name"));
-                    res.put("creator", groupInfo.get("creator"));
+                    res.put("creator", creator);
                     res.put("creatorId", groupInfo.get("creatorId"));
                     res.put("members", memberNames);
                     res.put("memberIds", memberIds);

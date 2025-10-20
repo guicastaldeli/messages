@@ -30,7 +30,7 @@ export class GroupManager {
     private uname: any;
     private socketId: Promise<string>;
     
-    private root: Root | null = null;
+    public root: Root | null = null;
     private container!: HTMLElement;
 
     private currentGroupName: string = '';
@@ -60,42 +60,6 @@ export class GroupManager {
         this.uname = uname;
         this.inviteCodeManager = new InviteCodeManager(socketClient);
         this.socketId = this.socketClient.getSocketId();
-        this.setupSocketListeners();
-    }
-
-    public async setupSocketListeners(): Promise<void> {        
-        const client = await this.socketId;
-
-        /* Creation Success */
-        const groupScssDestination = `/user/${client}/queue/group-creation-scss`;
-        this.socketClient.onDestination(groupScssDestination, (data: Data) => {
-            console.log(data.sessionId === client)
-            if(data.sessionId === client) {
-                if(this.creationRes) {
-                    this.creationRes(data);
-                    this.creationRes = undefined;
-                    this.creationRej = undefined;
-                }
-                this.handleGroupCreationScss(data);
-            } else {
-                console.error('Group creation err...');
-            }
-        });
-
-        /* Join Success */
-        const joinScssDestination = `/user/${client}/queue/join-group-scss`;
-        this.socketClient.onDestination(joinScssDestination, (data: Data) => {
-            if(data.sessionId === client) {
-                if(this.joinRes) {
-                    this.joinRes(data);
-                    this.joinRes = undefined;
-                    this.joinRej = undefined;
-                }
-                this.handleJoinGroupScss(data);
-            } else {
-                console.error('Join group err...');
-            }
-        });
     }
     
     /*
@@ -166,7 +130,8 @@ export class GroupManager {
     }
 
     /* Creation Menu */
-    public showCreationMenu(): void {
+    public async showCreationMenu(): Promise<void> {
+        const client = await this.socketId;
         if(!this.appEl) return;
         if(this.root) {
             this.root.unmount();
@@ -191,13 +156,6 @@ export class GroupManager {
                     showGroup: false,
                     hideGroup: false,
                     groupName: ''
-                });
-                this.socketClient.on('group-creation-err', (err: any) => {
-                    if(this.creationRej) {
-                        this.creationRej(new Error(err.error));
-                        this.creationRes = undefined;
-                        this.creationRej = undefined;
-                    }
                 });
             }
         );
@@ -234,15 +192,20 @@ export class GroupManager {
         return new Promise(async (res, rej) => {
             const sucssDestination = `/user/${client}/queue/group-creation-scss`;
             const errDestination = `/user/${client}/queue/group-creation-err`;
+            this.creationRes = res;
+            this.creationRej = rej;
 
             /* Success */ 
             const handleSucss = (data: any) => {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
                 if(data && data.id) {
-                    res(data as Data);
-                } else {
-                    rej(new Error('Inavlid response data'));
+                    if(this.creationRes) {
+                        this.creationRes(data as Data);
+                        this.creationRes = undefined;
+                        this.creationRej = undefined;
+                    }
+                    this.handleGroupCreationScss(data);
                 }
             }
 
@@ -250,7 +213,11 @@ export class GroupManager {
             const handleErr = (err: any) => {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
-                rej(new Error(err.error || err.message || 'Group creation failed'));
+                if(this.creationRej) {
+                    this.creationRej(new Error('Invalid response data'));
+                    this.creationRes = undefined;
+                    this.creationRej = undefined;
+                }
             }
 
             try {
@@ -260,18 +227,25 @@ export class GroupManager {
                 const sucss = await this.socketClient.sendToDestination(
                     '/app/create-group',
                     data,
-                    sucssDestination
                 );
 
                 if(!sucss) {
                     this.socketClient.offDestination(sucssDestination, handleSucss);
                     this.socketClient.offDestination(errDestination, handleErr);
-                    rej(new Error('Failed to send group creation request!'));
+                    if(this.creationRej) {
+                        this.creationRej(new Error('Failed to send group creation'));
+                        this.creationRes = undefined;
+                        this.creationRej = undefined;
+                    }
                 }
             } catch(err) {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
-                rej(err);
+                if(this.creationRej) {
+                    this.creationRej(err);
+                    this.creationRes = undefined;
+                    this.creationRej = undefined;
+                }
             }
         });
     }
@@ -307,8 +281,8 @@ export class GroupManager {
         );
         window.dispatchEvent(chatEvent);
 
-        if (this.onCreateSuccess) {
-            this.onCreateSuccess(data);
+        if (this.onJoinSuccess) {
+            this.onJoinSuccess(data);
         }
 
         const event = new CustomEvent( 
@@ -365,13 +339,6 @@ export class GroupManager {
                     hideGroup: false,
                     groupName: ''
                 });
-                this.socketClient.on('join-group-err', (err: any) => {
-                    if(this.joinRej) {
-                        this.joinRej(new Error(err.error));
-                        this.joinRes = undefined;
-                        this.joinRej = undefined;
-                    }
-                });
             }
         );
         
@@ -387,21 +354,33 @@ export class GroupManager {
     /* Join Method */
     public async join(inviteCode: string, id?: string): Promise<any> {
         return new Promise(async (res, rej) => {
-            const sucssDestination = '/user/queue/join-group-scss';
-            const errDestination = '/user/queue/join-group-err';
+            const client = await this.socketId;
+            const sucssDestination = `/user/${client}/queue/join-group-scss`;
+            const errDestination = `/user/${client}/queue/join-group-err`;
+            this.joinRes = res;
+            this.joinRej = rej;
 
             /* Success */
             const handleSucss = (data: any) => {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
-                res(data);
+                if(this.joinRes) {
+                    this.joinRes(data);
+                    this.joinRes = undefined;
+                    this.joinRej = undefined;
+                }
+                this.handleJoinGroupScss(data);
             }
 
             /* Error */
             const handleErr = (error: any) => {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
-                rej(new Error(error.message));
+                if(this.joinRej) {
+                    this.joinRej(new Error(error.message));
+                    this.joinRes = undefined;
+                    this.joinRej = undefined;
+                }
             }
 
             try {
@@ -422,7 +401,11 @@ export class GroupManager {
             } catch(err) {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
-                rej(err);
+                if(this.joinRej) {
+                    this.joinRej(err);
+                    this.joinRes = undefined;
+                    this.joinRej = undefined;
+                }
             }
         });
     }

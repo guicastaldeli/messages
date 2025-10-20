@@ -37,13 +37,13 @@ export class ContentGetter {
         return content;
     }
 
-    //System Message Content
-    __systemMessageContent(
+    //Join Message Content
+    __userEventMessageContent(
         data: any,
         type: string
     ): ReactElement {
         console.log(`${type} RECEIVED`);
-        const content = <div className="system-message-content">{data}</div>
+        const content = <div className="user-event-message-content">{data}</div>
         return content;
     }
 

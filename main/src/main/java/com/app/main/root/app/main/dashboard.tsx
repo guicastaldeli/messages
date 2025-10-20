@@ -104,10 +104,6 @@ export class Dashboard extends Component<Props, State> {
         }
     }
 
-    handleSendMessage = (chatId: string): void => {
-        this.props.messageManager.handleSendMessage(chatId);
-    }
-
     /*
     ** Group Actions
     */

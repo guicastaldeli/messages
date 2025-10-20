@@ -14,25 +14,6 @@ export const JoinGroupLayout: React.FC<Props> = ({
     const [inviteCode, setInviteCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [managerState, setManagerState] = useState({
-        showCreationForm: false,
-        showJoinForm: false,
-        showGroup: false,
-        hideGroup: false,
-        groupName: ''
-    });
-
-    useEffect(() => {
-        if(!groupManager || !groupManager.dashboard) throw new Error('err');
-
-        groupManager.dashboard.setStateChange((state: any) => {
-            setManagerState(state);
-        });
-
-        return () => {
-            groupManager.dashboard.setStateChange(() => {});
-        }
-    }, [groupManager]);
 
     /*
     ** Group Preview
@@ -65,10 +46,25 @@ export const JoinGroupLayout: React.FC<Props> = ({
         }
     }
 
-    /* Back to Form */
-    const handleBackToForm = () => {
+    /* Close */
+    const handleClose = () => {
         setShowGroupPreview(false);
         setGroupInfo(null);
+        setError(null);
+        setInviteCode('');
+        setIsLoading(false);
+
+        groupManager.dashboard.updateState({
+            showCreationForm: false,
+            showJoinForm: false,
+            showGroup: false,
+            hideGroup: false,
+            groupName: ''
+        });
+        if(groupManager.root) {
+            groupManager.root.unmount();
+            groupManager.root = null;
+        }
     }
     
     /* Render */
@@ -76,13 +72,12 @@ export const JoinGroupLayout: React.FC<Props> = ({
         <>
             {mode === 'join' && (
                 <div className="join-group-form">
-                    <div id="form-header">
-                        <button className="close-button" onClick={onError}>Close</button>
-                        <h3>Join Group</h3>
-                    </div>
-
                     {!showGroupPreview ? (
                         <div className="form-content">
+                            <button onClick={handleClose} id="back-button">Back</button>
+                            <div id="header">
+                                <h3 style={{ fontFamily: 'Comic Sans MS', color: '#4716c6ff' }}>Join Group</h3>
+                            </div>
                             <div id="form-input">
                                 <label htmlFor="groupId" style={{ fontWeight: "bolder" }}>Link:</label>
                                 <div id="form-input">
@@ -112,31 +107,19 @@ export const JoinGroupLayout: React.FC<Props> = ({
                                 >
                                     {isLoading ? 'Checking...' : 'Preview Group'}
                                 </button>
-                                <button
-                                    onClick={onError}
-                                    disabled={isLoading}
-                                    id="cancel-button"
-                                >
-                                    Cancel
-                                </button>
                             </div>
                         </div>
                     ) : (
-                        <div className="group-preview">
-                            <div id="preview-header">
-                                <button onClick={handleBackToForm} id="back-button">Back</button>
-                            </div>
-
+                        <div className="group-preview" style={{ backgroundColor: '#3f712bff' }}>
                             {groupInfo && (
                                 <div className="group-info">
-                                    <div id="group-name">{groupInfo.name}</div>
                                     <div id="group-details">
                                         <div id="detail-item">
-                                            <h2>Group Name:</h2>
+                                            <h4>Group Name:</h4>
                                             <span>{groupInfo.name}</span>
                                         </div>
                                         <div id="detail-item">
-                                            <h2>Members:</h2>
+                                            <h5>Members:</h5>
                                             <span>{groupInfo.memberCount || groupInfo.members?.length}</span>
                                         </div>
                                     </div>
@@ -150,13 +133,6 @@ export const JoinGroupLayout: React.FC<Props> = ({
                                     id="join-button"
                                 >
                                     {isLoading ? 'Joining...' : 'Join Group'}
-                                </button>
-                                <button
-                                    onClick={handleBackToForm}
-                                    disabled={isLoading}
-                                    id="cancel-button"
-                                >
-                                    Cancel
                                 </button>
                             </div>
                         </div>

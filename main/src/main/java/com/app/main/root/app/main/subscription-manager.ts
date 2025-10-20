@@ -81,27 +81,28 @@ export class SubscriptionManager {
     */
     public async onDestination(
         destination: string,
-        fCallback: Function,
-        sCallback?: Function,
+        callback: Function,
         options: SubscriptionOptions = {}
     ): Promise<void> {
         await this.ensureSubscription(destination, options);
 
         const eventName = options.eventName || this.destinationToEventName(destination);
         if(!this.eventListeners.has(eventName)) this.eventListeners.set(eventName, []);
-        this.eventListeners.get(eventName)!.push(fCallback);
-        if(sCallback) this.eventListeners.get(eventName)!.push(sCallback);
+        this.eventListeners.get(eventName)!.push(callback);
+        if(callback) this.eventListeners.get(eventName)!.push(callback);
     }
 
     /*
     ** Off Destination
     */
-    public offDestination(destination: string, callback: Function): void {
+    public offDestination(destination: string, callback?: Function): void {
         const eventName = this.destinationToEventName(destination);
         const listeners = this.eventListeners.get(eventName);
         if(listeners) {
-            const i = listeners.indexOf(callback);
-            if(i > -1) listeners.splice(i, 1);
+            if(callback) {
+                const i = listeners.indexOf(callback);
+                if(i > -1) listeners.splice(i, 1);
+            }
             if(!listeners.length) this.unsubscribeFromDestination(destination);
         }
     }

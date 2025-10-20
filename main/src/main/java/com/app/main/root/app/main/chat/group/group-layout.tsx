@@ -110,6 +110,19 @@ export class GroupLayout extends Component<Props, State> {
         }
     }
 
+    /* Join Group Success */
+    handleJoinSuccess = (data: any) => {
+        this.state.managerState.showJoinForm = false;
+        this.groupManager.dashboard.updateState({
+            showCreationForm: false,
+            showJoinForm: false,
+            showGroup: true,
+            hideGroup: false,
+            groupName: data.groupName
+        });
+        this.groupManager.currentGroupId = data.groupId;
+    }
+
     handleRetry = () => {
         this.setState({ error: null });
     }
@@ -146,6 +159,10 @@ export class GroupLayout extends Component<Props, State> {
             hideGroup: true,
             groupName: ''
         });
+        if(this.groupManager.root) {
+            this.groupManager.root.unmount();
+            this.groupManager.root = null;
+        }
     }
 
     /* Generated Link Handler */
@@ -164,19 +181,6 @@ export class GroupLayout extends Component<Props, State> {
         } catch(err: any) {
             console.error('Failed to generate invite link:', err);
         }
-    }
-
-    /* Join Group Success */
-    handleJoinSuccess = (data: any) => {
-        this.state.managerState.showJoinForm = false;
-        this.groupManager.dashboard.updateState({
-            showCreationForm: false,
-            showJoinForm: false,
-            showGroup: true,
-            hideGroup: false,
-            groupName: data.groupName
-        });
-        this.groupManager.currentGroupId = data.groupId;
     }
 
     /* Render */
@@ -198,6 +202,12 @@ export class GroupLayout extends Component<Props, State> {
                     !showJoinForm && 
                 (
                     <div className="group-info form">
+                        <button 
+                            id="close-menu button"
+                            onClick={this.handleBack}
+                        >
+                            Back
+                        </button>
                         <input 
                             type="text" 
                             id="group-info-name"
@@ -256,12 +266,7 @@ export class GroupLayout extends Component<Props, State> {
                         <div className="messages"></div>
                         <div className="typebox">
                             <input type="text" id="message-input" />
-                            <button 
-                                id="send-message" 
-                                onClick={async () => {
-                                    await this.messageManager.handleSendMessage();
-                                }}
-                            >
+                            <button id="send-message">
                                 Send
                             </button>
                         </div>

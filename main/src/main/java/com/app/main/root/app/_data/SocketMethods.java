@@ -1,4 +1,6 @@
 package com.app.main.root.app._data;
+import java.util.Collections;
+
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -88,6 +90,34 @@ public class SocketMethods {
             );
         } catch(Exception err) {
             System.err.println("Error broadcasting message: " + err.getMessage());
+        }
+    }
+
+
+    /*
+    * Broadcast to Others 
+    */
+    public void broadcastOthers(
+        String destination,
+        Object data,
+        String sessionId
+    ) {
+        try {
+            eventTracker.track(
+                "broadcast" + destination + "-x-" + sessionId,
+                data,
+                EventDirection.SENT,
+                "broadcast",
+                "system"
+            );
+
+            messagingTemplate.convertAndSend(
+                destination,
+                data,
+                Collections.singletonMap("excludeSessionId", sessionId)
+            );
+        } catch(Exception err) {
+            System.err.println("Error broadcasting to " + destination + " except " + sessionId + ": " + err.getMessage());
         }
     }
 

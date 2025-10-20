@@ -10,6 +10,7 @@ export class MessageManager {
     private messageTypes: MessageTypes;
     public controller!: Controller;
     public dashboard: any;
+    private messageSent: boolean = false;
 
     private uname: any;
     private appEl: HTMLDivElement | null = null;
@@ -18,8 +19,11 @@ export class MessageManager {
 
     private joinHandled: boolean = false;
     private chatHandled: boolean = false;
-
     private msgHandlerCallback: ((msg: any) => void) | null = null;
+
+    private isSending: boolean = false;
+    private sendQueue: Array<() => Promise<void>> = [];
+    private processingQueue: boolean = false;
 
     constructor(socketClient: SocketClientConnect) {
         this.contentGetter = new ContentGetter();
@@ -40,6 +44,7 @@ export class MessageManager {
     public async init(): Promise<void> {
         if(typeof document === 'undefined') return;
         this.appEl = document.querySelector<HTMLDivElement>('.app');
+        this.setupMessageHandling();
 
         this.socketClient.on('connect', (id: string) => {
             this.socketId = id;
@@ -85,67 +90,111 @@ export class MessageManager {
         });
     }
 
-    public async handleSendMessage(chatId?: string): Promise<void> {
-        if(!this.appEl || this.chatHandled) return;
-        this.chatHandled = true;
+    /*
+    ** Setup Message Handling
+    */
+    private setupMessageHandling(): void {
+        if(!this.appEl) return;
 
-        const senderId = await this.socketClient.getSocketId();
-        const sendBtn = this.appEl.querySelector<HTMLButtonElement>('.chat-screen #send-message');
-        let msgInputEl = this.appEl!.querySelector<HTMLInputElement>('.chat-screen #message-input');
-        if(!sendBtn || !msgInputEl) return;
-        
-        sendBtn.addEventListener('click', async () => {
-            const msgInput = msgInputEl.value.trim();
-            if(!msgInput.length) return; 
- 
-            try {
-                await this.sendMessage({
-                    senderId: senderId,
-                    username: this.uname,
-                    content: msgInput,
-                    chatId: chatId || senderId
-                });
-                msgInputEl.value = '';
-                msgInputEl.focus();
-            } catch(err) {
-                console.error(err);
+        this.appEl.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if(target.id === 'send-message' || target.closest('#send-message')) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                this.queueMessageSend();
+            }
+        });
+        this.appEl.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter' && (e.target as HTMLElement).id === 'message-input') {
+                e.preventDefault();
+                this.queueMessageSend();
             }
         });
     }
 
     /*
+    ** Queue Message Send
+    */
+    private async queueMessageSend(): Promise<void> {
+        if(this.isSending) {
+            console.log('Message in progress');
+            return;
+        }
+        this.sendQueue = [];
+        await this.handleMessageSend();
+    }
+
+    public async handleMessageSend(): Promise<void> {
+        if(this.isSending) return;
+        this.isSending = true;
+
+        try {
+            if(!this.appEl) {
+                this.isSending = false;
+                return;
+            }
+
+            const msgInputEl = this.appEl.querySelector<HTMLInputElement>('.chat-screen #message-input');
+            const senderId = await this.socketClient.getSocketId();
+            if(!msgInputEl) {
+                this.isSending = false;
+                return;
+            }
+
+            const msgInput = msgInputEl.value.trim();
+            if(!msgInput.length) {
+                this.isSending = false;
+                return;
+            }
+            msgInputEl.value = '';
+
+            await this.send({
+                senderId: senderId,
+                username: this.uname,
+                content: msgInput
+            });
+
+            msgInputEl.focus();
+        } catch(err) {
+            console.error(err);
+        } finally {
+            this.isSending = false;
+        }
+    }
+
+
+    /*
     ** Send Message Method
     */
-    private async sendMessage(data: any): Promise<void> {
+    private async send(data: any): Promise<void> {
         return new Promise(async (res, rej) => {
-            const sucssDestination = '/queue/message-sent';
-            const errDestination = '/queue/message-err';
+            const destination = '/topic/chat';
 
             /* Success */
-            const handleSucss = (response: any) => {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
-
+            const handleSucss = () => {
+                this.socketClient.offDestination(destination, handleSucss);
+                this.socketClient.offDestination(destination, handleErr);
                 this.renderMessage('self', {
                     username: data.username,
                     content: data.content,
-                    messageId: response.messageId,
-                    timestamp: response.timestamp
+                    messageId: data.messageId,
+                    timestamp: data.timestamp,
+                    type: 'MESSAGE',
+                    isOwnMessage: true
                 });
-
                 res();
             }
 
             /* Error */
             const handleErr = (err: any) => {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
+                this.socketClient.offDestination(destination, handleSucss);
+                this.socketClient.offDestination(destination, handleErr);
                 rej(new Error(err.error || err.mesage || 'Failed to send message'));
             }
 
             try {
-                await this.socketClient.onDestination(sucssDestination, handleSucss);
-                await this.socketClient.onDestination(errDestination, handleErr);
+                await this.socketClient.onDestination(destination, handleSucss);
+                await this.socketClient.onDestination(destination, handleErr);
 
                 const sucss = await this.socketClient.sendToDestination(
                     '/app/chat',
@@ -153,13 +202,13 @@ export class MessageManager {
                 );
 
                 if(!sucss) {
-                    this.socketClient.offDestination(sucssDestination, handleSucss);
-                    this.socketClient.offDestination(errDestination, handleErr);
+                    this.socketClient.offDestination(destination, handleSucss);
+                    this.socketClient.offDestination(destination, handleErr);
                     rej(new Error('Failed to send message request!'));
                 }
             } catch(err) {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
+                this.socketClient.offDestination(destination, handleSucss);
+                this.socketClient.offDestination(destination, handleErr);
                 rej(err);
             }
         });
@@ -172,7 +221,7 @@ export class MessageManager {
         let messageContainer = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
         if(!messageContainer) throw new Error('message container err');
 
-        const content = this.contentGetter.__systemMessageContent(
+        const content = this.contentGetter.__userEventMessageContent(
             this.messageTypes.content, 
             type
         );
@@ -205,46 +254,30 @@ export class MessageManager {
     /*
     ** Update
     */
-    public async update(): Promise<void> {
-        const destination = '/queue/new-messages';
-
-        /* System Messages */
-        const handleSystemMessages = async (data: any) => {
-            this.renderSystemMessage({
-                content: data.content,
-                type: 'SYSTEM_MESSAGE'
-            });
+    private async update(): Promise<void> {
+        const destination = '/topic/chat'; 
+        this.socketClient.offDestination(destination);
+        /* Incoming */
+        const handleIncomingMessage = async (data: any) => {
+            if(data.type === 'SYSTEM_MESSAGE') {
+                this.renderSystemMessage({
+                    content: data.content,
+                    type: 'SYSTEM_MESSAGE',
+                    isOwnMessage: false
+                });
+            } else if(data.type === 'MESSAGE') {
+                const type = data.senderId === this.currentUserId ? 'self' : 'other';
+                this.renderMessage(type, {
+                    username: data.username,
+                    content: data.content,
+                    messageId: data.messageId,
+                    timestamp: data.timestamp,
+                    type: 'MESSAGE',
+                    isOwnMessage: false
+                });
+            }
         }
 
-        /* Messages */
-        const handleIncomingMessage = async (msg: any) => {
-            if(!this.currentUserId) this.currentUserId = await this.socketClient.getSocketId();
-
-            const type = msg.senderId === this.currentUserId ? 'self' : 'other';
-            this.renderMessage(type, {
-                username: msg.username,
-                content: msg.content,
-                messageId: msg.messageId,
-                timestamp: msg.timestamp,
-                type: 'MESSAGE'
-            });
-        }
-
-        await this.socketClient.onDestination(
-            destination, 
-            handleSystemMessages,
-            handleIncomingMessage, 
-        {
-            autoSubscribe: true,
-            eventName: 'new-message'
-        });
-    }
-
-    public async messageEventHandler(): Promise<void> {
-        if(this.msgHandlerCallback) {
-            this.socketClient.off('new-message', this.msgHandlerCallback);
-            this.msgHandlerCallback = null;
-        }
-        await this.update();
+        await this.socketClient.onDestination(destination, handleIncomingMessage, { autoSubscribe: true, eventName: 'chat' });
     }
 }
