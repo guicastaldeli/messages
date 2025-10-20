@@ -45,7 +45,7 @@ public class MessageRouter {
 
     /* Others */
     private void handleOthersRoute(RouteContext context) {
-        Set<String> allSessions = connectionTracker.getActiveConnections();
+        Set<String> allSessions = connectionTracker.getAllActiveSessions();
         allSessions.remove(context.sessionId);
         context.targetSessions.addAll(allSessions);
         context.metadata.put("queue", "/queue/messages/others");
@@ -64,7 +64,7 @@ public class MessageRouter {
 
     /* Broadcast */
     private void handleBroadcastRoute(RouteContext context) {
-        context.targetSessions.addAll(connectionTracker.getActiveConnections());
+        context.targetSessions.addAll(connectionTracker.getAllActiveSessions());
         context.metadata.put("queue", "/topic/broadcast");
     }
 
@@ -81,7 +81,7 @@ public class MessageRouter {
     private void handleUserRoute(RouteContext context) {
         String targetUserId = (String) context.message.get("taregetUserId");
         if(targetUserId != null) {
-            String targetSession = connectionTracker.getSessionByUserId(targetUserId);
+            String targetSession = connectionTracker.userService.getSessionByUserId(targetUserId);
             if(targetSession != null) {
                 context.targetSessions.add(targetSession);
                 context.metadata.put("queue", "/queue/messages/direct");

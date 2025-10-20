@@ -5,11 +5,15 @@ import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.sql.*;
 
 @Component
 public class UserService {
     private final DataSource dataSource;
+    public final Map<String, String> userToSessionMap = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionToUserMap = new ConcurrentHashMap<>();
 
     public UserService(DataSource dataSource) {
         this.dataSource = dataSource;
@@ -82,6 +86,28 @@ public class UserService {
         }
 
         return users;
+    }
+
+    /* Session by User Id */
+    public String getSessionByUserId(String userId) {
+        return userToSessionMap.get(userId);
+    }
+
+    /* User Id by Session Id */
+    public String getUserIdBySessison(String sessionId) {
+        return sessionToUserMap.get(sessionId);
+    } 
+
+    /* Link */
+    public void linkUserSession(String userId, String sessionId) {
+        userToSessionMap.put(userId, sessionId);
+        sessionToUserMap.put(sessionId, userId);
+    }
+
+    /* Unlink */
+    public void unlinkUserSession(String sessionId) {
+        String userId = sessionToUserMap.remove(sessionId);
+        if(userId != null) userToSessionMap.remove(userId);
     }
 
     /*

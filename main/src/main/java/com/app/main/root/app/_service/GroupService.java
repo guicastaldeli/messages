@@ -9,12 +9,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.sql.*;
 
 @Component
 public class GroupService {
     private final DataSource dataSource;
     private InviteCodeManager inviteCodeManager;
+    public final Map<String, Set<String>> groupSessions = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> userGroups = new ConcurrentHashMap<>();
 
     public GroupService(DataSource dataSource) {
         this.dataSource = dataSource;
@@ -185,6 +190,61 @@ public class GroupService {
         }
 
         return false;
+    }
+
+    /*
+    * Add User to Group Mapping 
+    */
+    public void addUserToGroupMapping(
+        String userId, 
+        String groupId, 
+        String sessionId
+    ) {
+        userGroups.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(groupId);
+        groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
+    }
+
+    /*
+    * Remove from Group Mapping 
+    */
+    public void removeUserFromGroupMapping(String userId, String groupId) {
+        Set<String> userGroupSet = userGroups.get(userId);
+        if(userGroupSet != null) {
+            userGroupSet.remove(groupId);
+            if(userGroupSet.isEmpty()) {
+                userGroups.remove(userId);
+            }
+        }
+
+        Set<String> groupSessionSet = groupSessions.get(groupId);
+        if(groupSessionSet != null) {
+            groupSessionSet.remove(userId);
+            if(groupSessionSet.isEmpty()) {
+                groupSessions.remove(groupId);
+            }
+        }
+    }
+
+    public void removeUserFromAllGroups(String userId) {
+        Set<String> userGroupSet = userGroups.get(userId);
+        if(userGroupSet != null) {
+            for(String groupId : userGroupSet) {
+                removeUserFromGroupMapping(userId, groupId);
+            }
+        }
+        userGroups.remove(userId);
+    }
+
+    /*
+    * Update Sessions for User 
+    */
+    public void updateGroupSessionsUser(String userId, String sessionId) {
+        Set<String> userGroupSet = userGroups.get(userId);
+        if(userGroupSet != null) {
+            for(String groupId : userGroupSet) {
+                groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
+            }
+        }
     }
 
     /*

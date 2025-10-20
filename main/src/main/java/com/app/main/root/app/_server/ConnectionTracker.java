@@ -1,5 +1,7 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app.__controllers.UserAgentParserController;
+import com.app.main.root.app._service.GroupService;
+import com.app.main.root.app._service.UserService;
 import com.app.main.root.app._utils.ColorConverter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -12,21 +14,28 @@ import java.util.*;
 
 @Component
 public class ConnectionTracker {
+    private final Server server;
     private static ConnectionTracker instance;
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
     private final Set<Consumer<ConnectionInfo>> disconnectionCallbacks = new CopyOnWriteArraySet<>();
 
-    @Autowired
-    private ColorConverter colorConverter;
+    @Autowired private ColorConverter colorConverter;
+    @Autowired private UserAgentParserController userAgentParserController;
+    @Autowired public UserService userService;
+    @Autowired public GroupService groupService;
 
-    @Autowired
-    private UserAgentParserController userAgentParserController;
+    ConnectionTracker(Server server) {
+        this.server = server;
+    }
     
     public static ConnectionTracker getInstance() {
         return instance;
     }
 
+    /*
+    * Track Connection 
+    */
     public void trackConnection(
         String socketId,
         String ipAddress,
@@ -40,26 +49,44 @@ public class ConnectionTracker {
         );
         connectionInfo.isConnected = true;
         connections.put(socketId, connectionInfo);
+        userService.linkUserSession(socketId, socketId);
         
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);
         System.out.println(connectionInfo.toString());
     }
 
+    /*
+    * Track Disconnection 
+    */
     public void trackDisconnection(String socketId) {
         ConnectionInfo connectionInfo = connections.get(socketId);
         if(connectionInfo != null) {
             connectionInfo.disconnectedAt = LocalDateTime.now();
             connectionInfo.isConnected = false;
+
+            String userId = userService.getUserIdBySessison(socketId);
+            if(userId != null) {
+                groupService.removeUserFromAllGroups(userId);
+                userService.unlinkUserSession(socketId);
+            }
+
             logDisconnection(connectionInfo);
             notifyDisconnectionCallbacks(connectionInfo);
         }
     }
 
+    /*
+    * Update Username 
+    */
     public void updateUsername(String socketId, String username) {
         ConnectionInfo connectionInfo = connections.get(socketId);
         if(connectionInfo != null) {
+            String userId = socketId;
             connectionInfo.username = username;
+            
+            userService.linkUserSession(userId, socketId);
+            groupService.updateGroupSessionsUser(userId, socketId);
             connections.put(socketId, connectionInfo);
         }
     }
@@ -104,6 +131,54 @@ public class ConnectionTracker {
 
     public void removeDisconnectionCallback(Consumer<ConnectionInfo> callback) {
         disconnectionCallbacks.remove(callback);
+    }
+
+    /* Group Sessions */
+    public Set<String> getGroupSessions(String groupId) {
+        return groupService.groupSessions.getOrDefault(groupId, Collections.emptySet());
+    }
+
+    /*
+    * Get All Active Sessions 
+    */
+    public Set<String> getAllActiveSessions() {
+        Set<String> activeSessions = new HashSet<>();
+        for(ConnectionInfo conn : connections.values()) {
+            if(conn.isConnected) {
+                activeSessions.add(conn.socketId);
+            }
+        }
+        return activeSessions;
+    }
+
+    /*
+    * Connection Stats 
+    */
+    public Map<String, Object> getConnectionStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalConnections", connections.size());
+        stats.put("activeConnections", getActiveConnectionsCount());
+        stats.put("totalGroups", groupService.groupSessions.size());
+        stats.put("totalUsers", userService.userToSessionMap.size());
+
+        Map<String, Integer> groupSizes = new HashMap<>();
+        for(Map.Entry<String, Set<String>> entry : groupService.groupSessions.entrySet()) {
+            groupSizes.put(entry.getKey(), entry.getValue().size());
+        }
+        stats.put("groupSizes", groupSizes);
+
+        return stats;
+    }
+
+    /* 
+    ***
+    **** Socket Id
+    *** 
+    */
+    public String getSocketId(String sessionId) {
+        ConnectionInfo connectionInfo = connections.get(sessionId);
+        String res = connectionInfo != null ? connectionInfo.socketId : null;
+        return res;
     }
 
     /* 
@@ -169,16 +244,5 @@ public class ConnectionTracker {
                 System.err.println("Error in disconnection callback: " + err.getMessage());
             }
         }
-    }
-
-    /* 
-    ***
-    **** Socket Id
-    *** 
-    */
-    public String getSocketId(String sessionId) {
-        ConnectionInfo connectionInfo = connections.get(sessionId);
-        String res = connectionInfo != null ? connectionInfo.socketId : null;
-        return res;
     }
 }
