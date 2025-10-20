@@ -168,7 +168,7 @@ export class MessageManager {
     */
     private async send(data: any): Promise<void> {
         return new Promise(async (res, rej) => {
-            const destination = '/topic/chat';
+            const destination = '/queue/messages';
 
             /* Success */
             const handleSucss = () => {
@@ -255,7 +255,7 @@ export class MessageManager {
     ** Update
     */
     private async update(): Promise<void> {
-        const destination = '/topic/chat'; 
+        const destination = '/queue/messages'; 
         this.socketClient.offDestination(destination);
         /* Incoming */
         const handleIncomingMessage = async (data: any) => {
@@ -272,12 +272,11 @@ export class MessageManager {
                     content: data.content,
                     messageId: data.messageId,
                     timestamp: data.timestamp,
-                    type: 'MESSAGE',
-                    isOwnMessage: false
+                    type: 'MESSAGE'
                 });
             }
         }
 
-        await this.socketClient.onDestination(destination, handleIncomingMessage, { autoSubscribe: true, eventName: 'chat' });
+        await this.socketClient.onDestination(destination, handleIncomingMessage);
     }
 }

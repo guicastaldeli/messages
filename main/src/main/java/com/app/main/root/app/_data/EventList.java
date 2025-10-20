@@ -106,45 +106,22 @@ public class EventList {
                 String username = socketMethods.getSocketUsername(sessionId);
                 String chatSocket = chatId != null ? chatId : sessionId; 
                 String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
-                boolean isSystemMessage = "sys".equals(messageData.get("type"));
                 long time = System.currentTimeMillis();
-
-                Map<String, Object> res = new HashMap<>();
-
-                if(isSystemMessage) {
-                    messageTracker.track(
-                        messageId,
-                        content,
-                        messageId,
-                        username,
-                        chatId,
-                        MessageLog.MessageType.SYSTEM,
-                        MessageLog.MessageDirection.SENT
-                    );
-
-                    try {
-                        dbService.getMessageService().saveSystemMessage(content, "system-text");
-                    } catch(Exception err) {
-                        System.err.print("Failed to save join message: " + err.getMessage());
-                    }
-
-                    res.put("content", content);
-                    res.put("type", "SYSTEM_MESSAGE");
-                } else {
-                    try {
-                        dbService.getMessageService().saveMessage(chatSocket, sessionId, content, "text");
-                    } catch(Exception err) {
-                        System.err.println("Failed to save message: " + err.getMessage());
-                    }
-
-                    res.put("username", username);
-                    res.put("content", content);
-                    res.put("senderId", sessionId);
-                    res.put("chatId", chatSocket);
-                    res.put("messageId", messageId);
-                    res.put("timestamp", time);
-                    res.put("type", "MESSAGE");
+                
+                try {
+                    dbService.getMessageService().saveMessage(chatSocket, sessionId, content, "text");
+                } catch(Exception err) {
+                    System.err.println("Failed to save message: " + err.getMessage());
                 }
+                
+                Map<String, Object> res = new HashMap<>();
+                res.put("username", username);
+                res.put("content", content);
+                res.put("senderId", sessionId);
+                res.put("chatId", chatSocket);
+                res.put("messageId", messageId);
+                res.put("timestamp", time);
+                res.put("type", "MESSAGE");
 
                 eventTracker.track(
                     "chat",
@@ -154,10 +131,10 @@ public class EventList {
                     content
                 );
 
-                return Collections.emptyList();
+                return Collections.emptyMap();
             },
-            "/topic/chat",
-            true
+            "/queue/messages",
+            false
         ));
         /* Exit User */
         configs.put("exit-user", new EventConfig(

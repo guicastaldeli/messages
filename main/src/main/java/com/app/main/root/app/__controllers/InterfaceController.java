@@ -55,7 +55,7 @@ public class InterfaceController {
     }
 
     private String loadInterface() throws IOException {
-        String path = "com/app/main/root/app/_server/interface.html";
+        String path = "com/app/main/root/app/_server/_interface.html";
         Resource resource = new ClassPathResource(path);
         if(!resource.exists()) throw new IOException("Interface file not found " + path);
         return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
