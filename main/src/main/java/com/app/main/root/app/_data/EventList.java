@@ -22,6 +22,7 @@ public class EventList {
     private final SocketMethods socketMethods;
     private final MessageTracker messageTracker;
     private final MessageRouter messageRouter;
+    private final MessageAnalyzer messageAnalyzer;
     private final SimpMessagingTemplate messagingTemplate;
 
     public EventList(
@@ -31,7 +32,8 @@ public class EventList {
         ConnectionTracker connectionTracker,
         SocketMethods socketMethods,
         MessageTracker messageTracker,
-        MessageRouter messageRouter
+        MessageRouter messageRouter,
+        MessageAnalyzer messageAnalyzer
     ) {
         this.eventTracker = eventTracker;
         this.serviceManager = serviceManager;
@@ -40,6 +42,7 @@ public class EventList {
         this.socketMethods = socketMethods;
         this.messageTracker = messageTracker;
         this.messageRouter = messageRouter;
+        this.messageAnalyzer = messageAnalyzer;
     }
 
     public Map<String, EventConfig> list() {
@@ -107,55 +110,26 @@ public class EventList {
         /* Chat */
         configs.put("chat", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
-                Map<String, Object> messageData = (Map<String, Object>) payload;
-                String content = (String) messageData.get("content");
-                String chatId = (String) messageData.get("chatId");
-                String username = (String) messageData.get("username");
-                String chatSocket = chatId != null ? chatId : sessionId; 
-                boolean isGroupChat = (chatId != null && chatId.startsWith("_group")) || (chatSocket.startsWith("_group"));
-                String chatType = isGroupChat ? "GROUP" : "DIRECT";
-                String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
-                long time = System.currentTimeMillis();
-                
                 try {
-                    serviceManager.getMessageService().saveMessage(chatSocket, sessionId, content, "text");
+                    Map<String, Object> payloadData = (Map<String, Object>) payload;
+    
+                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
+                    eventTracker.track(
+                        "chat",
+                        payloadData,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "web"
+                    );
                 } catch(Exception err) {
-                    System.err.println("Failed to save message: " + err.getMessage());
+                    eventTracker.track(
+                        "chat-error",
+                        Map.of("error", err.getMessage(), "payload", payload),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "web"
+                    );
                 }
-                
-                Map<String, Object> message = new HashMap<>();
-                message.put("username", username);
-                message.put("content", content);
-                message.put("senderId", sessionId);
-                message.put("chatId", chatSocket);
-                message.put("messageId", messageId);
-                message.put("timestamp", time);
-                message.put("type", chatType + "_MESSAGE");
-                message.put("routingMetadata", Map.of(
-                    "sessionId", sessionId,
-                    "chatType", chatType,
-                    "timestamp", time
-                ));
-
-                String[] routes;
-                if(chatId != null && chatId.startsWith("group_")) {
-                    routes = new String[]{"GROUP"};
-                } else {
-                    if(chatSocket.equals(sessionId)) {
-                        routes = new String[]{"SELF"};
-                    } else {
-                        routes = new String[]{"SELF", "OTHERS"};
-                    }
-                }
-                messageRouter.routeMessage(sessionId, payload, message, routes);
-
-                eventTracker.track(
-                    "chat",
-                    payload,
-                    EventDirection.RECEIVED,
-                    sessionId,
-                    content
-                );
 
                 return Collections.emptyMap();
             },

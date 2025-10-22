@@ -4,7 +4,8 @@ import java.util.Date;
 public class EventLog {
     public enum EventDirection {
         SENT,
-        RECEIVED
+        RECEIVED,
+        PROCESSED
     }
 
     private String id;
