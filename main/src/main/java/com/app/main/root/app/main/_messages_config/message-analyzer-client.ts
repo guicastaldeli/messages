@@ -1,8 +1,8 @@
 interface Context {
     sessionId: string;
     content: string;
-    chatId: string;
     targetUserId: string;
+    chatId: string;
     username: string;
     senderId: string;
     isDirect: boolean;
@@ -39,6 +39,8 @@ interface ValidationResult {
     errors: string[];
     warnings: string[];
 }
+
+import { DirectManager } from "../chat/direct/direct-manager";
 
 export class MessageAnalyzerClient {
     private socketId: string | null = null;
@@ -78,20 +80,29 @@ export class MessageAnalyzerClient {
 
         const time = Date.now();
         const content = data.content || emptyPlaceholder;
-        const chatId = data.chatId || emptyPlaceholder;
         const targetUserId = data.targetUserId || data.senderId || emptyPlaceholder;
         const senderId = data.senderId || emptyPlaceholder;
         const username = data.username || emptyPlaceholder;
-        const isDirect = !!targetUserId;
-        const isGroup = (chatId && chatId.startsWith('group_'));
+        const isGroup = 
+            (data.chatId && data.chatId.startsWith('group_')) ||
+            (data.chatType === 'GROUP') ||
+            (data._metadata?.type === 'GROUP') ||
+            (data.type === 'GROUP') ||
+            (data.groupId != undefined);
+        const isDirect = !!targetUserId && !isGroup;
         const isBroadcast = !isGroup && !isDirect;
         const isSystem = data.type === 'SYSTEM';
+        const chatId = 
+            data.chatId || 
+            (isGroup ? data.groupId :
+            (isDirect ? DirectManager.generateChatId(data.senderId, targetUserId) :
+            emptyPlaceholder));
 
         return {
             sessionId: this.socketId || emptyPlaceholder,
             content,
-            chatId,
             targetUserId,
+            chatId,
             username,
             senderId,
             isGroup,
@@ -174,8 +185,11 @@ export class MessageAnalyzerClient {
     }
 
     public detectMessageType(data: any): string {
-        if(data.targetUserId) return 'DIRECT';
         if(data.chatId && data.chatId.startsWith('group_')) return 'GROUP';
+        if(data.groupId) return 'GROUP';
+        if(data.chatType === 'GROUP') return 'GROUP';
+        if(data._metadata?.type === 'GROUP') return 'GROUP';
+        if(data.targetUserId) return 'DIRECT';
         if(data.type === 'SYSTEM') return 'SYSTEM';
         return 'CHAT';
     }

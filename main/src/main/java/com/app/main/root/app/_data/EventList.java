@@ -112,14 +112,13 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-    
                     messageAnalyzer.organizeAndRoute(sessionId, payloadData);
                     eventTracker.track(
                         "chat",
                         payloadData,
                         EventDirection.RECEIVED,
                         sessionId,
-                        "web"
+                        "client"
                     );
                 } catch(Exception err) {
                     eventTracker.track(
@@ -127,13 +126,67 @@ public class EventList {
                         Map.of("error", err.getMessage(), "payload", payload),
                         EventDirection.RECEIVED,
                         sessionId,
-                        "web"
+                        "client"
                     );
                 }
 
                 return Collections.emptyMap();
             },
             "/queue/messages",
+            false
+        ));
+        configs.put("direct", new EventConfig(
+            (sessionId, payload, headerAcessor) -> {
+                try {
+                    Map<String, Object> payloadData = (Map<String, Object>) payload;
+                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
+                    eventTracker.track(
+                        "DIRECT_MESSAGE",
+                        payloadData,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "client"
+                    );
+                } catch(Exception err) {
+                    eventTracker.track(
+                        "DIRECT_MESSAGE_ERR",
+                        Map.of("error", err.getMessage(), "payload", payload),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "client"
+                    );
+                }
+
+                return Collections.emptyMap();
+            },
+            "/user/queue/messages/direct",
+            false
+        ));
+        configs.put("group", new EventConfig(
+            (sessionId, payload, headerAcessor) -> {
+                try {
+                    Map<String, Object> payloadData = (Map<String, Object>) payload;
+                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
+                    eventTracker.track(
+                        "GROUP_MESSAGE",
+                        payloadData,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "client"
+                    );
+                } catch(Exception err) {
+                    eventTracker.track(
+                        "GROUP_MESSAGE_ERR",
+                        Map.of("error", err.getMessage(), "payload", payload),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "client"
+                    );
+                }
+
+                return Collections.emptyMap();
+            },
+            "/user/queue/messages/group",
             false
         ));
         /* Exit User */

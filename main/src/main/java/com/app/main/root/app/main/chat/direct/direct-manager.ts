@@ -1,9 +1,6 @@
 export class DirectManager {
-    public generateChatId(senderId: string, targetUserId: string): string {
-        if(!targetUserId) {
-            return `broadcast_${Date.now()}`;
-        }
+    public static generateChatId(senderId: string, targetUserId: string): string {
         const participants = [senderId, targetUserId].sort();
-        return `direct_${participants.join('_')}`;
+        return `direct_${participants.join('_')}_${Date.now()}`;
     }
 }

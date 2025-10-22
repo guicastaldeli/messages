@@ -12,7 +12,7 @@ export interface Context {
 
 export class ChatRegistry {
     private chats: Map<string, Context> = new Map();
-    private currentChatId: string | null = null;
+    private currentChat: Context | null = null;
 
     public generateChatId(type: ChatType, members: string[]): string {
         const sortedParticipants = [...members].sort();
@@ -46,11 +46,11 @@ export class ChatRegistry {
         return context;
     }
 
-    public setCurrentChat(chatId: string): void {
-        this.currentChatId = chatId;
+    public setCurrentChat(context: Context): void {
+        this.currentChat = context;
     }
 
     public getCurrentChat(): Context | null {
-        return this.currentChatId ? this.chats.get(this.currentChatId) || null : null;
+        return this.currentChat;
     }
 }

@@ -163,6 +163,8 @@ export class ChatManager {
 
     public setContainer(container: HTMLElement): void {
         this.container = container;
+        const groupManager = this.getGroupManager();
+        if(groupManager) groupManager.container = container;
     }
 
     public setDashboard(instance: Dashboard): void {

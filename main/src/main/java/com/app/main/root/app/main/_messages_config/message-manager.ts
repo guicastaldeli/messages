@@ -6,6 +6,8 @@ import { QueueManager } from "./queue-manager";
 import { Analysis, MessageAnalyzerClient } from "./message-analyzer-client";
 import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
 
+import { DirectManager } from "../chat/direct/direct-manager";
+
 export class MessageManager {
     private queueManager: QueueManager;
     private contentGetter: ContentGetter;
@@ -31,7 +33,6 @@ export class MessageManager {
         this.messageTypes = new MessageTypes(this.contentGetter);
         this.queueManager = new QueueManager(socketClient);
         this.messageAnalyzer = new MessageAnalyzerClient();
-        this.setupHandlers();
     }
 
     public async init(): Promise<void> {
@@ -49,15 +50,6 @@ export class MessageManager {
     }
 
     /*
-    ** Setup Handlers
-    */
-    private setupHandlers(): void {
-        this.messageHandlers.set('DIRECT', this.handleChatMessage.bind(this));
-        this.messageHandlers.set('GROUP', this.handleChatMessage.bind(this));
-       // this.messageHandlers.set('SYSTEM', this.handleSystemMessage.bind(this));
-    }
-
-    /*
     ** Setup Subscriptions
     */
     private async setupSubscriptions(): Promise<void> {
@@ -65,6 +57,7 @@ export class MessageManager {
         this.socketId = client;
         this.messageAnalyzer.init(client, this.currentUserId, this.uname);
         for(const [messageType, handler] of this.messageHandlers) {
+            this.messageHandlers.set(messageType, this.handleChatMessage.bind(this));
             await this.queueManager.subscribeToMessageType(messageType, handler);
         }
     }
@@ -143,7 +136,10 @@ export class MessageManager {
             context.id = chatId;
         }
 
-        this.chatRegistry.setCurrentChat(context.id);
+        context.type = chatType;
+        this.chatRegistry.setCurrentChat(context);
+        console.log('Current chat set:', { id: context.id, type: context.type });
+        console.log(this.chatRegistry.getCurrentChat());
     }
 
     /*
@@ -208,6 +204,7 @@ export class MessageManager {
         const client = this.socketId;
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
+        const isGroupChat = currentChat?.type === 'GROUP';
         if(!client) return false;
 
         const data = {
@@ -215,12 +212,12 @@ export class MessageManager {
             username: this.uname,
             content: content.content,
             messageId: content.messageId,
-            chatId: currentChat?.id || content.chatId,
-            targetUserId: currentChat?.type === 'DIRECT'
-                ? currentChat.members.find(m => m !== client)
-                : content.targetUserId,
+            targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != client),
+            groupId: isGroupChat ? currentChat.id : undefined,
+            chatId: currentChat?.id,
             timestamp: time,
-            chatType: content.chatType
+            chatType: content.chatType || currentChat?.type,
+            type: isGroupChat ? 'GROUP' : 'DIRECT'
         }
 
         const analysis = this.messageAnalyzer.analyzeMessage(data);
@@ -235,6 +232,7 @@ export class MessageManager {
                 priority: analysis.priority
             }
         }
+        console.log(analyzedData)
 
         return await this.queueManager.sendWithRouting(
             analyzedData,

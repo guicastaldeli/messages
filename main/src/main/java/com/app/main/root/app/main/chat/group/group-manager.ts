@@ -31,7 +31,7 @@ export class GroupManager {
     private socketId: string | null = null;
     
     public root: Root | null = null;
-    private container!: HTMLElement;
+    public container!: HTMLElement;
 
     private currentGroupName: string = '';
     public currentGroupId: string = '';
@@ -71,22 +71,22 @@ export class GroupManager {
     **
     */
     private async handleGroupCreationScss(data: Data): Promise<void> {
-        this.currentGroupName = data.name;
         const name = this.currentGroupName;
         const time = new Date().toISOString();
+        this.currentGroupName = data.name;
         this.currentGroupId = data.id;
-        chatState.setType('group');
+        chatState.setType('GROUP');
 
-        this.messageManager.setCurrentChat(
+        await this.messageManager.setCurrentChat(
             this.currentGroupId,
             'GROUP',
-            data.members || [await this.socketId]
-        )
+            data.members || [this.socketId]
+        );
 
         const chatItem = {
             id: this.currentGroupId,
             chatId: this.currentGroupId,
-            groupId: data.id,
+            groupId: this.currentGroupId,
             name: data.name,
             type: 'group',
             creator: data.creator,
@@ -185,8 +185,8 @@ export class GroupManager {
 
         await this.socketClient.eventDiscovery.refreshEvents();
         this.currentGroupName = groupName;
-        chatState.setType('group');
-        const client = await this.socketId;
+        chatState.setType('GROUP');
+        const client = this.socketId;
 
         const data = {
             sessionId: client,
@@ -194,6 +194,8 @@ export class GroupManager {
             creatorId: client,
             groupName: this.currentGroupName.trim()
         }
+
+        console.log('grpup data', data)
 
         return new Promise(async (res, rej) => {
             const sucssDestination = `/user/${client}/queue/group-creation-scss`;
@@ -266,14 +268,14 @@ export class GroupManager {
         const name = this.currentGroupName;
         const time = new Date().toISOString();
         this.currentGroupId = data.id;
-        chatState.setType('group');
+        chatState.setType('GROUP');
 
         const chatItem = {
             id: this.currentGroupId,
             chatId: this.currentGroupId,
             groupId: data.id,
             name: data.name,
-            type: 'group',
+            type: 'GROUP',
             creator: data.creator,
             members: data.members,
             unreadCount: 0,
@@ -362,7 +364,7 @@ export class GroupManager {
     /* Join Method */
     public async join(inviteCode: string, id?: string): Promise<any> {
         return new Promise(async (res, rej) => {
-            const client = await this.socketId;
+            const client = this.socketId;
             const sucssDestination = `/user/${client}/queue/join-group-scss`;
             const errDestination = `/user/${client}/queue/join-group-err`;
             this.joinRes = res;
@@ -394,7 +396,7 @@ export class GroupManager {
             try {
                 await this.socketClient.onDestination(sucssDestination, handleSucss);
                 await this.socketClient.onDestination(errDestination, handleErr);
-                const userId = await this.socketId;
+                const userId = this.socketId;
                 
                 const data = {
                     userId: userId,

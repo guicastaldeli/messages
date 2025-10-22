@@ -41,17 +41,23 @@ public class MessageAnalyzer {
         String content = (String) payload.get("content");
         String messageId = (String) payload.get("messageId");
         String chatId = (String) payload.get("chatId");
+        String groupId = (String) payload.get("groupId");
         String targetUserId = (String) payload.get("targetUserId");
         String username = (String) payload.get("username");
-        boolean isDirect = (targetUserId != null);
-        boolean isGroup = (chatId != null && chatId.startsWith("group_"));
+        boolean isGroup = (chatId != null && chatId.startsWith("group_")) ||
+                            (groupId != null) ||
+                            "GROUP".equals(payload.get("type")) ||
+                            "GROUP".equals(payload.get("chatType"));
+        boolean isDirect = (targetUserId != null) && !isGroup;
         boolean isBoolean = (chatId == null && targetUserId == null);
+
+        System.out.println(groupId + chatId + messageId + content);
 
         return new MessageContext(
             sessionId, 
             content,
             messageId,
-            chatId, 
+            chatId,
             targetUserId, 
             username, 
             isDirect, 
