@@ -1,7 +1,6 @@
 import './__styles/styles.scss';
 import React, { Component } from 'react';
 import { MessageManager } from './_messages_config/message-manager';
-import { GroupManager } from './chat/group/group-manager';
 import { SessionContext, SessionType } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { chatState } from './chat-state-service';
@@ -10,7 +9,6 @@ import { ApiClient } from './_api-client/api-client';
 interface Props {
     messageManager: MessageManager;
     chatManager: ChatManager;
-    groupManager: GroupManager;
     chatList: any[];
     activeChat: any;
     apiClient: ApiClient;
@@ -41,8 +39,8 @@ export class Dashboard extends Component<Props, State> {
 
     async componentDidMount(): Promise<void> {
         this.setSession('MAIN_DASHBOARD');
-        if(!this.groupContainerRef.current || !this.props.groupManager) return;
-        this.props.groupManager.setContainer(this.groupContainerRef.current);
+        if(!this.groupContainerRef.current || !this.props.chatManager) return;
+        this.props.chatManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
 
         try {
@@ -57,11 +55,11 @@ export class Dashboard extends Component<Props, State> {
 
     componentDidUpdate(prevProps: Props): void {
         if(
-            this.props.groupManager && 
-            this.props.groupManager !== prevProps.groupManager &&
+            this.props.chatList && 
+            this.props.chatManager !== prevProps.chatManager &&
             this.groupContainerRef.current 
         ) {
-            this.props.groupManager.setContainer(this.groupContainerRef.current);
+            this.props.chatManager.setContainer(this.groupContainerRef.current);
         }
 
         if (prevProps.chatList !== this.props.chatList) {
@@ -102,17 +100,6 @@ export class Dashboard extends Component<Props, State> {
         } catch(err) {
             console.error('Error loading chat history:', err);
         }
-    }
-
-    /*
-    ** Group Actions
-    */
-    onCreateGroup = () => {
-        this.props.groupManager.showCreationMenu();
-    }
-
-    onJoinGroup = () => {
-        this.props.groupManager.showJoinMenu();
     }
 
     /*
@@ -163,13 +150,13 @@ export class Dashboard extends Component<Props, State> {
                                         <div id="actions-bar">
                                             <button 
                                                 id="action-create-group"
-                                                onClick={() => this.onCreateGroup()}
+                                                onClick={() => this.props.chatManager.getGroupManager().onCreateGroup()}
                                             >
                                                 Group++++
                                             </button>
                                             <button 
                                                 id="action-join-group"
-                                                onClick={() => this.onJoinGroup()}
+                                                onClick={() => this.props.chatManager.getGroupManager().onJoinGroup()}
                                             >
                                                 Join :))
                                             </button>

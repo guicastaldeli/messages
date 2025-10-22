@@ -2,7 +2,6 @@ import { React, ReactDOMServer } from "next/dist/server/route-modules/app-page/v
 import { SocketClientConnect } from "../socket-client-connect";
 import { ContentGetter } from "../../content-getter";
 import { MessageTypes } from "./message-types";
-import { Controller } from "../controller";
 import { QueueManager } from "./queue-manager";
 import { Analysis, MessageAnalyzerClient } from "./message-analyzer-client";
 import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
@@ -13,7 +12,6 @@ export class MessageManager {
     public socketClient: SocketClientConnect;
     private messageTypes: MessageTypes;
     private messageAnalyzer: MessageAnalyzerClient;
-    public controller!: Controller;
     public dashboard: any;
     private messageHandlers: Map<string, (data: any) => Promise<void>> = new Map();
 
@@ -27,26 +25,13 @@ export class MessageManager {
     private isSending: boolean = false;
     private sendQueue: Array<() => Promise<void>> = [];
 
-    constructor(
-        socketClient: SocketClientConnect,
-        messageAnalyzer: MessageAnalyzerClient
-    ) {
+    constructor(socketClient: SocketClientConnect) {
         this.socketClient = socketClient;
         this.contentGetter = new ContentGetter();
         this.messageTypes = new MessageTypes(this.contentGetter);
         this.queueManager = new QueueManager(socketClient);
         this.messageAnalyzer = new MessageAnalyzerClient();
         this.setupHandlers();
-    }
-
-    private initController(): void {
-        this.controller = new Controller(
-            this.socketClient,
-            this,
-            this.dashboard,
-            this.appEl,
-            this.uname
-        );
     }
 
     public async init(): Promise<void> {
@@ -110,8 +95,6 @@ export class MessageManager {
                     return rej(new Error('Failed to send join request!'));
                 }
                 this.uname = usernameInput.value;
-                this.initController();
-                this.controller.init();
                 res('dashboard');
             } catch(err) {
                 this.joinHandled = false;
@@ -235,7 +218,7 @@ export class MessageManager {
             chatId: currentChat?.id || content.chatId,
             targetUserId: currentChat?.type === 'DIRECT'
                 ? currentChat.members.find(m => m !== client)
-                : content.taregetUserId,
+                : content.targetUserId,
             timestamp: time,
             chatType: content.chatType
         }

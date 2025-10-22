@@ -22,13 +22,13 @@ interface Data {
 export class GroupManager {
     public socketClient: SocketClientConnect;
     private messageManager: MessageManager;
-    public dashboard: Dashboard;
+    public dashboard: Dashboard | null;
     private inviteCodeManager: InviteCodeManager;
 
     public appEl: HTMLDivElement | null = null;
     private layoutRef = React.createRef<GroupLayout>();
     private uname: any;
-    private socketId: Promise<string>;
+    private socketId: string | null = null;
     
     public root: Root | null = null;
     private container!: HTMLElement;
@@ -49,7 +49,7 @@ export class GroupManager {
     constructor(
         socketClient: SocketClientConnect,
         messageManager: MessageManager,
-        dashboard: Dashboard,
+        dashboard: Dashboard | null,
         appEl: HTMLDivElement | null = null, 
         uname: any
     ) {
@@ -59,16 +59,10 @@ export class GroupManager {
         this.appEl = appEl;
         this.uname = uname;
         this.inviteCodeManager = new InviteCodeManager(socketClient);
-        this.socketId = this.socketClient.getSocketId();
-        this.test()
     }
 
-    private async test(): Promise<void> {
-        const client = await this.socketId;
-        const handleSystemMessage = (data: any) => {
-            console.log('System: User joined group:', data);
-        }
-        await this.socketClient.onDestination(`/user/${client}/queue/messages/group/user-joined`, handleSystemMessage);
+    public async init(): Promise<void> {
+        this.socketId = await this.socketClient.getSocketId();
     }
     
     /*
@@ -125,6 +119,7 @@ export class GroupManager {
         onCreateError: (error: any) => void,
     ): void {
         if(!this.container) return;
+        if(!this.dashboard) throw new Error('Dashboard error!');
 
         this.onCreateSuccess = onCreateSuccess;
         this.onCreateError = onCreateError;
@@ -141,10 +136,6 @@ export class GroupManager {
         this.root.render(content);
     }
 
-    public setContainer(container: HTMLElement): void {
-        this.container = container;
-    }
-
     /* Creation Menu */
     public async showCreationMenu(): Promise<void> {
         if(!this.appEl) return;
@@ -155,7 +146,7 @@ export class GroupManager {
         
         this.renderCreationLayout(
             (data) => {
-                this.dashboard.updateState({
+                this.dashboard!.updateState({
                     showCreationForm: false,
                     showJoinForm: false,
                     showGroup: true,
@@ -165,7 +156,7 @@ export class GroupManager {
             },
             (error) => {
                 alert(`Failed to create group: ${error.message}`);
-                this.dashboard.updateState({
+                this.dashboard!.updateState({
                     showCreationForm: true,
                     showJoinForm: false,
                     showGroup: false,
@@ -175,7 +166,7 @@ export class GroupManager {
             }
         );
         
-        this.dashboard.updateState({
+        this.dashboard!.updateState({
             showCreationForm: true,
             showJoinForm: false,
             showGroup: false,
@@ -313,6 +304,7 @@ export class GroupManager {
         onJoinError: (error: any) => void,
     ): void {
         if(!this.container) return;
+        if(!this.dashboard) throw new Error('Dashboard error!');
 
         this.onJoinSuccess = onJoinSuccess;
         this.onJoinError = onJoinError;
@@ -338,7 +330,7 @@ export class GroupManager {
         
         this.renderJoinLayout(
             (data) => {
-                this.dashboard.updateState({
+                this.dashboard!.updateState({
                     showCreationForm: false,
                     showJoinForm: false,
                     showGroup: true,
@@ -348,7 +340,7 @@ export class GroupManager {
             },
             (error) => {
                 alert(`Failed to join group: ${error.message}`);
-                this.dashboard.updateState({
+                this.dashboard!.updateState({
                     showCreationForm: false,
                     showJoinForm: true,
                     showGroup: false,
@@ -358,7 +350,7 @@ export class GroupManager {
             }
         );
         
-        this.dashboard.updateState({
+        this.dashboard!.updateState({
             showCreationForm: false,
             showJoinForm: true,
             showGroup: false,
@@ -464,6 +456,17 @@ export class GroupManager {
                 rej(err);
             }
         });
+    }
+
+    /*
+    ** Group Actions
+    */
+    public onCreateGroup = () => {
+        this.showCreationMenu();
+    }
+
+    public onJoinGroup = () => {
+        this.showJoinMenu();
     }
 
     /*

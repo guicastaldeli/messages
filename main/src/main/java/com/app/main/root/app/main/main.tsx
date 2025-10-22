@@ -11,7 +11,7 @@ import { Item } from './chat/chat-manager';
 import { ActiveChat } from './chat/chat-manager';
 
 interface State {
-    groupManager: MessageManager['controller']['groupManager'] | null;
+    chatManager: ChatManager | null;
     chatList: Item[];
     activeChat: ActiveChat | null;
     currentSession: SessionType;
@@ -22,9 +22,11 @@ interface State {
 export class Main extends Component<any, State> {
     private messageManager!: MessageManager;
     private socketClientConnect: SocketClientConnect;
-    private chatManager: ChatManager;
-    private dashboardInstance: Dashboard | null = null;
     private apiClient: ApiClient;
+    private chatManager?: ChatManager;
+
+    private appContainerRef = React.createRef<HTMLDivElement>();
+    private dashboardInstance: Dashboard | null = null;
 
     constructor(props: any) {
         super(props);
@@ -32,14 +34,13 @@ export class Main extends Component<any, State> {
         this.apiClient = new ApiClient();
         this.messageManager = new MessageManager(this.socketClientConnect);
         this.state = { 
-            groupManager: null,
+            chatManager: null,
             chatList: [],
             activeChat: null,
             currentSession: 'LOGIN',
             userId: null,
             username: null
         }
-        this.chatManager = new ChatManager(this.setState.bind(this));
     }
 
     private loadData = async(): Promise<void> => {
@@ -52,32 +53,41 @@ export class Main extends Component<any, State> {
         }
     }
 
-    componentDidMount(): void {
-        this.connect();
+    async componentDidMount(): Promise<void> {
+        await this.connect();
+        this.chatManager = new ChatManager(
+            this.socketClientConnect,
+            this.messageManager,
+            this.dashboardInstance,
+            this.appContainerRef.current,
+            this.state.username,
+            this.setState.bind(this)
+        );
         this.chatManager.mount();
+        await this.chatManager.init();
         this.loadData();
     }
 
     componentWillUnmount(): void {
-        this.chatManager.unmount();
+        if(this.chatManager) this.chatManager.unmount();
     }
 
-    private connect(): void {
+    private async connect(): Promise<void> {
         if(!this.socketClientConnect) return;
-        this.socketClientConnect.connect();
-        this.messageManager.init();
+        await this.socketClientConnect.connect();
+        await this.messageManager.init();
     }
 
     private setDashboardRef = (instance: Dashboard | null): void => {
         this.dashboardInstance = instance;
-        if(instance && this.messageManager) {
-            this.messageManager.dashboard = instance;
-            this.messageManager.controller.setDashboard(instance);
-        }
+        if(instance && this.messageManager) this.messageManager.dashboard = instance;
+        if(this.chatManager && instance) this.chatManager.setDashboard(instance);
     }
 
     //Join
     private handleJoin = async (sessionContext: any): Promise<void> => {
+        if(!this.chatManager) throw new Error('Chat manager error');
+
         try {
             const usernameInput = document.getElementById('username') as HTMLInputElement;
             const username = usernameInput.value.trim();
@@ -89,7 +99,7 @@ export class Main extends Component<any, State> {
 
             await this.messageManager.handleJoin();
             if(sessionContext) sessionContext.setSession('MAIN_DASHBOARD');
-            this.setState({ groupManager: this.messageManager.controller.groupManager });
+            this.setState({ chatManager: this.chatManager });
         } catch(err) {
             console.error(err);
         }
@@ -99,7 +109,7 @@ export class Main extends Component<any, State> {
         const { chatList, activeChat } = this.state;
 
         return (
-            <div className='app'>
+            <div className='app' ref={this.appContainerRef}>
                 <SessionProvider 
                     apiClient={this.apiClient} 
                     initialSession='LOGIN'
@@ -135,8 +145,7 @@ export class Main extends Component<any, State> {
                                         <Dashboard 
                                             ref={this.setDashboardRef}
                                             messageManager={this.messageManager}
-                                            chatManager={this.chatManager}
-                                            groupManager={this.state.groupManager!}
+                                            chatManager={this.state.chatManager!}
                                             chatList={chatList}
                                             activeChat={activeChat}
                                             apiClient={this.apiClient}

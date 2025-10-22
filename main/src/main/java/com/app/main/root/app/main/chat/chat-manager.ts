@@ -1,5 +1,10 @@
 import React from "react";
 import { chatState } from "../chat-state-service";
+import { SocketClientConnect } from "../socket-client-connect";
+import { MessageManager } from "../_messages_config/message-manager";
+import { Dashboard } from "../dashboard";
+import { DirectManager } from "./direct/direct-manager";
+import { GroupManager } from "./group/group-manager";
 
 export interface Item {
     id: string;
@@ -33,11 +38,35 @@ interface LastMessageUpdatedEvent extends CustomEvent {
 export class ChatManager {
     private chatList: any[] = [];
     private activeChat: any = null;
+    private container!: HTMLElement;
     private updateCallback: ((chatList: any[]) => void) | null = null;
     private setState: React.Component<any, State>['setState']; 
 
-    constructor(setState: React.Component<any, State>['setState']) {
+    private directManager: DirectManager;
+    private groupManager: GroupManager;
+
+    constructor(
+        socketClient: SocketClientConnect,
+        messageManager: MessageManager,
+        dashboard: Dashboard | null,
+        appEl: HTMLDivElement | null = null, 
+        uname: any,
+        setState: React.Component<any, State>['setState']
+    ) {
+        this.directManager = new DirectManager();
+        this.groupManager = new GroupManager(
+            socketClient, 
+            messageManager, 
+            dashboard, 
+            appEl, 
+            uname
+        );
         this.setState = setState;
+    }
+
+    public async init(): Promise<void> {
+        //await this.directManager.init();
+        await this.groupManager.init();
     }
 
     public mount(): void {
@@ -130,5 +159,28 @@ export class ChatManager {
             sender: sender || data.username,
             timestamp: timestamp.toISOString()
         });
+    }
+
+    public setContainer(container: HTMLElement): void {
+        this.container = container;
+    }
+
+    public setDashboard(instance: Dashboard): void {
+        const groupManager = this.getGroupManager();
+        if(groupManager) groupManager.dashboard = instance;
+    }
+
+    /*
+    ** Direct Manager
+    */
+    public getDirectManager(): DirectManager {
+        return this.directManager;
+    }
+
+    /*
+    ** Group Manager
+    */
+    public getGroupManager(): GroupManager {
+        return this.groupManager;
     }
 }
