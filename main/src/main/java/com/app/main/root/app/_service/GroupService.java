@@ -4,7 +4,6 @@ import com.app.main.root.app._types._Group;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._db.CommandQueryManager;
-import com.app.main.root.app._server.ConnectionTracker;
 import com.app.main.root.app._server.RouteContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -14,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +23,6 @@ import java.sql.*;
 public class GroupService {
     private final DataSource dataSource;
     private final EventTracker eventTracker;
-    private final ConnectionTracker connectionTracker;
     private final InviteCodeManager inviteCodeManager;
     private final SimpMessagingTemplate messagingTemplate;
     public final Map<String, Set<String>> groupSessions = new ConcurrentHashMap<>();
@@ -32,13 +31,11 @@ public class GroupService {
     public GroupService(
         DataSource dataSource, 
         SimpMessagingTemplate messagingTemplate,
-        EventTracker eventTracker,
-        ConnectionTracker connectionTracker
+        EventTracker eventTracker
     ) {
         this.dataSource = dataSource;
         this.messagingTemplate = messagingTemplate;
         this.eventTracker = eventTracker;
-        this.connectionTracker = connectionTracker;
         try {
             this.inviteCodeManager = new InviteCodeManager(dataSource);
         } catch(Exception err) {
@@ -319,11 +316,14 @@ public class GroupService {
     /* Group */
     private void handleGroupRoute(RouteContext context) {
         String chatId = (String) context.message.get("chatId");
-        if(chatId != null && chatId.startsWith("group_id")) {
-            Set<String> groupSessions = connectionTracker.getGroupSessions(chatId);
-            groupSessions.remove(context.sessionId);
-            context.targetSessions.addAll(groupSessions);
-            context.metadata.put("queue", "/queue/messages/group/" + chatId);
+        if(chatId != null && chatId.startsWith("group_")) {
+            Set<String> groupSessions = this.groupSessions.get(chatId);
+            if(groupSessions != null) {
+                Set<String> otherSessions = new HashSet<>(groupSessions);
+                otherSessions.remove(context.sessionId);
+                context.targetSessions.addAll(groupSessions);
+                context.metadata.put("queue", "/user/queue/messages/group");
+            }
         }
     }
 
@@ -336,11 +336,14 @@ public class GroupService {
     /* Group Others */
     private void handleGroupOthersRoute(RouteContext context) {
         String chatId = (String) context.message.get("chatId");
-        if(chatId != null && chatId.startsWith("group_id")) {
-            Set<String> groupSessions = connectionTracker.getGroupSessions(chatId);
-            groupSessions.remove(context.sessionId);
-            context.targetSessions.addAll(groupSessions);
-            context.metadata.put("queue", "/queue/messages/group/others");
+        if(chatId != null && chatId.startsWith("group_")) {
+            Set<String> groupSessions = this.groupSessions.get(chatId);
+            if(groupSessions != null) {
+                Set<String> otherSessions = new HashSet<>(groupSessions);
+                otherSessions.remove(context.sessionId);
+                context.targetSessions.addAll(groupSessions);
+                context.metadata.put("queue", "/queue/messages/group/others");
+            }
         }
     }
 

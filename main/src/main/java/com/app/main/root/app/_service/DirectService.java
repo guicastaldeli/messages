@@ -4,10 +4,10 @@ import com.app.main.root.app._server.RouteContext;
 
 @Component
 public class DirectService {
-    private final ServiceManager serviceManager;
+    private final UserService userService;
 
-    public DirectService(ServiceManager serviceManager) {
-        this.serviceManager = serviceManager;
+    public DirectService(UserService userService) {
+        this.userService = userService;
     }
     
     /*
@@ -25,14 +25,14 @@ public class DirectService {
     /* Self */
     private void handleSelfRoute(RouteContext context) {
         context.targetSessions.add(context.sessionId);
-        context.metadata.put("queue", "/queue/messages/direct/self");
+        context.metadata.put("queue", "/user/queue/messages/direct/self");
     }
 
     /* Others */
     private void handleOthersRoute(RouteContext context) {
         String targetUserId = (String) context.message.get("targetUserId");
         if(targetUserId != null) {
-            String targetSession = serviceManager.getUserService().getSessionByUserId(targetUserId);
+            String targetSession = userService.getSessionByUserId(targetUserId);
             if(targetSession != null && !targetSession.equals(context.sessionId)) {
                 context.targetSessions.add(targetSession);
                 context.metadata.put("queue", "/user/queue/messages/direct/others");

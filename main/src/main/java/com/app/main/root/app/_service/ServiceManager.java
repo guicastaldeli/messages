@@ -1,5 +1,6 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.DbService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,7 @@ public class ServiceManager {
 
     public ServiceManager(
         DbService dbService,
-        MessageService messageService,
+        @Lazy MessageService messageService,
         UserService userService,
         DirectService directService,
         GroupService groupService

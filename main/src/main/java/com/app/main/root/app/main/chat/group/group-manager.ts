@@ -76,15 +76,22 @@ export class GroupManager {
     *** Group Creation
     **
     */
-    private handleGroupCreationScss(data: Data): void {
+    private async handleGroupCreationScss(data: Data): Promise<void> {
         this.currentGroupName = data.name;
         const name = this.currentGroupName;
         const time = new Date().toISOString();
         this.currentGroupId = data.id;
         chatState.setType('group');
 
+        this.messageManager.setCurrentChat(
+            this.currentGroupId,
+            'GROUP',
+            data.members || [await this.socketId]
+        )
+
         const chatItem = {
             id: this.currentGroupId,
+            chatId: this.currentGroupId,
             groupId: data.id,
             name: data.name,
             type: 'group',
@@ -204,7 +211,7 @@ export class GroupManager {
             this.creationRej = rej;
 
             /* Success */ 
-            const handleSucss = (data: any) => {
+            const handleSucss = async (data: any) => {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
                 if(data && data.id) {
@@ -213,7 +220,7 @@ export class GroupManager {
                         this.creationRes = undefined;
                         this.creationRej = undefined;
                     }
-                    this.handleGroupCreationScss(data);
+                    await this.handleGroupCreationScss(data);
                 }
             }
 
@@ -272,6 +279,7 @@ export class GroupManager {
 
         const chatItem = {
             id: this.currentGroupId,
+            chatId: this.currentGroupId,
             groupId: data.id,
             name: data.name,
             type: 'group',

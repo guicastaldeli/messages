@@ -24,8 +24,8 @@ public class MessageRouter {
         this.messagingTemplate = messagingTemplate;
         this.eventTracker = eventTracker;
         this.connectionTracker = connectionTracker;
-        this.routeHandlers = new HashMap<>();
         this.serviceManager = serviceManager;
+        this.routeHandlers = new HashMap<>();
         registerDefaultHandlers();
     }
 

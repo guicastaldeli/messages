@@ -2,6 +2,7 @@ package com.app.main.root.app._service;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
@@ -13,7 +14,10 @@ public class MessageService {
     private final DataSource dataSource;
     private final ServiceManager serviceManager;
 
-    public MessageService(DataSource dataSource, ServiceManager serviceManager) {
+    public MessageService(
+        DataSource dataSource, 
+        @Lazy ServiceManager serviceManager
+    ) {
         this.dataSource = dataSource;
         this.serviceManager = serviceManager;
     }

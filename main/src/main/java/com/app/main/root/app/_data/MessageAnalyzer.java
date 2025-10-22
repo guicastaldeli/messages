@@ -39,6 +39,7 @@ public class MessageAnalyzer {
     */
     private MessageContext analyzeContext(String sessionId, Map<String, Object> payload) {
         String content = (String) payload.get("content");
+        String messageId = (String) payload.get("messageId");
         String chatId = (String) payload.get("chatId");
         String targetUserId = (String) payload.get("targetUserId");
         String username = (String) payload.get("username");
@@ -48,7 +49,8 @@ public class MessageAnalyzer {
 
         return new MessageContext(
             sessionId, 
-            content, 
+            content,
+            messageId,
             chatId, 
             targetUserId, 
             username, 
@@ -96,6 +98,7 @@ public class MessageAnalyzer {
         message.put("routingMetadata", Map.of(
             "sessionId", context.sessionId,
             "messageType", type,
+            "messageId", context.messageId,
             "isDirect", context.isDirect,
             "isGroup", context.isGroup,
             "isBroadcast", context.isBroadcast,

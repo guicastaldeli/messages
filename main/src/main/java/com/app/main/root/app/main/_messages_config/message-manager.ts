@@ -5,6 +5,7 @@ import { MessageTypes } from "./message-types";
 import { Controller } from "../controller";
 import { QueueManager } from "./queue-manager";
 import { Analysis, MessageAnalyzerClient } from "./message-analyzer-client";
+import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
 
 export class MessageManager {
     private queueManager: QueueManager;
@@ -16,6 +17,7 @@ export class MessageManager {
     public dashboard: any;
     private messageHandlers: Map<string, (data: any) => Promise<void>> = new Map();
 
+    private chatRegistry: ChatRegistry = new ChatRegistry();
     private uname: any;
     private appEl: HTMLDivElement | null = null;
     private socketId: string | null = null;
@@ -82,6 +84,7 @@ export class MessageManager {
         }
     }
 
+    /* SWITCH LATER TO JOIN CLASS :P */
     public handleJoin(): Promise<'dashboard'> {
         return new Promise(async (res, rej) => {
             if(!this.appEl || this.joinHandled) return rej('err');
@@ -140,6 +143,27 @@ export class MessageManager {
     }
 
     /*
+    ** Set CurrentChat
+    */
+    public async setCurrentChat(
+        chatId: string,
+        chatType: ChatType,
+        members?: string[]
+    ): Promise<void> {
+        let context: Context;
+
+        if(chatId && members) {
+            context = this.chatRegistry.getContext('GROUP', members);
+            context.id = chatId;
+        } else {
+            context = this.chatRegistry.getContext('DIRECT', [this.socketId!]);
+            context.id = chatId;
+        }
+
+        this.chatRegistry.setCurrentChat(context.id);
+    }
+
+    /*
     ** Queue Message Send
     */
     private async queueMessageSend(): Promise<void> {
@@ -178,11 +202,13 @@ export class MessageManager {
             }
             msgInputEl.value = '';
 
-            await this.sendMessage({
+            const content = {
+                content: msgInput,
                 senderId: senderId,
                 username: this.uname,
-                content: msgInput
-            });
+                timestamp: Date.now()
+            };
+            await this.sendMessage(content);
 
             msgInputEl.focus();
         } catch(err) {
@@ -195,25 +221,40 @@ export class MessageManager {
     /*
     ** Send Message Method
     */
-    private async sendMessage(content: any, options: any = {}): Promise<boolean> {
+    private async sendMessage(content: any): Promise<boolean> {
         const client = this.socketId;
         const time = Date.now();
+        const currentChat = this.chatRegistry.getCurrentChat();
         if(!client) return false;
 
         const data = {
             senderId: client,
             username: this.uname,
-            content: content.content || content,
-            chatId: options.chatId,
-            timestamp: time
+            content: content.content,
+            messageId: content.messageId,
+            chatId: currentChat?.id || content.chatId,
+            targetUserId: currentChat?.type === 'DIRECT'
+                ? currentChat.members.find(m => m !== client)
+                : content.taregetUserId,
+            timestamp: time,
+            chatType: content.chatType
         }
 
         const analysis = this.messageAnalyzer.analyzeMessage(data);
         const type = analysis.messageType.split('_')[0];
-        console.log('Analysis', analysis);
+
+        const analyzedData = {
+            ...analysis.context,
+            _metadata: {
+                type: type,
+                timestamp: time,
+                routing: 'STANDARD',
+                priority: analysis.priority
+            }
+        }
 
         return await this.queueManager.sendWithRouting(
-            data,
+            analyzedData,
             type,
             {
                 priority: analysis.priority,

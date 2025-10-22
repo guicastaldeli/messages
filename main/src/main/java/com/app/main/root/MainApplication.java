@@ -22,21 +22,31 @@ import org.springframework.context.annotation.Bean;
 public class MainApplication {
 	private static String url;
 	private static String test;
+	private static ConfigurableApplicationContext context;
 
 	public static void main(String[] args) {
-		/*
-		* Env Path 
-		*/
-		url = EnvConfig.get("SERVER_DEF_HTTP_URL");
+		Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+			System.err.println("Uncaught Exception in thread" + thread.getName() + ":");
+			throwable.printStackTrace();
+		});
 
-		/*
-		* App 
-		*/
-		ConfigurableApplicationContext context = SpringApplication.run(MainApplication.class, args);
-		Loading.finished();
-		alert();
-		init(context);
-	}
+		try {
+			/*
+			* Env Path 
+			*/
+			url = EnvConfig.get("SERVER_DEF_HTTP_URL");
+	
+			/*
+			* App 
+			*/
+			context = SpringApplication.run(MainApplication.class, args);
+			Loading.finished();
+			alert();
+			init(context);
+		} catch(Exception mainError) {
+			//handleError("MAIN APP INIT FAILED", mainError);
+		}
+	} 
 
 	private static void init(ConfigurableApplicationContext context) {
 		try {
@@ -44,9 +54,14 @@ public class MainApplication {
 			DbService dbService = context.getBean(DbService.class);
 			dbService.alert();
 			server.alert();
-		} catch(Exception err) {
-			System.err.println(err);
-			err.printStackTrace();
+		} catch(Exception initError) {
+			handleError("SERVICE INITIALIZATION ERROR!", initError);
+
+			if(context != null && context.isRunning()) {
+				System.out.println("Initiating shutdown...");
+				context.close();
+			}
+			System.exit(1);
 		}
 	}
 
@@ -92,4 +107,24 @@ public class MainApplication {
 	public ColorConverter colorConverter() {
 		return new ColorConverter();
 	}
+
+	private static void handleError(String message, Exception error) {
+        ColorConverter colorConverter = new ColorConverter();
+		
+        String errorMsg = colorConverter.style("   CRITICAL ERROR :(   \n", "red", "bold");
+        System.err.println("\n" + errorMsg);
+        System.err.println("\n📋 ERROR DETAILS:");
+        System.err.println("Message: " + error.getMessage());
+        System.err.println("\n🔍 STACK TRACE:");
+        error.printStackTrace();
+        
+        if (context != null) {
+            try {
+                String[] beanNames = context.getBeanDefinitionNames();
+                System.err.println("\nBEAN STATUS: " + beanNames.length + " beans defined");
+            } catch (Exception e) {
+                System.err.println("Cannot access bean definitions");
+            }
+		}
+    }
 }

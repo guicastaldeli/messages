@@ -182,6 +182,8 @@ public class EventList {
 
                     Map<String, Object> newGroup = new HashMap<>();
                     newGroup.put("id", id);
+                    newGroup.put("chatId", id);
+                    newGroup.put("groupId", id);
                     newGroup.put("name", groupName);
                     newGroup.put("creator", creator);
                     newGroup.put("creatorId", creatorId);

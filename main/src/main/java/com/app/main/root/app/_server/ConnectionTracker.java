@@ -17,10 +17,14 @@ public class ConnectionTracker {
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
     private final Set<Consumer<ConnectionInfo>> disconnectionCallbacks = new CopyOnWriteArraySet<>();
-
+    public ServiceManager serviceManager;
     @Autowired private ColorConverter colorConverter;
     @Autowired private UserAgentParserController userAgentParserController;
-    @Autowired @Lazy public ServiceManager serviceManager;
+    
+    @Autowired
+    public void setServiceManager(@Lazy ServiceManager serviceManager) {
+        this.serviceManager = serviceManager;
+    }
 
     /*
     * Track Connection 

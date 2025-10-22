@@ -10,15 +10,19 @@ public class DbService {
     private final RestTemplate restTemplate;
     public final ColorConverter colorConverter;
     private final String apiUrl = EnvConfig.get("API_URL");
-    private DbConfig dbConfig;
-    private FileManager fileManager;
+    private final DbConfig dbConfig;
+    private final FileManager fileManager;
 
     public DbService(
         DataSource dataSource, 
-        ColorConverter colorConverter
+        ColorConverter colorConverter,
+        DbConfig dbConfig,
+        FileManager fileManager
     ) {
         this.restTemplate = new RestTemplate();
         this.colorConverter = colorConverter;
+        this.dbConfig = dbConfig;
+        this.fileManager = fileManager;
     }
 
     public void alert() {
@@ -28,7 +32,7 @@ public class DbService {
             colorConverter.style("\nServices connected to API at: ", "green", "italic") +
             colorConverter.style(apiUrl, "brightGreen", "italic")
         );
-        dbConfig.verify();
-        fileManager.verify();
+        if(dbConfig != null) dbConfig.verify();
+        if(fileManager != null) fileManager.verify();
     }
 }

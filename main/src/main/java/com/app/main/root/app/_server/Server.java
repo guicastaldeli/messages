@@ -50,9 +50,9 @@ public class Server implements CommandLineRunner {
         this.eventTracker = eventTracker;
         this.messageTracker = MessageTracker.getInstance();
         this.serviceManager = serviceManager;
-        this.sessionService = new SessionService();
+        this.sessionService = sessionService;
         this.messagingTemplate = messagingTemplate;
-        this.socketMethods = new SocketMethods(messagingTemplate, eventTracker);
+        this.socketMethods = socketMethods;
         this.connectionTracker = connectionTracker;
         this.configSocketEvents = configSocketEvents;
         this.colorConverter = colorConverter;

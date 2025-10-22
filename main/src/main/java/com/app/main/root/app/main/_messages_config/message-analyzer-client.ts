@@ -67,7 +67,7 @@ export class MessageAnalyzerClient {
             context,
             routes,
             metadata,
-            messageType: this.getMessageType(data),
+            messageType: this.getMessageType(context),
             direction: this.setDirection(data),
             priority: 'NORMAL'
         }
@@ -79,7 +79,7 @@ export class MessageAnalyzerClient {
         const time = Date.now();
         const content = data.content || emptyPlaceholder;
         const chatId = data.chatId || emptyPlaceholder;
-        const targetUserId = data.targetUserId || emptyPlaceholder;
+        const targetUserId = data.targetUserId || data.senderId || emptyPlaceholder;
         const senderId = data.senderId || emptyPlaceholder;
         const username = data.username || emptyPlaceholder;
         const isDirect = !!targetUserId;
@@ -99,7 +99,7 @@ export class MessageAnalyzerClient {
             isBroadcast,
             isSystem,
             timestamp: data.timestamp || time,
-            messageId: data.messageId
+            messageId: data.messageId || this.generateMessageId()
         }
     }
 
@@ -166,7 +166,7 @@ export class MessageAnalyzerClient {
     /*
     ** Message Type
     */
-    private getMessageType(context: Context): string {
+    private getMessageType(context: Context): any {
         if(context.isDirect) return 'DIRECT_MESSAGE';
         if(context.isGroup) return 'GROUP_MESSAGE';
         if(context.isSystem) return 'SYSTEM_MESSAGE';
@@ -178,6 +178,14 @@ export class MessageAnalyzerClient {
         if(data.chatId && data.chatId.startsWith('group_')) return 'GROUP';
         if(data.type === 'SYSTEM') return 'SYSTEM';
         return 'CHAT';
+    }
+
+    /*
+    **
+    */
+    private generateMessageId(): string {
+        const time = Date.now();
+        return 'msg_' + time + '_' + Math.random().toString(36).substring(2, 10);
     }
 
     /*

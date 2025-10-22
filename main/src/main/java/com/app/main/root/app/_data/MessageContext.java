@@ -3,6 +3,7 @@ package com.app.main.root.app._data;
 public class MessageContext {
     public final String sessionId;
     public final String content;
+    public final String messageId;
     public final String chatId;
     public final String targetUserId;
     public final String username;
@@ -13,6 +14,7 @@ public class MessageContext {
     public MessageContext(
         String sessionId,
         String content,
+        String messageId,
         String chatId,
         String targetUserId,
         String username,
@@ -22,6 +24,7 @@ public class MessageContext {
     ) {
         this.sessionId = sessionId;
         this.content = content;
+        this.messageId = messageId;
         this.chatId = chatId;
         this.targetUserId = targetUserId;
         this.username = username;
