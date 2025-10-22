@@ -4,14 +4,17 @@ import { ContentGetter } from "../../content-getter";
 import { MessageTypes } from "./message-types";
 import { Controller } from "../controller";
 import { QueueManager } from "./queue-manager";
+import { Analysis, MessageAnalyzerClient } from "./message-analyzer-client";
 
 export class MessageManager {
     private queueManager: QueueManager;
     private contentGetter: ContentGetter;
     public socketClient: SocketClientConnect;
     private messageTypes: MessageTypes;
+    private messageAnalyzer: MessageAnalyzerClient;
     public controller!: Controller;
     public dashboard: any;
+    private messageHandlers: Map<string, (data: any) => Promise<void>> = new Map();
 
     private uname: any;
     private appEl: HTMLDivElement | null = null;
@@ -22,11 +25,16 @@ export class MessageManager {
     private isSending: boolean = false;
     private sendQueue: Array<() => Promise<void>> = [];
 
-    constructor(socketClient: SocketClientConnect) {
-        this.contentGetter = new ContentGetter();
+    constructor(
+        socketClient: SocketClientConnect,
+        messageAnalyzer: MessageAnalyzerClient
+    ) {
         this.socketClient = socketClient;
+        this.contentGetter = new ContentGetter();
         this.messageTypes = new MessageTypes(this.contentGetter);
         this.queueManager = new QueueManager(socketClient);
+        this.messageAnalyzer = new MessageAnalyzerClient();
+        this.setupHandlers();
     }
 
     private initController(): void {
@@ -54,45 +62,24 @@ export class MessageManager {
     }
 
     /*
+    ** Setup Handlers
+    */
+    private setupHandlers(): void {
+        this.messageHandlers.set('DIRECT', this.handleChatMessage.bind(this));
+        this.messageHandlers.set('GROUP', this.handleChatMessage.bind(this));
+       // this.messageHandlers.set('SYSTEM', this.handleSystemMessage.bind(this));
+    }
+
+    /*
     ** Setup Subscriptions
     */
     private async setupSubscriptions(): Promise<void> {
-        await this.queueManager.subscribeToMessageType('DIRECT', this.handleChatMessage.bind(this));
-        await this.queueManager.subscribeToMessageType('GROUP', this.handleChatMessage.bind(this));
-        await this.queueManager.subscribeToMessageType('SYSTEM', this.handleSystemMessage.bind(this));
-    }
-
-    /* Handle Chat Message */
-    private async handleChatMessage(data: any): Promise<void> {
         const client = await this.socketClient.getSocketId();
-
-        const isSelfMessage = 
-            data._metadata?.queue?.includes('self') ||
-            data.senderId === this.socketId ||
-            data.senderId === this.currentUserId ||
-            data.senderId === client;
-        const type = isSelfMessage ? 'self' : 'other';
-        if(this.currentUserId === null) this.currentUserId = client;
-
-        this.renderMessage(type, {
-            username: data.username,
-            content: data.content,
-            messageId: data.messageId,
-            timestamp: data.timestamp,
-            type: 'MESSAGE',
-            isOwnMessage: isSelfMessage,
-            groupId: data.chatId
-        });
-    }
-
-    /* Handle System Message */
-    private handleSystemMessage(data: any): void {
-        this.renderSystemMessage({
-            content: data.content,
-            type: 'SYSTEM_MESSAGE',
-            timestamp: data.timestamp,
-            isOwnMessage: false
-        });
+        this.socketId = client;
+        this.messageAnalyzer.init(client, this.currentUserId, this.uname);
+        for(const [messageType, handler] of this.messageHandlers) {
+            await this.queueManager.subscribeToMessageType(messageType, handler);
+        }
     }
 
     public handleJoin(): Promise<'dashboard'> {
@@ -161,10 +148,13 @@ export class MessageManager {
             return;
         }
         this.sendQueue = [];
-        await this.handleMessageSend();
+        await this.handleSendMessage();
     }
 
-    public async handleMessageSend(): Promise<void> {
+    /*
+    ** Send Message Handler
+    */
+    public async handleSendMessage(): Promise<void> {
         if(this.isSending) return;
         this.isSending = true;
 
@@ -188,7 +178,7 @@ export class MessageManager {
             }
             msgInputEl.value = '';
 
-            await this.send({
+            await this.sendMessage({
                 senderId: senderId,
                 username: this.uname,
                 content: msgInput
@@ -202,61 +192,79 @@ export class MessageManager {
         }
     }
 
-
     /*
     ** Send Message Method
     */
-    private async send(data: any): Promise<void> {
-        try {
-            const success = await this.queueManager.sendWithRouting(
-                data,
-                'CHAT',
-                {
-                    routing: 'STANDARD',
-                    priority: 'NORMAL'
-                }
-            );
-            if(!success) throw new Error('Failed to send message');
-        } catch(err) {
-            console.error('Send message err', err);
-            throw err;
+    private async sendMessage(content: any, options: any = {}): Promise<boolean> {
+        const client = this.socketId;
+        const time = Date.now();
+        if(!client) return false;
+
+        const data = {
+            senderId: client,
+            username: this.uname,
+            content: content.content || content,
+            chatId: options.chatId,
+            timestamp: time
         }
+
+        const analysis = this.messageAnalyzer.analyzeMessage(data);
+        const type = analysis.messageType.split('_')[0];
+        console.log('Analysis', analysis);
+
+        return await this.queueManager.sendWithRouting(
+            data,
+            type,
+            {
+                priority: analysis.priority,
+                metadata: analysis.metadata
+            }
+        )
     }
 
-    /* Render System Messages */
-    private renderSystemMessage(type: any) {
-        if(!this.appEl) return;
+    /* Handle Chat Message */
+    private async handleChatMessage(data: any): Promise<void> {
+        const type = this.messageAnalyzer.detectMessageType(data);
+        console.log(`Type: ${type}`);
 
-        let messageContainer = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
-        if(!messageContainer) throw new Error('message container err');
-
-        const content = this.contentGetter.__userEventMessageContent(
-            this.messageTypes.content, 
-            type
-        );
-
-        if(React.isValidElement(content)) {
-            const render = ReactDOMServer.renderToStaticMarkup(content);
-            messageContainer.insertAdjacentHTML('beforeend', render);
-        }
+        const analysis = this.messageAnalyzer.analyzeMessage(data);
+        console.log(`Analysis type: ${analysis.messageType}`);
+        
+        await this.renderMessage(data, analysis);
     }
 
     /* Render Messages */
-    private renderMessage(type: any, data: any) {
+    private async renderMessage(data: any, analysis: Analysis): Promise<void> {
         if(!this.appEl) return;
+        const container = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
+        let content: React.ReactElement;
 
-        let messageContainer = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
-        if(!messageContainer) throw new Error('message container err');
-
-        const content = this.contentGetter.__messageContent(
-            this.messageTypes.content, 
-            type, 
-            data
-        );
-
-        if(React.isValidElement(content)) {
-            const render = ReactDOMServer.renderToStaticMarkup(content);
-            messageContainer.insertAdjacentHTML('beforeend', render);
+        if(analysis.direction === 'self') {
+            content = this.contentGetter.__self({
+                username: data.username || 'Unknown',
+                content: data.content,
+                timestamp: data.timestamp,
+                messageId: data.messageId,
+                type: analysis.messageType,
+                priority: analysis.priority,
+                isDirect: analysis.context.isDirect,
+                isGroup: analysis.context.isGroup
+            });
+        } else {
+            content = this.contentGetter.__other({
+                username: data.username || 'Unknown',
+                content: data.content,
+                timestamp: data.timestamp,
+                messageId: data.messageId,
+                type: analysis.messageType,
+                priority: analysis.priority,
+                isDirect: analysis.context.isDirect,
+                isGroup: analysis.context.isGroup
+            });
         }
+
+        const render = ReactDOMServer.renderToStaticMarkup(content);
+        container?.insertAdjacentHTML('beforeend', render);
+        this.appEl.innerHTML += render;
     }
 }

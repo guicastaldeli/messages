@@ -1,0 +1,197 @@
+interface Context {
+    sessionId: string;
+    content: string;
+    chatId: string;
+    targetUserId: string;
+    username: string;
+    senderId: string;
+    isDirect: boolean;
+    isGroup: boolean;
+    isBroadcast: boolean;
+    isSystem: boolean;
+    timestamp: number;
+    messageId: string;
+}
+
+interface Metadata {
+    sessionId: string;
+    messageType: string;
+    isDirect: boolean;
+    isGroup: boolean;
+    isBroadcast: boolean;
+    isSystem: boolean;
+    direction: string;
+    priority: string;
+    timestamp: number;
+}
+
+export interface Analysis {
+    context: Context;
+    routes: string[];
+    metadata: Metadata;
+    direction: string;
+    messageType: string;
+    priority: string;
+}
+
+interface ValidationResult {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+}
+
+export class MessageAnalyzerClient {
+    private socketId: string | null = null;
+    private currentUserId: string | null = null;
+    private username: string | null = null;
+    
+    public init(
+        socketId: string,
+        currentUserId: string | null,
+        username: string
+    ): void {
+        this.socketId = socketId;
+        this.currentUserId = currentUserId;
+        this.username = username;
+    }
+
+    /*
+    ** Analyze
+    */
+    public analyzeMessage(data: any): Analysis {
+        const context = this.analyzeContext(data);
+        const routes = this.determineRoutes(context);
+        const metadata = this.generateMetadata(context);
+
+        return {
+            context,
+            routes,
+            metadata,
+            messageType: this.getMessageType(data),
+            direction: this.setDirection(data),
+            priority: 'NORMAL'
+        }
+    }
+
+    private analyzeContext(data: any): Context {
+        const emptyPlaceholder = 'Empty! :(';
+
+        const time = Date.now();
+        const content = data.content || emptyPlaceholder;
+        const chatId = data.chatId || emptyPlaceholder;
+        const targetUserId = data.targetUserId || emptyPlaceholder;
+        const senderId = data.senderId || emptyPlaceholder;
+        const username = data.username || emptyPlaceholder;
+        const isDirect = !!targetUserId;
+        const isGroup = (chatId && chatId.startsWith('group_'));
+        const isBroadcast = !isGroup && !isDirect;
+        const isSystem = data.type === 'SYSTEM';
+
+        return {
+            sessionId: this.socketId || emptyPlaceholder,
+            content,
+            chatId,
+            targetUserId,
+            username,
+            senderId,
+            isGroup,
+            isDirect,
+            isBroadcast,
+            isSystem,
+            timestamp: data.timestamp || time,
+            messageId: data.messageId
+        }
+    }
+
+    /*
+    ** Determine Routes
+    */
+    private determineRoutes(context: Context): string[] {
+        const routes: string[] = [];
+
+        if(context.isDirect) {
+            routes.push('DIRECT');
+        }
+        if(context.isGroup) {
+            routes.push('GROUP');
+        }
+        if(context.isSystem) {
+            routes.push('SYSTEM');
+        }
+
+        routes.push('CHAT');
+        return routes;
+    }
+
+    /*
+    ** Generate Metadata
+    */
+    private generateMetadata(context: Context): Metadata {
+        const direction = this.setDirectionByContext(context);
+
+        return {
+            sessionId: context.sessionId,
+            messageType: this.getMessageType(context),
+            isDirect: context.isDirect,
+            isGroup: context.isGroup,
+            isBroadcast: context.isBroadcast,
+            isSystem: context.isSystem,
+            direction: direction,
+            priority: 'NORMAL',
+            timestamp: context.timestamp
+        }
+    }
+
+    /*
+    ** Set Direction
+    */
+    public setDirection(data: any): string {
+        if(!this.socketId) return 'other';
+
+        const isSelf = (
+            data.senderId === this.socketId ||
+            data.senderId === this.currentUserId ||
+            data.username === this.username ||
+            data._metadata?.isSelf ||
+            data.routingMetadata?.isSelf
+        );
+
+        return isSelf ? 'self' : 'other';
+    }
+
+    private setDirectionByContext(context: Context): string {
+        return context.senderId === this.socketId ? 'self' : 'other';
+    }
+
+    /*
+    ** Message Type
+    */
+    private getMessageType(context: Context): string {
+        if(context.isDirect) return 'DIRECT_MESSAGE';
+        if(context.isGroup) return 'GROUP_MESSAGE';
+        if(context.isSystem) return 'SYSTEM_MESSAGE';
+        return 'BROADCAST_MESSAGE';
+    }
+
+    public detectMessageType(data: any): string {
+        if(data.targetUserId) return 'DIRECT';
+        if(data.chatId && data.chatId.startsWith('group_')) return 'GROUP';
+        if(data.type === 'SYSTEM') return 'SYSTEM';
+        return 'CHAT';
+    }
+
+    /*
+    **
+    ** Validate
+    **
+    */
+    public validateMessage(data: any): ValidationResult {
+        const errors: string[] = [];
+        if(!data.content) errors.push('Content is required!');
+        return {
+            isValid: errors.length === 0,
+            errors,
+            warnings: data.content
+        }
+    }
+}
