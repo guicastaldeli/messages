@@ -18,6 +18,10 @@ public class DbConfig {
     private static final String DATA_DIR = "./src/main/java/com/app/main/root/app/_db/data/";
     private final String file = "db.db";
 
+    public void verify() {
+        System.out.println("Database Config initialized...");
+    }
+
     @Bean
     public DataSource dataSource() {
         SQLiteDataSource dataSource = new SQLiteDataSource();

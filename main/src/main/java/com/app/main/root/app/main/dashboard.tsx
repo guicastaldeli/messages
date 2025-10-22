@@ -196,7 +196,7 @@ export class Dashboard extends Component<Props, State> {
                                                     onClick={() => this.handleChatSelect(chat)}
                                                 >
                                                     <div className="chat-icon">
-                                                        {chat.type === 'group' ? 'g' : 'd'}
+                                                        {chat.type === 'direct' ? 'd' : 'g'}
                                                     </div>
                                                     <div className="chat-info">
                                                         <div id="chat-name">{chat.name}</div>

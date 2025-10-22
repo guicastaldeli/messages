@@ -1,22 +1,39 @@
 package com.app.main.root.app._service;
-import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._User;
+import com.app.main.root.app.EventTracker;
+import com.app.main.root.app.EventLog.EventDirection;
+import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._server.RouteContext;
+import com.app.main.root.app._server.ConnectionTracker;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 import java.sql.*;
 
 @Component
 public class UserService {
     private final DataSource dataSource;
+    private final EventTracker eventTracker;
+    private final ConnectionTracker connectionTracker;
+    private final SimpMessagingTemplate messagingTemplate;
     public final Map<String, String> userToSessionMap = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToUserMap = new ConcurrentHashMap<>();
 
-    public UserService(DataSource dataSource) {
+    public UserService(
+        DataSource dataSource,
+        EventTracker eventTracker,
+        ConnectionTracker connectionTracker,
+        SimpMessagingTemplate messagingTemplate
+    ) {
         this.dataSource = dataSource;
+        this.eventTracker = eventTracker;
+        this.connectionTracker = connectionTracker;
+        this.messagingTemplate = messagingTemplate;
     }
 
     public void addUser(String id, String username, String sessionId) throws SQLException {
@@ -108,6 +125,57 @@ public class UserService {
     public void unlinkUserSession(String sessionId) {
         String userId = sessionToUserMap.remove(sessionId);
         if(userId != null) userToSessionMap.remove(userId);
+    }
+
+    /*
+    ** Send To User
+    */
+    public void sendMessageToUser(
+        String sessionId,
+        String event,
+        Object data
+    ) {
+        try {
+            eventTracker.track(
+                event,
+                data,
+                EventDirection.SENT,
+                sessionId,
+                "system"
+            );
+            messagingTemplate.convertAndSendToUser(
+                sessionId,
+                "/queue/" + event,
+                data
+            );
+        } catch(Exception err) {
+            System.err.println("Error sending message: " + err.getMessage());
+        }
+    }
+
+    /*
+    **
+    ***
+    *** Routes
+    ***
+    **
+    */
+    public void handleUserRoute(RouteContext context) {
+        String targetUserId = (String) context.message.get("targetUserId");
+        if(targetUserId != null) {
+            String targetSession = getSessionByUserId(targetUserId);
+            if(targetSession != null) {
+                context.targetSessions.add(targetSession);
+                if(targetSession.equals(context.sessionId)) {
+                    context.metadata.put("queue", "/user/queue/messages/self");
+                } else {
+                    Set<String> allSessions = connectionTracker.getAllActiveSessions();
+                    allSessions.remove(context.sessionId);
+                    context.targetSessions.addAll(allSessions);
+                    context.metadata.put("queue", "/user/queue/messages/others");
+                }
+            }
+        }
     }
 
     /*

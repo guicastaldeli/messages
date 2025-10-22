@@ -60,6 +60,15 @@ export class GroupManager {
         this.uname = uname;
         this.inviteCodeManager = new InviteCodeManager(socketClient);
         this.socketId = this.socketClient.getSocketId();
+        this.test()
+    }
+
+    private async test(): Promise<void> {
+        const client = await this.socketId;
+        const handleSystemMessage = (data: any) => {
+            console.log('System: User joined group:', data);
+        }
+        await this.socketClient.onDestination(`/user/${client}/queue/messages/group/user-joined`, handleSystemMessage);
     }
     
     /*
@@ -131,7 +140,6 @@ export class GroupManager {
 
     /* Creation Menu */
     public async showCreationMenu(): Promise<void> {
-        const client = await this.socketId;
         if(!this.appEl) return;
         if(this.root) {
             this.root.unmount();

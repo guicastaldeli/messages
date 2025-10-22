@@ -2,15 +2,14 @@ package com.app.main.root.app._server;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import com.app.main.root.app.EventTracker;
-import com.app.main.root.app._db.DbService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.RouteContext.RouteHandler;
+import com.app.main.root.app._service.ServiceManager;
 import java.util.*;
 
 @Component
 public class MessageRouter {
-
-    private final DbService dbService;
+    private final ServiceManager serviceManager;
     private final SimpMessagingTemplate messagingTemplate;
     private final EventTracker eventTracker;
     private final ConnectionTracker connectionTracker;
@@ -19,51 +18,48 @@ public class MessageRouter {
     public MessageRouter(
         SimpMessagingTemplate messagingTemplate,
         EventTracker eventTracker,
-        ConnectionTracker connectionTracker
-    , DbService dbService) {
+        ConnectionTracker connectionTracker, 
+        ServiceManager serviceManager
+    ) {
         this.messagingTemplate = messagingTemplate;
         this.eventTracker = eventTracker;
         this.connectionTracker = connectionTracker;
         this.routeHandlers = new HashMap<>();
+        this.serviceManager = serviceManager;
         registerDefaultHandlers();
-        this.dbService = dbService;
     }
 
     /*
     * Default Handlers 
     */
     private void registerDefaultHandlers() {
-        routeHandlers.put("SELF", this::handleSelfRoute);
-        routeHandlers.put("OTHERS", this::handleOthersRoute);
-        routeHandlers.put("GROUP", this::handleGroupRoute);
+        routeHandlers.put("CHAT", this::handleChatRoute);
+        routeHandlers.put("USER", this::handleUserRoute);
+        routeHandlers.put("DIRECT", this::handleDirectRoutes);
+        routeHandlers.put("GROUP", this::handleGroupRoutes);
         routeHandlers.put("BROADCAST", this::handleBroadcastRoute);
         routeHandlers.put("SESSION", this::handleSessionRoute);
-        routeHandlers.put("USER", this::handleUserRoute);
     }
 
-    /* Self */
-    private void handleSelfRoute(RouteContext context) {
+    /* Chat */
+    private void handleChatRoute(RouteContext context) {
         context.targetSessions.add(context.sessionId);
-        context.metadata.put("queue", "/queue/messages/self");
+        context.metadata.put("queue", "/queue/messages/all");
     }
 
-    /* Others */
-    private void handleOthersRoute(RouteContext context) {
-        Set<String> allSessions = connectionTracker.getAllActiveSessions();
-        allSessions.remove(context.sessionId);
-        context.targetSessions.addAll(allSessions);
-        context.metadata.put("queue", "/queue/messages/others");
+    /* User Messages */
+    private void handleUserRoute(RouteContext context) {
+        serviceManager.getUserService().handleUserRoute(context);
+    }
+
+    /* Direct */
+    private void handleDirectRoutes(RouteContext context) {
+        serviceManager.getDirectService().handleDirectRoutes(context);
     }
 
     /* Group */
-    private void handleGroupRoute(RouteContext context) {
-        String chatId = (String) context.message.get("chatId");
-        if(chatId != null && chatId.startsWith("group_id")) {
-            Set<String> groupSessions = connectionTracker.getGroupSessions(chatId);
-            groupSessions.remove(context.sessionId);
-            context.targetSessions.addAll(groupSessions);
-            context.metadata.put("queue", "/queue/messages/group" + chatId);
-        }
+    private void handleGroupRoutes(RouteContext context) {
+        serviceManager.getGroupService().handleGroupRoutes(context);
     }
 
     /* Broadcast */
@@ -77,18 +73,10 @@ public class MessageRouter {
         String targetSession = (String) context.message.get("targetSession");
         if(targetSession != null) {
             context.targetSessions.add(targetSession);
-            context.metadata.put("queue", "/queue/messages/direct");
-        }
-    }
-
-    /* User */
-    private void handleUserRoute(RouteContext context) {
-        String targetUserId = (String) context.message.get("targetUserId");
-        if(targetUserId != null) {
-            String targetSession = connectionTracker.userService.getSessionByUserId(targetUserId);
-            if(targetSession != null) {
-                context.targetSessions.add(targetSession);
-                context.metadata.put("queue", "/queue/messages/direct");
+            if(targetSession.equals(context.sessionId)) {
+                context.metadata.put("queue", "/user/queue/messages/self");
+            } else {
+                context.metadata.put("queue", "/user/queue/messages/others");
             }
         }
     }

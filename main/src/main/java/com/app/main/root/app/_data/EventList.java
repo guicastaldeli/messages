@@ -1,37 +1,41 @@
 package com.app.main.root.app._data;
 import com.app.main.root.app._server.MessageRouter;
+import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.EnvConfig;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
-import com.app.main.root.app._db.DbService;
 import com.app.main.root.app._server.ConnectionTracker;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app._server.ConnectionInfo;
 import com.app.main.root.app.main._messages_config.MessageTracker;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Component
 public class EventList {
-    private final DbService dbService;
+    private final ServiceManager serviceManager;
     private final EventTracker eventTracker;
     private final ConnectionTracker connectionTracker;
     private final SocketMethods socketMethods;
     private final MessageTracker messageTracker;
     private final MessageRouter messageRouter;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public EventList(
-        DbService dbService,
+        ServiceManager serviceManager,
         EventTracker eventTracker,
+        SimpMessagingTemplate messagingTemplate,
         ConnectionTracker connectionTracker,
         SocketMethods socketMethods,
         MessageTracker messageTracker,
         MessageRouter messageRouter
     ) {
         this.eventTracker = eventTracker;
-        this.dbService = dbService;
+        this.serviceManager = serviceManager;
+        this.messagingTemplate = messagingTemplate;
         this.connectionTracker = connectionTracker;
         this.socketMethods = socketMethods;
         this.messageTracker = messageTracker;
@@ -82,7 +86,7 @@ public class EventList {
 
                 try {
                     String actualUserId = userId != null ? userId : sessionId;
-                    dbService.getUserService().addUser(actualUserId, username, sessionId);
+                    serviceManager.getUserService().addUser(actualUserId, username, sessionId);
                     ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
                     if(connectionInfo != null) connectionTracker.logUsernameSet(connectionInfo, username);
                 } catch(Exception err) {
@@ -108,12 +112,13 @@ public class EventList {
                 String chatId = (String) messageData.get("chatId");
                 String username = (String) messageData.get("username");
                 String chatSocket = chatId != null ? chatId : sessionId; 
-                String chatType = chatId != null && chatId.startsWith("group_") ? "GROUP" : "DIRECT";
+                boolean isGroupChat = (chatId != null && chatId.startsWith("_group")) || (chatSocket.startsWith("_group"));
+                String chatType = isGroupChat ? "GROUP" : "DIRECT";
                 String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
                 long time = System.currentTimeMillis();
                 
                 try {
-                    dbService.getMessageService().saveMessage(chatSocket, sessionId, content, "text");
+                    serviceManager.getMessageService().saveMessage(chatSocket, sessionId, content, "text");
                 } catch(Exception err) {
                     System.err.println("Failed to save message: " + err.getMessage());
                 }
@@ -125,7 +130,7 @@ public class EventList {
                 message.put("chatId", chatSocket);
                 message.put("messageId", messageId);
                 message.put("timestamp", time);
-                message.put("type", "MESSAGE");
+                message.put("type", chatType + "_MESSAGE");
                 message.put("routingMetadata", Map.of(
                     "sessionId", sessionId,
                     "chatType", chatType,
@@ -134,9 +139,13 @@ public class EventList {
 
                 String[] routes;
                 if(chatId != null && chatId.startsWith("group_")) {
-                    routes = new String[]{"SELF", "GROUP"};
+                    routes = new String[]{"GROUP"};
                 } else {
-                    routes = new String[]{"SELF", "OTHERS"};
+                    if(chatSocket.equals(sessionId)) {
+                        routes = new String[]{"SELF"};
+                    } else {
+                        routes = new String[]{"SELF", "OTHERS"};
+                    }
                 }
                 messageRouter.routeMessage(sessionId, payload, message, routes);
 
@@ -181,7 +190,7 @@ public class EventList {
         configs.put("create-group", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 try {
-                    Map<String, Object> groupData = dbService.getGroupService().parseData(payload);
+                    Map<String, Object> groupData = serviceManager.getGroupService().parseData(payload);
                     String format = UUID.randomUUID().toString().substring(0, 7);
                     String id = "group_" + System.currentTimeMillis() + "_" + format;
                     String creator = (String) groupData.get("creator");
@@ -189,10 +198,11 @@ public class EventList {
                     String groupName = (String) groupData.get("groupName");
                     String creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-                    dbService.getGroupService().createGroup(id, groupName, creatorId);
-                    dbService.getGroupService().addUserToGroup(id, creatorId);
+                    serviceManager.getGroupService().createGroup(id, groupName, creatorId);
+                    serviceManager.getGroupService().addUserToGroup(id, creatorId);
+                    serviceManager.getGroupService().addUserToGroupMapping(creatorId, id, sessionId);
 
-                    List<_User> members = dbService.getGroupService().getGroupMembers(id);
+                    List<_User> members = serviceManager.getGroupService().getGroupMembers(id);
                     List<String> memberUserId = new ArrayList<>();
                     for(_User member : members) memberUserId.add(member.getId());
 
@@ -201,7 +211,7 @@ public class EventList {
                     newGroup.put("name", groupName);
                     newGroup.put("creator", creator);
                     newGroup.put("creatorId", creatorId);
-                    newGroup.put("members", memberUserId);
+                    newGroup.put("members", memberUserId != null ? memberUserId : creatorId);
                     newGroup.put("createdAt", creationDate);
                     newGroup.put("sessionId", sessionId);
 
@@ -212,7 +222,7 @@ public class EventList {
                         sessionId, 
                         creator
                     );
-                    socketMethods.sendToUser(
+                    connectionTracker.serviceManager.getUserService().sendMessageToUser(
                         sessionId,
                         "group-creation-scss",
                         newGroup
@@ -220,7 +230,7 @@ public class EventList {
 
                     return Collections.emptyMap();
                 } catch(Exception err) {
-                    socketMethods.sendToUser(sessionId, "group-creation-err", err.getMessage());
+                    connectionTracker.serviceManager.getUserService().sendMessageToUser(sessionId, "group-creation-err", err.getMessage());
                     return Collections.emptyMap();
                 }
             },
@@ -232,23 +242,24 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     long time = System.currentTimeMillis();
-                    Map<String, Object> data = dbService.getGroupService().parseData(payload);
+                    Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
                     String userId = (String) data.get("userId");
                     String inviteCode = (String) data.get("inviteCode");
                     String username = (String) data.get("username");
 
-                    String groupId = dbService.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
-                    Map<String, Object> groupInfo = dbService.getGroupService().getGroupInfo(groupId);
+                    String groupId = serviceManager.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
+                    Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
                     
                     if(groupId == null) throw new Exception("Group Id is required!");
                     if(userId == null) throw new Exception("User Id is required!");
                     if(username == null || username.trim().isEmpty()) throw new Exception("Username is required!");
 
-                    boolean isValid = dbService.getGroupService().getInviteCodes().validateInviteCode(inviteCode);
+                    boolean isValid = serviceManager.getGroupService().getInviteCodes().validateInviteCode(inviteCode);
                     if(!isValid) throw new Exception("Invalid invite code");
 
-                    boolean success = dbService.getGroupService().addUserToGroup(groupId, sessionId);
+                    boolean success = serviceManager.getGroupService().addUserToGroup(groupId, sessionId);
                     if(!success) throw new Exception("Failed to join group :(");
+                    serviceManager.getGroupService().addUserToGroupMapping(userId, groupId, sessionId);
 
                     eventTracker.track(
                         "join-group",
@@ -257,13 +268,6 @@ public class EventList {
                         sessionId,
                         userId
                     );
-
-                    /* System Message */ 
-                    Map<String, Object> systemMessageData = new HashMap<>();
-                    systemMessageData.put("content", username + " joined");
-                    systemMessageData.put("chatId", groupId);
-                    systemMessageData.put("type", "SYSTEM_MESSAGE");
-                    //socketMethods.broadcastToDestination("/topic/chat", systemMessageData);
 
                     /* Event Response */
                     Map<String, Object> res = new HashMap<>();
@@ -274,15 +278,25 @@ public class EventList {
                     res.put("timestamp", time);
                     res.put("members", groupInfo.get("members"));
                     res.put("sessionId", sessionId);
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "join-group-scss", res);
 
-                    socketMethods.sendToUser(sessionId, "join-group-scss", res);
+                    /* System Message */
+                    Map<String, Object> systemMessage = new HashMap<>();
+                    systemMessage.put("content", username + " joined");
+                    systemMessage.put("groupId", groupId);
+                    systemMessage.put("timestamp", time);
+                    systemMessage.put("type", "SYSTEM_MESSAGE");
+                    systemMessage.put("event", "USER_JOINED");
+                    messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
+                    serviceManager.getGroupService().sendToGroup(groupId, "user-joined", systemMessage);
+
                     return Collections.emptyMap();
                 } catch(Exception err) {
                     err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
                     errRes.put("error", "JOIN_FAILED");
                     errRes.put("message", err.getMessage());
-                    socketMethods.sendToUser(sessionId, "join-group-err", errRes);
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "join-group-err", errRes);
                     return Collections.emptyMap();
                 }
             },
@@ -298,7 +312,7 @@ public class EventList {
                     Map<String, Object> data = (Map<String, Object>) payload;
                     String groupId = (String) data.get("groupId");
                     String userId = (String) data.get("userId");
-                    boolean isMember = dbService.getGroupService().isUserGroupMember(groupId, userId);
+                    boolean isMember = serviceManager.getGroupService().isUserGroupMember(groupId, userId);
 
                     if(groupId == null || groupId.trim().isEmpty()) {
                         throw new IllegalArgumentException("Group Id is required");
@@ -314,7 +328,7 @@ public class EventList {
                     String inviteCode = UUID.randomUUID().toString().substring(0, 16);
                     String inviteLink = webUrl + "/join?c=" + inviteCode;
                     long expireTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
-                    dbService.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, userId, userId);
+                    serviceManager.getGroupService().getInviteCodes().storeInviteCode(groupId, inviteCode, userId, userId);
                     
                     res.put("userId", userId);
                     res.put("inviteLink", inviteLink);
@@ -343,10 +357,10 @@ public class EventList {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
                     String inviteCode = (String) data.get("inviteCode");
-                    String groupId = dbService.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
-                    Map<String, Object> groupInfo = dbService.getGroupService().getGroupInfo(groupId);
+                    String groupId = serviceManager.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
+                    Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
                     Object creator = groupInfo.get("creator") != null ? groupInfo.get("creator") : groupInfo.get("creatorId");
-                    List<_User> members = dbService.getGroupService().getGroupMembers(groupId);
+                    List<_User> members = serviceManager.getGroupService().getGroupMembers(groupId);
                     List<String> memberNames = new ArrayList<>();
                     List<String> memberIds = new ArrayList<>();
                     for(_User member : members) {

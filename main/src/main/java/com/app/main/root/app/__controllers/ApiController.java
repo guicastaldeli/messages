@@ -1,5 +1,5 @@
 package com.app.main.root.app.__controllers;
-import com.app.main.root.app._db.DbService;
+import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app._types._User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,12 +12,12 @@ import java.util.*;
 @RequestMapping("/api")
 public class ApiController {
     @Autowired
-    private DbService dbService;
+    private ServiceManager serviceManager;
 
     @GetMapping("/recent-chats")
     public ResponseEntity<List<_RecentChat>> getRecentChats(@RequestParam(required = false) String userId) {
         try {
-            List<_RecentChat> chats = dbService.getMessageService().getRecentChats(userId, 100);
+            List<_RecentChat> chats = serviceManager.getMessageService().getRecentChats(userId, 100);
             return ResponseEntity.ok(chats);
         } catch (SQLException e) {
             System.err.println("SQL Error getting recent chats: " + e.getMessage());
@@ -31,7 +31,7 @@ public class ApiController {
     @GetMapping("/users/{userId}")
     public ResponseEntity<_User> getUserById(@PathVariable String userId) {
         try {
-            _User user = dbService.getUserService().getUserById(userId);
+            _User user = serviceManager.getUserService().getUserById(userId);
             if(user != null) {
                 return ResponseEntity.ok(user);
             } else {

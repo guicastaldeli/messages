@@ -178,6 +178,12 @@ li:hover {
   background-color: rgba(0, 0, 0, 0.388);
 }
 
+.chat-item {
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+}
+
 #chat-name {
   font-weight: bolder;
 }

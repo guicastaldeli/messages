@@ -1,6 +1,4 @@
 package com.app.main.root.app._data;
-import java.util.Collections;
-
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -19,32 +17,6 @@ public class SocketMethods {
     ) {
         this.messagingTemplate = messagingTemplate;
         this.eventTracker = eventTracker;
-    }
-
-    /*
-    ** Send To User
-    */
-    public void sendToUser(
-        String sessionId,
-        String event,
-        Object data
-    ) {
-        try {
-            eventTracker.track(
-                event,
-                data,
-                EventDirection.SENT,
-                sessionId,
-                "system"
-            );
-            messagingTemplate.convertAndSendToUser(
-                sessionId,
-                "/queue/" + event,
-                data
-            );
-        } catch(Exception err) {
-            System.err.println("Error sending message: " + err.getMessage());
-        }
     }
 
     /*
@@ -75,7 +47,7 @@ public class SocketMethods {
     /*
     ** Broadcast to All 
     */
-    public void broadcast(String event, Object data) {
+    public void broadcastAll(String event, Object data) {
         try {
             eventTracker.track(
                 event,
@@ -90,34 +62,6 @@ public class SocketMethods {
             );
         } catch(Exception err) {
             System.err.println("Error broadcasting message: " + err.getMessage());
-        }
-    }
-
-
-    /*
-    * Broadcast to Others 
-    */
-    public void broadcastOthers(
-        String destination,
-        Object data,
-        String sessionId
-    ) {
-        try {
-            eventTracker.track(
-                "broadcast" + destination + "-x-" + sessionId,
-                data,
-                EventDirection.SENT,
-                "broadcast",
-                "system"
-            );
-
-            messagingTemplate.convertAndSend(
-                destination,
-                data,
-                Collections.singletonMap("excludeSessionId", sessionId)
-            );
-        } catch(Exception err) {
-            System.err.println("Error broadcasting to " + destination + " except " + sessionId + ": " + err.getMessage());
         }
     }
 

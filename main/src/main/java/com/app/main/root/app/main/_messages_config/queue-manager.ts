@@ -13,19 +13,19 @@ export class QueueManager {
     */
     private setupRoutingConfig() {
         this.routingConfig.set('CHAT', [
-            '/user/queue/messages/self', 
-            '/user/queue/messages/others',
+            '/user/queue/messages/all'
         ]);
-        this.routingConfig.set('GROUP_CHAT', [
+        this.routingConfig.set('DIRECT', [
             '/user/queue/messages/self', 
-            '/user/queue/messages/group'
+            '/user/queue/messages/others'
         ]);
-        this.routingConfig.set('DIRECT_MESSAGE', [
+        this.routingConfig.set('GROUP', [
             '/user/queue/messages/self', 
-            '/user/queue/messages/direct'
+            '/user/queue/messages/others'
         ]);
         this.routingConfig.set('SYSTEM', [
-            '/user/queue/messages/system'
+            '/user/queue/messages/system',
+            '/user/queue/system-message'
         ]);
     }
 

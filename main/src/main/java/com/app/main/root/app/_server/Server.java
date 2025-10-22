@@ -3,7 +3,7 @@ import com.app.main.root.app._data.ConfigSocketEvents;
 import com.app.main.root.EnvConfig;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.main._messages_config.MessageTracker;
-import com.app.main.root.app._db.DbService;
+import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._service.SessionService;
 import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app._utils.ColorConverter;
@@ -20,7 +20,7 @@ public class Server implements CommandLineRunner {
     private final EventRegistry eventRegistry;
     private final EventTracker eventTracker;
     private final MessageTracker messageTracker;
-    private final DbService dbService;
+    private final ServiceManager serviceManager;
     private final SessionService sessionService;
     private final SocketMethods socketMethods;
     private final SimpMessagingTemplate messagingTemplate;
@@ -35,7 +35,7 @@ public class Server implements CommandLineRunner {
     private String apiUrl = EnvConfig.get("API_URL");
 
     public Server(
-        DbService dbService,
+        ServiceManager serviceManager,
         SessionService sessionService,
         EventTracker eventTracker,
         EventRegistry eventRegistry,
@@ -49,7 +49,7 @@ public class Server implements CommandLineRunner {
         this.eventRegistry = eventRegistry;
         this.eventTracker = eventTracker;
         this.messageTracker = MessageTracker.getInstance();
-        this.dbService = dbService;
+        this.serviceManager = serviceManager;
         this.sessionService = new SessionService();
         this.messagingTemplate = messagingTemplate;
         this.socketMethods = new SocketMethods(messagingTemplate, eventTracker);

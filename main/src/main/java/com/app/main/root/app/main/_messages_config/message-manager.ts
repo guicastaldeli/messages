@@ -57,7 +57,8 @@ export class MessageManager {
     ** Setup Subscriptions
     */
     private async setupSubscriptions(): Promise<void> {
-        await this.queueManager.subscribeToMessageType('CHAT', this.handleChatMessage.bind(this));
+        await this.queueManager.subscribeToMessageType('DIRECT', this.handleChatMessage.bind(this));
+        await this.queueManager.subscribeToMessageType('GROUP', this.handleChatMessage.bind(this));
         await this.queueManager.subscribeToMessageType('SYSTEM', this.handleSystemMessage.bind(this));
     }
 
@@ -71,8 +72,7 @@ export class MessageManager {
             data.senderId === this.currentUserId ||
             data.senderId === client;
         const type = isSelfMessage ? 'self' : 'other';
-
-        console.log(`Message type: ${type}, isSelf: ${isSelfMessage}, sender: ${data.senderId}, currentUser: ${this.currentUserId}`);
+        if(this.currentUserId === null) this.currentUserId = client;
 
         this.renderMessage(type, {
             username: data.username,
@@ -80,7 +80,8 @@ export class MessageManager {
             messageId: data.messageId,
             timestamp: data.timestamp,
             type: 'MESSAGE',
-            isOwnMessage: isSelfMessage
+            isOwnMessage: isSelfMessage,
+            groupId: data.chatId
         });
     }
 

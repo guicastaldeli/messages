@@ -19,6 +19,10 @@ public class FileManager {
         BASE_PATH + "system-messages.sql"
     );
 
+    public void verify() {
+        System.out.println("File Manager initialized...");
+    }
+
     public void initDb(Statement stmt) throws SQLException, IOException {
         for(String file : tables) {
             execFile(stmt, file);

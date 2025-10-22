@@ -1,7 +1,6 @@
 package com.app.main.root.app._server;
 import com.app.main.root.app.__controllers.UserAgentParserController;
-import com.app.main.root.app._service.GroupService;
-import com.app.main.root.app._service.UserService;
+import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -21,8 +20,7 @@ public class ConnectionTracker {
 
     @Autowired private ColorConverter colorConverter;
     @Autowired private UserAgentParserController userAgentParserController;
-    @Autowired @Lazy public UserService userService;
-    @Autowired @Lazy public GroupService groupService;
+    @Autowired @Lazy public ServiceManager serviceManager;
 
     /*
     * Track Connection 
@@ -40,7 +38,7 @@ public class ConnectionTracker {
         );
         connectionInfo.isConnected = true;
         connections.put(socketId, connectionInfo);
-        userService.linkUserSession(socketId, socketId);
+        serviceManager.getUserService().linkUserSession(socketId, socketId);
         
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);
@@ -56,10 +54,10 @@ public class ConnectionTracker {
             connectionInfo.disconnectedAt = LocalDateTime.now();
             connectionInfo.isConnected = false;
 
-            String userId = userService.getUserIdBySessison(socketId);
+            String userId = serviceManager.getUserService().getUserIdBySessison(socketId);
             if(userId != null) {
-                groupService.removeUserFromAllGroups(userId);
-                userService.unlinkUserSession(socketId);
+                serviceManager.getGroupService().removeUserFromAllGroups(userId);
+                serviceManager.getUserService().unlinkUserSession(socketId);
             }
 
             logDisconnection(connectionInfo);
@@ -76,8 +74,8 @@ public class ConnectionTracker {
             String userId = socketId;
             connectionInfo.username = username;
             
-            userService.linkUserSession(userId, socketId);
-            groupService.updateGroupSessionsUser(userId, socketId);
+            serviceManager.getUserService().linkUserSession(userId, socketId);
+            serviceManager.getGroupService().updateGroupSessionsUser(userId, socketId);
             connections.put(socketId, connectionInfo);
         }
     }
@@ -126,7 +124,7 @@ public class ConnectionTracker {
 
     /* Group Sessions */
     public Set<String> getGroupSessions(String groupId) {
-        return groupService.groupSessions.getOrDefault(groupId, Collections.emptySet());
+        return serviceManager.getGroupService().groupSessions.getOrDefault(groupId, Collections.emptySet());
     }
 
     /*
@@ -149,11 +147,11 @@ public class ConnectionTracker {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalConnections", connections.size());
         stats.put("activeConnections", getActiveConnectionsCount());
-        stats.put("totalGroups", groupService.groupSessions.size());
-        stats.put("totalUsers", userService.userToSessionMap.size());
+        stats.put("totalGroups", serviceManager.getGroupService().groupSessions.size());
+        stats.put("totalUsers", serviceManager.getUserService().userToSessionMap.size());
 
         Map<String, Integer> groupSizes = new HashMap<>();
-        for(Map.Entry<String, Set<String>> entry : groupService.groupSessions.entrySet()) {
+        for(Map.Entry<String, Set<String>> entry : serviceManager.getGroupService().groupSessions.entrySet()) {
             groupSizes.put(entry.getKey(), entry.getValue().size());
         }
         stats.put("groupSizes", groupSizes);

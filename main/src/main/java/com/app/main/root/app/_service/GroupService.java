@@ -1,28 +1,44 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._types._User;
-import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Group;
+import com.app.main.root.app.EventTracker;
+import com.app.main.root.app.EventLog.EventDirection;
+import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._server.ConnectionTracker;
+import com.app.main.root.app._server.RouteContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.sql.*;
 
 @Component
 public class GroupService {
     private final DataSource dataSource;
+    private final EventTracker eventTracker;
+    private final ConnectionTracker connectionTracker;
     private final InviteCodeManager inviteCodeManager;
+    private final SimpMessagingTemplate messagingTemplate;
     public final Map<String, Set<String>> groupSessions = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> userGroups = new ConcurrentHashMap<>();
 
-    public GroupService(DataSource dataSource) {
+    public GroupService(
+        DataSource dataSource, 
+        SimpMessagingTemplate messagingTemplate,
+        EventTracker eventTracker,
+        ConnectionTracker connectionTracker
+    ) {
         this.dataSource = dataSource;
+        this.messagingTemplate = messagingTemplate;
+        this.eventTracker = eventTracker;
+        this.connectionTracker = connectionTracker;
         try {
             this.inviteCodeManager = new InviteCodeManager(dataSource);
         } catch(Exception err) {
@@ -118,6 +134,42 @@ public class GroupService {
         }
 
         return groups;
+    }
+
+    /*
+    * Send to Group 
+    */
+    public void sendToGroup(
+        String id,
+        String event,
+        Object data
+    ) {
+        try {
+            Set<String> sessions = groupSessions.get(id);
+            if(sessions != null && !sessions.isEmpty()) {
+                eventTracker.track(
+                    event,
+                    data,
+                    EventDirection.SENT,
+                    id,
+                    "system"
+                );
+
+                for(String sessionId : sessions) {
+                    messagingTemplate.convertAndSendToUser(
+                        sessionId,
+                        "/queue/messages/group/" + event,
+                        data
+                    );
+                }
+
+                System.out.println("Broadcasted to " + groupSessions.size() + " group members in group " + id);
+            } else {
+                System.out.println("No active sessions found for group " + id);
+            }
+        } catch(Exception err) {
+            System.err.println("Error sending to group " + id + ": " + err.getMessage());
+        }
     }
 
     /*
@@ -248,6 +300,47 @@ public class GroupService {
             for(String groupId : userGroupSet) {
                 groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
             }
+        }
+    }
+
+    /*
+    **
+    ***
+    *** Routes
+    ***
+    **
+    */
+    public void handleGroupRoutes(RouteContext context) {
+        handleGroupRoute(context);
+        handleGroupSelfRoute(context);
+        handleGroupOthersRoute(context);
+    }
+
+    /* Group */
+    private void handleGroupRoute(RouteContext context) {
+        String chatId = (String) context.message.get("chatId");
+        if(chatId != null && chatId.startsWith("group_id")) {
+            Set<String> groupSessions = connectionTracker.getGroupSessions(chatId);
+            groupSessions.remove(context.sessionId);
+            context.targetSessions.addAll(groupSessions);
+            context.metadata.put("queue", "/queue/messages/group/" + chatId);
+        }
+    }
+
+    /* Group Self */
+    private void handleGroupSelfRoute(RouteContext context) {
+        context.targetSessions.add(context.sessionId);
+        context.metadata.put("queue", "/user/queue/messages/group/self");
+    }
+
+    /* Group Others */
+    private void handleGroupOthersRoute(RouteContext context) {
+        String chatId = (String) context.message.get("chatId");
+        if(chatId != null && chatId.startsWith("group_id")) {
+            Set<String> groupSessions = connectionTracker.getGroupSessions(chatId);
+            groupSessions.remove(context.sessionId);
+            context.targetSessions.addAll(groupSessions);
+            context.metadata.put("queue", "/queue/messages/group/others");
         }
     }
 

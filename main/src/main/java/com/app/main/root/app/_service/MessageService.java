@@ -11,9 +11,11 @@ import java.sql.*;
 @Component
 public class MessageService {
     private final DataSource dataSource;
+    private final ServiceManager serviceManager;
 
-    public MessageService(DataSource dataSource) {
+    public MessageService(DataSource dataSource, ServiceManager serviceManager) {
         this.dataSource = dataSource;
+        this.serviceManager = serviceManager;
     }
 
     /*

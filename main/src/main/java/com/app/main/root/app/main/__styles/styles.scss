@@ -172,6 +172,10 @@ li {
     }
 }
 
+.chat-item {
+    user-select: none;
+}
+
 #chat-name {
     font-weight: bolder;
 }
