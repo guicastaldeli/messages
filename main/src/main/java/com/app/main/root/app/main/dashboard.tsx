@@ -75,7 +75,7 @@ export class Dashboard extends Component<Props, State> {
     }
 
     handleChatSelect = async (chat: any): Promise<void> => {
-        chatState.setType(chat.type === 'direct' ? 'direct' : 'group');
+        chatState.setType(chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP');
         
         try {
             const socketId = await this.props.messageManager.socketClient.getSocketId();
@@ -176,7 +176,7 @@ export class Dashboard extends Component<Props, State> {
                                             {chatList.map((chat, i) => (
                                                 <li
                                                     key={chat.id || i}
-                                                    className={`chat-item ${
+                                                    className={`chat-item${
                                                         activeChat && 
                                                         activeChat.id === chat.id ? 'active' : ''
                                                     }`}

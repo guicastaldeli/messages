@@ -31,19 +31,18 @@ export class ContentGetter {
         return content;
     }
 
-    //Update
-    __update(data: { data: string }): React.ReactElement {
-        const content = <div className="update">{data.data}</div>;
+    //Join Message Content
+    __userEventMessageContent(data: any): ReactElement {
+        const content = 
+        <div className="user-event-message-content">
+            {data.content}
+        </div>
         return content;
     }
 
-    //Join Message Content
-    __userEventMessageContent(
-        data: any,
-        type: string
-    ): ReactElement {
-        console.log(`${type} RECEIVED`);
-        const content = <div className="user-event-message-content">{data}</div>
+    //Update
+    __update(data: { data: string }): React.ReactElement {
+        const content = <div className="update">{data.data}</div>;
         return content;
     }
 

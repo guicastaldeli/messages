@@ -49,6 +49,7 @@ public class MessageAnalyzer {
                             "GROUP".equals(payload.get("type")) ||
                             "GROUP".equals(payload.get("chatType"));
         boolean isDirect = (targetUserId != null) && !isGroup;
+        boolean isSystem = "SYSTEM_MESSAGE".equals(payload.get("type"));
         boolean isBoolean = (chatId == null && targetUserId == null);
 
         return new MessageContext(
@@ -59,7 +60,8 @@ public class MessageAnalyzer {
             targetUserId, 
             username, 
             isDirect, 
-            isGroup, 
+            isGroup,
+            isSystem,
             isBoolean
         );
     }
@@ -69,14 +71,12 @@ public class MessageAnalyzer {
     */
     private String[] determineRoutes(MessageContext context) {
         List<String> routes = new ArrayList<>();
-
         if(context.isDirect) {
             routes.add("DIRECT");
         }
         if(context.isGroup) {
             routes.add("GROUP");
         }
-
         routes.add("CHAT");
         return routes.toArray(new String[0]);
     }
@@ -118,6 +118,7 @@ public class MessageAnalyzer {
     private String getMessageType(MessageContext context) {
         if(context.isDirect) return "DIRECT_MESSAGE";
         if(context.isGroup) return "GROUP_MESSAGE";
+        if(context.isSystem) return "SYSTEM_MESSAGE";
         return "BROADCAST_MESSAGE";
     }
 

@@ -9,6 +9,7 @@ public class MessageContext {
     public final String username;
     public final boolean isDirect;
     public final boolean isGroup;
+    public final boolean isSystem;
     public final boolean isBroadcast;
 
     public MessageContext(
@@ -20,6 +21,7 @@ public class MessageContext {
         String username,
         boolean isDirect,
         boolean isGroup,
+        boolean isSystem,
         boolean isBroadcast
     ) {
         this.sessionId = sessionId;
@@ -30,6 +32,7 @@ public class MessageContext {
         this.username = username;
         this.isDirect = isDirect;
         this.isGroup = isGroup;
+        this.isSystem = isSystem;
         this.isBroadcast = isBroadcast;
     }
 }

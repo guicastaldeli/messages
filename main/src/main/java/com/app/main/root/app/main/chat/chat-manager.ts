@@ -9,7 +9,7 @@ import { GroupManager } from "./group/group-manager";
 export interface Item {
     id: string;
     name: string;
-    type: 'direct' | 'group';
+    type: 'DIRECT' | 'GROUP';
     lastMessage?: string;
     timestamp?: Date;
     unreadCount: number;
@@ -18,7 +18,7 @@ export interface Item {
 export interface ActiveChat {
     id: string;
     name: string;
-    type: 'direct' | 'group';
+    type: 'DIRECT' | 'GROUP';
 }
 
 interface State {
@@ -92,7 +92,7 @@ export class ChatManager {
 
     private handleChatActivated = (event: CustomEvent): void => {
         const activeChat: ActiveChat = event.detail;
-        chatState.setType(activeChat.type === 'direct' ? 'direct' : 'group');
+        chatState.setType(activeChat.type === 'DIRECT' ? 'DIRECT' : 'GROUP');
         this.setState({ activeChat });
     }
 
@@ -170,6 +170,11 @@ export class ChatManager {
     public setDashboard(instance: Dashboard): void {
         const groupManager = this.getGroupManager();
         if(groupManager) groupManager.dashboard = instance;
+    }
+
+    public setUsername(username: string): void {
+        const groupManager = this.getGroupManager();
+        if(groupManager) groupManager.uname = username;
     }
 
     /*

@@ -92,12 +92,17 @@ export class MessageAnalyzerClient {
             (data.groupId != undefined);
         const isDirect = !!targetUserId && !isGroup;
         const isBroadcast = !isGroup && !isDirect;
-        const isSystem = data.type === 'SYSTEM';
         const chatId = 
             data.chatId || 
             (isGroup ? data.groupId :
             (isDirect ? DirectManager.generateChatId(data.senderId, targetUserId) :
             emptyPlaceholder));
+        const isSystem = 
+            data.type === 'SYSTEM' ||
+            data.type === 'SYSTEM_MESSAGE' ||
+            data._metadata?.type === 'SYSTEM' || 
+            data.routingMetadata?.type === 'SYSTEM' ||
+            Boolean(data.isSystem);
 
         return {
             sessionId: this.socketId || emptyPlaceholder,

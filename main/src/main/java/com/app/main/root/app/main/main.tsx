@@ -99,6 +99,7 @@ export class Main extends Component<any, State> {
 
             await this.messageManager.handleJoin();
             if(sessionContext) sessionContext.setSession('MAIN_DASHBOARD');
+            this.chatManager.setUsername(username);
             this.setState({ chatManager: this.chatManager });
         } catch(err) {
             console.error(err);

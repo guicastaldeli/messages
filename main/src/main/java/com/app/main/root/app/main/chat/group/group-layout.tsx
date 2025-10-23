@@ -56,27 +56,39 @@ export class GroupLayout extends Component<Props, State> {
     }
 
     componentDidMount(): void {
-        this.groupManager.dashboard.setStateChange((state: any) => {
+        this.groupManager.dashboard?.setStateChange((state: any) => {
             this.setState({ managerState: state });
         });
-        window.addEventListener(
-            'group-creation-complete',
-            this.handleCreationComplete as EventListener
-        );
+        window.addEventListener('group-creation-complete', this.handleGroupActivation as EventListener);
+        window.addEventListener('group-activated', this.handleGroupActivation as EventListener);
+        window.addEventListener('group-join-complete', this.handleGroupActivation as EventListener);
     }
     componentWillUnmount(): void {
-        window.removeEventListener(
-            'group-creation-complete',
-            this.handleCreationComplete as EventListener
-        );
+        window.removeEventListener('group-creation-complete', this.handleGroupActivation as EventListener);
+        window.removeEventListener('group-activated', this.handleGroupActivation as EventListener);
+        window.removeEventListener('group-join-complete', this.handleGroupActivation as EventListener);
     }
 
-    handleCreationComplete = () => {
-        this.setState({
-            isLoading: false,
-            creationComplete: true,
-            error: null
+    handleGroupActivation = (event: CustomEvent) => {
+        const data = event.detail;
+        this.groupManager.currentGroupId = data.id || data.groupId;
+        this.groupManager.dashboard?.updateState({
+            showCreationForm: false,
+            showJoinForm: false,
+            showGroup: true,
+            hideGroup: false,
+            groupName: data.name
         });
+        this.setState({
+            managerState: {
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: true,
+                hideGroup: false,
+                groupName: data.name
+            }
+        });
+        console.log('Group activated:', data.name, 'ID:', this.groupManager.currentGroupId);
     }
 
     /* Create */
@@ -112,15 +124,26 @@ export class GroupLayout extends Component<Props, State> {
 
     /* Join Group Success */
     handleJoinSuccess = (data: any) => {
-        this.state.managerState.showJoinForm = false;
-        this.groupManager.dashboard.updateState({
+        this.groupManager.currentGroupId = data.groupId;
+        this.groupManager.currentGroupName = data.name;
+
+        this.groupManager.dashboard?.updateState({
             showCreationForm: false,
             showJoinForm: false,
             showGroup: true,
             hideGroup: false,
             groupName: data.groupName
         });
-        this.groupManager.currentGroupId = data.groupId;
+        this.setState({
+            managerState: {
+                ...this.state.managerState,
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: true,
+                hideGroup: false,
+                groupName: data.name
+            }
+        });
     }
 
     handleRetry = () => {
@@ -141,7 +164,7 @@ export class GroupLayout extends Component<Props, State> {
     handleExitGroup = () => {
        // this.groupManager.exitGroup();
         this.resetForm();
-        this.groupManager.dashboard.updateState({
+        this.groupManager.dashboard?.updateState({
             showCreationForm: false,
             showJoinForm: false,
             showGroup: false,
@@ -152,7 +175,7 @@ export class GroupLayout extends Component<Props, State> {
 
     /* Back */
     handleBack = () => {
-        this.groupManager.dashboard.updateState({
+        this.groupManager.dashboard?.updateState({
             showCreationForm: false,
             showJoinForm: false,
             showGroup: false,
@@ -190,7 +213,6 @@ export class GroupLayout extends Component<Props, State> {
             showCreationForm,
             showJoinForm, 
             showGroup,
-            hideGroup, 
             groupName 
         } = this.state.managerState;
         

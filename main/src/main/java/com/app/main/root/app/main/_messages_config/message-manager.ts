@@ -17,6 +17,9 @@ export class MessageManager {
     public dashboard: any;
     private messageHandlers: Map<string, (data: any) => Promise<void>> = new Map();
     private currentSubscription: string | null = null;
+    private lastMessageId: string | null = null;
+    private lastMessageIds: Map<string, string> = new Map();
+    private lastSystemMessageKeys: Set<string> = new Set();
 
     private chatRegistry: ChatRegistry = new ChatRegistry();
     private uname: any;
@@ -49,14 +52,6 @@ export class MessageManager {
         await this.socketClient.connect();
         await this.setupSubscriptions();
     }
-
-    /*
-    **
-    private setupHandlers(): void {
-        this.messageHandlers.set('GROUP', this.handleChatMessage.bind(this));
-        //this.messageHandlers.set('SYSTEM', this.handleChatMessage.bind(this));
-    }
-    */
     
     /*
     ** Setup Subscriptions
@@ -72,11 +67,7 @@ export class MessageManager {
     ** Update Subscription
     */
     private async updateSubscription(type: string): Promise<void> {
-        if(this.currentSubscription) {
-            await this.queueManager.unsubscribeFromMessageType(this.currentSubscription);
-            console.log(`Unsubscribed from: ${this.currentSubscription}`);
-        }
-
+        if(this.currentSubscription) await this.queueManager.unsubscribeFromMessageType(this.currentSubscription);
         await this.queueManager.subscribeToMessageType(type, this.handleChatMessage.bind(this));
         this.currentSubscription = type;
         console.log(`Subscribed to: ${type}`);
@@ -283,18 +274,23 @@ export class MessageManager {
 
     /* Handle Chat Message */
     private async handleChatMessage(data: any): Promise<void> {
-        const currentChat = this.chatRegistry.getCurrentChat();
-        if(currentChat && data.chatId !== currentChat.id) {
-            console.log('Ignoring message for different chat!: ', data.chatId);
+        const analysis = this.messageAnalyzer.analyzeMessage(data);
+        const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
+        const isSystemMessage = messageType.includes('SYSTEM');
+
+        if(isSystemMessage) {
+            const systemKey = `${data.event}_${data.content}_${data.timestamp}`;
+            if(this.lastSystemMessageKeys.has(systemKey)) return;
+
+            this.lastSystemMessageKeys.add(systemKey);
+            await this.renderMessage(data, analysis);
             return;
         }
 
-        const type = this.messageAnalyzer.detectMessageType(data);
-        console.log(`Type: ${type}`);
+        const lastMessageId = this.lastMessageIds.get(messageType);
+        if(data.messageId === lastMessageId) return;
 
-        const analysis = this.messageAnalyzer.analyzeMessage(data);
-        console.log(`Analysis type: ${analysis.messageType}`);
-        
+        this.lastMessageIds.set(messageType, data.messageId);
         await this.renderMessage(data, analysis);
     }
 
@@ -304,31 +300,44 @@ export class MessageManager {
         const container = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
         let content: React.ReactElement;
 
-        if(analysis.direction === 'self') {
-            content = this.contentGetter.__self({
-                username: data.username || 'Unknown',
-                content: data.content,
-                timestamp: data.timestamp,
-                messageId: data.messageId,
-                type: analysis.messageType,
-                priority: analysis.priority,
-                isDirect: analysis.context.isDirect,
-                isGroup: analysis.context.isGroup
-            });
+        if(!analysis.context.isSystem) {
+            if(analysis.direction === 'self') {
+                content = this.contentGetter.__self({
+                    username: data.username || 'Unknown',
+                    content: data.content,
+                    timestamp: data.timestamp,
+                    messageId: data.messageId,
+                    type: analysis.messageType,
+                    priority: analysis.priority,
+                    isDirect: analysis.context.isDirect,
+                    isGroup: analysis.context.isGroup
+                });
+            } else {
+                content = this.contentGetter.__other({
+                    username: data.username || 'Unknown',
+                    content: data.content,
+                    timestamp: data.timestamp,
+                    messageId: data.messageId,
+                    type: analysis.messageType,
+                    priority: analysis.priority,
+                    isDirect: analysis.context.isDirect,
+                    isGroup: analysis.context.isGroup
+                });
+            }
         } else {
-            content = this.contentGetter.__other({
-                username: data.username || 'Unknown',
+            content = this.contentGetter.__userEventMessageContent({
                 content: data.content,
                 timestamp: data.timestamp,
                 messageId: data.messageId,
                 type: analysis.messageType,
                 priority: analysis.priority,
                 isDirect: analysis.context.isDirect,
-                isGroup: analysis.context.isGroup
+                isGroup: analysis.context.isGroup,
+                isSystem: true
             });
         }
 
-        const render = ReactDOMServer.renderToStaticMarkup(content);
+        const render = ReactDOMServer.renderToStaticMarkup(content!);
         container?.insertAdjacentHTML('beforeend', render);
     }
 }

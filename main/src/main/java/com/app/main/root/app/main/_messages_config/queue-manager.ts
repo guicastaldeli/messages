@@ -2,7 +2,7 @@ import { SocketClientConnect } from "../socket-client-connect";
 
 export class QueueManager {
     private queueSubscriptions: Map<string, (data: any) => void> = new Map();
-    private routingConfig: Map<string, string[]> = new Map();
+    public routingConfig: Map<string, string[]> = new Map();
 
     constructor(private socketClient: SocketClientConnect) {
         this.setupRoutingConfig();
@@ -18,7 +18,7 @@ export class QueueManager {
         this.routingConfig.set('USER', [
             '/user/queue/messages/self', 
             '/user/queue/messages/others',
-            '/user/queue/messages/all'
+            
         ]);
         this.routingConfig.set('DIRECT', [
             '/user/queue/messages/self', 
@@ -28,11 +28,10 @@ export class QueueManager {
         this.routingConfig.set('GROUP', [
             '/user/queue/messages/self', 
             '/user/queue/messages/others',
-            '/user/queue/messages/all'
+            
         ]);
         this.routingConfig.set('SYSTEM', [
-            '/user/queue/messages/system',
-            '/user/queue/system-message'
+            '/user/queue/messages/system'
         ]);
     }
 
@@ -45,6 +44,8 @@ export class QueueManager {
     ): Promise<void> {
         const queues = this.routingConfig.get(messageType) || [];
         for(const queue of queues) {
+            const existingHandler = this.queueSubscriptions.get(queue);
+            if(existingHandler) this.socketClient.offDestination(queue, existingHandler);
             await this.socketClient.onDestination(queue, handler);
             this.queueSubscriptions.set(queue, handler);
         }

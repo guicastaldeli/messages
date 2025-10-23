@@ -37,11 +37,30 @@ export const JoinGroupLayout: React.FC<Props> = ({
     ** Handle Join
     */
     const handleJoin = async () => {
+        setIsLoading(true);
+        setError(null);
+
         try {
             const result = await groupManager.join(inviteCode);
-            if(onSuccess) onSuccess(result);
+            setIsLoading(false);
+            groupManager.currentGroupId = result.id;
+            groupManager.currentGroupName = result.name;
+
+            groupManager.dashboard?.updateState({
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: true,
+                hideGroup: false,
+                groupName: result.name
+            });
+
+            if(onSuccess) {
+                const event = new CustomEvent('group-join-complete', { detail: result });
+                onSuccess(event);
+            }
         } catch(err) {
             console.log(err);
+            setIsLoading(false);
             throw new Error('Failed to join');
         }
     }
@@ -54,7 +73,7 @@ export const JoinGroupLayout: React.FC<Props> = ({
         setInviteCode('');
         setIsLoading(false);
 
-        groupManager.dashboard.updateState({
+        groupManager.dashboard?.updateState({
             showCreationForm: false,
             showJoinForm: false,
             showGroup: false,

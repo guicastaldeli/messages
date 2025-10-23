@@ -27,13 +27,13 @@ export class GroupManager {
 
     public appEl: HTMLDivElement | null = null;
     private layoutRef = React.createRef<GroupLayout>();
-    private uname: any;
+    public uname: any;
     private socketId: string | null = null;
     
     public root: Root | null = null;
     public container!: HTMLElement;
 
-    private currentGroupName: string = '';
+    public currentGroupName: string = '';
     public currentGroupId: string = '';
 
     private onCreateSuccess?: (data: Data) => void;
@@ -71,8 +71,8 @@ export class GroupManager {
     **
     */
     private async handleGroupCreationScss(data: Data): Promise<void> {
-        const name = this.currentGroupName;
         const time = new Date().toISOString();
+        const name = this.currentGroupName;
         this.currentGroupName = data.name;
         this.currentGroupId = data.id;
         chatState.setType('GROUP');
@@ -87,7 +87,7 @@ export class GroupManager {
             id: this.currentGroupId,
             chatId: this.currentGroupId,
             groupId: this.currentGroupId,
-            name: data.name,
+            name: name,
             type: 'group',
             creator: data.creator,
             members: data.members,
@@ -96,22 +96,25 @@ export class GroupManager {
             lastMessageTime: time
         }
 
-        //Chat Event
-        const chatEvent = new CustomEvent(
-            'chat-item-added',
-            { detail: chatItem }
-        );
-        window.dispatchEvent(chatEvent);
-
-        if (this.onCreateSuccess) {
-            this.onCreateSuccess(data);
+        const eventData = {
+            ...data,
+            id: data.id,
+            groupId: data.id
         }
 
-        const event = new CustomEvent( 
-            'group-creation-complete', 
-            { detail: { name } }
-        ); 
-        window.dispatchEvent(event);
+        //Chat Event
+        const chatEvent = new CustomEvent('chat-item-added', { detail: chatItem });
+        window.dispatchEvent(chatEvent);
+
+        //Creation Complete Event
+        const creationEvent = new CustomEvent('group-creation-complete', { detail: eventData }); 
+        window.dispatchEvent(creationEvent);
+
+        //Activation Event
+        const chatActivationEvent = new CustomEvent('group-activated', { detail: eventData });
+        window.dispatchEvent(chatActivationEvent);
+
+        if(this.onCreateSuccess) this.onCreateSuccess(data);
     }
 
     private renderCreationLayout(
@@ -120,7 +123,6 @@ export class GroupManager {
     ): void {
         if(!this.container) return;
         if(!this.dashboard) throw new Error('Dashboard error!');
-
         this.onCreateSuccess = onCreateSuccess;
         this.onCreateError = onCreateError;
 
@@ -132,6 +134,7 @@ export class GroupManager {
             onError: onCreateError,
             mode: 'create'
         });
+
         if(!this.root) this.root = createRoot(this.container);
         this.root.render(content);
     }
@@ -194,8 +197,6 @@ export class GroupManager {
             creatorId: client,
             groupName: this.currentGroupName.trim()
         }
-
-        console.log('grpup data', data)
 
         return new Promise(async (res, rej) => {
             const sucssDestination = `/user/${client}/queue/group-creation-scss`;
@@ -270,11 +271,21 @@ export class GroupManager {
         this.currentGroupId = data.id;
         chatState.setType('GROUP');
 
+        if(this.dashboard) {
+            this.dashboard.updateState({
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: true,
+                hideGroup: false,
+                groupName: data.name
+            });
+        }
+
         const chatItem = {
             id: this.currentGroupId,
             chatId: this.currentGroupId,
             groupId: data.id,
-            name: data.name,
+            name: name,
             type: 'GROUP',
             creator: data.creator,
             members: data.members,
@@ -284,21 +295,18 @@ export class GroupManager {
         }
 
         //Chat Event
-        const chatEvent = new CustomEvent(
-            'chat-item-added',
-            { detail: chatItem }
-        );
+        const chatEvent = new CustomEvent('chat-item-added', { detail: chatItem });
         window.dispatchEvent(chatEvent);
 
-        if (this.onJoinSuccess) {
-            this.onJoinSuccess(data);
-        }
+        //Activated Event
+        const chatActivationEvent = new CustomEvent('chat-activated', { detail: data }); 
+        window.dispatchEvent(chatActivationEvent);
 
-        const event = new CustomEvent( 
-            'chat-activated', 
-            { detail: { name } }
-        ); 
-        window.dispatchEvent(event);
+        //Join Complete
+        const joinEvent = new CustomEvent('group-join-complete', { detail: data });
+        window.dispatchEvent(joinEvent);
+
+        if (this.onJoinSuccess) this.onJoinSuccess(data);
     }
 
     private renderJoinLayout(
@@ -307,7 +315,6 @@ export class GroupManager {
     ): void {
         if(!this.container) return;
         if(!this.dashboard) throw new Error('Dashboard error!');
-
         this.onJoinSuccess = onJoinSuccess;
         this.onJoinError = onJoinError;
 
@@ -318,6 +325,7 @@ export class GroupManager {
             onError: onJoinError,
             mode: 'join'
         });
+
         if(!this.root) this.root = createRoot(this.container);
         this.root.render(content);
     }
@@ -332,13 +340,7 @@ export class GroupManager {
         
         this.renderJoinLayout(
             (data) => {
-                this.dashboard!.updateState({
-                    showCreationForm: false,
-                    showJoinForm: false,
-                    showGroup: true,
-                    hideGroup: false,
-                    groupName: data.name
-                });
+                this.renderGroupAfterJoin(data);
             },
             (error) => {
                 alert(`Failed to join group: ${error.message}`);
@@ -359,6 +361,43 @@ export class GroupManager {
             hideGroup: false,
             groupName: ''
         });
+    }
+
+    /* Render Group Join */
+    private renderGroupAfterJoin(data: Data): void {
+        if(!this.container) return;
+        if(!this.dashboard) return;
+        if(this.root) {
+            this.root.unmount();
+            this.root = null;
+        }
+
+        const content = React.createElement(GroupLayout, {
+            messageManager: this.messageManager,
+            groupManager: this,
+            mode: 'join'
+        });
+
+        this.root = createRoot(this.container);
+        this.root.render(content);
+        this.currentGroupId = data.id;
+        this.currentGroupName = data.name;
+
+        this.dashboard.updateState({
+            showCreationForm: false,
+            showJoinForm: false,
+            showGroup: true,
+            hideGroup: false,
+            groupName: data.name
+        });
+        this.messageManager.setCurrentChat(
+            data.id,
+            'GROUP',
+            data.members || [this.socketId]
+        );
+
+        const event = new CustomEvent('group-join-complete', { detail: data });
+        window.dispatchEvent(event);
     }
 
     /* Join Method */

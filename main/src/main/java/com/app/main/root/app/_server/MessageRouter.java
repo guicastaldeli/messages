@@ -132,11 +132,6 @@ public class MessageRouter {
         Object data
     ) {
         try {
-            if(destination.startsWith("/user/")) {
-                messagingTemplate.convertAndSendToUser(sessionId, destination, data);
-            } else {
-                messagingTemplate.convertAndSend(destination, data);
-            }
             messagingTemplate.convertAndSend(destination, data);
         } catch(Exception err) {
             System.err.println("Error routing message: " + err.getMessage());
