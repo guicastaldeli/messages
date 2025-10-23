@@ -17,15 +17,15 @@ export class QueueManager {
         ]);
         this.routingConfig.set('USER', [
             '/user/queue/messages/self', 
-            '/user/queue/messages/others'
+            '/user/queue/messages/others',
+            '/user/queue/messages/all'
         ]);
         this.routingConfig.set('DIRECT', [
-            '/user/queue/messages/direct/self', 
-            '/user/queue/messages/direct/others'
+            '/user/queue/messages/self', 
+            '/user/queue/messages/others',
+            '/user/queue/messages/all'
         ]);
         this.routingConfig.set('GROUP', [
-            '/user/queue/messages/group/self', 
-            '/user/queue/messages/group/others',
             '/user/queue/messages/self', 
             '/user/queue/messages/others',
             '/user/queue/messages/all'

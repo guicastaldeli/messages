@@ -15,6 +15,7 @@ interface Context {
 
 interface Metadata {
     sessionId: string;
+    type: string;
     messageType: string;
     isDirect: boolean;
     isGroup: boolean;
@@ -142,6 +143,7 @@ export class MessageAnalyzerClient {
 
         return {
             sessionId: context.sessionId,
+            type: this.detectMessageType(context),
             messageType: this.getMessageType(context),
             isDirect: context.isDirect,
             isGroup: context.isGroup,

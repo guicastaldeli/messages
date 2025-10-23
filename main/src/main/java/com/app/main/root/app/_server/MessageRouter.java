@@ -1,10 +1,13 @@
 package com.app.main.root.app._server;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.RouteContext.RouteHandler;
 import com.app.main.root.app._service.ServiceManager;
+import com.app.main.root.app._utils.ColorConverter;
+
 import java.util.*;
 
 @Component
@@ -14,6 +17,7 @@ public class MessageRouter {
     private final EventTracker eventTracker;
     private final ConnectionTracker connectionTracker;
     private final Map<String, RouteHandler> routeHandlers;
+    @Autowired private ColorConverter colorConverter;
 
     public MessageRouter(
         SimpMessagingTemplate messagingTemplate,
@@ -108,7 +112,8 @@ public class MessageRouter {
                 finalQueue = "/user/queue/messages/others";
             }
 
-            System.out.println("Sending to session " + targetSession + " via queue: " + finalQueue);
+            String msg = colorConverter.style("Sending to session " + targetSession + " via queue" + finalQueue, "magenta", "italic");
+            System.out.println(msg);
             sendToUser(targetSession, finalQueue, context.message);
         }
 

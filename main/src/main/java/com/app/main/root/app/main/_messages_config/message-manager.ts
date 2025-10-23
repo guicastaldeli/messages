@@ -16,6 +16,7 @@ export class MessageManager {
     private messageAnalyzer: MessageAnalyzerClient;
     public dashboard: any;
     private messageHandlers: Map<string, (data: any) => Promise<void>> = new Map();
+    private currentSubscription: string | null = null;
 
     private chatRegistry: ChatRegistry = new ChatRegistry();
     private uname: any;
@@ -50,16 +51,35 @@ export class MessageManager {
     }
 
     /*
+    **
+    private setupHandlers(): void {
+        this.messageHandlers.set('GROUP', this.handleChatMessage.bind(this));
+        //this.messageHandlers.set('SYSTEM', this.handleChatMessage.bind(this));
+    }
+    */
+    
+    /*
     ** Setup Subscriptions
     */
     private async setupSubscriptions(): Promise<void> {
         const client = await this.socketClient.getSocketId();
         this.socketId = client;
         this.messageAnalyzer.init(client, this.currentUserId, this.uname);
-        for(const [messageType, handler] of this.messageHandlers) {
-            this.messageHandlers.set(messageType, this.handleChatMessage.bind(this));
-            await this.queueManager.subscribeToMessageType(messageType, handler);
+        await this.updateSubscription('CHAT');
+    }
+
+    /*
+    ** Update Subscription
+    */
+    private async updateSubscription(type: string): Promise<void> {
+        if(this.currentSubscription) {
+            await this.queueManager.unsubscribeFromMessageType(this.currentSubscription);
+            console.log(`Unsubscribed from: ${this.currentSubscription}`);
         }
+
+        await this.queueManager.subscribeToMessageType(type, this.handleChatMessage.bind(this));
+        this.currentSubscription = type;
+        console.log(`Subscribed to: ${type}`);
     }
 
     /* SWITCH LATER TO JOIN CLASS :P */
@@ -119,6 +139,18 @@ export class MessageManager {
     }
 
     /*
+    ** Queue Message Send
+    */
+    private async queueMessageSend(): Promise<void> {
+        if(this.isSending) {
+            console.log('Message in progress');
+            return;
+        }
+        this.sendQueue = [];
+        await this.handleSendMessage();
+    }
+
+    /*
     ** Set CurrentChat
     */
     public async setCurrentChat(
@@ -138,20 +170,27 @@ export class MessageManager {
 
         context.type = chatType;
         this.chatRegistry.setCurrentChat(context);
-        console.log('Current chat set:', { id: context.id, type: context.type });
-        console.log(this.chatRegistry.getCurrentChat());
+        const type = await this.getMetadataType(context);
+        await this.updateSubscription(type);
     }
 
     /*
-    ** Queue Message Send
+    ** Metadata Type
     */
-    private async queueMessageSend(): Promise<void> {
-        if(this.isSending) {
-            console.log('Message in progress');
-            return;
+    private async getMetadataType(context: Context): Promise<string> {
+        const initData = {
+            senderId: this.socketClient,
+            username: this.uname,
+            content: 'content',
+            chatId: context.id,
+            chatType: context.type,
+            timestamp: Date.now()
         }
-        this.sendQueue = [];
-        await this.handleSendMessage();
+
+        const analysis = this.messageAnalyzer.analyzeMessage(initData);
+        const type = analysis.metadata.type || analysis.messageType.split('_')[0];
+        console.log(`Metadata type: ${type}`);
+        return type;
     }
 
     /*
@@ -216,27 +255,25 @@ export class MessageManager {
             groupId: isGroupChat ? currentChat.id : undefined,
             chatId: currentChat?.id,
             timestamp: time,
-            chatType: content.chatType || currentChat?.type,
-            type: isGroupChat ? 'GROUP' : 'DIRECT'
+            chatType: content.chatType || currentChat?.type || isGroupChat ? 'GROUP' : 'DIRECT',
+            type: 'CHAT'
         }
 
         const analysis = this.messageAnalyzer.analyzeMessage(data);
-        const type = analysis.messageType.split('_')[0];
-
+        const metaType = analysis.metadata.type || analysis.messageType.split('_')[0];
         const analyzedData = {
             ...analysis.context,
             _metadata: {
-                type: type,
+                type: metaType,
                 timestamp: time,
                 routing: 'STANDARD',
                 priority: analysis.priority
             }
         }
-        console.log(analyzedData)
 
         return await this.queueManager.sendWithRouting(
             analyzedData,
-            type,
+            metaType,
             {
                 priority: analysis.priority,
                 metadata: analysis.metadata
@@ -246,6 +283,12 @@ export class MessageManager {
 
     /* Handle Chat Message */
     private async handleChatMessage(data: any): Promise<void> {
+        const currentChat = this.chatRegistry.getCurrentChat();
+        if(currentChat && data.chatId !== currentChat.id) {
+            console.log('Ignoring message for different chat!: ', data.chatId);
+            return;
+        }
+
         const type = this.messageAnalyzer.detectMessageType(data);
         console.log(`Type: ${type}`);
 
@@ -287,6 +330,5 @@ export class MessageManager {
 
         const render = ReactDOMServer.renderToStaticMarkup(content);
         container?.insertAdjacentHTML('beforeend', render);
-        this.appEl.innerHTML += render;
     }
 }

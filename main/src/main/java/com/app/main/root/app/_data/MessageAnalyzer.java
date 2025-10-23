@@ -51,8 +51,6 @@ public class MessageAnalyzer {
         boolean isDirect = (targetUserId != null) && !isGroup;
         boolean isBoolean = (chatId == null && targetUserId == null);
 
-        System.out.println(groupId + chatId + messageId + content);
-
         return new MessageContext(
             sessionId, 
             content,
