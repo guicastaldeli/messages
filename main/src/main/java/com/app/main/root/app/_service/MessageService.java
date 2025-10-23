@@ -2,6 +2,8 @@ package com.app.main.root.app._service;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
+import com.app.main.root.app.main._messages_config.MessageLog;
+import com.app.main.root.app.main._messages_config.MessageTracker;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
@@ -13,13 +15,16 @@ import java.sql.*;
 public class MessageService {
     private final DataSource dataSource;
     private final ServiceManager serviceManager;
+    private final MessageTracker messageTracker;
 
     public MessageService(
         DataSource dataSource, 
-        @Lazy ServiceManager serviceManager
+        @Lazy ServiceManager serviceManager,
+        MessageTracker messageTracker
     ) {
         this.dataSource = dataSource;
         this.serviceManager = serviceManager;
+        this.messageTracker = messageTracker;
     }
 
     /*
@@ -50,6 +55,20 @@ public class MessageService {
                     if(generatedKeys.next()) {
                         return generatedKeys.getInt(1);
                     }
+                    String value = String.valueOf(generatedKeys.getInt(1));
+                    MessageLog.MessageType messageType = chatId.startsWith("direct_") ?
+                        MessageLog.MessageType.DIRECT : MessageLog.MessageType.GROUP;
+                    MessageLog.MessageDirection direction = MessageLog.MessageDirection.SENT;
+                    
+                    messageTracker.track(
+                        value, 
+                        content, 
+                        senderId, 
+                        "username", 
+                        chatId, 
+                        messageType, 
+                        direction
+                    );
                 }
             }
 

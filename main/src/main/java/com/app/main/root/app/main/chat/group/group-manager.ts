@@ -3,6 +3,7 @@ import { createRoot, Root } from "react-dom/client";
 import { SocketClientConnect } from "../../socket-client-connect";
 import { MessageManager } from "../../_messages_config/message-manager";
 import { InviteCodeManager } from "./invite-code-manager";
+import { ApiClient } from "../../_api-client/api-client";
 import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat-state-service";
 import { Dashboard } from "../../dashboard";
@@ -22,6 +23,7 @@ interface Data {
 export class GroupManager {
     public socketClient: SocketClientConnect;
     private messageManager: MessageManager;
+    private apiClient: ApiClient;
     public dashboard: Dashboard | null;
     private inviteCodeManager: InviteCodeManager;
 
@@ -49,12 +51,14 @@ export class GroupManager {
     constructor(
         socketClient: SocketClientConnect,
         messageManager: MessageManager,
+        apiClient: ApiClient,
         dashboard: Dashboard | null,
         appEl: HTMLDivElement | null = null, 
         uname: any
     ) {
         this.socketClient = socketClient;
         this.messageManager = messageManager;
+        this.apiClient = apiClient;
         this.dashboard = dashboard;
         this.appEl = appEl;
         this.uname = uname;
@@ -63,6 +67,41 @@ export class GroupManager {
 
     public async init(): Promise<void> {
         this.socketId = await this.socketClient.getSocketId();
+    }
+
+    /*
+    ** Load History
+    */
+    private async loadHistory(groupId: string): Promise<void> {
+        try {
+            await this.waitForMessagesContainer();
+            const service = await this.apiClient.getMessageService();
+            const messages = await service.getMessagesByChatId(groupId);
+            if(messages && Array.isArray(messages)) {
+                console.log(`Loading ${messages.length} messages for group ${groupId}`);
+                for(const message of messages) {
+                    await this.messageManager.renderHistory(message);
+                }
+            } else {
+                console.log('No messages found for group:', groupId);
+            }
+        } catch(err) {
+            console.error('Failed to load messages: ', err);
+        }
+    }
+
+    private async waitForMessagesContainer(): Promise<void> {
+        return new Promise((res) => {
+            const checkContainer = () => {
+                const container = document.querySelector('.chat-screen .messages');
+                if(container) {
+                    res();
+                } else {
+                    setTimeout(checkContainer, 100);
+                }
+            }
+            checkContainer();
+        });
     }
     
     /*
@@ -270,6 +309,7 @@ export class GroupManager {
         const time = new Date().toISOString();
         this.currentGroupId = data.id;
         chatState.setType('GROUP');
+        this.messageManager.setCurrentChat(data.id, 'GROUP', data.members || [this.socketId]);
 
         if(this.dashboard) {
             this.dashboard.updateState({
@@ -280,6 +320,8 @@ export class GroupManager {
                 groupName: data.name
             });
         }
+
+        this.loadHistory(data.id);
 
         const chatItem = {
             id: this.currentGroupId,

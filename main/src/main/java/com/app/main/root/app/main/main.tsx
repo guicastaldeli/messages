@@ -32,7 +32,7 @@ export class Main extends Component<any, State> {
         super(props);
         this.socketClientConnect = SocketClientConnect.getInstance();
         this.apiClient = new ApiClient();
-        this.messageManager = new MessageManager(this.socketClientConnect);
+        this.messageManager = new MessageManager(this.socketClientConnect, this.apiClient);
         this.state = { 
             chatManager: null,
             chatList: [],
@@ -58,6 +58,7 @@ export class Main extends Component<any, State> {
         this.chatManager = new ChatManager(
             this.socketClientConnect,
             this.messageManager,
+            this.apiClient,
             this.dashboardInstance,
             this.appContainerRef.current,
             this.state.username,

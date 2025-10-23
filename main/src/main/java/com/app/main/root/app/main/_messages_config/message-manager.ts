@@ -5,8 +5,7 @@ import { MessageTypes } from "./message-types";
 import { QueueManager } from "./queue-manager";
 import { Analysis, MessageAnalyzerClient } from "./message-analyzer-client";
 import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
-
-import { DirectManager } from "../chat/direct/direct-manager";
+import { ApiClient } from "../_api-client/api-client";
 
 export class MessageManager {
     private queueManager: QueueManager;
@@ -14,7 +13,9 @@ export class MessageManager {
     public socketClient: SocketClientConnect;
     private messageTypes: MessageTypes;
     private messageAnalyzer: MessageAnalyzerClient;
+    private apiClient: ApiClient;
     public dashboard: any;
+    
     private messageHandlers: Map<string, (data: any) => Promise<void>> = new Map();
     private currentSubscription: string | null = null;
     private lastMessageId: string | null = null;
@@ -31,8 +32,9 @@ export class MessageManager {
     private isSending: boolean = false;
     private sendQueue: Array<() => Promise<void>> = [];
 
-    constructor(socketClient: SocketClientConnect) {
+    constructor(socketClient: SocketClientConnect, apiClient: ApiClient) {
         this.socketClient = socketClient;
+        this.apiClient = apiClient;
         this.contentGetter = new ContentGetter();
         this.messageTypes = new MessageTypes(this.contentGetter);
         this.queueManager = new QueueManager(socketClient);
@@ -262,14 +264,31 @@ export class MessageManager {
             }
         }
 
-        return await this.queueManager.sendWithRouting(
+        const res = await this.queueManager.sendWithRouting(
             analyzedData,
             metaType,
             {
                 priority: analysis.priority,
                 metadata: analysis.metadata
             }
-        )
+        );
+        if(res) {
+            try {
+                (await this.apiClient.getMessageService()).saveMessages({
+                    messageId: analyzedData.messageId,
+                    content: analyzedData.content,
+                    senderId: analyzedData.senderId,
+                    username: analyzedData.username,
+                    chatId: analyzedData.chatId,
+                    messageType: isGroupChat ? 'GROUP' : 'DIRECT',
+                    direction: 'SENT'
+                });
+                console.log('Message saved on server! :)');
+            } catch(err) {
+                console.error('Failed to save message :(', err);
+            }
+        }
+        return res;
     }
 
     /* Handle Chat Message */
@@ -291,6 +310,22 @@ export class MessageManager {
         if(data.messageId === lastMessageId) return;
 
         this.lastMessageIds.set(messageType, data.messageId);
+        if(analysis.direction === 'OTHER') {
+            try {
+                (await this.apiClient.getMessageService()).saveMessages({
+                    messageId: data.messageId,
+                    content: data.content,
+                    senderId: data.senderId,
+                    username: data.username,
+                    chatId: data.chatId,
+                    messageType: analysis.context.isDirect ? 'DIRECT' : 'GROUP',
+                    direction: 'RECEIVED'
+                });
+                console.log('Received messaged saved to server :)');
+            } catch(err) {
+                console.error('Received message failed to save to server :(');
+            }
+        }
         await this.renderMessage(data, analysis);
     }
 
@@ -339,5 +374,14 @@ export class MessageManager {
 
         const render = ReactDOMServer.renderToStaticMarkup(content!);
         container?.insertAdjacentHTML('beforeend', render);
+    }
+
+    /*
+    ** Render History
+    */
+    public async renderHistory(data: any): Promise<void> {
+        if(!this.appEl) return;
+        const analysis = this.messageAnalyzer.analyzeMessage(data);
+        await this.renderMessage(data, analysis);
     }
 }

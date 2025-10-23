@@ -8,10 +8,20 @@ class MessageRoutes:
         self.setupRoutes()
 
     def setupRoutes(self):
+        @self.router.post("/messages")
+        async def saveMessages(data: dict):
+            try:
+                content = await self.service.saveMessages(data)
+                return content
+            except HTTPException as e:
+                raise e
+            except Exception as err:
+                raise HTTPException(status_code=err, detail=f"Failed to load messages: {str(err)}")
+            
         ##
         ## Messages
         ##
-        @self.router.get("/messages")
+        @self.router.get("/get-messages")
         async def getMessages():
             try:
                 content = await self.service.getMessages()
@@ -37,15 +47,15 @@ class MessageRoutes:
         ##
         ## Chat Id
         ##
-        @self.router.get("/messages/chat/{chatId}")
-        async def getMessagesByChatId(id: str):
+        @self.router.get("/messages/chatId/{chatId}")
+        async def getMessagesByChatId(chatId: str):
             try:
-                content = await self.service.getMessagesByChatId(id)
+                content = await self.service.getMessagesByChatId(chatId)
                 return content
             except HTTPException as e:
                 raise e
             except Exception as err:
-                raise HTTPException(status_code=err, detail=f"Failed to load messages of chat {id}")
+                raise HTTPException(status_code=err, detail=f"Failed to load messages of chat {chatId}")
 
         ##
         ## Type

@@ -2,6 +2,7 @@ import React from "react";
 import { chatState } from "../chat-state-service";
 import { SocketClientConnect } from "../socket-client-connect";
 import { MessageManager } from "../_messages_config/message-manager";
+import { ApiClient } from "../_api-client/api-client";
 import { Dashboard } from "../dashboard";
 import { DirectManager } from "./direct/direct-manager";
 import { GroupManager } from "./group/group-manager";
@@ -36,6 +37,7 @@ interface LastMessageUpdatedEvent extends CustomEvent {
 }
 
 export class ChatManager {
+    private apiClient!: ApiClient;
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
@@ -48,6 +50,7 @@ export class ChatManager {
     constructor(
         socketClient: SocketClientConnect,
         messageManager: MessageManager,
+        apiClient: ApiClient,
         dashboard: Dashboard | null,
         appEl: HTMLDivElement | null = null, 
         uname: any,
@@ -57,6 +60,7 @@ export class ChatManager {
         this.groupManager = new GroupManager(
             socketClient, 
             messageManager, 
+            apiClient,
             dashboard, 
             appEl, 
             uname

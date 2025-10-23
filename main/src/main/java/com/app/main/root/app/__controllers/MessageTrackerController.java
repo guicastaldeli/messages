@@ -14,9 +14,35 @@ public class MessageTrackerController {
     }
 
     /*
+    * Save 
+    */
+    @PostMapping("/messages")
+    public MessageLog saveMessage(@RequestBody Map<String, Object> data) {
+        Date time = new Date();
+        String messageId = (String) data.get("messageId");
+        String content = (String) data.get("content");
+        String senderId = (String) data.get("senderId");
+        String username = (String) data.get("username");
+        String chatId = (String) data.get("chatId");
+        MessageLog.MessageType messageType = MessageLog.MessageType.valueOf(((String) data.get("messageType")).toUpperCase());
+        MessageLog.MessageDirection direction = MessageLog.MessageDirection.valueOf(((String) data.get("direction")).toUpperCase());
+        MessageLog log = new MessageLog(messageId, content, senderId, username, chatId, messageType, direction, time);
+        messageTracker.track(
+            messageId, 
+            content, 
+            senderId, 
+            username, 
+            chatId, 
+            messageType, 
+            direction
+        );
+        return log;
+    }
+
+    /*
     * All Messages 
     */
-    @GetMapping("/messages")
+    @GetMapping("/get-messages")
     public List<MessageLog> getAllMessages() {
         return messageTracker.getAllMessages();
     }
