@@ -3,16 +3,19 @@ import com.app.main.root.app._data.MessageContext;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
+import com.app.main.root.app._utils.FunctionalInterfaces;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.sql.*;
+import java.util.*;
 
 @Component
 public class MessageService {
@@ -283,14 +286,20 @@ public class MessageService {
         String content,
         String chatId,
         boolean isDirect,
-        Map<String, Object> data
+        Map<String, Object> data,
+        FunctionalInterfaces.Function1<
+            MessageContext, Map<String, Object>
+        > createPayloadFn,
+        FunctionalInterfaces.TriConsumer<
+            String, Map<String, Object>, String
+        > deliverMessageFn
     ) {
         String senderUserId = serviceManager.getUserService().getUserIdBySession(senderSessionId);
         String senderUsername = (String) data.get("username");
         //if(!isDirect) recipientSessionIds.remove(senderSessionId);
 
-        List<String> recipientSessionIds = isDirect ?
-            List.of((String) data.get("targetSessionId")) :
+        Set<String> recipientSessionIds = isDirect ?
+            new HashSet<>(List.of((String) data.get("targetSessionId"))) :
             serviceManager.getGroupService().getGroupSessionIds(chatId);
 
         for(String recipientSessionId : recipientSessionIds) {
@@ -305,8 +314,8 @@ public class MessageService {
                 isDirect,
                 data
             );
-            Map<String, Object> payload = createPayload(context);
-            deliverMessage(recipientSessionId, payload, "MESSAGE");
+            Map<String, Object> payload = (Map<String, Object>) createPayloadFn.apply(context);
+            deliverMessageFn.accept(senderSessionId, payload, "MESSAGE");
         }
 
         MessageContext context = createMessage(
@@ -320,9 +329,13 @@ public class MessageService {
             data
         );
 
-        Map<String, Object> payload = createPayload(context);
+        Map<String, Object> payload = (Map<String, Object>) createPayloadFn.apply(context);
         payload.put("isSelf", true);
-        deliverMessage(senderSessionId, payload, "MESSAGE");
-        saveMessage(chatId, senderUserId, content, senderUsername);
+        deliverMessageFn.accept(senderSessionId, payload, "MESSAGE");
+        try {
+            saveMessage(chatId, senderUserId, content, senderUsername);
+        } catch(SQLException err) {
+            System.err.println("Failed to save messages: " + err.getMessage());
+        }
     }
 }

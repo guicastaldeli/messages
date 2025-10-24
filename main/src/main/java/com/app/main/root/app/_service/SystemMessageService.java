@@ -1,8 +1,8 @@
 package com.app.main.root.app._service;
-import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._data.MessageContext;
 import org.springframework.context.annotation.Lazy;
+import com.app.main.root.app._utils.FunctionalInterfaces;
 import java.util.*;
 
 public class SystemMessageService {
@@ -85,7 +85,7 @@ public class SystemMessageService {
     ) {
         boolean isDirect = (Boolean) data.getOrDefault("isDirect", false);
         boolean isGroup = groupId != null && !isDirect;
-
+        
         MessageContext context = new MessageContext(
             sessionId, 
             eventType,
@@ -116,9 +116,18 @@ public class SystemMessageService {
         String chatId,
         String groupId,
         boolean isDirect,
-        Map<String, Object> addData
+        Map<String, Object> addData,
+        FunctionalInterfaces.Function4<
+            String, String, Map<String, Object>, Map<String, Object>, Map<String, Object>
+        > createDataFn,
+        FunctionalInterfaces.Function1<
+            MessageContext, Map<String, Object>
+        > createPayloadFn,
+        FunctionalInterfaces.TriConsumer<
+            String, Map<String, Object>, String
+        > deliverMessageFn
     ) {
-        Map<String, Object> data = createData(username, null, null, addData);
+        Map<String, Object> data = (Map<String, Object>) createDataFn.apply(username, groupId, null, addData);
         
         if(isDirect) {
             String targetSessionId = serviceManager.getUserService().getSessionByUserId(targetUserId);
@@ -136,11 +145,10 @@ public class SystemMessageService {
                 data
             );
 
-            Map<String, Object> payload = createPayload(context);
-            deliverMessage(targetSessionId, payload, "SYSTEM_MESSAGE");
-        } else if(!isDirect && groupId) {
-            Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
-            List<String> groupSessionIds = serviceManager.getGroupService().getGroupSessionIds(groupId);
+            Map<String, Object> payload = (Map<String, Object>) createPayloadFn.apply(context);
+            deliverMessageFn.accept(targetSessionId, payload, "SYSTEM_MESSAGE");
+        } else {
+            Set<String> groupSessionIds = serviceManager.getGroupService().getGroupSessionIds(groupId);
 
             for(String memberSessionId : groupSessionIds) {
                 String memberUserId = serviceManager.getUserService().getUserIdBySession(memberSessionId);
@@ -153,8 +161,8 @@ public class SystemMessageService {
                     eventType, 
                     data
                 );
-                Map<String, Object> payload = createPayload(context);
-                deliverMessage(targetUserId, payload, "SYSTEM_MESSAGE");
+                Map<String, Object> payload = (Map<String, Object>) createPayloadFn.apply(context);
+                deliverMessageFn.accept(memberUserId, payload, "SYSTEM_MESSAGE");
             }
         }
     }

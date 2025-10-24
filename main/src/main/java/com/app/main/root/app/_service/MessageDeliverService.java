@@ -36,7 +36,10 @@ public class MessageDeliverService {
                 context.chatId,
                 context.chatId,
                 context.isDirect,
-                extractGroupData(context)
+                extractGroupData(context),
+                this::createData,
+                this::createPayload,
+                this::deliverMessage
             );
         } else if(context.getContextType() == MessageContext.ContextType.REGULAR) {
             serviceManager.getMessageService().sendMessage(
@@ -44,7 +47,9 @@ public class MessageDeliverService {
                 context.content,
                 context.chatId,
                 context.isDirect,
-                payload
+                payload,
+                this::createPayload,
+                this::deliverMessage
             );
         }
     }

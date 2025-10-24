@@ -2,6 +2,11 @@ package com.app.main.root.app._utils;
 
 public class FunctionalInterfaces {
     @FunctionalInterface
+    public static interface Function1<A, R>{
+        R apply(A a);    
+    }
+
+    @FunctionalInterface
     public static interface Function4<A, B, C, D, R> {
         R apply(A a, B b, C c, D d);
     }

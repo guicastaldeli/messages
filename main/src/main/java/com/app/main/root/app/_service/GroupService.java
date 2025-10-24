@@ -133,6 +133,11 @@ public class GroupService {
         return groups;
     }
 
+    public Set<String> getGroupSessionIds(String groupId) {
+        Set<String> sessions = groupSessions.get(groupId);
+        return sessions != null ? new HashSet<>(sessions) : new HashSet<>();
+    }
+    
     /*
     * Send to Group 
     */
