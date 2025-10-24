@@ -1,5 +1,6 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._data.MessageContext;
+import com.app.main.root.app._data.MessagePerspective;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
@@ -268,14 +269,17 @@ public class MessageService {
             !isDirect,
             false,
             isDirect
-        );
-        return context
-            .withPerspective(recipientUserId)
-            .withContextType(MessageContext.ContextType.REGULAR)
-            .withContext("originalSender", senderUserId)
-            .withContext("recipient", recipientUserId)
-            .withContext("isDirectMessage", isDirect)
-            .withAllContext(data);
+        )
+        .toMessagePerspective().withPerspective(recipientUserId)
+        .withContextType(MessageContext.ContextType.REGULAR)
+        .withContext("originalSender", senderUserId)
+        .withContext("recipient", recipientUserId)
+        .withContext("isDirectMessage", isDirect)
+        .withAllContext(data);
+
+        MessagePerspective perspective = context.toMessagePerspective();
+        String displayUsername = perspective.isSelf() ? "" : senderUsername;
+        return context.withContext("displayUsername", displayUsername);
     }
 
     /*

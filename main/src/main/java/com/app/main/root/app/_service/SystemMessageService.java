@@ -1,10 +1,13 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._utils.FunctionalInterfaces;
 import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._data.MessageContext;
+import com.app.main.root.app._data.MessagePerspective;
 import org.springframework.context.annotation.Lazy;
-import com.app.main.root.app._utils.FunctionalInterfaces;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
+@Component
 public class SystemMessageService {
     private String ctx;
     private String action;
@@ -14,8 +17,17 @@ public class SystemMessageService {
     @Lazy private ServiceManager serviceManager;
     private final Map<String, String> messageTemplates = new HashMap<>();
     private final String userJoined = CommandSystemMessageList.USER_JOINED_GROUP.get();
-    private final String userLeft = CommandSystemMessageList.USER_JOINED_GROUP.get();
+    private final String userLeft = CommandSystemMessageList.USER_LEFT_GROUP.get();
     private final String userRemoved = CommandSystemMessageList.USER_REMOVED_GROUP.get();
+
+    private void initTemplates() {
+        messageTemplates.put("USER_JOINED", CommandSystemMessageList.USER_JOINED_GROUP.get());
+        messageTemplates.put("USER_LEFT", CommandSystemMessageList.USER_LEFT_GROUP.get());
+        messageTemplates.put("USER_ADDED", CommandSystemMessageList.USER_ADDED_GROUP.get());
+        messageTemplates.put("USER_REMOVED", CommandSystemMessageList.USER_JOINED_GROUP.get());
+        messageTemplates.put("GROUP_CREATED", CommandSystemMessageList.GROUP_CREATED.get());
+        messageTemplates.put("GROUP_DELETED", CommandSystemMessageList.GROUP_DELETED.get());
+    }
 
     public String generateMessage(
         String templateKey,
@@ -43,32 +55,32 @@ public class SystemMessageService {
         return data;
     }
 
-    /* Self */
-    public String resolveSelfAction() {
-        switch(action) {
-            case "JOINED": return userJoined;
-            case "LEFT": return userLeft;
-            //case "ADDED": return userAdded;*** //LATER....
-            case "REMOVED": return userRemoved;
-            default: return "You " + action + "**df";
-        }
-    }
-
-    /* Group */
-    public String resolveGroupAction() {
-        switch(action) {
-            case "JOINED": return username + userJoined;
-            case "LEFT": return username + userLeft;
-            case "REMOVED": return username + userRemoved;
-            default: return username + " " + action + "**df";
-        }
-    }
-
     /*
-    * Id 
+    * Resolve Content 
     */
-    private String generateId() {
-        return "sys_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    private String resolveMessageFromPerspective(
+        MessageContext context, 
+        MessagePerspective perspective
+    ) {
+        String eventType = context.getEventType();
+        String template = messageTemplates.get(eventType);
+        if(template == null) return "SYSTEM MESSAGE";
+
+        String actualUsername = (String) context.getContext().get("username");
+        String usernameSet = 
+            perspective.isSelf() ? "You" :
+            (actualUsername != null ? actualUsername : "User");
+        String content = template.replace("{username}", usernameSet);
+
+        Map<String, Object> contextMap = context.getContext();
+        for(Map.Entry<String, Object> entry : contextMap.entrySet()) {
+            if(!"username".equals(entry.getKey())) {
+                String placeholder = "{" + entry.getKey() + "}";
+                content = content.replace(placeholder, String.valueOf(entry.getValue()));
+            }
+        }
+
+        return content;
     }
 
     /*
@@ -85,25 +97,29 @@ public class SystemMessageService {
     ) {
         boolean isDirect = (Boolean) data.getOrDefault("isDirect", false);
         boolean isGroup = groupId != null && !isDirect;
+        String usernameData = (String) data.get("username");
         
         MessageContext context = new MessageContext(
             sessionId, 
-            eventType,
+            "",
             generateId(), 
             chatId != null ? chatId : groupId,  
             targetUserId, 
-            username, 
+            usernameData, 
             isDirect,
             isGroup, 
             true, 
-            perspectiveUserId == null
-        );
-        return context
-            .withPerspective(perspectiveUserId)
-            .withEventType(eventType)
-            .withContext("groupId", groupId)
-            .withContext("groupName", data.get("groupName"))
-            .withAllContext(data);
+            false
+        )
+        .toMessagePerspective().withPerspective(perspectiveUserId)
+        .withEventType(eventType)
+        .withContext("groupId", groupId)
+        .withContext("groupName", data.get("groupName"))
+        .withAllContext(data);
+
+        MessagePerspective perspective = context.toMessagePerspective();
+        String resolvedContent = resolveMessageFromPerspective(context, perspective);
+        return context.withResolvedContext(resolvedContent);
     }
 
     /*
@@ -127,7 +143,15 @@ public class SystemMessageService {
             String, Map<String, Object>, String
         > deliverMessageFn
     ) {
-        Map<String, Object> data = (Map<String, Object>) createDataFn.apply(username, groupId, null, addData);
+        Map<String, Object> groupInfo = new HashMap<>();
+        try {
+            if(groupId != null) {
+                groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
+            }
+        } catch(Exception err) {
+            System.err.println("Group info not found" + err);
+        }
+        Map<String, Object> data = (Map<String, Object>) createDataFn.apply(username, groupId, groupInfo, addData);
         
         if(isDirect) {
             String targetSessionId = serviceManager.getUserService().getSessionByUserId(targetUserId);
@@ -140,7 +164,7 @@ public class SystemMessageService {
                 chatId, 
                 chatId, 
                 targetUserId, 
-                targetSessionId, 
+                targetUserId, 
                 eventType, 
                 data
             );
@@ -157,7 +181,7 @@ public class SystemMessageService {
                     chatId, 
                     groupId, 
                     targetUserId, 
-                    groupId, 
+                    memberSessionId, 
                     eventType, 
                     data
                 );
@@ -167,11 +191,8 @@ public class SystemMessageService {
         }
     }
 
-    public String resolve() {
-        if(isSelf) {
-            return resolveSelfAction();
-        } else {
-            return resolveGroupAction();
-        }
+    /* Id */
+    private String generateId() {
+        return "sys_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
 }

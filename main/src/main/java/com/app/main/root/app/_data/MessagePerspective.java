@@ -2,19 +2,34 @@ package com.app.main.root.app._data;
 import java.util.*;
 
 public class MessagePerspective {
-    private final Map<String, Object> context = new HashMap<>();
-    private final String eventType;
+    private final MessageContext messageContext;
+    private final Map<String, Object> context;
     private final String targetUserId;
-    private final String perspectiveUserId;
+    private String perspectiveUserId;
 
     public MessagePerspective(
-        String eventType,
+        MessageContext messageContext,
         String targetUserId,
         String perspectiveUserId
     ) {
-        this.eventType = eventType;
+        this(
+            messageContext,
+            targetUserId,
+            perspectiveUserId,
+            new HashMap<>()
+        );
+    }
+
+    public MessagePerspective(
+        MessageContext messageContext,
+        String targetUserId,
+        String perspectiveUserId,
+        Map<String, Object> context
+    ) {
+        this.messageContext = messageContext;
         this.targetUserId = targetUserId;
         this.perspectiveUserId = perspectiveUserId;
+        this.context = new HashMap<>(context);
     }
 
     public MessagePerspective with(String key, Object value) {
@@ -22,20 +37,31 @@ public class MessagePerspective {
         return this;
     }
 
-    public boolean isSelf() {
-        return targetUserId != null && targetUserId.equals(perspectiveUserId);
+    public MessagePerspective withAll(Map<String, Object> data) {
+        if(data != null) context.putAll(data);
+        return this;
     }
 
-    public String getEventType() {
-        return eventType;
+    /*
+    * Perspective 
+    */
+    public MessageContext withPerspective(String perspectiveUserId) {
+        this.perspectiveUserId = perspectiveUserId;
+        return this.messageContext;
+    } 
+
+    public boolean isSelfPerspective() {
+        return perspectiveUserId != null && targetUserId != null &&
+            perspectiveUserId.equals(targetUserId);
     }
-    public String getTargetUserId() {
-        return targetUserId;
+
+    public boolean isSenderPerspective() {
+        return perspectiveUserId != null && 
+            targetUserId != null &&
+            perspectiveUserId.equals(targetUserId);
     }
-    public String getPerspectiveUserId() {
-        return perspectiveUserId;
-    }
-    public Map<String, Object> getContext() {
-        return context;
+
+    public boolean isSelf() {
+        return targetUserId != null && targetUserId.equals(perspectiveUserId);
     }
 }

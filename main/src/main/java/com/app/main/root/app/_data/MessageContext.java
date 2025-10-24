@@ -1,5 +1,4 @@
 package com.app.main.root.app._data;
-import com.app.main.root.app._utils.MessageTemplateResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import com.app.main.root.app._service.ServiceManager;
@@ -24,11 +23,11 @@ public class MessageContext {
     public final boolean isBroadcast;
     
     @Autowired @Lazy private ServiceManager serviceManager;
-    @Autowired @Lazy private MessageTemplateResolver messageTemplateResolver;
     private String perspectiveUserId;
     private String eventType;
     private ContextType contextType;
     private final Map<String, Object> context = new HashMap<>();
+    private String resolvedContent;
 
     public MessageContext(
         String sessionId,
@@ -53,6 +52,7 @@ public class MessageContext {
         this.isSystem = isSystem;
         this.isBroadcast = isBroadcast;
         this.contextType = isSystem ? ContextType.SYSTEM : ContextType.REGULAR;
+        this.resolvedContent = content;
     }
 
     /*
@@ -73,12 +73,12 @@ public class MessageContext {
         return this;
     }
 
-    public ContextType getContextType() {
-        return contextType;
-    }
-
     public Map<String, Object> getContext() {
         return context;
+    }
+
+    public ContextType getContextType() {
+        return contextType;
     }
 
     /*
@@ -94,29 +94,6 @@ public class MessageContext {
     }
 
     /*
-    * Perspective 
-    */
-    public MessageContext withPerspective(String perspectiveUserId) {
-        this.perspectiveUserId = perspectiveUserId;
-        return this;
-    } 
-
-    public boolean isSelfPerspective() {
-        return perspectiveUserId != null && targetUserId != null &&
-            perspectiveUserId.equals(targetUserId);
-    }
-
-    public boolean isSenderPerspective() {
-        return perspectiveUserId != null && 
-            targetUserId != null &&
-            perspectiveUserId.equals(targetUserId);
-    }
-
-    public String getPerspectiveUserId() {
-        return perspectiveUserId;
-    }
-
-    /*
     * Extract Session Id 
     */
     public String extractSessionId(String sessionId) {
@@ -128,11 +105,17 @@ public class MessageContext {
     *** Content
     ** 
     */
+    public MessageContext withResolvedContext(String resolvedContext) {
+        this.resolvedContent = resolvedContext;
+        return this;
+    }
+
     public String resolveContent() {
-        if(contextType == ContextType.SYSTEM) {
-            return serviceManager.getMessageService().resolve();
-        } else {
-            return serviceManager.getSystemMessageService().resolve();
-        }
+        return resolvedContent != null ? resolvedContent : content;   
+    }
+
+    public MessagePerspective toMessagePerspective() {
+        return new MessagePerspective(this, targetUserId, perspectiveUserId, context)
+            .withAll(this.context);
     }
 }
