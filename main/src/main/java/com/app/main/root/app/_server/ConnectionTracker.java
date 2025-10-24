@@ -58,7 +58,7 @@ public class ConnectionTracker {
             connectionInfo.disconnectedAt = LocalDateTime.now();
             connectionInfo.isConnected = false;
 
-            String userId = serviceManager.getUserService().getUserIdBySessison(socketId);
+            String userId = serviceManager.getUserService().getUserIdBySession(socketId);
             if(userId != null) {
                 serviceManager.getGroupService().removeUserFromAllGroups(userId);
                 serviceManager.getUserService().unlinkUserSession(socketId);
