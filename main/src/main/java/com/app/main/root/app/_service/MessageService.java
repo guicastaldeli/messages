@@ -1,4 +1,5 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._data.MessageContext;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
@@ -9,6 +10,8 @@ import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.sql.*;
 
 @Component
@@ -16,6 +19,7 @@ public class MessageService {
     private final DataSource dataSource;
     private final ServiceManager serviceManager;
     private final MessageTracker messageTracker;
+    private String ctx;
 
     public MessageService(
         DataSource dataSource, 
@@ -27,6 +31,11 @@ public class MessageService {
         this.messageTracker = messageTracker;
     }
 
+    public String setCtx(String data) {
+        ctx = data;
+        return data;
+    }
+
     /*
     * Save Message Database 
     */
@@ -36,6 +45,7 @@ public class MessageService {
         String content,
         String type
     ) throws SQLException {
+        ctx = content;
         String query = CommandQueryManager.SAVE_MESSAGE.get();
 
         try(
@@ -79,7 +89,8 @@ public class MessageService {
     /*
     * Save System Message 
     */
-    public int saveSystemMessage(String content,String messageType) throws SQLException {
+    public int saveSystemMessage(String content, String messageType) throws SQLException {
+        ctx = content;
         String query = CommandQueryManager.SAVE_MESSAGE.get();
 
         try(
@@ -217,5 +228,101 @@ public class MessageService {
         chat.setChatType(rs.getString("chat_type"));
         chat.setChatName(rs.getString("chat_name"));
         return chat;
+    }
+
+    public String resolve() {
+        return ctx;
+    }
+
+    /*
+    * Id 
+    */
+    private String generateId() {
+        return "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    /*
+    * Create Message 
+    */
+    private MessageContext createMessage(
+        String senderSessionId,
+        String content,
+        String chatId,
+        String senderUserId,
+        String senderUsername,
+        String recipientUserId,
+        boolean isDirect,
+        Map<String, Object> data
+    ) {
+        MessageContext context = new MessageContext(
+            senderSessionId,
+            content,
+            generateId(),
+            chatId,
+            senderUserId,
+            senderUsername,
+            isDirect,
+            !isDirect,
+            false,
+            isDirect
+        );
+        return context
+            .withPerspective(recipientUserId)
+            .withContextType(MessageContext.ContextType.REGULAR)
+            .withContext("originalSender", senderUserId)
+            .withContext("recipient", recipientUserId)
+            .withContext("isDirectMessage", isDirect)
+            .withAllContext(data);
+    }
+
+    /*
+    * Send Message 
+    */
+    public void sendMessage(
+        String senderSessionId,
+        String content,
+        String chatId,
+        boolean isDirect,
+        Map<String, Object> data
+    ) {
+        String senderUserId = serviceManager.getUserService().getUserIdBySession(senderSessionId);
+        String senderUsername = (String) data.get("username");
+        //if(!isDirect) recipientSessionIds.remove(senderSessionId);
+
+        List<String> recipientSessionIds = isDirect ?
+            List.of((String) data.get("targetSessionId")) :
+            serviceManager.getGroupService().getGroupSessionIds(chatId);
+
+        for(String recipientSessionId : recipientSessionIds) {
+            String recipientUserId = serviceManager.getUserService().getUserIdBySession(recipientSessionId);
+            MessageContext context = createMessage(
+                senderSessionId, 
+                content,  
+                chatId, 
+                senderUserId, 
+                senderUsername, 
+                recipientUserId, 
+                isDirect,
+                data
+            );
+            Map<String, Object> payload = createPayload(context);
+            deliverMessage(recipientSessionId, payload, "MESSAGE");
+        }
+
+        MessageContext context = createMessage(
+            senderSessionId, 
+            content, 
+            chatId, 
+            senderUserId, 
+            senderUsername, 
+            senderUserId, 
+            isDirect, 
+            data
+        );
+
+        Map<String, Object> payload = createPayload(context);
+        payload.put("isSelf", true);
+        deliverMessage(senderSessionId, payload, "MESSAGE");
+        saveMessage(chatId, senderUserId, content, senderUsername);
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 public class ServiceManager {
     private final DbService dbService;
     private final MessageService messageService;
+    private final SystemMessageService systemMessageService;
     private final UserService userService;
     private final DirectService directService;
     private final GroupService groupService;
@@ -16,12 +17,14 @@ public class ServiceManager {
     public ServiceManager(
         DbService dbService,
         @Lazy MessageService messageService,
+        @Lazy SystemMessageService systemMessageService,
         UserService userService,
         DirectService directService,
         GroupService groupService
     ) {
         this.dbService = dbService;
         this.messageService = messageService;
+        this.systemMessageService = systemMessageService;
         this.userService = userService;
         this.directService = directService;
         this.groupService = groupService;
@@ -39,6 +42,13 @@ public class ServiceManager {
     */
     public MessageService getMessageService() {
         return messageService;
+    }
+
+    /*
+    * System Message Service 
+    */
+    public SystemMessageService getSystemMessageService() {
+        return systemMessageService;
     }
 
     /*

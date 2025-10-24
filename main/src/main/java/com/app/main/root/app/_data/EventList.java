@@ -189,30 +189,6 @@ public class EventList {
             "/user/queue/messages/group",
             false
         ));
-        /* Exit User */
-        configs.put("exit-user", new EventConfig(
-            (sessionId, payload, headerAccessor) -> {
-                String user = (String) payload;
-                long time = System.currentTimeMillis();
-                
-                eventTracker.track(
-                    "exit-user", 
-                    user, 
-                    EventDirection.RECEIVED, 
-                    sessionId, 
-                    user
-                );
-                
-                Map<String, Object> updateMessage = new HashMap<>();
-                updateMessage.put("type", "USER_LEFT");
-                updateMessage.put("username", user);
-                updateMessage.put("sessionId", sessionId);
-                updateMessage.put("timestamp", time);
-                return updateMessage;
-            },
-            "/topic/users",
-            true
-        ));
         /* Create Group */
         configs.put("create-group", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
@@ -331,6 +307,30 @@ public class EventList {
             },
             "/user/queue/join-group-scss",
             false
+        ));
+        /* Left Group */
+        configs.put("left-group", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                String user = (String) payload;
+                long time = System.currentTimeMillis();
+                
+                eventTracker.track(
+                    "left-group", 
+                    user, 
+                    EventDirection.RECEIVED, 
+                    sessionId, 
+                    user
+                );
+                
+                Map<String, Object> updateMessage = new HashMap<>();
+                updateMessage.put("type", "USER_LEFT");
+                updateMessage.put("username", user);
+                updateMessage.put("sessionId", sessionId);
+                updateMessage.put("timestamp", time);
+                return updateMessage;
+            },
+            "/topic/users",
+            true
         ));
         /* Generate Group Link */
         configs.put("generate-invite-link", new EventConfig(

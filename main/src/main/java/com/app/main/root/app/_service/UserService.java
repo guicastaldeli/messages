@@ -111,7 +111,7 @@ public class UserService {
     }
 
     /* User Id by Session Id */
-    public String getUserIdBySessison(String sessionId) {
+    public String getUserIdBySession(String sessionId) {
         return sessionToUserMap.get(sessionId);
     } 
 
