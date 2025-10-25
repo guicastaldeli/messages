@@ -47,7 +47,11 @@ public class MessagePerspective {
     */
     public MessageContext withPerspective(String perspectiveUserId) {
         this.perspectiveUserId = perspectiveUserId;
-        return this.messageContext;
+        return this.messageContext
+            .withAllContext(this.context)
+            .withContext("perspectiveUserId", perspectiveUserId)
+            .withContext("isSelf", isSelfPerspective())
+            .withContext("displayUsername", displayUsername());
     } 
 
     public boolean isSelfPerspective() {
@@ -59,6 +63,15 @@ public class MessagePerspective {
         return perspectiveUserId != null && 
             targetUserId != null &&
             perspectiveUserId.equals(targetUserId);
+    }
+
+    public String displayUsername() {
+        if(isSelfPerspective()) {
+            return "";
+        } else {
+            String username = (String) context.get("username");
+            return username != null ? username : messageContext.username;
+        }
     }
 
     public boolean isSelf() {

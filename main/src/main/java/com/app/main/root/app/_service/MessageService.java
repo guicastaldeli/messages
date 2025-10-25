@@ -10,11 +10,7 @@ import com.app.main.root.app.main._messages_config.MessageTracker;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+
 import java.sql.*;
 import java.util.*;
 
@@ -256,7 +252,9 @@ public class MessageService {
         String senderUsername,
         String recipientUserId,
         boolean isDirect,
-        Map<String, Object> data
+        Map<String, Object> data,
+        boolean isSelf,
+        String displayUsername
     ) {
         MessageContext context = new MessageContext(
             senderSessionId,
@@ -275,10 +273,10 @@ public class MessageService {
         .withContext("originalSender", senderUserId)
         .withContext("recipient", recipientUserId)
         .withContext("isDirectMessage", isDirect)
+        .withContext("isSelf", isSelf)
+        .withContext("displayUsername", displayUsername)
         .withAllContext(data);
 
-        MessagePerspective perspective = context.toMessagePerspective();
-        String displayUsername = perspective.isSelf() ? "" : senderUsername;
         return context.withContext("displayUsername", displayUsername);
     }
 
@@ -294,48 +292,60 @@ public class MessageService {
         FunctionalInterfaces.Function1<
             MessageContext, Map<String, Object>
         > createPayloadFn,
-        FunctionalInterfaces.TriConsumer<
-            String, Map<String, Object>, String
+        FunctionalInterfaces.BiConsumer<
+            String, Map<String, Object>
         > deliverMessageFn
     ) {
         String senderUserId = serviceManager.getUserService().getUserIdBySession(senderSessionId);
         String senderUsername = (String) data.get("username");
-        //if(!isDirect) recipientSessionIds.remove(senderSessionId);
 
         Set<String> recipientSessionIds = isDirect ?
             new HashSet<>(List.of((String) data.get("targetSessionId"))) :
             serviceManager.getGroupService().getGroupSessionIds(chatId);
 
-        for(String recipientSessionId : recipientSessionIds) {
-            String recipientUserId = serviceManager.getUserService().getUserIdBySession(recipientSessionId);
-            MessageContext context = createMessage(
-                senderSessionId, 
-                content,  
-                chatId, 
-                senderUserId, 
-                senderUsername, 
-                recipientUserId, 
-                isDirect,
-                data
-            );
-            Map<String, Object> payload = (Map<String, Object>) createPayloadFn.apply(context);
-            deliverMessageFn.accept(senderSessionId, payload, "MESSAGE");
-        }
+        Set<String> otherRecipients = new HashSet<>(recipientSessionIds);
+        otherRecipients.remove(senderSessionId);
 
-        MessageContext context = createMessage(
+        MessageContext baseContext = new MessageContext(
             senderSessionId, 
             content, 
+            generateId(), 
             chatId, 
             senderUserId, 
             senderUsername, 
-            senderUserId, 
             isDirect, 
-            data
-        );
+            !isDirect, 
+            false, 
+            isDirect
+        )
+        .withContextType(MessageContext.ContextType.REGULAR)
+        .withContext("originalSender", senderUserId)
+        .withContext("isDirect", isDirect)
+        .withAllContext(data);
 
-        Map<String, Object> payload = (Map<String, Object>) createPayloadFn.apply(context);
-        payload.put("isSelf", true);
-        deliverMessageFn.accept(senderSessionId, payload, "MESSAGE");
+        for(String recipientSessionId : otherRecipients) {
+            String recipientUserId = serviceManager.getUserService().getUserIdBySession(senderSessionId);
+            MessageContext otherContext = new MessagePerspective(
+                baseContext, 
+                senderUsername, 
+                recipientUserId,
+                data
+            ).withPerspective(recipientUserId);
+            Map<String, Object> payload = createPayloadFn.apply(otherContext);
+            System.out.println("SENDING TO OTHER - isSelf: " + payload.get("isSelf") + ", displayUsername: " + payload.get("displayUsername"));
+            deliverMessageFn.accept(recipientSessionId, payload);
+        }
+
+        MessageContext selfContext = new MessagePerspective(
+            baseContext, 
+            senderUserId, 
+            senderUsername,
+            data
+        ).withPerspective(senderUserId);
+
+        Map<String, Object> payload = createPayloadFn.apply(selfContext);
+        System.out.println("SENDING TO SELF - isSelf: " + payload.get("isSelf") + ", displayUsername: '" + payload.get("displayUsername") + "'");
+        deliverMessageFn.accept(senderSessionId, payload);
         try {
             saveMessage(chatId, senderUserId, content, senderUsername);
         } catch(SQLException err) {

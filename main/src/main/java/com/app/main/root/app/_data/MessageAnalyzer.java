@@ -28,16 +28,36 @@ public class MessageAnalyzer {
     public void organizeAndRoute(String sessionId, Map<String, Object> payload) {
         MessageContext context = analyzeContext(sessionId, payload);
         String[] routes = determineRoutes(context);
-        Map<String, Object> setMessage = setMessage(context);
-        
-        routeMessage(context, setMessage, routes);
+        Map<String, Object> message = messageData(payload, context);
+        routeMessage(context, message, routes);
         trackMessage(context);
+    }
+
+    private Map<String, Object> messageData(
+        Map<String, Object> payload,
+        MessageContext context
+    ) {
+        Map<String, Object> message = new HashMap<>(payload);
+        if (!message.containsKey("routingMetadata")) {
+            message.put("routingMetadata", Map.of(
+                "sessionId", context.sessionId,
+                "messageType", getMessageType(context),
+                "messageId", context.messageId,
+                "isDirect", context.isDirect,
+                "isGroup", context.isGroup,
+                "isBroadcast", context.isBroadcast,
+                "priority", "NORMAL"
+            ));
+        }
+        
+        System.out.println("Preserved perspective - isSelf: " + message.get("isSelf") + ", displayUsername: " + message.get("displayUsername"));
+        return message;
     }
 
     /*
     * Analyze 
     */
-    private MessageContext analyzeContext(String sessionId, Map<String, Object> payload) {
+    public MessageContext analyzeContext(String sessionId, Map<String, Object> payload) {
         String content = (String) payload.get("content");
         String messageId = (String) payload.get("messageId");
         String chatId = (String) payload.get("chatId");
@@ -69,7 +89,7 @@ public class MessageAnalyzer {
     /*
     * Determine 
     */
-    private String[] determineRoutes(MessageContext context) {
+    public String[] determineRoutes(MessageContext context) {
         List<String> routes = new ArrayList<>();
         if(context.isDirect) {
             routes.add("DIRECT");
@@ -82,40 +102,9 @@ public class MessageAnalyzer {
     }
 
     /*
-    * Set 
-    */
-    private Map<String, Object> setMessage(MessageContext context) {
-        String messageId = "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
-        String type = getMessageType(context);
-        long time = System.currentTimeMillis();
-
-        Map<String, Object> message = new HashMap<>();
-        message.put("username", context.username);
-        message.put("content", context.content);
-        message.put("senderId", context.sessionId);
-        message.put("chatId", context.chatId);
-        message.put("targetUserId", context.targetUserId);
-        message.put("messageId", messageId);
-        message.put("timestamp", time);
-        message.put("type", type);
-
-        message.put("routingMetadata", Map.of(
-            "sessionId", context.sessionId,
-            "messageType", type,
-            "messageId", context.messageId,
-            "isDirect", context.isDirect,
-            "isGroup", context.isGroup,
-            "isBroadcast", context.isBroadcast,
-            "priority", "NORMAL"
-        ));
-
-        return message;
-    }
-
-    /*
     * Type 
     */
-    private String getMessageType(MessageContext context) {
+    public String getMessageType(MessageContext context) {
         if(context.isDirect) return "DIRECT_MESSAGE";
         if(context.isGroup) return "GROUP_MESSAGE";
         if(context.isSystem) return "SYSTEM_MESSAGE";

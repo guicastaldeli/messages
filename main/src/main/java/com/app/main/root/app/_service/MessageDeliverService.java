@@ -1,21 +1,25 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._server.ConnectionTracker;
 import com.app.main.root.app._server.MessageRouter;
+import com.app.main.root.app._data.MessageAnalyzer;
 import com.app.main.root.app._data.MessageContext;
 import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
 public class MessageDeliverService {
+    private final MessageAnalyzer messageAnalyzer;
     private final MessageRouter messageRouter;
     private final ConnectionTracker connectionTracker;
     private final ServiceManager serviceManager;
 
     public MessageDeliverService(
+        MessageAnalyzer messageAnalyzer,
         MessageRouter messageRouter, 
         ServiceManager serviceManager, 
         ConnectionTracker connectionTracker
     ) {
+        this.messageAnalyzer = messageAnalyzer;
         this.messageRouter = messageRouter;
         this.serviceManager = serviceManager;
         this.connectionTracker = connectionTracker;
@@ -77,6 +81,7 @@ public class MessageDeliverService {
     public Map<String, Object> createPayload(MessageContext context) {
         Map<String, Object> payload = new HashMap<>();
         long time = System.currentTimeMillis();
+        String type = messageAnalyzer.getMessageType(context);
 
         payload.put("content", context.resolveContent());
         payload.put("chatId", context.chatId);
@@ -86,10 +91,15 @@ public class MessageDeliverService {
         payload.put("isDirect", context.isDirect);
         payload.put("isGroup", context.isGroup);
 
+        Boolean isSelfPerspective = (Boolean) context.getContext().get("isSelf");
+        String displayUsername = (String) context.getContext().get("displayUsername");
+        payload.put("isSelf", isSelfPerspective != null ? isSelfPerspective : false);
+        payload.put("displayUsername", displayUsername != null ? displayUsername : context.username);
+
         if(context.getContextType() == MessageContext.ContextType.SYSTEM) {
             payload.put("type", "SYSTEM_MESSAGE");
         } else {
-            payload.put("type", "MESSAGE");
+            payload.put("type", type);
             payload.put("senderId", context.targetUserId);
         }
 
@@ -108,51 +118,15 @@ public class MessageDeliverService {
     }
 
     /*
-    * Determine Destination 
-    */
-    private String determineDestination(
-        String sessionId,
-        String messageType,
-        Map<String, Object> payload
-    ) {
-        switch(messageType) {
-            case "SYSTEM_MESSAGE":
-                return "SYSTEM_MESSAGE";
-            case "MESSAGE":
-                boolean isDirect = (Boolean) payload.getOrDefault("isDirect", true);
-                return isDirect ? "DIRECT_MESSAGE" : "GROUP_MESSAGE";
-            default:
-                return "MESSAGE";
-        }
-    }
-
-    /*
-    * Determine Route Types 
-    */
-    private String[] determineRouteTypes(String messageType, Map<String, Object> payload) {
-        switch(messageType) {
-            case "SYSTEM_MESSAGE": 
-                return new String[]{"SYSTEM"};
-            case "MESSAGE":
-                boolean isDirect = (Boolean) payload.getOrDefault("isDirect", true);
-                return isDirect ? new String[]{"GROUP", "CHAT"} : new String[]{"DIRECT", "CHAT"};
-            default:
-                return new String[]{"CHAT"};
-        }
-    }
-
-    /*
     * Deliver 
     */
-    private void deliverMessage(
+    public void deliverMessage(
         String sessionId,
-        Map<String, Object> payload,
-        String messageType
+        Map<String, Object> payload
     ) {
-        String destination = determineDestination(sessionId, messageType, payload);
-        serviceManager.getUserService().sendMessageToUser(sessionId, messageType, destination);
-
-        String[] routingTypes = determineRouteTypes(messageType, payload);
+        MessageContext context = messageAnalyzer.analyzeContext(sessionId, payload);
+        messageAnalyzer.organizeAndRoute(sessionId, payload);
+        String[] routingTypes = messageAnalyzer.determineRoutes(context);
         messageRouter.routeMessage(sessionId, payload, payload, routingTypes);
     }
 }

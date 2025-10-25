@@ -293,6 +293,14 @@ export class MessageManager {
 
     /* Handle Chat Message */
     private async handleChatMessage(data: any): Promise<void> {
+        console.log('Received message with perspective data:', {
+            isSelf: data.isSelf,
+            displayUsername: data.displayUsername,
+            username: data.username,
+            senderId: data.senderId,
+            fullData: data // Log entire data to see what's available
+        });
+
         const analysis = this.messageAnalyzer.analyzeMessage(data);
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
         const isSystemMessage = messageType.includes('SYSTEM');
@@ -340,6 +348,7 @@ export class MessageManager {
                 content = this.contentGetter.__self({
                     username: data.username || 'Unknown',
                     content: data.content,
+                    isSelf: data.isSelf,
                     timestamp: data.timestamp,
                     messageId: data.messageId,
                     type: analysis.messageType,

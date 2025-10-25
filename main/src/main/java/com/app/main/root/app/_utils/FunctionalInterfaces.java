@@ -7,8 +7,18 @@ public class FunctionalInterfaces {
     }
 
     @FunctionalInterface
+    public static interface Function3<A, B, C, R> {
+        R apply(A a, B b, C c);
+    }
+
+    @FunctionalInterface
     public static interface Function4<A, B, C, D, R> {
         R apply(A a, B b, C c, D d);
+    }
+
+    @FunctionalInterface
+    public static interface BiConsumer<A, B> {
+        void accept(A a, B b);
     }
 
     @FunctionalInterface

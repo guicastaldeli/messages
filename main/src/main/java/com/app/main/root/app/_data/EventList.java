@@ -24,6 +24,7 @@ public class EventList {
     private final MessageRouter messageRouter;
     private final MessageAnalyzer messageAnalyzer;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MessageContext messageContext;
 
     public EventList(
         ServiceManager serviceManager,
@@ -33,7 +34,8 @@ public class EventList {
         SocketMethods socketMethods,
         MessageTracker messageTracker,
         MessageRouter messageRouter,
-        MessageAnalyzer messageAnalyzer
+        MessageAnalyzer messageAnalyzer,
+        MessageContext messageContext
     ) {
         this.eventTracker = eventTracker;
         this.serviceManager = serviceManager;
@@ -43,6 +45,7 @@ public class EventList {
         this.messageTracker = messageTracker;
         this.messageRouter = messageRouter;
         this.messageAnalyzer = messageAnalyzer;
+        this.messageContext = messageContext;
     }
 
     public Map<String, EventConfig> list() {
@@ -112,7 +115,7 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
+                    serviceManager.getMessageDeliverService().deliverMessage(sessionId, payloadData);
                     eventTracker.track(
                         "chat",
                         payloadData,
@@ -139,7 +142,7 @@ public class EventList {
             (sessionId, payload, headerAcessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
+                    serviceManager.getMessageDeliverService().deliverMessage(sessionId, payloadData);
                     eventTracker.track(
                         "DIRECT_MESSAGE",
                         payloadData,
@@ -166,7 +169,7 @@ public class EventList {
             (sessionId, payload, headerAcessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
+                    serviceManager.getMessageDeliverService().deliverMessage(sessionId, payloadData);
                     eventTracker.track(
                         "GROUP_MESSAGE",
                         payloadData,

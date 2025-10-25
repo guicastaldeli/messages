@@ -139,8 +139,8 @@ public class SystemMessageService {
         FunctionalInterfaces.Function1<
             MessageContext, Map<String, Object>
         > createPayloadFn,
-        FunctionalInterfaces.TriConsumer<
-            String, Map<String, Object>, String
+        FunctionalInterfaces.BiConsumer<
+            String, Map<String, Object>
         > deliverMessageFn
     ) {
         Map<String, Object> groupInfo = new HashMap<>();
@@ -170,7 +170,7 @@ public class SystemMessageService {
             );
 
             Map<String, Object> payload = (Map<String, Object>) createPayloadFn.apply(context);
-            deliverMessageFn.accept(targetSessionId, payload, "SYSTEM_MESSAGE");
+            deliverMessageFn.accept(targetSessionId, payload);
         } else {
             Set<String> groupSessionIds = serviceManager.getGroupService().getGroupSessionIds(groupId);
 
@@ -186,7 +186,7 @@ public class SystemMessageService {
                     data
                 );
                 Map<String, Object> payload = (Map<String, Object>) createPayloadFn.apply(context);
-                deliverMessageFn.accept(memberUserId, payload, "SYSTEM_MESSAGE");
+                deliverMessageFn.accept(memberUserId, payload);
             }
         }
     }
