@@ -24,7 +24,6 @@ public class EventList {
     private final MessageRouter messageRouter;
     private final MessageAnalyzer messageAnalyzer;
     private final SimpMessagingTemplate messagingTemplate;
-    private final MessageContext messageContext;
 
     public EventList(
         ServiceManager serviceManager,
@@ -34,8 +33,7 @@ public class EventList {
         SocketMethods socketMethods,
         MessageTracker messageTracker,
         MessageRouter messageRouter,
-        MessageAnalyzer messageAnalyzer,
-        MessageContext messageContext
+        MessageAnalyzer messageAnalyzer
     ) {
         this.eventTracker = eventTracker;
         this.serviceManager = serviceManager;
@@ -45,7 +43,6 @@ public class EventList {
         this.messageTracker = messageTracker;
         this.messageRouter = messageRouter;
         this.messageAnalyzer = messageAnalyzer;
-        this.messageContext = messageContext;
     }
 
     public Map<String, EventConfig> list() {
@@ -115,7 +112,7 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    serviceManager.getMessageDeliverService().deliverMessage(sessionId, payloadData);
+                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
                     eventTracker.track(
                         "chat",
                         payloadData,
@@ -142,7 +139,7 @@ public class EventList {
             (sessionId, payload, headerAcessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    serviceManager.getMessageDeliverService().deliverMessage(sessionId, payloadData);
+                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
                     eventTracker.track(
                         "DIRECT_MESSAGE",
                         payloadData,
@@ -169,7 +166,7 @@ public class EventList {
             (sessionId, payload, headerAcessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    serviceManager.getMessageDeliverService().deliverMessage(sessionId, payloadData);
+                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
                     eventTracker.track(
                         "GROUP_MESSAGE",
                         payloadData,
@@ -191,6 +188,30 @@ public class EventList {
             },
             "/user/queue/messages/group",
             false
+        ));
+        /* Exit User */
+        configs.put("exit-user", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                String user = (String) payload;
+                long time = System.currentTimeMillis();
+                
+                eventTracker.track(
+                    "exit-user", 
+                    user, 
+                    EventDirection.RECEIVED, 
+                    sessionId, 
+                    user
+                );
+                
+                Map<String, Object> updateMessage = new HashMap<>();
+                updateMessage.put("type", "USER_LEFT");
+                updateMessage.put("username", user);
+                updateMessage.put("sessionId", sessionId);
+                updateMessage.put("timestamp", time);
+                return updateMessage;
+            },
+            "/topic/users",
+            true
         ));
         /* Create Group */
         configs.put("create-group", new EventConfig(
@@ -310,30 +331,6 @@ public class EventList {
             },
             "/user/queue/join-group-scss",
             false
-        ));
-        /* Left Group */
-        configs.put("left-group", new EventConfig(
-            (sessionId, payload, headerAccessor) -> {
-                String user = (String) payload;
-                long time = System.currentTimeMillis();
-                
-                eventTracker.track(
-                    "left-group", 
-                    user, 
-                    EventDirection.RECEIVED, 
-                    sessionId, 
-                    user
-                );
-                
-                Map<String, Object> updateMessage = new HashMap<>();
-                updateMessage.put("type", "USER_LEFT");
-                updateMessage.put("username", user);
-                updateMessage.put("sessionId", sessionId);
-                updateMessage.put("timestamp", time);
-                return updateMessage;
-            },
-            "/topic/users",
-            true
         ));
         /* Generate Group Link */
         configs.put("generate-invite-link", new EventConfig(

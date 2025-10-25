@@ -164,9 +164,6 @@ export class MessageAnalyzerClient {
     ** Set Direction
     */
     public setDirection(data: any): string {
-        if(data.isSelf != undefined) {
-            return data.isSelf ? 'self' : 'other';
-        } 
         if(!this.socketId) return 'other';
 
         const isSelf = (
@@ -174,11 +171,8 @@ export class MessageAnalyzerClient {
             data.senderId === this.currentUserId ||
             data.username === this.username ||
             data._metadata?.isSelf ||
-            data.routingMetadata?.isSelf ||
-            data.isSelf
+            data.routingMetadata?.isSelf
         );
-
-        console.log(data.isSelf)
 
         return isSelf ? 'self' : 'other';
     }

@@ -1,25 +1,21 @@
 package com.app.main.root.app._service;
-import com.app.main.root.app._data.MessageContext;
-import com.app.main.root.app._data.MessagePerspective;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
-import com.app.main.root.app._utils.FunctionalInterfaces;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
-
+import java.util.ArrayList;
+import java.util.List;
 import java.sql.*;
-import java.util.*;
 
 @Component
 public class MessageService {
     private final DataSource dataSource;
     private final ServiceManager serviceManager;
     private final MessageTracker messageTracker;
-    private String ctx;
 
     public MessageService(
         DataSource dataSource, 
@@ -31,11 +27,6 @@ public class MessageService {
         this.messageTracker = messageTracker;
     }
 
-    public String setCtx(String data) {
-        ctx = data;
-        return data;
-    }
-
     /*
     * Save Message Database 
     */
@@ -45,7 +36,6 @@ public class MessageService {
         String content,
         String type
     ) throws SQLException {
-        ctx = content;
         String query = CommandQueryManager.SAVE_MESSAGE.get();
 
         try(
@@ -89,8 +79,7 @@ public class MessageService {
     /*
     * Save System Message 
     */
-    public int saveSystemMessage(String content, String messageType) throws SQLException {
-        ctx = content;
+    public int saveSystemMessage(String content,String messageType) throws SQLException {
         String query = CommandQueryManager.SAVE_MESSAGE.get();
 
         try(
@@ -228,128 +217,5 @@ public class MessageService {
         chat.setChatType(rs.getString("chat_type"));
         chat.setChatName(rs.getString("chat_name"));
         return chat;
-    }
-
-    public String resolve() {
-        return ctx;
-    }
-
-    /*
-    * Id 
-    */
-    private String generateId() {
-        return "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
-    }
-
-    /*
-    * Create Message 
-    */
-    private MessageContext createMessage(
-        String senderSessionId,
-        String content,
-        String chatId,
-        String senderUserId,
-        String senderUsername,
-        String recipientUserId,
-        boolean isDirect,
-        Map<String, Object> data,
-        boolean isSelf,
-        String displayUsername
-    ) {
-        MessageContext context = new MessageContext(
-            senderSessionId,
-            content,
-            generateId(),
-            chatId,
-            senderUserId,
-            senderUsername,
-            isDirect,
-            !isDirect,
-            false,
-            isDirect
-        )
-        .toMessagePerspective().withPerspective(recipientUserId)
-        .withContextType(MessageContext.ContextType.REGULAR)
-        .withContext("originalSender", senderUserId)
-        .withContext("recipient", recipientUserId)
-        .withContext("isDirectMessage", isDirect)
-        .withContext("isSelf", isSelf)
-        .withContext("displayUsername", displayUsername)
-        .withAllContext(data);
-
-        return context.withContext("displayUsername", displayUsername);
-    }
-
-    /*
-    * Send Message 
-    */
-    public void sendMessage(
-        String senderSessionId,
-        String content,
-        String chatId,
-        boolean isDirect,
-        Map<String, Object> data,
-        FunctionalInterfaces.Function1<
-            MessageContext, Map<String, Object>
-        > createPayloadFn,
-        FunctionalInterfaces.BiConsumer<
-            String, Map<String, Object>
-        > deliverMessageFn
-    ) {
-        String senderUserId = serviceManager.getUserService().getUserIdBySession(senderSessionId);
-        String senderUsername = (String) data.get("username");
-
-        Set<String> recipientSessionIds = isDirect ?
-            new HashSet<>(List.of((String) data.get("targetSessionId"))) :
-            serviceManager.getGroupService().getGroupSessionIds(chatId);
-
-        Set<String> otherRecipients = new HashSet<>(recipientSessionIds);
-        otherRecipients.remove(senderSessionId);
-
-        MessageContext baseContext = new MessageContext(
-            senderSessionId, 
-            content, 
-            generateId(), 
-            chatId, 
-            senderUserId, 
-            senderUsername, 
-            isDirect, 
-            !isDirect, 
-            false, 
-            isDirect
-        )
-        .withContextType(MessageContext.ContextType.REGULAR)
-        .withContext("originalSender", senderUserId)
-        .withContext("isDirect", isDirect)
-        .withAllContext(data);
-
-        for(String recipientSessionId : otherRecipients) {
-            String recipientUserId = serviceManager.getUserService().getUserIdBySession(senderSessionId);
-            MessageContext otherContext = new MessagePerspective(
-                baseContext, 
-                senderUsername, 
-                recipientUserId,
-                data
-            ).withPerspective(recipientUserId);
-            Map<String, Object> payload = createPayloadFn.apply(otherContext);
-            System.out.println("SENDING TO OTHER - isSelf: " + payload.get("isSelf") + ", displayUsername: " + payload.get("displayUsername"));
-            deliverMessageFn.accept(recipientSessionId, payload);
-        }
-
-        MessageContext selfContext = new MessagePerspective(
-            baseContext, 
-            senderUserId, 
-            senderUsername,
-            data
-        ).withPerspective(senderUserId);
-
-        Map<String, Object> payload = createPayloadFn.apply(selfContext);
-        System.out.println("SENDING TO SELF - isSelf: " + payload.get("isSelf") + ", displayUsername: '" + payload.get("displayUsername") + "'");
-        deliverMessageFn.accept(senderSessionId, payload);
-        try {
-            saveMessage(chatId, senderUserId, content, senderUsername);
-        } catch(SQLException err) {
-            System.err.println("Failed to save messages: " + err.getMessage());
-        }
     }
 }

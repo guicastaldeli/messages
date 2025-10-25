@@ -44,7 +44,7 @@ public class MainApplication {
 			alert();
 			init(context);
 		} catch(Exception mainError) {
-			//handleError("MAIN APP INIT FAILED", mainError);
+			handleError("MAIN APP INIT FAILED", mainError);
 		}
 	} 
 
@@ -116,7 +116,7 @@ public class MainApplication {
         System.err.println("\n📋 ERROR DETAILS:");
         System.err.println("Message: " + error.getMessage());
         System.err.println("\n🔍 STACK TRACE:");
-        //error.printStackTrace();
+        error.printStackTrace();
         
         if (context != null) {
             try {

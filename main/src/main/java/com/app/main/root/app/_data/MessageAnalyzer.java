@@ -38,19 +38,23 @@ public class MessageAnalyzer {
         MessageContext context
     ) {
         Map<String, Object> message = new HashMap<>(payload);
-        if (!message.containsKey("routingMetadata")) {
-            message.put("routingMetadata", Map.of(
-                "sessionId", context.sessionId,
-                "messageType", getMessageType(context),
-                "messageId", context.messageId,
-                "isDirect", context.isDirect,
-                "isGroup", context.isGroup,
-                "isBroadcast", context.isBroadcast,
-                "priority", "NORMAL"
-            ));
-        }
+        message.put("routingMetadata", Map.of(
+            "sessionId", context.sessionId,
+            "messageType", getMessageType(context),
+            "messageId", context.messageId,
+            "isDirect", context.isDirect,
+            "isGroup", context.isGroup,
+            "isBroadcast", context.isBroadcast,
+            "priority", "NORMAL"
+        ));
         
-        System.out.println("Preserved perspective - isSelf: " + message.get("isSelf") + ", displayUsername: " + message.get("displayUsername"));
+        
+        System.out.println("=== MESSAGE ANALYZER PRESERVATION ===");
+        System.out.println("Original payload keys: " + payload.keySet());
+        System.out.println("Preserved isSelf: " + message.get("isSelf"));
+        System.out.println("Preserved displayUsername: " + message.get("displayUsername"));
+        System.out.println("Final message keys: " + message.keySet());
+        System.out.println("=====================================");
         return message;
     }
 
@@ -61,16 +65,35 @@ public class MessageAnalyzer {
         String content = (String) payload.get("content");
         String messageId = (String) payload.get("messageId");
         String chatId = (String) payload.get("chatId");
-        String groupId = (String) payload.get("groupId");
         String targetUserId = (String) payload.get("targetUserId");
         String username = (String) payload.get("username");
         boolean isGroup = (chatId != null && chatId.startsWith("group_")) ||
-                            (groupId != null) ||
                             "GROUP".equals(payload.get("type")) ||
                             "GROUP".equals(payload.get("chatType"));
         boolean isDirect = (targetUserId != null) && !isGroup;
         boolean isSystem = "SYSTEM_MESSAGE".equals(payload.get("type"));
-        boolean isBoolean = (chatId == null && targetUserId == null);
+        boolean isBroadcast = (chatId == null && targetUserId == null);
+
+        if (sessionId == null) {
+            System.out.println("Session id is null");
+        } else {
+            System.out.println(sessionId);
+        }
+        if (chatId == null) {
+            System.out.println("chat id is null");
+        } else {
+            System.out.println(chatId);
+        }
+        if (targetUserId == null) {
+            System.out.println("targetuser id is null");
+        } else {
+            System.out.println(targetUserId);
+        }
+        if (messageId == null) {
+            System.out.println("message id is null");
+        } else {
+            System.out.println(messageId);
+        }
 
         return new MessageContext(
             sessionId, 
@@ -82,7 +105,7 @@ public class MessageAnalyzer {
             isDirect, 
             isGroup,
             isSystem,
-            isBoolean
+            isBroadcast
         );
     }
 
