@@ -273,18 +273,59 @@ public class EventList {
                     );
 
                     /* System Message */
-                    Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createMessageWithPerspective(
-                        "GROUP_CREATED", 
-                        groupData, 
-                        sessionId, 
-                        sessionId
-                    );
-                    systemMessage.put("chatId", id);
-                    /* Fix later
-                    String destination = "/user/queue/messages/group/" + id;
-                    socketMethods.send(sessionId, destination, systemMessage);
-                    messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
-                    */
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Thread.sleep(300);
+                                String destination = "/user/queue/messages/group/" + id;
+                                String routeType = messageAnalyzer.extractRouteType(sessionId, groupData);
+                                
+                                Map<String, Object> systemMessageData = new HashMap<>();
+                                systemMessageData.put("groupId", id);
+                                systemMessageData.put("chatId", id);
+                                systemMessageData.put("groupName", groupName);
+                                systemMessageData.put("username", creator);
+    
+                                serviceManager.getSystemMessageService().setContent(
+                                    CommandSystemMessageList.GROUP_CREATED.get(), 
+                                    systemMessageData, 
+                                    sessionId, 
+                                    sessionId
+                                );
+                                Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createMessageWithPerspective(
+                                    "GROUP_CREATED", 
+                                    systemMessageData, 
+                                    sessionId, 
+                                    sessionId
+                                );
+                                systemMessage.put("groupId", id);
+                                systemMessage.put("chatId", id);
+                                systemMessage.put("chatType", "GROUP");
+                                systemMessage.put("isSystem", true);
+    
+                                Object systemMessagePayload = serviceManager.getSystemMessageService().payload(
+                                    "GROUP_CREATED", 
+                                    systemMessage, 
+                                    id, 
+                                    id
+                                );
+    
+                                try {
+                                    messageRouter.routeMessage(sessionId, systemMessagePayload, systemMessage, new String[]{"GROUP"});
+                                    socketMethods.send(sessionId, destination, systemMessagePayload);
+                                } catch(Exception err) {
+                                    System.err.println("Failed to route system message" + err.getMessage());
+                                    socketMethods.send(sessionId, destination, systemMessagePayload);
+                                }
+                            } catch(InterruptedException err) {
+                                Thread.currentThread().interrupt();
+                            } catch(Exception err) {
+                                System.err.println("Error in system message thread" + err.getMessage()); 
+                            }
+                        }
+                    }).start();
+                    
                     return Collections.emptyMap();
                 } catch(Exception err) {
                     serviceManager.getUserService().sendMessageToUser(sessionId, "group-creation-err", err.getMessage());

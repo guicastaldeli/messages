@@ -35,7 +35,7 @@ public class SystemMessageService {
     /*
     * Set Content
     */
-    private String setContent(
+    public String setContent(
         String template,
         Map<String, Object> data,
         String currentSesionId,
@@ -77,7 +77,7 @@ public class SystemMessageService {
 
         Map<String, Object> systemMessage = new HashMap<>();
         systemMessage.put("type", "SYSTEM");
-        systemMessage.put("messageType", "SYSTEM_MESSAGE");
+        systemMessage.put("messageType", eventType);
         systemMessage.put("event", eventType);
         systemMessage.put("content", content);
         systemMessage.put("timestamp", time);
@@ -96,6 +96,32 @@ public class SystemMessageService {
         MessagePerspectiveResult perspective = messagePerspectiveDetector.detectPerspective(targetSessionId, message);
         message.put("_perspective", createPerspectiveMap(perspective));
         message.put("_metadata", createMetadata(perspective));
+        return message;
+    }
+
+    /*
+    * Payload 
+    */
+    public Map<String, Object> payload(
+        String type, 
+        Map<String, Object> payload,
+        String chatId,
+        String sessionId
+    ) { 
+        Map<String, Object> message = new HashMap<>();
+        message.put("username", payload.get("username"));
+        message.put("content", payload.get("content"));
+        message.put("senderId", payload.get("senderId"));
+        message.put("chatId", chatId);
+        message.put("groupId", chatId);
+        message.put("messageId", payload.get("messageId"));
+        message.put("timestamp", payload.get("timestamp"));
+        message.put("type", "SYSTEM_MESSAGE");
+        message.put("event", payload.get("eventType"));
+        message.put("isDirect", false);
+        message.put("isGroup", true);
+        message.put("isSystem", true);
+        message.put("isBroadcast", false);
         return message;
     }
 

@@ -315,6 +315,11 @@ export class MessageManager {
             if(this.lastSystemMessageKeys.has(systemKey)) return;
 
             this.lastSystemMessageKeys.add(systemKey);
+            if(this.lastSystemMessageKeys.size > 100) {
+                const keysArray = Array.from(this.lastSystemMessageKeys);
+                this.lastSystemMessageKeys = new Set(keysArray.slice(-50));
+            }
+            
             await this.renderMessage(data, analysis);
             return;
         }
