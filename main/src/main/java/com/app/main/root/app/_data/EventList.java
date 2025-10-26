@@ -174,6 +174,22 @@ public class EventList {
                         sessionId,
                         "client"
                     );
+                    String chatId = (String) payloadData.get("chatId");
+                    String groupId = (String) payloadData.get("groupId");
+                    String actualGroupId = chatId != null ? chatId : groupId;
+                    String routeType = messageAnalyzer.extractRouteType(sessionId, payloadData);
+
+                    if(actualGroupId != null && actualGroupId.startsWith("group_")) {
+                        String destination = "/user/queue/messages/group/" + actualGroupId;
+                        Object data = serviceManager.getMessageService().payload(
+                            routeType, 
+                            payloadData, 
+                            actualGroupId, 
+                            sessionId
+                        );
+                        socketMethods.send(sessionId, destination, data);
+                        serviceManager.getGroupService().sendToGroup(actualGroupId, "group-message", payloadData);
+                    }
                 } catch(Exception err) {
                     eventTracker.track(
                         "GROUP_MESSAGE_ERR",
@@ -186,7 +202,7 @@ public class EventList {
 
                 return Collections.emptyMap();
             },
-            "/user/queue/messages/group",
+            "",
             false
         ));
         /* Exit User */
@@ -251,15 +267,26 @@ public class EventList {
                         sessionId, 
                         creator
                     );
-                    connectionTracker.serviceManager.getUserService().sendMessageToUser(
+                    serviceManager.getUserService().sendMessageToUser(
                         sessionId,
                         "group-creation-scss",
                         newGroup
                     );
 
+                    /* System Message */
+                    Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createMessageWithPerspective(
+                        "GROUP_CREATED", 
+                        groupData, 
+                        sessionId, 
+                        sessionId
+                    );
+                    systemMessage.put("chatId", id);
+                    messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
+                    serviceManager.getGroupService().sendToUserGroup(id, "group-creation-scss", systemMessage);
+
                     return Collections.emptyMap();
                 } catch(Exception err) {
-                    connectionTracker.serviceManager.getUserService().sendMessageToUser(sessionId, "group-creation-err", err.getMessage());
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "group-creation-err", err.getMessage());
                     return Collections.emptyMap();
                 }
             },
@@ -278,6 +305,7 @@ public class EventList {
 
                     String groupId = serviceManager.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
                     Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
+                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
                     
                     if(groupId == null) throw new Exception("Group Id is required!");
                     if(userId == null) throw new Exception("User Id is required!");
@@ -310,15 +338,23 @@ public class EventList {
                     serviceManager.getUserService().sendMessageToUser(sessionId, "join-group-scss", res);
 
                     /* System Message */
-                    Map<String, Object> systemMessage = new HashMap<>();
-                    systemMessage.put("content", username + " joined");
-                    systemMessage.put("groupId", groupId);
-                    systemMessage.put("timestamp", time);
-                    systemMessage.put("type", "SYSTEM_MESSAGE");
-                    systemMessage.put("event", "USER_JOINED");
-                    messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
-                    serviceManager.getGroupService().sendToGroup(groupId, "user-joined", systemMessage);
+                    for(_User member : groupMembers) {
+                        String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
+                        if(memberSessionId != null) {
+                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createMessageWithPerspective(
+                                "USER_JOINED_GROUP", 
+                                data, 
+                                sessionId, 
+                                memberSessionId
+                            );
+                            systemMessage.put("groupId", groupId);
+                            systemMessage.put("chatId", groupId);
+                            systemMessage.put("chatType", "GROUP");
 
+                            messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
+                            serviceManager.getGroupService().sendToUserGroup(groupId, "user-joined", systemMessage);
+                        }
+                    }
                     return Collections.emptyMap();
                 } catch(Exception err) {
                     err.printStackTrace();

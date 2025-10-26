@@ -25,8 +25,10 @@ public class GroupService {
     private final EventTracker eventTracker;
     private final InviteCodeManager inviteCodeManager;
     private final SimpMessagingTemplate messagingTemplate;
+
     public final Map<String, Set<String>> groupSessions = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> userGroups = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> sessionGroups = new ConcurrentHashMap<>();
 
     public GroupService(
         DataSource dataSource, 
@@ -141,37 +143,67 @@ public class GroupService {
     /*
     * Send to Group 
     */
-    public void sendToGroup(
-        String id,
-        String event,
-        Object data
-    ) {
+    public void sendToGroup(String groupId, String event, Object data) {
         try {
-            Set<String> sessions = groupSessions.get(id);
+            Set<String> sessions = groupSessions.get(groupId);
             if(sessions != null && !sessions.isEmpty()) {
                 eventTracker.track(
                     event,
                     data,
                     EventDirection.SENT,
-                    id,
+                    groupId,
                     "system"
                 );
 
                 for(String sessionId : sessions) {
-                    messagingTemplate.convertAndSendToUser(
-                        sessionId,
-                        "/queue/messages/group/" + event,
-                        data
-                    );
+                    if (isSessionInGroup(sessionId, groupId)) {
+                        String destination = "/user/queue/messages/group/" + groupId; 
+                        messagingTemplate.convertAndSend(destination, data);
+                    }
                 }
-
-                System.out.println("Broadcasted to " + groupSessions.size() + " group members in group " + id);
+                System.out.println("Broadcasted to " + sessions.size() + " group members in group " + groupId);
             } else {
-                System.out.println("No active sessions found for group " + id);
+                System.out.println("No active sessions found for group " + groupId);
             }
         } catch(Exception err) {
-            System.err.println("Error sending to group " + id + ": " + err.getMessage());
+            System.err.println("Error sending to group " + groupId + ": " + err.getMessage());
         }
+    }
+
+    public void sendToUserGroup(String groupId, String event, Object data) {
+        try {
+            Set<String> sessions = groupSessions.get(groupId);
+            if(sessions != null && !sessions.isEmpty()) {
+                eventTracker.track(
+                    event,
+                    data,
+                    EventDirection.SENT,
+                    groupId,
+                    "system"
+                );
+
+                for(String sessionId : sessions) {
+                    if (isSessionInGroup(sessionId, groupId)) {
+                        String destination = "/user/queue/messages/group/" + groupId; 
+                        messagingTemplate.convertAndSendToUser(
+                            sessionId,
+                            destination,
+                            data
+                        );
+                    }
+                }
+                System.out.println("Broadcasted to " + sessions.size() + " group members in group " + groupId);
+            } else {
+                System.out.println("No active sessions found for group " + groupId);
+            }
+        } catch(Exception err) {
+            System.err.println("Error sending to group " + groupId + ": " + err.getMessage());
+        }
+    }
+
+    private boolean isSessionInGroup(String sessionId, String groupId) {
+        Set<String> sessionGroups = this.sessionGroups.get(sessionId);
+        return sessionGroups != null && sessionGroups.contains(groupId);
     }
 
     /*
@@ -260,6 +292,7 @@ public class GroupService {
     ) {
         userGroups.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(groupId);
         groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
+        sessionGroups.computeIfAbsent(sessionId, k -> new CopyOnWriteArraySet<>()).add(groupId);
     }
 
     /*
@@ -324,18 +357,24 @@ public class GroupService {
         if(chatId != null && chatId.startsWith("group_")) {
             Set<String> groupSessions = this.groupSessions.get(chatId);
             if(groupSessions != null) {
-                Set<String> otherSessions = new HashSet<>(groupSessions);
-                otherSessions.remove(context.sessionId);
-                context.targetSessions.addAll(groupSessions);
-                context.metadata.put("queue", "/user/queue/messages/group");
+                Set<String> validSessions = new HashSet<>();
+                for(String sessionId : groupSessions) {
+                    if(isSessionInGroup(sessionId, chatId)) {
+                        validSessions.add(sessionId);
+                    }
+                }
+                context.targetSessions.addAll(validSessions);
+                context.metadata.put("groupId", chatId);
+                context.metadata.put("queue", "/user/queue/messages/group/" + chatId);
             }
         }
     }
 
     /* Group Self */
     private void handleGroupSelfRoute(RouteContext context) {
+        String chatId = (String) context.message.get("chatId");
         context.targetSessions.add(context.sessionId);
-        context.metadata.put("queue", "/user/queue/messages/group/self");
+        context.metadata.put("queue", "/user/queue/messages/group/" + chatId + "/self");
     }
 
     /* Group Others */
@@ -347,7 +386,7 @@ public class GroupService {
                 Set<String> otherSessions = new HashSet<>(groupSessions);
                 otherSessions.remove(context.sessionId);
                 context.targetSessions.addAll(groupSessions);
-                context.metadata.put("queue", "/queue/messages/group/others");
+                context.metadata.put("queue", "/queue/messages/group/" + chatId + "/others");
             }
         }
     }

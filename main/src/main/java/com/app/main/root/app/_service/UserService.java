@@ -105,6 +105,11 @@ public class UserService {
         return users;
     }
 
+    /* Username */
+    public String getUsernameBySessionId(String sessionId) {
+        return sessionToUserMap.get(sessionId);
+    }
+
     /* Session by User Id */
     public String getSessionByUserId(String userId) {
         return userToSessionMap.get(userId);

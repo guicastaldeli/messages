@@ -1,4 +1,6 @@
 export type ChatType =
+'CHAT' |
+'SYSTEM' |
 'DIRECT' |
 'GROUP'; 
 

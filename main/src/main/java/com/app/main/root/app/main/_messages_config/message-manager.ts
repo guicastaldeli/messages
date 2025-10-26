@@ -6,6 +6,7 @@ import { QueueManager } from "./queue-manager";
 import { Analysis, MessageAnalyzerClient } from "./message-analyzer-client";
 import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
 import { ApiClient } from "../_api-client/api-client";
+import { MessageHandler, RegisteredMessageHandlers } from "./message-handler";
 
 export class MessageManager {
     private queueManager: QueueManager;
@@ -16,8 +17,9 @@ export class MessageManager {
     private apiClient: ApiClient;
     public dashboard: any;
     
+    private registeredMessageHandlers: RegisteredMessageHandlers;
+    private currentHandler: MessageHandler | null = null;
     private messageHandlers: Map<string, (data: any) => Promise<void>> = new Map();
-    private currentSubscription: string | null = null;
     private lastMessageId: string | null = null;
     private lastMessageIds: Map<string, string> = new Map();
     private lastSystemMessageKeys: Set<string> = new Set();
@@ -39,6 +41,8 @@ export class MessageManager {
         this.messageTypes = new MessageTypes(this.contentGetter);
         this.queueManager = new QueueManager(socketClient);
         this.messageAnalyzer = new MessageAnalyzerClient();
+        this.registeredMessageHandlers = new RegisteredMessageHandlers();
+        this.registeredMessageHandlers.register();
     }
 
     public async init(): Promise<void> {
@@ -54,6 +58,13 @@ export class MessageManager {
         await this.socketClient.connect();
         await this.setupSubscriptions();
     }
+
+    private getHandlerByType(chatType: ChatType): MessageHandler {
+        const handler = this.registeredMessageHandlers.messageHandlers
+                            .find(h => h.canHandle(chatType));
+        if(!handler) throw new Error(`No message handler for chat type: ${chatType}`);
+        return handler;
+    }
     
     /*
     ** Setup Subscriptions
@@ -68,11 +79,16 @@ export class MessageManager {
     /*
     ** Update Subscription
     */
-    private async updateSubscription(type: string): Promise<void> {
-        if(this.currentSubscription) await this.queueManager.unsubscribeFromMessageType(this.currentSubscription);
-        await this.queueManager.subscribeToMessageType(type, this.handleChatMessage.bind(this));
-        this.currentSubscription = type;
-        console.log(`Subscribed to: ${type}`);
+    private async updateSubscription(type: ChatType, chatId?: string): Promise<void> {
+        if(this.currentHandler && this.chatRegistry.getCurrentChat()) {
+            const currentChatId = this.chatRegistry.getCurrentChat()!.id;
+            const currentPattern = this.currentHandler.getSubscriptionPattern(currentChatId);
+            await this.queueManager.unsubscribe(currentPattern);
+        }
+
+        this.currentHandler = this.getHandlerByType(type);
+        const pattern = this.currentHandler.getSubscriptionPattern(chatId || 'defult');
+        await this.queueManager.subscribe(pattern, this.handleChatMessage.bind(this));
     }
 
     /* SWITCH LATER TO JOIN CLASS :P */
@@ -151,39 +167,11 @@ export class MessageManager {
         chatType: ChatType,
         members?: string[]
     ): Promise<void> {
-        let context: Context;
-
-        if(chatId && members) {
-            context = this.chatRegistry.getContext('GROUP', members);
-            context.id = chatId;
-        } else {
-            context = this.chatRegistry.getContext('DIRECT', [this.socketId!]);
-            context.id = chatId;
-        }
-
+        const context = this.chatRegistry.getContext(chatType, members || []);
+        context.id = chatId;
         context.type = chatType;
         this.chatRegistry.setCurrentChat(context);
-        const type = await this.getMetadataType(context);
-        await this.updateSubscription(type);
-    }
-
-    /*
-    ** Metadata Type
-    */
-    private async getMetadataType(context: Context): Promise<string> {
-        const initData = {
-            senderId: this.socketClient,
-            username: this.uname,
-            content: 'content',
-            chatId: context.id,
-            chatType: context.type,
-            timestamp: Date.now()
-        }
-
-        const analysis = this.messageAnalyzer.analyzeMessage(initData);
-        const type = analysis.metadata.type || analysis.messageType.split('_')[0];
-        console.log(`Metadata type: ${type}`);
-        return type;
+        await this.updateSubscription(chatType, chatId);
     }
 
     /*
@@ -293,6 +281,11 @@ export class MessageManager {
 
     /* Handle Chat Message */
     private async handleChatMessage(data: any): Promise<void> {
+        console.log("=== RECEIVED MESSAGE ===");
+    console.log("Data:", data);
+    console.log("Current group:", this.chatRegistry.getCurrentChat()?.id);
+    console.log("Message groupId:", data.groupId || data.chatId);
+    console.log("========================");
         const analysis = this.messageAnalyzer.analyzeMessage(data);
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
         const isSystemMessage = messageType.includes('SYSTEM');
@@ -360,6 +353,7 @@ export class MessageManager {
                 });
             }
         } else {
+            console.log(data)
             content = this.contentGetter.__userEventMessageContent({
                 content: data.content,
                 timestamp: data.timestamp,

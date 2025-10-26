@@ -28,72 +28,29 @@ public class MessageAnalyzer {
     public void organizeAndRoute(String sessionId, Map<String, Object> payload) {
         MessageContext context = analyzeContext(sessionId, payload);
         String[] routes = determineRoutes(context);
-        Map<String, Object> message = messageData(payload, context);
-        routeMessage(context, message, routes);
+        Map<String, Object> setMessage = setMessage(context);
+        
+        routeMessage(context, setMessage, routes);
         trackMessage(context);
-    }
-
-    private Map<String, Object> messageData(
-        Map<String, Object> payload,
-        MessageContext context
-    ) {
-        Map<String, Object> message = new HashMap<>(payload);
-        message.put("routingMetadata", Map.of(
-            "sessionId", context.sessionId,
-            "messageType", getMessageType(context),
-            "messageId", context.messageId,
-            "isDirect", context.isDirect,
-            "isGroup", context.isGroup,
-            "isBroadcast", context.isBroadcast,
-            "priority", "NORMAL"
-        ));
-        
-        
-        System.out.println("=== MESSAGE ANALYZER PRESERVATION ===");
-        System.out.println("Original payload keys: " + payload.keySet());
-        System.out.println("Preserved isSelf: " + message.get("isSelf"));
-        System.out.println("Preserved displayUsername: " + message.get("displayUsername"));
-        System.out.println("Final message keys: " + message.keySet());
-        System.out.println("=====================================");
-        return message;
     }
 
     /*
     * Analyze 
     */
-    public MessageContext analyzeContext(String sessionId, Map<String, Object> payload) {
+    private MessageContext analyzeContext(String sessionId, Map<String, Object> payload) {
         String content = (String) payload.get("content");
         String messageId = (String) payload.get("messageId");
         String chatId = (String) payload.get("chatId");
+        String groupId = (String) payload.get("groupId");
         String targetUserId = (String) payload.get("targetUserId");
         String username = (String) payload.get("username");
         boolean isGroup = (chatId != null && chatId.startsWith("group_")) ||
+                            (groupId != null) ||
                             "GROUP".equals(payload.get("type")) ||
                             "GROUP".equals(payload.get("chatType"));
         boolean isDirect = (targetUserId != null) && !isGroup;
         boolean isSystem = "SYSTEM_MESSAGE".equals(payload.get("type"));
-        boolean isBroadcast = (chatId == null && targetUserId == null);
-
-        if (sessionId == null) {
-            System.out.println("Session id is null");
-        } else {
-            System.out.println(sessionId);
-        }
-        if (chatId == null) {
-            System.out.println("chat id is null");
-        } else {
-            System.out.println(chatId);
-        }
-        if (targetUserId == null) {
-            System.out.println("targetuser id is null");
-        } else {
-            System.out.println(targetUserId);
-        }
-        if (messageId == null) {
-            System.out.println("message id is null");
-        } else {
-            System.out.println(messageId);
-        }
+        boolean isBoolean = (chatId == null && targetUserId == null);
 
         return new MessageContext(
             sessionId, 
@@ -105,23 +62,44 @@ public class MessageAnalyzer {
             isDirect, 
             isGroup,
             isSystem,
-            isBroadcast
+            isBoolean
         );
     }
 
     /*
-    * Determine 
+    * Set 
     */
-    public String[] determineRoutes(MessageContext context) {
-        List<String> routes = new ArrayList<>();
-        if(context.isDirect) {
-            routes.add("DIRECT");
-        }
-        if(context.isGroup) {
-            routes.add("GROUP");
-        }
-        routes.add("CHAT");
-        return routes.toArray(new String[0]);
+    private Map<String, Object> setMessage(MessageContext context) {
+        String messageId = context.messageId != null ? context.messageId : 
+        "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+        String type = getMessageType(context);
+        long time = System.currentTimeMillis();
+
+        Map<String, Object> message = new HashMap<>();
+        message.put("username", context.username);
+        message.put("content", context.content);
+        message.put("senderId", context.sessionId);
+        message.put("chatId", context.chatId);
+        message.put("targetUserId", context.targetUserId);
+        message.put("messageId", messageId);
+        message.put("timestamp", time);
+        message.put("type", type);
+        message.put("isDirect", context.isDirect);
+        message.put("isGroup", context.isGroup);
+        message.put("isSystem", context.isSystem);
+        message.put("isBroadcast", context.isBroadcast);
+
+        Map<String, Object> routingMetadata = new HashMap<>();
+        routingMetadata.put("sessionId", context.sessionId);
+        routingMetadata.put("messageType", type);
+        routingMetadata.put("messageId", messageId);
+        routingMetadata.put("isDirect", context.isDirect);
+        routingMetadata.put("isGroup", context.isGroup);
+        routingMetadata.put("isBroadcast", context.isBroadcast);
+        routingMetadata.put("priority", "NORMAL");
+        message.put("routingMetadata", routingMetadata);
+
+        return message;
     }
 
     /*
@@ -148,6 +126,34 @@ public class MessageAnalyzer {
             message,
             routes
         );
+    }
+
+    /*
+    * Determine 
+    */
+    private String[] determineRoutes(MessageContext context) {
+        List<String> routes = new ArrayList<>();
+        if(context.isDirect) {
+            routes.add("DIRECT");
+        }
+        if(context.isGroup) {
+            routes.add("GROUP");
+        }
+        routes.add("CHAT");
+        return routes.toArray(new String[0]);
+    }
+
+    /*
+    * Extract Route 
+    */
+    public String extractRouteType(String sessionId, Map<String, Object> payload) {
+        MessageContext context = analyzeContext(sessionId, payload);
+        String[] routes = determineRoutes(context);
+        for(String route : routes) {
+            if("GROUP".equals(route)) return "GROUP";
+            if("DIRECT".equals(route)) return "DIRECT"; 
+        }
+        return "CHAT";
     }
 
     /*

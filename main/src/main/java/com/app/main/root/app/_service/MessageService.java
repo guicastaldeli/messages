@@ -1,14 +1,18 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._data.MessagePerspectiveResult;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
+import com.app.main.root.app._data.MessageAnalyzer;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.sql.*;
 
 @Component
@@ -16,15 +20,18 @@ public class MessageService {
     private final DataSource dataSource;
     private final ServiceManager serviceManager;
     private final MessageTracker messageTracker;
+    private final MessageAnalyzer messageAnalyzer;
 
     public MessageService(
         DataSource dataSource, 
         @Lazy ServiceManager serviceManager,
-        MessageTracker messageTracker
+        MessageTracker messageTracker,
+        MessageAnalyzer messageAnalyzer
     ) {
         this.dataSource = dataSource;
         this.serviceManager = serviceManager;
         this.messageTracker = messageTracker;
+        this.messageAnalyzer = messageAnalyzer;
     }
 
     /*
@@ -187,6 +194,87 @@ public class MessageService {
         List<_Message> reversed = new ArrayList<>();
         for(int i = messages.size() - 1; i >= 0; i--) reversed.add(messages.get(i));
         return reversed;
+    }
+
+    /*
+    * Payload 
+    */
+    public Map<String, Object> payload(
+        String type, 
+        Map<String, Object> payload,
+        String chatId,
+        String sessionId
+    ) { 
+        Map<String, Object> message = new HashMap<>();
+        message.put("username", payload.get("username"));
+        message.put("content", payload.get("content"));
+        message.put("senderId", payload.get("senderId"));
+        message.put("chatId", chatId);
+        message.put("messageId", payload.get("messageId"));
+        message.put("timestamp", payload.get("timestamp"));
+        message.put("type", type);
+        message.put("isDirect", false);
+        message.put("isGroup", true);
+        message.put("isSystem", false);
+        message.put("isBroadcast", false);
+                
+        Map<String, Object> routingMetadata = new HashMap<>();
+        routingMetadata.put("sessionId", sessionId);
+        routingMetadata.put("messageType", "GROUP_MESSAGE");
+        routingMetadata.put("messageId", payload.get("messageId"));
+        routingMetadata.put("isDirect", false);
+        routingMetadata.put("isGroup", true);
+        routingMetadata.put("isBroadcast", false);
+        routingMetadata.put("priority", "NORMAL");
+        message.put("routingMetadata", routingMetadata);
+
+        return message;
+    }
+
+    /*
+    **
+    ***
+    *** Perspective
+    ***
+    **
+    */
+    public MessagePerspectiveResult createSelfPerspective(
+        MessagePerspectiveResult result,
+        boolean isGroup,
+        String displayUsername
+    ) {
+        result.setDirection("self");
+        result.setPerpspectiveType("SELF_SENT");
+
+        result.getRenderConfig().put("showUsername", false);
+        result.getRenderConfig().put("displayUsername", null);
+        
+        result.getMetadata().put("isCurrentUser", true);
+        result.getMetadata().put("isGroup", isGroup);
+        result.getMetadata().put("isDirect", !isGroup);
+        result.getMetadata().put("isSystem", false);
+
+        return result;
+    }
+
+    public MessagePerspectiveResult createOtherPerspective(
+        MessagePerspectiveResult result,
+        boolean isGroup,
+        String displayUsername
+    ) {
+        result.setDirection("other");
+        result.setPerpspectiveType(isGroup ? "GROUP_OTHER_USER" : "OTHER_USER");
+
+        boolean shouldShowUSername = isGroup && displayUsername != null;
+        result.getRenderConfig().put("showUsername", shouldShowUSername);
+        result.getRenderConfig().put("displayUsername", displayUsername);
+        
+        result.getMetadata().put("isCurrentUser", false);
+        result.getMetadata().put("isGroup", isGroup);
+        result.getMetadata().put("isDirect", !isGroup);
+        result.getMetadata().put("isSystem", false);
+
+        return result;
     }
 
     /*

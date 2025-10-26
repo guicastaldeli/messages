@@ -1,66 +1,69 @@
 import { SocketClientConnect } from "../socket-client-connect";
 
 export class QueueManager {
-    private queueSubscriptions: Map<string, (data: any) => void> = new Map();
-    public routingConfig: Map<string, string[]> = new Map();
+    private subscriptions: Map<string, (data: any) => void> = new Map();
 
     constructor(private socketClient: SocketClientConnect) {
-        this.setupRoutingConfig();
+        this.socketClient = socketClient;
     }
 
-    /*
-    ** Setup Routing
-    */
-    private setupRoutingConfig() {
-        this.routingConfig.set('CHAT', [
-            '/user/queue/messages/all'
-        ]);
-        this.routingConfig.set('USER', [
-            '/user/queue/messages/self', 
-            '/user/queue/messages/others',
-            
-        ]);
-        this.routingConfig.set('DIRECT', [
-            '/user/queue/messages/self', 
-            '/user/queue/messages/others'
-        ]);
-        this.routingConfig.set('GROUP', [
-            '/user/queue/messages/self', 
-            '/user/queue/messages/others',
-            
-        ]);
-        this.routingConfig.set('SYSTEM', [
-            '/user/queue/messages/system'
-        ]);
+    private resolvePattern(pattern: string): string {
+        const patterns: Record<string, string> = {
+            'CHAT': '/user/queue/messages/all',
+            'SYSTEM': '/user/queue/messages/system',
+
+            'DIRECT:*': '/user/queue/messages/direct/$1',
+            'DIRECT:SELF': '/user/queue/messages/direct/$1/self',
+            'DIRECT:OTHERS': '/user/queue/messages/direct/$1/others',
+
+            'GROUP:*': '/user/queue/messages/group/$1',
+            'GROUP:SELF': '/user/queue/messages/group/$1/self',
+            'GROUP:OTHERS': '/user/queue/messages/group/$1/others'
+        }
+        if(patterns[pattern]) {
+            return patterns[pattern]
+        }
+
+        for(const [key, value] of Object.entries(patterns)) {
+            if(pattern.startsWith(key.replace(':*', ''))) {
+                if(key.includes(':*')) {
+                    const parts = pattern.split(':');
+                    const param = parts[1];
+                    return value.replace('$1', param);
+                }
+                return value;
+            }
+        }
+
+        return pattern;
     }
 
     /*
     ** Subscribe
     */
-    public async subscribeToMessageType(
-        messageType: string,
+    public async subscribe(
+        pattern: string,
         handler: (data: any) => void
     ): Promise<void> {
-        const queues = this.routingConfig.get(messageType) || [];
-        for(const queue of queues) {
-            const existingHandler = this.queueSubscriptions.get(queue);
-            if(existingHandler) this.socketClient.offDestination(queue, existingHandler);
-            await this.socketClient.onDestination(queue, handler);
-            this.queueSubscriptions.set(queue, handler);
-        }
+        const destination = this.resolvePattern(pattern);
+        await this.unsubscribe(pattern);
+
+        const existingHandler = this.subscriptions.get(destination);
+        if(existingHandler) this.socketClient.offDestination(destination, existingHandler);
+
+        await this.socketClient.onDestination(destination, handler);
+        this.subscriptions.set(destination, handler);
     }
 
     /*
     ** Unsubscribe
     */
-    public async unsubscribeFromMessageType(messageType: string): Promise<void> {
-        const queues = this.routingConfig.get(messageType) || [];
-        for(const queue of queues) {
-            const handler = this.queueSubscriptions.get(queue);
-            if(handler) {
-                this.socketClient.offDestination(queue, handler);
-                this.queueSubscriptions.delete(queue);
-            }
+    public async unsubscribe(pattern: string): Promise<void> {
+        const destination = this.resolvePattern(pattern);
+        const handler = this.subscriptions.get(destination);
+        if(handler) {
+            this.socketClient.offDestination(destination, handler);
+            this.subscriptions.delete(destination);
         }
     }
 
