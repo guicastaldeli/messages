@@ -196,8 +196,14 @@ export class MessageAnalyzerClient {
         if(data.groupId) return 'GROUP';
         if(data.chatType === 'GROUP') return 'GROUP';
         if(data._metadata?.type === 'GROUP') return 'GROUP';
+
+        if(data.chatId && data.chatId.startsWith('direct_')) return 'DIRECT';
         if(data.targetUserId) return 'DIRECT';
+        if(data.isDirect) return 'DIRECT';
+
+        if(data.isSystem) return 'SYSTEM'; 
         if(data.type === 'SYSTEM') return 'SYSTEM';
+
         return 'CHAT';
     }
 

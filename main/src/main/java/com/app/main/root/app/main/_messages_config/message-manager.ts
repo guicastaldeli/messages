@@ -73,21 +73,21 @@ export class MessageManager {
         const client = await this.socketClient.getSocketId();
         this.socketId = client;
         this.messageAnalyzer.init(client, this.currentUserId, this.uname);
-        await this.updateSubscription('CHAT');
+        await this.updateSubscription('CHAT', undefined, 'CHAT');
     }
 
     /*
     ** Update Subscription
     */
-    private async updateSubscription(type: ChatType, chatId?: string): Promise<void> {
+    private async updateSubscription(type?: string, chatId?: string, handlerType?: ChatType): Promise<void> {
         if(this.currentHandler && this.chatRegistry.getCurrentChat()) {
             const currentChatId = this.chatRegistry.getCurrentChat()!.id;
             const currentPattern = this.currentHandler.getSubscriptionPattern(currentChatId);
             await this.queueManager.unsubscribe(currentPattern);
         }
 
-        this.currentHandler = this.getHandlerByType(type);
-        const pattern = this.currentHandler.getSubscriptionPattern(chatId || 'defult');
+        this.currentHandler = this.getHandlerByType(handlerType!);
+        const pattern = this.currentHandler.getSubscriptionPattern(chatId || 'default');
         await this.queueManager.subscribe(pattern, this.handleChatMessage.bind(this));
     }
 
@@ -171,7 +171,27 @@ export class MessageManager {
         context.id = chatId;
         context.type = chatType;
         this.chatRegistry.setCurrentChat(context);
-        await this.updateSubscription(chatType, chatId);
+        const type = await this.getMetadataType(context);
+        await this.updateSubscription(type, chatId, chatType);
+    }
+
+    /*
+    ** Metadata Type
+    */
+    private async getMetadataType(context: Context): Promise<string> {
+        const initData = {
+            senderId: this.socketClient,
+            username: this.uname,
+            content: 'content',
+            chatId: context.id,
+            chatType: context.type,
+            timestamp: Date.now()
+        }
+
+        const analysis = this.messageAnalyzer.analyzeMessage(initData);
+        const type = analysis.metadata.type || analysis.messageType.split('_')[0];
+        console.log(`Metadata type: ${type}`);
+        return type;
     }
 
     /*
@@ -225,6 +245,11 @@ export class MessageManager {
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
         const isGroupChat = currentChat?.type === 'GROUP';
+        const chatId = currentChat?.id;
+        if(!chatId) {
+            console.error('No chatId found');
+            return false;
+        }
         if(!client) return false;
 
         const data = {
@@ -233,15 +258,15 @@ export class MessageManager {
             content: content.content,
             messageId: content.messageId,
             targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != client),
-            groupId: isGroupChat ? currentChat.id : undefined,
-            chatId: currentChat?.id,
+            groupId: isGroupChat ? currentChat?.id : undefined,
+            chatId: chatId,
             timestamp: time,
             chatType: content.chatType || currentChat?.type || isGroupChat ? 'GROUP' : 'DIRECT',
             type: 'CHAT'
         }
 
         const analysis = this.messageAnalyzer.analyzeMessage(data);
-        const metaType = analysis.metadata.type || analysis.messageType.split('_')[0];
+        const metaType = analysis.messageType.split('_')[0];
         const analyzedData = {
             ...analysis.context,
             _metadata: {
@@ -281,11 +306,6 @@ export class MessageManager {
 
     /* Handle Chat Message */
     private async handleChatMessage(data: any): Promise<void> {
-        console.log("=== RECEIVED MESSAGE ===");
-    console.log("Data:", data);
-    console.log("Current group:", this.chatRegistry.getCurrentChat()?.id);
-    console.log("Message groupId:", data.groupId || data.chatId);
-    console.log("========================");
         const analysis = this.messageAnalyzer.analyzeMessage(data);
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
         const isSystemMessage = messageType.includes('SYSTEM');

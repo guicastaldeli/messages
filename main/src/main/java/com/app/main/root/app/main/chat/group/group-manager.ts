@@ -303,13 +303,17 @@ export class GroupManager {
     *** Join Group
     **
     */
-    private handleJoinGroupScss(data: Data): void {
+    private async handleGroupJoinScss(data: Data): Promise<void> {
         this.currentGroupName = data.name;
         const name = this.currentGroupName;
         const time = new Date().toISOString();
         this.currentGroupId = data.id;
         chatState.setType('GROUP');
-        this.messageManager.setCurrentChat(data.id, 'GROUP', data.members || [this.socketId]);
+        await this.messageManager.setCurrentChat(
+            data.id, 
+            'GROUP', 
+            data.members || [this.socketId]
+        );
 
         if(this.dashboard) {
             this.dashboard.updateState({
@@ -452,7 +456,7 @@ export class GroupManager {
             this.joinRej = rej;
 
             /* Success */
-            const handleSucss = (data: any) => {
+            const handleSucss = async (data: any) => {
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
                 if(this.joinRes) {
@@ -460,7 +464,7 @@ export class GroupManager {
                     this.joinRes = undefined;
                     this.joinRej = undefined;
                 }
-                this.handleJoinGroupScss(data);
+                await this.handleGroupJoinScss(data);
             }
 
             /* Error */

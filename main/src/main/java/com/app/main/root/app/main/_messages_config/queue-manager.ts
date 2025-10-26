@@ -7,7 +7,7 @@ export class QueueManager {
         this.socketClient = socketClient;
     }
 
-    private resolvePattern(pattern: string): string {
+    public resolvePattern(pattern: string): string {
         const patterns: Record<string, string> = {
             'CHAT': '/user/queue/messages/all',
             'SYSTEM': '/user/queue/messages/system',

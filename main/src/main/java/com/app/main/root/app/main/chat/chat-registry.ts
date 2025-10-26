@@ -11,7 +11,6 @@ export interface Context {
     metadata?: Record<string, any>;
 }
 
-
 export class ChatRegistry {
     private chats: Map<string, Context> = new Map();
     private currentChat: Context | null = null;

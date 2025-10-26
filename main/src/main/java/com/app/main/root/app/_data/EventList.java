@@ -188,7 +188,6 @@ public class EventList {
                             sessionId
                         );
                         socketMethods.send(sessionId, destination, data);
-                        serviceManager.getGroupService().sendToGroup(actualGroupId, "group-message", payloadData);
                     }
                 } catch(Exception err) {
                     eventTracker.track(
@@ -281,9 +280,11 @@ public class EventList {
                         sessionId
                     );
                     systemMessage.put("chatId", id);
+                    /* Fix later
+                    String destination = "/user/queue/messages/group/" + id;
+                    socketMethods.send(sessionId, destination, systemMessage);
                     messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
-                    serviceManager.getGroupService().sendToUserGroup(id, "group-creation-scss", systemMessage);
-
+                    */
                     return Collections.emptyMap();
                 } catch(Exception err) {
                     serviceManager.getUserService().sendMessageToUser(sessionId, "group-creation-err", err.getMessage());
@@ -351,8 +352,9 @@ public class EventList {
                             systemMessage.put("chatId", groupId);
                             systemMessage.put("chatType", "GROUP");
 
+                            String destination = "/user/queue/messages/group/" + groupId;
+                            socketMethods.send(sessionId, destination, systemMessage);
                             messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
-                            serviceManager.getGroupService().sendToUserGroup(groupId, "user-joined", systemMessage);
                         }
                     }
                     return Collections.emptyMap();

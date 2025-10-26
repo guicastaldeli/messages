@@ -386,7 +386,7 @@ public class GroupService {
                 Set<String> otherSessions = new HashSet<>(groupSessions);
                 otherSessions.remove(context.sessionId);
                 context.targetSessions.addAll(groupSessions);
-                context.metadata.put("queue", "/queue/messages/group/" + chatId + "/others");
+                context.metadata.put("queue", "/user/queue/messages/group/" + chatId + "/others");
             }
         }
     }
