@@ -13,6 +13,11 @@ public class MessagePerspectiveDetector {
 
     public MessagePerspectiveResult detectPerspective(String sessionId, Map<String, Object> data) {
         MessagePerspectiveResult result = new MessagePerspectiveResult();
+        result.setDirection("other");
+        result.setPerpspectiveType("UNKNOWN");
+        if(result.getRenderConfig() == null) result.setRenderConfig(new HashMap<>());
+        if(result.getMetadata() == null) result.setMetadata(new HashMap<>());
+
         String chatId = (String) data.get("chatId");
         String messageUsername = (String) data.get("username");
         String chatType = (String) data.get("chatType");
@@ -32,14 +37,14 @@ public class MessagePerspectiveDetector {
         if(isSystem) {
             return serviceManager.getSystemMessageService().createPerspective(result, data, sessionId);
         }
-        if(isSelf) {
-            return serviceManager.getMessageService().createSelfPerspective(result, isGroup, displayUsername);
-        }
         if(isOther) {
             return serviceManager.getMessageService().createOtherPerspective(result, isGroup, displayUsername);
         }
-
-        return serviceManager.getMessageService().createOtherPerspective(result, isGroup, displayUsername);
+        if(isSelf) {
+            return serviceManager.getMessageService().createSelfPerspective(result, isGroup, displayUsername);
+        } else {
+            return serviceManager.getMessageService().createOtherPerspective(result, isGroup, displayUsername);
+        }
     }
 
     public boolean isAboutCurrentUser(
@@ -98,9 +103,21 @@ public class MessagePerspectiveDetector {
     ) {
         String senderId = (String) data.get("senderId");
         String username = (String) data.get("username");
-        return sessionId.equals(senderId) ||
-            currentUsername.equals(username) ||
-            Boolean.TRUE.equals(data.get("isSelf")) ||
-            Boolean.TRUE.equals(data.get("isSelfMessage"));
+        String senderSessionId = (String) data.get("senderSessionId");
+        String currentUserId = serviceManager.getUserService().getUsernameBySessionId(sessionId);
+        if(sessionId.equals(senderId) || sessionId.equals(senderSessionId)) {
+            return true;
+        }
+        
+        String dataUserId = (String) data.get("userId");
+        if(currentUserId != null && currentUserId.equals(dataUserId)) {
+            return true;
+        }
+        if(currentUsername != null && currentUsername.equals(username)) {
+            return true;
+        }
+
+        return Boolean.TRUE.equals(data.get("isSelf")) ||
+                Boolean.TRUE.equals(data.get("isSelfMessage"));
     }
 }

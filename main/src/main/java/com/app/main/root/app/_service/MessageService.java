@@ -6,6 +6,7 @@ import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app._data.MessageAnalyzer;
+import com.app.main.root.app._data.MessagePerspectiveDetector;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
@@ -21,17 +22,20 @@ public class MessageService {
     private final ServiceManager serviceManager;
     private final MessageTracker messageTracker;
     private final MessageAnalyzer messageAnalyzer;
+    private final MessagePerspectiveDetector perspectiveDetector;
 
     public MessageService(
         DataSource dataSource, 
         @Lazy ServiceManager serviceManager,
         MessageTracker messageTracker,
-        MessageAnalyzer messageAnalyzer
+        MessageAnalyzer messageAnalyzer,
+        MessagePerspectiveDetector messagePerspectiveDetector
     ) {
         this.dataSource = dataSource;
         this.serviceManager = serviceManager;
         this.messageTracker = messageTracker;
         this.messageAnalyzer = messageAnalyzer;
+        this.perspectiveDetector = messagePerspectiveDetector;
     }
 
     /*
@@ -209,7 +213,9 @@ public class MessageService {
         message.put("username", payload.get("username"));
         message.put("content", payload.get("content"));
         message.put("senderId", payload.get("senderId"));
+        message.put("senderSessionId", payload.get("senderSessionId"));
         message.put("chatId", chatId);
+        message.put("userId", chatId);
         message.put("messageId", payload.get("messageId"));
         message.put("timestamp", payload.get("timestamp"));
         message.put("type", type);
@@ -227,6 +233,18 @@ public class MessageService {
         routingMetadata.put("isBroadcast", false);
         routingMetadata.put("priority", "NORMAL");
         message.put("routingMetadata", routingMetadata);
+
+        MessagePerspectiveResult perspectiveData = perspectiveDetector.detectPerspective(sessionId, message);
+        Map<String, Object> perspective = new HashMap<>();
+        perspective.put("direction", perspectiveData.getDirection());
+        perspective.put("perspectiveType", perspectiveData.getPerpspectiveType());
+        perspective.put("showUsername", perspectiveData.getRenderConfig().get("showUsername"));
+        perspective.put("displayUsername", perspectiveData.getRenderConfig().get("displayUsername"));
+        perspective.put("isCurrentUser", perspectiveData.getMetadata().get("isCurrentUser"));
+        perspective.put("isDirect", perspectiveData.getMetadata().get("isDirect"));
+        perspective.put("isGroup", perspectiveData.getMetadata().get("isGroup"));
+        perspective.put("isSystem", perspectiveData.getMetadata().get("isSystem"));
+        message.put("_perspective", perspective);
 
         return message;
     }

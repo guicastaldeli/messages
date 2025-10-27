@@ -10,6 +10,7 @@ public class ServiceManager {
     private final DbService dbService;
     private final MessageService messageService;
     private final SystemMessageService systemMessageService;
+    private final MessagePerspectiveService messagePerspectiveService;
     private final UserService userService;
     private final DirectService directService;
     private final GroupService groupService;
@@ -18,6 +19,7 @@ public class ServiceManager {
         DbService dbService,
         @Lazy MessageService messageService,
         @Lazy SystemMessageService systemMessageService,
+        @Lazy MessagePerspectiveService messagePerspectiveService,
         UserService userService,
         DirectService directService,
         GroupService groupService
@@ -25,6 +27,7 @@ public class ServiceManager {
         this.dbService = dbService;
         this.messageService = messageService;
         this.systemMessageService = systemMessageService;
+        this.messagePerspectiveService = messagePerspectiveService;
         this.userService = userService;
         this.directService = directService;
         this.groupService = groupService;
@@ -49,6 +52,13 @@ public class ServiceManager {
     */
     public SystemMessageService getSystemMessageService() {
         return systemMessageService;
+    }
+
+    /*
+    * Message Perspective Service 
+    */
+    public MessagePerspectiveService getMessagePerspectiveService() {
+        return messagePerspectiveService;
     }
 
     /*

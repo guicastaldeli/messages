@@ -4,12 +4,12 @@ import java.util.*;
 public class MessagePerspectiveResult {
     private String direction;
     private String perpspectiveType;
-    private Map<String, Object> renderConifig;
-    private Map<String, Object> meatdata;
+    private Map<String, Object> renderConfig;
+    private Map<String, Object> metadata;
 
     public MessagePerspectiveResult() {
-        this.renderConifig = new HashMap<>();
-        this.meatdata = new HashMap<>();
+        this.renderConfig = new HashMap<>();
+        this.metadata = new HashMap<>();
     }
 
     /*
@@ -35,14 +35,21 @@ public class MessagePerspectiveResult {
     /*
     * Render Config 
     */
+    public void setRenderConfig(Map<String, Object> config) {
+        this.renderConfig = config;
+    }
+
     public Map<String, Object> getRenderConfig() {
-        return renderConifig;
+        return renderConfig;
     }
 
     /*
     * Metadata 
     */
+    public void setMetadata(Map<String, Object> metadata) {
+        this.metadata = metadata;
+    }
     public Map<String, Object> getMetadata() {
-        return meatdata;
+        return metadata;
     }
 }

@@ -91,6 +91,28 @@ public class MessageRouter {
         Map<String, Object> message,
         String[] routes
     ) {
+        try {
+            if(serviceManager == null || serviceManager.getMessagePerspectiveService() == null) {
+                System.err.println("ERR. PerspectiveService not available >:(. Routing without perspective :/");
+                routeToDestination(sessionId, payload, message, routes);
+                return;
+            }
+            Map<String, Object> messageWithPerspective = this.serviceManager.getMessagePerspectiveService()
+                .applyPerspective(sessionId, message);
+            routeToDestination(sessionId, payload, messageWithPerspective, routes);
+        } catch(Exception err) {
+            System.err.println("ERR. Routes" + err.getMessage());
+            err.printStackTrace();
+            routeToDestination(sessionId, payload, message, routes);
+        }
+    }
+
+    private void routeToDestination(
+        String sessionId,
+        Object payload,
+        Map<String, Object> message,
+        String[] routes
+    ) {
         RouteContext context = new RouteContext(sessionId, payload, message);
         for(String route : routes) {
             RouteHandler handler = routeHandlers.get(route);

@@ -279,7 +279,6 @@ public class EventList {
                             try {
                                 Thread.sleep(300);
                                 String destination = "/user/queue/messages/group/" + id;
-                                String routeType = messageAnalyzer.extractRouteType(sessionId, groupData);
                                 
                                 Map<String, Object> systemMessageData = new HashMap<>();
                                 systemMessageData.put("groupId", id);

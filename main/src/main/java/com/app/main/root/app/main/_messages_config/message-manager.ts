@@ -274,6 +274,14 @@ export class MessageManager {
                 timestamp: time,
                 routing: 'STANDARD',
                 priority: analysis.priority
+            },
+            _perspective: {
+                direction: analysis.direction,
+                messageType: analysis.messageType,
+                isCurrentUser: analysis.direction,
+                isDirect: analysis.context.isDirect,
+                isGroup: analysis.context.isGroup,
+                isSystem: analysis.context.isSystem
             }
         }
 
@@ -306,7 +314,7 @@ export class MessageManager {
 
     /* Handle Chat Message */
     private async handleChatMessage(data: any): Promise<void> {
-        const analysis = this.messageAnalyzer.analyzeMessage(data);
+        const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
         const isSystemMessage = messageType.includes('SYSTEM');
 
@@ -328,53 +336,42 @@ export class MessageManager {
         if(data.messageId === lastMessageId) return;
 
         this.lastMessageIds.set(messageType, data.messageId);
-        if(analysis.direction === 'OTHER') {
-            try {
-                (await this.apiClient.getMessageService()).saveMessages({
-                    messageId: data.messageId,
-                    content: data.content,
-                    senderId: data.senderId,
-                    username: data.username,
-                    chatId: data.chatId,
-                    messageType: analysis.context.isDirect ? 'DIRECT' : 'GROUP',
-                    direction: 'RECEIVED'
-                });
-                console.log('Received messaged saved to server :)');
-            } catch(err) {
-                console.error('Received message failed to save to server :(');
-            }
-        }
-        await this.renderMessage(data, analysis);
+        const perspective = data._perspective;
+        const direction = perspective?.direction || analysis.direction;
+        await this.renderMessage(data, { ...analysis, direction });
     }
 
     /* Render Messages */
     private async renderMessage(data: any, analysis: Analysis): Promise<void> {
         if(!this.appEl) return;
         const container = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
+        const perspective = data._perspective || analysis.perspective;
         let content: React.ReactElement;
 
         if(!analysis.context.isSystem) {
             if(analysis.direction === 'self') {
                 content = this.contentGetter.__self({
-                    username: data.username || 'Unknown',
+                    username: perspective.showUsername ? data.username : null,
                     content: data.content,
                     timestamp: data.timestamp,
                     messageId: data.messageId,
                     type: analysis.messageType,
                     priority: analysis.priority,
                     isDirect: analysis.context.isDirect,
-                    isGroup: analysis.context.isGroup
+                    isGroup: analysis.context.isGroup,
+                    perspective: perspective
                 });
             } else {
                 content = this.contentGetter.__other({
-                    username: data.username || 'Unknown',
+                    username: perspective.showUsername ? data.username : null,
                     content: data.content,
                     timestamp: data.timestamp,
                     messageId: data.messageId,
                     type: analysis.messageType,
                     priority: analysis.priority,
                     isDirect: analysis.context.isDirect,
-                    isGroup: analysis.context.isGroup
+                    isGroup: analysis.context.isGroup,
+                    perspective: perspective
                 });
             }
         } else {
@@ -400,7 +397,7 @@ export class MessageManager {
     */
     public async renderHistory(data: any): Promise<void> {
         if(!this.appEl) return;
-        const analysis = this.messageAnalyzer.analyzeMessage(data);
+        const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
         await this.renderMessage(data, analysis);
     }
 }

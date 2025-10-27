@@ -1,4 +1,4 @@
-interface Context {
+export interface Context {
     sessionId: string;
     content: string;
     targetUserId: string;
@@ -13,7 +13,7 @@ interface Context {
     messageId: string;
 }
 
-interface Metadata {
+export interface Metadata {
     sessionId: string;
     type: string;
     messageType: string;
@@ -33,6 +33,7 @@ export interface Analysis {
     direction: string;
     messageType: string;
     priority: string;
+    perspective?: string;
 }
 
 interface ValidationResult {
@@ -42,6 +43,7 @@ interface ValidationResult {
 }
 
 import { DirectManager } from "../chat/direct/direct-manager";
+import { MessagePerspectiveManager } from "./message-perspective-manager";
 
 export class MessageAnalyzerClient {
     private socketId: string | null = null;
@@ -76,7 +78,7 @@ export class MessageAnalyzerClient {
         }
     }
 
-    private analyzeContext(data: any): Context {
+    public analyzeContext(data: any): Context {
         const emptyPlaceholder = 'Empty! :(';
 
         const time = Date.now();
@@ -123,7 +125,7 @@ export class MessageAnalyzerClient {
     /*
     ** Determine Routes
     */
-    private determineRoutes(context: Context): string[] {
+    public determineRoutes(context: Context): string[] {
         const routes: string[] = [];
 
         if(context.isDirect) {
@@ -184,7 +186,7 @@ export class MessageAnalyzerClient {
     /*
     ** Message Type
     */
-    private getMessageType(context: Context): any {
+    public getMessageType(context: Context): any {
         if(context.isDirect) return 'DIRECT_MESSAGE';
         if(context.isGroup) return 'GROUP_MESSAGE';
         if(context.isSystem) return 'SYSTEM_MESSAGE';
@@ -208,7 +210,7 @@ export class MessageAnalyzerClient {
     }
 
     /*
-    **
+    ** Message Id
     */
     private generateMessageId(): string {
         const time = Date.now();
@@ -228,5 +230,15 @@ export class MessageAnalyzerClient {
             errors,
             warnings: data.content
         }
+    }
+
+    /*
+    **
+    ** Perspective
+    **
+    */
+    public getPerspective(): MessagePerspectiveManager {
+        const perspective = new MessagePerspectiveManager(this);
+        return perspective;
     }
 }
