@@ -13,8 +13,6 @@ public class MessagePerspectiveDetector {
 
     public MessagePerspectiveResult detectPerspective(String sessionId, Map<String, Object> data) {
         MessagePerspectiveResult result = new MessagePerspectiveResult();
-        result.setDirection("other");
-        result.setPerpspectiveType("UNKNOWN");
         if(result.getRenderConfig() == null) result.setRenderConfig(new HashMap<>());
         if(result.getMetadata() == null) result.setMetadata(new HashMap<>());
 
@@ -24,26 +22,22 @@ public class MessagePerspectiveDetector {
         String messageType = (String) data.get("type");
         String currentUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
         
-        boolean isSystem = isSystemMessage(data);
-        boolean isSelf = isSelfMessage(sessionId, currentUsername, data);
-        boolean isOther = !isSelf;
         boolean isGroup = 
             "GROUP".equals(chatType) ||
             "GROUP".equals(messageType) ||
             data.containsKey("groupId") || 
             (chatId != null && chatId.startsWith("group_"));
-
+        boolean isSystem = isSystemMessage(data);
+        boolean isSelf = isSelfMessage(sessionId, currentUsername, data);
         String displayUsername = determineDisplayUsername(isSelf, isGroup, messageUsername);
+
         if(isSystem) {
             return serviceManager.getSystemMessageService().createPerspective(result, data, sessionId);
-        }
-        if(isOther) {
-            return serviceManager.getMessageService().createOtherPerspective(result, isGroup, displayUsername);
-        }
+        } 
         if(isSelf) {
-            return serviceManager.getMessageService().createSelfPerspective(result, isGroup, displayUsername);
+            return serviceManager.getMessageService().createSelfPerspective(result, isGroup, displayUsername, sessionId);
         } else {
-            return serviceManager.getMessageService().createOtherPerspective(result, isGroup, displayUsername);
+            return serviceManager.getMessageService().createOtherPerspective(result, isGroup, displayUsername, sessionId);
         }
     }
 
@@ -103,21 +97,16 @@ public class MessagePerspectiveDetector {
     ) {
         String senderId = (String) data.get("senderId");
         String username = (String) data.get("username");
-        String senderSessionId = (String) data.get("senderSessionId");
-        String currentUserId = serviceManager.getUserService().getUsernameBySessionId(sessionId);
-        if(sessionId.equals(senderId) || sessionId.equals(senderSessionId)) {
-            return true;
-        }
+        String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+        boolean result = false;
         
-        String dataUserId = (String) data.get("userId");
-        if(currentUserId != null && currentUserId.equals(dataUserId)) {
-            return true;
+        if(sessionId.equals(senderId)) {
+            result = true;
+        } else if(currentUserId != null && currentUserId.equals(senderId)) {
+            result = true;
+        } else if(currentUsername != null && currentUsername.equals(username)) {
+            result = true;
         }
-        if(currentUsername != null && currentUsername.equals(username)) {
-            return true;
-        }
-
-        return Boolean.TRUE.equals(data.get("isSelf")) ||
-                Boolean.TRUE.equals(data.get("isSelfMessage"));
+        return result;
     }
 }

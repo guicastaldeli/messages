@@ -242,6 +242,7 @@ export class MessageManager {
     */
     private async sendMessage(content: any): Promise<boolean> {
         const client = this.socketId;
+        this.currentUserId = client;
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
         const isGroupChat = currentChat?.type === 'GROUP';
@@ -253,7 +254,8 @@ export class MessageManager {
         if(!client) return false;
 
         const data = {
-            senderId: client,
+            senderId: this.currentUserId,
+            senderSessionId: this.socketId,
             username: this.uname,
             content: content.content,
             messageId: content.messageId,
@@ -262,7 +264,7 @@ export class MessageManager {
             chatId: chatId,
             timestamp: time,
             chatType: content.chatType || currentChat?.type || isGroupChat ? 'GROUP' : 'DIRECT',
-            type: 'CHAT'
+            type: 'CHAT',
         }
 
         const analysis = this.messageAnalyzer.analyzeMessage(data);
@@ -273,9 +275,11 @@ export class MessageManager {
                 type: metaType,
                 timestamp: time,
                 routing: 'STANDARD',
-                priority: analysis.priority
+                priority: analysis.priority,
+                senderSessionId: this.socketId,
             },
             _perspective: {
+                senderSessionId: this.socketId,
                 direction: analysis.direction,
                 messageType: analysis.messageType,
                 isCurrentUser: analysis.direction,
@@ -397,7 +401,11 @@ export class MessageManager {
     */
     public async renderHistory(data: any): Promise<void> {
         if(!this.appEl) return;
-        const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
+        const perspective = this.messageAnalyzer.getPerspective().calculateClientPerspective(data);
+        const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective({
+            ...data,
+            _perspective: perspective
+        });
         await this.renderMessage(data, analysis);
     }
 }

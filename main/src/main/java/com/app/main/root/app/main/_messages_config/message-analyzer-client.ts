@@ -167,15 +167,8 @@ export class MessageAnalyzerClient {
     */
     public setDirection(data: any): string {
         if(!this.socketId) return 'other';
-
-        const isSelf = (
-            data.senderId === this.socketId ||
-            data.senderId === this.currentUserId ||
-            data.username === this.username ||
-            data._metadata?.isSelf ||
-            data.routingMetadata?.isSelf
-        );
-
+        this.currentUserId = this.socketId;
+        const isSelf = data.senderId !== this.currentUserId
         return isSelf ? 'self' : 'other';
     }
 
@@ -238,7 +231,7 @@ export class MessageAnalyzerClient {
     **
     */
     public getPerspective(): MessagePerspectiveManager {
-        const perspective = new MessagePerspectiveManager(this);
+        const perspective = new MessagePerspectiveManager(this, this.socketId!);
         return perspective;
     }
 }

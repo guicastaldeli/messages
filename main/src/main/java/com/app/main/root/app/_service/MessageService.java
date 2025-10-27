@@ -213,38 +213,25 @@ public class MessageService {
         message.put("username", payload.get("username"));
         message.put("content", payload.get("content"));
         message.put("senderId", payload.get("senderId"));
-        message.put("senderSessionId", payload.get("senderSessionId"));
         message.put("chatId", chatId);
-        message.put("userId", chatId);
+        message.put("userId", payload.get("userId"));
         message.put("messageId", payload.get("messageId"));
         message.put("timestamp", payload.get("timestamp"));
         message.put("type", type);
-        message.put("isDirect", false);
-        message.put("isGroup", true);
-        message.put("isSystem", false);
+        message.put("isDirect", "DIRECT".equalsIgnoreCase(type));
+        message.put("isGroup", "GROUP".equalsIgnoreCase(type));
+        message.put("isSystem", "SYSTEM".equalsIgnoreCase(type));
         message.put("isBroadcast", false);
                 
         Map<String, Object> routingMetadata = new HashMap<>();
         routingMetadata.put("sessionId", sessionId);
-        routingMetadata.put("messageType", "GROUP_MESSAGE");
+        routingMetadata.put("messageType", type + "_MESSAGE");
         routingMetadata.put("messageId", payload.get("messageId"));
-        routingMetadata.put("isDirect", false);
-        routingMetadata.put("isGroup", true);
+        routingMetadata.put("isDirect", "DIRECT".equalsIgnoreCase(type));
+        routingMetadata.put("isGroup", "GROUP".equalsIgnoreCase(type));
         routingMetadata.put("isBroadcast", false);
         routingMetadata.put("priority", "NORMAL");
         message.put("routingMetadata", routingMetadata);
-
-        MessagePerspectiveResult perspectiveData = perspectiveDetector.detectPerspective(sessionId, message);
-        Map<String, Object> perspective = new HashMap<>();
-        perspective.put("direction", perspectiveData.getDirection());
-        perspective.put("perspectiveType", perspectiveData.getPerpspectiveType());
-        perspective.put("showUsername", perspectiveData.getRenderConfig().get("showUsername"));
-        perspective.put("displayUsername", perspectiveData.getRenderConfig().get("displayUsername"));
-        perspective.put("isCurrentUser", perspectiveData.getMetadata().get("isCurrentUser"));
-        perspective.put("isDirect", perspectiveData.getMetadata().get("isDirect"));
-        perspective.put("isGroup", perspectiveData.getMetadata().get("isGroup"));
-        perspective.put("isSystem", perspectiveData.getMetadata().get("isSystem"));
-        message.put("_perspective", perspective);
 
         return message;
     }
@@ -259,13 +246,15 @@ public class MessageService {
     public MessagePerspectiveResult createSelfPerspective(
         MessagePerspectiveResult result,
         boolean isGroup,
-        String displayUsername
+        String displayUsername,
+        String sessionId
     ) {
         result.setDirection("self");
         result.setPerpspectiveType("SELF_SENT");
 
+        result.getRenderConfig().put("sessionSenderId", false);
         result.getRenderConfig().put("showUsername", false);
-        result.getRenderConfig().put("displayUsername", null);
+        result.getRenderConfig().put("displayUsername", sessionId);
         
         result.getMetadata().put("isCurrentUser", true);
         result.getMetadata().put("isGroup", isGroup);
@@ -278,14 +267,16 @@ public class MessageService {
     public MessagePerspectiveResult createOtherPerspective(
         MessagePerspectiveResult result,
         boolean isGroup,
-        String displayUsername
+        String displayUsername,
+        String sessionId
     ) {
         result.setDirection("other");
         result.setPerpspectiveType(isGroup ? "GROUP_OTHER_USER" : "OTHER_USER");
 
-        boolean shouldShowUSername = isGroup && displayUsername != null;
-        result.getRenderConfig().put("showUsername", shouldShowUSername);
+        boolean shouldShowUsername = isGroup && displayUsername != null;
+        result.getRenderConfig().put("showUsername", shouldShowUsername);
         result.getRenderConfig().put("displayUsername", displayUsername);
+        result.getRenderConfig().put("displayUsername", sessionId);
         
         result.getMetadata().put("isCurrentUser", false);
         result.getMetadata().put("isGroup", isGroup);
