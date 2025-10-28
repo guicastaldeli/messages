@@ -3,14 +3,18 @@ import com.app.main.root.app._types._User;
 import com.app.main.root.app._types._Group;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
+import com.app.main.root.app._data.CommandSystemMessageList;
+import com.app.main.root.app._data.MemberVerifier;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._server.MessageRouter;
 import com.app.main.root.app._server.RouteContext;
+import com.app.main.root.app._data.SocketMethods;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.Date;
@@ -28,6 +32,9 @@ public class GroupService {
     private final EventTracker eventTracker;
     private final InviteCodeManager inviteCodeManager;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MemberVerifier memberVerifier;
+    private final ServiceManager serviceManager;
+    private final SocketMethods socketMethods;
 
     public final Map<String, Set<String>> groupSessions = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> userGroups = new ConcurrentHashMap<>();
@@ -36,8 +43,12 @@ public class GroupService {
     public GroupService(
         DataSource dataSource, 
         SimpMessagingTemplate messagingTemplate,
-        EventTracker eventTracker
-    , MessageRouter messageRouter) {
+        EventTracker eventTracker,
+        MessageRouter messageRouter,
+        MemberVerifier memberVerifier,
+        ServiceManager serviceManager,
+        SocketMethods socketMethods
+    ) {
         this.dataSource = dataSource;
         this.messagingTemplate = messagingTemplate;
         this.eventTracker = eventTracker;
@@ -47,14 +58,20 @@ public class GroupService {
             throw new RuntimeException("Failed to init InviteCodeManager", err);
         }
         this.messageRouter = messageRouter;
+        this.memberVerifier = memberVerifier;
+        this.serviceManager = serviceManager;
+        this.socketMethods = socketMethods;
     }
 
-    public void createGroup(
+    public Map<String, Object> createGroup(
         String id,
         String name,
-        String creatorId
+        String creatorId,
+        String creatorName,
+        String sessionId
     ) throws SQLException {
         String query = CommandQueryManager.CREATE_GROUP.get();
+        Timestamp time = new Timestamp(System.currentTimeMillis());
 
         try(
             Connection conn = dataSource.getConnection();
@@ -63,23 +80,131 @@ public class GroupService {
             stmt.setString(1, id);
             stmt.setString(2, name);
             stmt.setString(3, creatorId);
-            stmt.executeUpdate();
+            int rowsAffected = stmt.executeUpdate();
+            if(rowsAffected == 0) throw new SQLException("Failed to create gorup! :/");
         }
+
+        boolean creatorAdded = addUserToGroup(id, creatorId, creatorName);
+        if(!creatorAdded) throw new SQLException("Failed to add creator! :/");
+        addUserToGroupMapping(creatorId, id, sessionId);
+
+        MemberVerifier.VerificationResult verification = null;
+        verification = memberVerifier.verifyCreator(id, creatorId, creatorId);
+        if(!verification.isSuccess()) {
+            eventTracker.track(
+                "group-creation-verification-warning",
+                Map.of(
+                    "groupId", id,
+                    "creatorId", creatorId,
+                    "creatorName", creatorName,
+                    "verificationMessage", verification.getMessage()
+                ),
+                EventDirection.INTERNAL,
+                sessionId,
+                creatorName
+            );
+        }
+
+        List<_User> members = getGroupMembers(id);
+        List<String> memberIds = members.stream()
+            .map(_User::getId)
+            .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", id);
+        result.put("name", name);
+        result.put("creatorId", creatorId);
+        result.put("creatorName", creatorName);
+        result.put("members", memberIds);
+        result.put("memberDetails", members);
+        result.put("totalMembers", members.size());
+        result.put("createdAt", time);
+        if(verification != null) {
+            result.put("verification", verification);
+            result.put("verificationStatus", verification.isSuccess());
+        }
+
+        eventTracker.track(
+            "group-created",
+            result,
+            EventDirection.INTERNAL,
+            sessionId,
+            creatorName
+        );
+
+        return result;
     }
 
-    public boolean addUserToGroup(String groupId, String userId) throws SQLException {
+    /*
+    * Add User 
+    */
+    public boolean addUserToGroup(String groupId, String userId, String username) throws SQLException {
         String query = CommandQueryManager.ADD_USER_TO_GROUP.get();
+        boolean added = false;
 
         try(
             Connection conn = dataSource.getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
-            stmt.setString(1, groupId);
-            stmt.setString(2, userId);
-            stmt.executeUpdate();
+            try {
+                stmt.setString(1, groupId);
+                stmt.setString(2, userId);
+                int rowsAffected = stmt.executeUpdate();
+                added = rowsAffected > 0;
+            } catch(SQLException err) {
+                if(err.getMessage().contains("PRIMARY KEY")) {
+                    System.out.println("User " + userId + " is already in group " + groupId);
+                    added = true;
+                } else {
+                    throw err;
+                }
+            }
         }
 
-        return true;
+        if(added) {
+            MemberVerifier.VerificationResult verification = memberVerifier
+                .verifyMember(groupId, userId, username);
+            
+            if(!verification.isSuccess()) {
+                eventTracker.track(
+                    "user-add-verification-failed",
+                    Map.of(
+                        "groupId", groupId,
+                        "userId", userId,
+                        "username", username,
+                        "verificationMessage", verification.getMessage(),
+                        "action", "logged_no_retry"
+                    ),
+                    EventDirection.INTERNAL,
+                    "system",
+                    "System"
+                );
+            }
+
+            eventTracker.track(
+                "user-added-to-group",
+                Map.of(
+                    "groupId", groupId,
+                    "userId", userId,
+                    "username", username,
+                    "alreadyExists", !added
+                ),
+                EventDirection.INTERNAL,
+                "system",
+                "GroupService"
+            );
+        }
+        return added;
+    }
+
+    public void addUserToGroupMapping(
+        String userId, 
+        String groupId, 
+        String sessionId
+    ) {
+        userGroups.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(groupId);
+        groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
+        sessionGroups.computeIfAbsent(sessionId, k -> new CopyOnWriteArraySet<>()).add(groupId);
     }
 
     public _Group getGroupId(String id) throws SQLException {
@@ -287,23 +412,11 @@ public class GroupService {
     }
 
     /*
-    * Add User to Group Mapping 
-    */
-    public void addUserToGroupMapping(
-        String userId, 
-        String groupId, 
-        String sessionId
-    ) {
-        userGroups.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(groupId);
-        groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
-        sessionGroups.computeIfAbsent(sessionId, k -> new CopyOnWriteArraySet<>()).add(groupId);
-    }
-
-    /*
     * Remove from Group 
     */
     public boolean removeUserFromGroup(String groupId, String userId) throws SQLException {
         String query = CommandQueryManager.REMOVE_USER_FROM_GROUP.get();
+        boolean removed = false;
 
         try (
             Connection conn = dataSource.getConnection();
@@ -312,13 +425,43 @@ public class GroupService {
             stmt.setString(1, groupId);
             stmt.setString(2, userId);
             int rowsAffected = stmt.executeUpdate();
-
-            if(rowsAffected > 0) {
-                removeUserFromGroupMapping(userId, groupId);
-                return true;
-            }
-            return false;
+            removed = rowsAffected > 0;
         }
+
+        if(removed) {
+            MemberVerifier.VerificationResult verification = memberVerifier
+                .verifyMember(groupId, userId, "RemovedUser");
+
+            if(verification.isSuccess()) {
+                eventTracker.track(
+                    "user-removal-verification-failed",
+                    Map.of(
+                        "groupId", groupId,
+                        "userId", userId,
+                        "verificationMessage", "User still exists in group after removal"
+                    ),
+                    EventDirection.INTERNAL,
+                    "system",
+                    "GroupService"
+                );
+                removed = false;
+            }
+        }
+
+        if(removed) {
+            eventTracker.track(
+                "user-removed-from-group",
+                Map.of(
+                    "groupId", groupId,
+                    "userId", userId
+                ),
+                EventDirection.INTERNAL,
+                "system",
+                "GroupService"
+            );
+        }
+
+        return removed;
     }
 
     /*
@@ -410,6 +553,64 @@ public class GroupService {
         } catch(Exception err) {
             System.err.println("Err broadcasting last message group:" + err.getMessage());
         }
+    }
+
+    /*
+    * Creation Message 
+    */
+    public void sendCreationMessage(String sessionId, String id, String groupName, String creator) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(2000);
+                    String destination = "/user/queue/messages/group/" + id;
+                                
+                    Map<String, Object> systemMessageData = new HashMap<>();
+                    systemMessageData.put("groupId", id);
+                    systemMessageData.put("chatId", id);
+                    systemMessageData.put("groupName", groupName);
+                    systemMessageData.put("username", creator);
+    
+                    serviceManager.getSystemMessageService().setContent(
+                        CommandSystemMessageList.GROUP_CREATED.get(), 
+                        systemMessageData, 
+                        sessionId, 
+                        sessionId
+                    );
+                    Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
+                        "GROUP_CREATED", 
+                        systemMessageData, 
+                        sessionId, 
+                        sessionId,
+                        id
+                    );
+                    systemMessage.put("groupId", id);
+                    systemMessage.put("chatId", id);
+                    systemMessage.put("chatType", "GROUP");
+                    systemMessage.put("isSystem", true);
+    
+                    Object systemMessagePayload = serviceManager.getSystemMessageService().payload(
+                        "GROUP_CREATED", 
+                        systemMessage, 
+                        id, 
+                        id
+                    );
+    
+                    try {
+                        messageRouter.routeMessage(sessionId, systemMessagePayload, systemMessage, new String[]{"GROUP"});
+                        socketMethods.send(sessionId, destination, systemMessagePayload);
+                    } catch(Exception err) {
+                        System.err.println("Failed to route system message" + err.getMessage());
+                        socketMethods.send(sessionId, destination, systemMessagePayload);
+                    }
+                } catch(InterruptedException err) {
+                    Thread.currentThread().interrupt();
+                } catch(Exception err) {
+                    System.err.println("Error in system message thread" + err.getMessage()); 
+                }
+            }
+        }).start();
     }
 
     /*

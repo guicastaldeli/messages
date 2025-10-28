@@ -22,10 +22,12 @@ public enum CommandQueryManager {
     ),
     GET_GROUP_MEMBERS(
         """
-            SELECT u.*
+            SELECT
+                gm.user_id as id,
+                gm.user_id as username,
+                CURRENT_TIMESTAMP as created_at
             FROM group_members gm
-            JOIN users u ON gm.user_id = u.id
-            WHERE gm.group_id = ?        
+            WHERE gm.group_id = ?      
         """
     ),
     GET_USER_GROUPS(
@@ -73,9 +75,7 @@ public enum CommandQueryManager {
     ),
     IS_GROUP_MEMBER(
         """
-            SELECT COUNT(*) FROM group_members gm
-            JOIN users u ON gm.user_id = u.id
-            WHERE gm.group_id = ? AND u.id = ?
+            SELECT COUNT(*) FROM group_members WHERE group_id = ? AND user_id = ?
         """
     ),
     UPDATE_GROUP_LAST_MESSAGE(

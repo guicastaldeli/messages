@@ -1,8 +1,9 @@
 package com.app.main.root.app._data;
-import com.app.main.root.app._types._User;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
+import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._service.GroupService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -20,7 +21,7 @@ public class MemberVerifier {
     public MemberVerifier(
         DataSource dataSource,
         EventTracker eventTracker,
-        GroupService groupService
+        @Lazy GroupService groupService
     ) {
         this.dataSource = dataSource;
         this.eventTracker = eventTracker;
@@ -28,7 +29,9 @@ public class MemberVerifier {
     }
 
     /*
-    * Verification Result 
+    **
+    *** Verification Result
+    **  
     */
     public static class VerificationResult {
         private final boolean success;
@@ -83,7 +86,9 @@ public class MemberVerifier {
     }
 
     /*
-    * Batch Verification Result 
+    **
+    *** Batch Verification Result
+    **  
     */
     public static class BatchVerificationResult {
         private final String groupId;
@@ -124,6 +129,9 @@ public class MemberVerifier {
         }
     }
 
+    /*
+    * Verify Member 
+    */
     public VerificationResult verifyMember(String groupId, String userId, String username) {
         String cacheKey = groupId + ":" + userId;
         long time = System.currentTimeMillis();
@@ -189,6 +197,84 @@ public class MemberVerifier {
                 "MemberVerifier"
             );
             return new VerificationResult(false, groupId, userId, username, errorMsg, new ArrayList<>());
+        }
+    }
+
+    /*
+    * Verify Members 
+    */
+    public BatchVerificationResult verifyMembers(String groupId, Map<String, String> users) {
+        Map<String, VerificationResult> results = new HashMap<>();
+        for(Map.Entry<String, String> userEntry : users.entrySet()) {
+            String userId = userEntry.getKey();
+            String username = userEntry.getValue();
+            results.put(userId, verifyMember(groupId, userId, username));
+        }
+        return new BatchVerificationResult(groupId, results);
+    }
+
+    /*
+    * Group Creator Verification 
+    */
+    public VerificationResult verifyCreator(
+        String groupId,
+        String creatorId,
+        String creatorName
+    ) {
+        VerificationResult result = verifyMember(groupId, creatorId, creatorName);
+        if(!result.isSuccess()) {
+            eventTracker.track(
+                "creator-verification-failed",
+                Map.of(
+                    "groupId", groupId,
+                    "creatorId", creatorId,
+                    "creatorName", creatorName,
+                    "verificationMessage", result.getMessage(),
+                    "action", "logged_only"
+                ),
+                EventDirection.INTERNAL,
+                "system",
+                "MemberVerify"
+            );
+
+            clearCache(groupId, creatorName);
+            result = verifyMember(groupId, creatorId, creatorName);
+        }
+        return result;
+    }
+
+    /*
+    * Member Ids 
+    */
+    public List<String> getGroupMemberIds(String groupId) throws SQLException {
+        String query = CommandQueryManager.GET_MEMBER_ID.get();
+        List<String> memberIds = new ArrayList<>();
+
+        try(
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query)
+        ) {
+            stmt.setString(1, groupId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                while(rs.next()) {
+                    memberIds.add(rs.getString("user_id"));
+                }
+            }
+        }
+
+        return memberIds;
+    }
+
+    /*
+    * Clear Cache 
+    */
+    public void clearCache(String groupId, String userId) {
+        if(groupId != null && userId != null) {
+            verificationCache.remove(groupId + ":" + userId);
+        } else if(groupId != null) {
+            verificationCache.keySet().removeIf(key -> key.startsWith(groupId + ":"));
+        } else {
+            verificationCache.clear();
         }
     }
 }

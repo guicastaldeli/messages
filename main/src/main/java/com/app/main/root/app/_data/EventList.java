@@ -216,13 +216,8 @@ public class EventList {
                     String groupName = (String) groupData.get("groupName");
                     String creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-                    serviceManager.getGroupService().createGroup(id, groupName, creatorId);
-                    serviceManager.getGroupService().addUserToGroup(id, creatorId);
-                    serviceManager.getGroupService().addUserToGroupMapping(creatorId, id, sessionId);
-
-                    List<_User> members = serviceManager.getGroupService().getGroupMembers(id);
-                    List<String> memberUserId = new ArrayList<>();
-                    for(_User member : members) memberUserId.add(member.getId());
+                    Map<String, Object> creationResult = serviceManager.getGroupService()
+                        .createGroup(id, groupName, creatorId, creator, sessionId);
 
                     Map<String, Object> newGroup = new HashMap<>();
                     newGroup.put("id", id);
@@ -231,9 +226,10 @@ public class EventList {
                     newGroup.put("name", groupName);
                     newGroup.put("creator", creator);
                     newGroup.put("creatorId", creatorId);
-                    newGroup.put("members", memberUserId != null ? memberUserId : creatorId);
+                    newGroup.put("members", creationResult.get("members"));
                     newGroup.put("createdAt", creationDate);
                     newGroup.put("sessionId", sessionId);
+                    newGroup.put("verificationResult", creationResult.get("verificationStatus"));
 
                     eventTracker.track(
                         "create-group", 
@@ -247,60 +243,12 @@ public class EventList {
                         "group-creation-scss",
                         newGroup
                     );
-
-                    /* System Message */
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                Thread.sleep(2000);
-                                String destination = "/user/queue/messages/group/" + id;
-                                
-                                Map<String, Object> systemMessageData = new HashMap<>();
-                                systemMessageData.put("groupId", id);
-                                systemMessageData.put("chatId", id);
-                                systemMessageData.put("groupName", groupName);
-                                systemMessageData.put("username", creator);
-    
-                                serviceManager.getSystemMessageService().setContent(
-                                    CommandSystemMessageList.GROUP_CREATED.get(), 
-                                    systemMessageData, 
-                                    sessionId, 
-                                    sessionId
-                                );
-                                Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
-                                    "GROUP_CREATED", 
-                                    systemMessageData, 
-                                    sessionId, 
-                                    sessionId,
-                                    id
-                                );
-                                systemMessage.put("groupId", id);
-                                systemMessage.put("chatId", id);
-                                systemMessage.put("chatType", "GROUP");
-                                systemMessage.put("isSystem", true);
-    
-                                Object systemMessagePayload = serviceManager.getSystemMessageService().payload(
-                                    "GROUP_CREATED", 
-                                    systemMessage, 
-                                    id, 
-                                    id
-                                );
-    
-                                try {
-                                    messageRouter.routeMessage(sessionId, systemMessagePayload, systemMessage, new String[]{"GROUP"});
-                                    socketMethods.send(sessionId, destination, systemMessagePayload);
-                                } catch(Exception err) {
-                                    System.err.println("Failed to route system message" + err.getMessage());
-                                    socketMethods.send(sessionId, destination, systemMessagePayload);
-                                }
-                            } catch(InterruptedException err) {
-                                Thread.currentThread().interrupt();
-                            } catch(Exception err) {
-                                System.err.println("Error in system message thread" + err.getMessage()); 
-                            }
-                        }
-                    }).start();
+                    serviceManager.getGroupService().sendCreationMessage(
+                        sessionId, 
+                        id, 
+                        groupName, 
+                        creator
+                    );
                     
                     return Collections.emptyMap();
                 } catch(Exception err) {
@@ -332,7 +280,7 @@ public class EventList {
                     boolean isValid = serviceManager.getGroupService().getInviteCodes().validateInviteCode(inviteCode);
                     if(!isValid) throw new Exception("Invalid invite code");
 
-                    boolean success = serviceManager.getGroupService().addUserToGroup(groupId, userId);
+                    boolean success = serviceManager.getGroupService().addUserToGroup(groupId, userId, username);
                     if(!success) throw new Exception("Failed to join group :(");
                     serviceManager.getGroupService().addUserToGroupMapping(userId, groupId, sessionId);
 
