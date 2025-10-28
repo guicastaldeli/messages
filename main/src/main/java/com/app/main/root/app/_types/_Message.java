@@ -9,6 +9,7 @@ public class _Message {
     private String messageType;
     private Timestamp createdAt;
     private String username;
+    private boolean isSystem;
 
     /*
     * ID 
@@ -78,6 +79,16 @@ public class _Message {
     }
     public String getUsername() {
         return username;
+    }
+
+    /*
+    * System 
+    */
+    public void setSystem(boolean isSystem) {
+        this.isSystem = isSystem;
+    }
+    public boolean isSystem() {
+        return isSystem;
     }
 }
  

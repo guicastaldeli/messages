@@ -1,8 +1,6 @@
 package com.app.main.root.app;
 import com.app.main.root.app.EventLog.EventDirection;
-
 import jakarta.annotation.PostConstruct;
-
 import org.springframework.stereotype.Component;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;

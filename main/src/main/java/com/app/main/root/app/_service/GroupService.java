@@ -4,6 +4,7 @@ import com.app.main.root.app._types._Group;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._server.MessageRouter;
 import com.app.main.root.app._server.RouteContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +23,7 @@ import java.sql.*;
 
 @Component
 public class GroupService {
+    private final MessageRouter messageRouter;
     private final DataSource dataSource;
     private final EventTracker eventTracker;
     private final InviteCodeManager inviteCodeManager;
@@ -34,7 +37,7 @@ public class GroupService {
         DataSource dataSource, 
         SimpMessagingTemplate messagingTemplate,
         EventTracker eventTracker
-    ) {
+    , MessageRouter messageRouter) {
         this.dataSource = dataSource;
         this.messagingTemplate = messagingTemplate;
         this.eventTracker = eventTracker;
@@ -43,6 +46,7 @@ public class GroupService {
         } catch(Exception err) {
             throw new RuntimeException("Failed to init InviteCodeManager", err);
         }
+        this.messageRouter = messageRouter;
     }
 
     public void createGroup(
@@ -296,6 +300,28 @@ public class GroupService {
     }
 
     /*
+    * Remove from Group 
+    */
+    public boolean removeUserFromGroup(String groupId, String userId) throws SQLException {
+        String query = CommandQueryManager.REMOVE_USER_FROM_GROUP.get();
+
+        try (
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, groupId);
+            stmt.setString(2, userId);
+            int rowsAffected = stmt.executeUpdate();
+
+            if(rowsAffected > 0) {
+                removeUserFromGroupMapping(userId, groupId);
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /*
     * Remove from Group Mapping 
     */
     public void removeUserFromGroupMapping(String userId, String groupId) {
@@ -316,6 +342,9 @@ public class GroupService {
         }
     }
 
+    /*
+    * Remove from All Groups 
+    */
     public void removeUserFromAllGroups(String userId) {
         Set<String> userGroupSet = userGroups.get(userId);
         if(userGroupSet != null) {
@@ -335,6 +364,51 @@ public class GroupService {
             for(String groupId : userGroupSet) {
                 groupSessions.computeIfAbsent(groupId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
             }
+        }
+    }
+
+    /*
+    * Update Last Message
+    */
+    public void updateLastMessage(
+        String groupId,
+        String lastMessage,
+        String lastSender,
+        Timestamp lastMessageTime
+    ) throws SQLException {
+        String query = CommandQueryManager.UPDATE_GROUP_LAST_MESSAGE.get();
+        try (
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, lastMessage);
+            stmt.setString(2, lastSender);
+            stmt.setTimestamp(3, lastMessageTime);
+            stmt.setString(4, groupId);
+            stmt.executeUpdate();
+        }
+    }
+
+    public void broadcastLastMessageUpdate(
+        String groupId,
+        String lastMessage,
+        String lastSender,
+        Timestamp time
+    ) {
+        Date now = new Date();
+
+        try {
+            Map<String, Object> updateEvent = new HashMap<>();
+            updateEvent.put("type", "LAST_MESSAGE_SENT");
+            updateEvent.put("groupId", groupId);
+            updateEvent.put("lastMessage", lastMessage);
+            updateEvent.put("lastSender", lastSender);
+            updateEvent.put("lastTimeMessage", time);
+            updateEvent.put("timestamp", now);
+
+            sendToGroup(groupId, "last_message_updated", updateEvent);
+        } catch(Exception err) {
+            System.err.println("Err broadcasting last message group:" + err.getMessage());
         }
     }
 
@@ -370,14 +444,19 @@ public class GroupService {
         }
     }
 
-    /* Group Self */
+    /*
+    **
+    ***
+    *** Perspective
+    ***
+    **
+    */
     private void handleGroupSelfRoute(RouteContext context) {
         String chatId = (String) context.message.get("chatId");
         context.targetSessions.add(context.sessionId);
         context.metadata.put("queue", "/user/queue/messages/group/" + chatId + "/self");
     }
 
-    /* Group Others */
     private void handleGroupOthersRoute(RouteContext context) {
         String chatId = (String) context.message.get("chatId");
         if(chatId != null && chatId.startsWith("group_")) {

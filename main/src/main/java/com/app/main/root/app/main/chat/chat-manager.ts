@@ -27,15 +27,6 @@ interface State {
     activeChat: ActiveChat | null;
 }
 
-interface LastMessageUpdatedEvent extends CustomEvent {
-    detail: {
-        id: string;
-        lastMessage: string;
-        sender: string;
-        timestamp: string;
-    }
-}
-
 export class ChatManager {
     private apiClient!: ApiClient;
     private chatList: any[] = [];
@@ -76,15 +67,13 @@ export class ChatManager {
     public mount(): void {
         window.addEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
         window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
-        window.addEventListener('message-tracked', this.handleMessageTracked as EventListener);
-        window.addEventListener('last-message-updated', this.handleLastMessageUpdated as EventListener);
+        window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
     }
 
     public unmount(): void {
         window.removeEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
         window.removeEventListener('chat-activated', this.handleChatActivated as EventListener);
-        window.removeEventListener('message-tracked', this.handleMessageTracked as EventListener);
-        window.removeEventListener('last-message-updated', this.handleLastMessageUpdated as EventListener);
+        window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);
     }
 
     private handleChatItemAdded = (event: CustomEvent): void => {
@@ -100,82 +89,101 @@ export class ChatManager {
         this.setState({ activeChat });
     }
 
-    private handleLastMessageUpdated = (event: Event): void => {
-        const customEvent = event as LastMessageUpdatedEvent;
-        this.updateLastMessage(customEvent.detail);
+    public setUpdateCallback(callback: (list: any[]) => void): void {
+        this.updateCallback = callback;
+    }
+
+    /*
+    ** Update Last Message
+    */
+    private handleLastMessage = (event: CustomEvent): void => {
+        const { messageId, chatId, lastMessage, sender, timestamp, isCurrentUser, isSystem } = event.detail;
+        console.log(event.detail)
+        const systemMessage = this.isSystemMessage(event.detail);
+
+        let formattedMessage;
+        if(systemMessage) {
+            formattedMessage = lastMessage;
+        } else {
+            formattedMessage = isCurrentUser 
+                ? `You: ${lastMessage}`
+                : `${sender}: ${lastMessage}`;
+        }
+
+        this.updateLastMessage({
+            id: chatId,
+            messageId: messageId,
+            lastMessage: formattedMessage,
+            sender: sender,
+            timestamp: timestamp
+        });
     }
 
     public updateLastMessage(detail: {
         id: string;
+        messageId: string;
         lastMessage: string;
         sender: string;
         timestamp: string;
     }): void {
-        const { lastMessage, sender, timestamp } = detail;
+        const { id, lastMessage, sender, timestamp, messageId } = detail;
+        const now = new Date(timestamp);
         
         this.setState((prevState: State) => {
-            const chatIndex = prevState.chatList.findIndex(chat => chat.lastMessage);
-            if(chatIndex === -1) return prevState;
+            const chatIndex = prevState.chatList.findIndex(chat => chat.id === id);
+            if(chatIndex === -1) {
+                console.warn(`Chat with id ${id} not found!`);
+                return prevState;
+            }
 
             const updatedChatList = [...prevState.chatList];
             const originalChat = updatedChatList[chatIndex];
 
             const updatedChat = {
                 ...originalChat,
-                lastMessage: `${sender}: ${lastMessage}`,
+                messageId: messageId,
+                lastMessage: this.formattedLastMessage(lastMessage),
                 lastMessageSender: sender,
                 lastMessageTime: timestamp,
+                timestamp: now
             }
 
-            updatedChatList[chatIndex] = updatedChat;
+            updatedChatList.splice(chatIndex, 1);
+            updatedChatList.unshift(updatedChat);
             return { chatList: updatedChatList }
         });
     }
 
-    public setUpdateCallback(callback: (list: any[]) => void): void {
-        this.updateCallback = callback;
-    }
-
-    private handleMessageTracked = (event: CustomEvent): void => {
-        const {
-            type,
-            data,
-            username,
-            timestamp
-        } = event.detail;
-        
-        if(type === 'chat' || type === 'new-message') {
-            this.updateMessageTracked(data, username, timestamp);
-        }
-    }
-
-    private updateMessageTracked(
-        data: any,
+    public setLastMessage(
+        id: string,
+        messageId: string,
+        content: string,
         sender: string,
-        timestamp: Date
+        isSystem: boolean
     ): void {
-        const id = sender;
-        const lastMessage = data?.content ?? data;
-
-        this.updateLastMessage({
+        this.getGroupManager().updateLastMessage(
             id,
-            lastMessage,
-            sender: sender || data.username,
-            timestamp: timestamp.toISOString()
-        });
+            messageId, 
+            content, 
+            sender,
+            isSystem
+        );
     }
 
+    /* Set Container */
     public setContainer(container: HTMLElement): void {
         this.container = container;
         const groupManager = this.getGroupManager();
         if(groupManager) groupManager.container = container;
     }
 
+    /* Set Dashboard */
     public setDashboard(instance: Dashboard): void {
         const groupManager = this.getGroupManager();
         if(groupManager) groupManager.dashboard = instance;
     }
 
+    /* Set Username */
     public setUsername(username: string): void {
         const groupManager = this.getGroupManager();
         if(groupManager) groupManager.uname = username;
@@ -193,5 +201,23 @@ export class ChatManager {
     */
     public getGroupManager(): GroupManager {
         return this.groupManager;
+    }
+
+    /*
+    ** Formatted Last Message
+    */
+    private formattedLastMessage(message: string): string {
+        if(message.length > 15) return message.substring(0, 15) + '...';
+        return message;
+    }
+
+    /*
+    ** System Message
+    */
+    private isSystemMessage(message: any): boolean {
+        if(message.isSystem === true) return true;
+        if(message.messageId.includes('sys_')) return true;
+        if(message.type === 'SYSTEM') return true;
+        return false;
     }
 }

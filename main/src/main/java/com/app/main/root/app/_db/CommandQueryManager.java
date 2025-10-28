@@ -7,13 +7,6 @@ public enum CommandQueryManager {
     VALIDATE_DATABASE(
         "SELECT name FROM sqlite_master WHERE type='table' LIMIT 1"
     ),
-
-    /*
-    * ~~~ SYSTEM MESSAGES ~~~ 
-    */
-    SAVE_SYSTEM_MESSAGE(
-        "INSERT INTO system_messages (content, message_type) VALUES (?, ?)"
-    ),
     
     /*
     * ~~~ GROUP SERVICE ~~~ 
@@ -85,6 +78,9 @@ public enum CommandQueryManager {
             WHERE gm.group_id = ? AND u.id = ?
         """
     ),
+    UPDATE_GROUP_LAST_MESSAGE(
+        "UPDATE groups SET last_message = ?, last_sender = ?, last_message_time = ? WHERE id = ?"
+    ),
     EXEC_INDEX_GROUP_INVITE_CODE(
         "CREATE INDEX IF NOT EXISTS idx_group_invite_code ON group_invite_codes(group_id, invite_code)"
     ),
@@ -99,6 +95,9 @@ public enum CommandQueryManager {
             SELECT group_id FROM group_invite_codes
             WHERE invite_code = ? AND is_used = 0 AND expires_at > ?        
         """
+    ),
+    REMOVE_USER_FROM_GROUP(
+        "DELETE FROM group_members WHERE group_id = ? AND user_id = ?"
     ),
 
     /*
@@ -203,6 +202,16 @@ public enum CommandQueryManager {
             ORDER BY m.created_at DESC
             LIMIT ?      
         """
+    ),
+
+    /*
+    * ~~~ SYSTEM MESSAGE SERVICE ~~~ 
+    */
+    SAVE_SYSTEM_MESSAGE(
+        "INSERT INTO system_messages (group_id, content, message_type) VALUES (?, ?, ?)"
+    ),
+    GET_SYSTEM_MESSAGES_BY_GROUP(
+        "SELECT * FROM system_messages WHERE group_id = ? ORDER BY created_at ASC"
     );
 
     /* Main */

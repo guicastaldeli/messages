@@ -62,11 +62,13 @@ export class GroupLayout extends Component<Props, State> {
         window.addEventListener('group-creation-complete', this.handleGroupActivation as EventListener);
         window.addEventListener('group-activated', this.handleGroupActivation as EventListener);
         window.addEventListener('group-join-complete', this.handleGroupActivation as EventListener);
+        window.addEventListener('group-exit-complete', this.handleGroupExit as EventListener);
     }
     componentWillUnmount(): void {
         window.removeEventListener('group-creation-complete', this.handleGroupActivation as EventListener);
         window.removeEventListener('group-activated', this.handleGroupActivation as EventListener);
         window.removeEventListener('group-join-complete', this.handleGroupActivation as EventListener);
+        window.removeEventListener('group-exit-complete', this.handleGroupExit as EventListener);
     }
 
     handleGroupActivation = (event: CustomEvent) => {
@@ -161,9 +163,7 @@ export class GroupLayout extends Component<Props, State> {
     }
 
     /* Exit */
-    handleExitGroup = () => {
-       // this.groupManager.exitGroup();
-        this.resetForm();
+    handleGroupExit = () => {
         this.groupManager.dashboard?.updateState({
             showCreationForm: false,
             showJoinForm: false,
@@ -171,6 +171,27 @@ export class GroupLayout extends Component<Props, State> {
             hideGroup: false,
             groupName: ''
         });
+        this.setState({
+            managerState: {
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: false,
+                hideGroup: false,
+                groupName: ''
+            }
+        });
+    }
+
+    handleGroupExitAction = async () => {
+        try {
+            await this.groupManager.exitGroup(this.groupManager.currentGroupId);
+        } catch(err: any) {
+            console.error(err);
+            this.setState({
+                isLoading: false,
+                error: `Failed to exit group: ${err.message}`
+            });
+        }
     }
 
     /* Back */
@@ -280,7 +301,7 @@ export class GroupLayout extends Component<Props, State> {
                             </button>
                             <button 
                                 id="exit-chat"
-                                onClick={this.handleExitGroup}
+                                onClick={this.handleGroupExitAction}
                             >
                                 Exit Group
                             </button>

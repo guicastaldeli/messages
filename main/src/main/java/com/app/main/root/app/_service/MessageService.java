@@ -66,6 +66,7 @@ public class MessageService {
                     if(generatedKeys.next()) {
                         return generatedKeys.getInt(1);
                     }
+
                     String value = String.valueOf(generatedKeys.getInt(1));
                     MessageLog.MessageType messageType = chatId.startsWith("direct_") ?
                         MessageLog.MessageType.DIRECT : MessageLog.MessageType.GROUP;

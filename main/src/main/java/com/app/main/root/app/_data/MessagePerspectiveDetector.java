@@ -32,7 +32,11 @@ public class MessagePerspectiveDetector {
         String displayUsername = determineDisplayUsername(isSelf, isGroup, messageUsername);
 
         if(isSystem) {
-            return serviceManager.getSystemMessageService().createPerspective(result, data, sessionId);
+            if(isSelf) {
+                return serviceManager.getSystemMessageService().createPerspective(result, data, sessionId);
+            } else {
+                return serviceManager.getMessageService().createSelfPerspective(result, isGroup, displayUsername, sessionId);
+            }
         } 
         if(isSelf) {
             return serviceManager.getMessageService().createSelfPerspective(result, isGroup, displayUsername, sessionId);
@@ -46,12 +50,10 @@ public class MessagePerspectiveDetector {
         String sessionId
     ) {
         String userId = (String) data.get("userId");
-        String username = (String) data.get("username");
-        String currentUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
         String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+        System.out.println(currentUserId + userId);
         
         return (currentUserId != null && currentUserId.equals(userId)) ||
-                (currentUsername != null && currentUsername.equals(username)) ||
                 Boolean.TRUE.equals(data.get("isAboutCurrentUser"));
     }
 

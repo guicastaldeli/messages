@@ -16,7 +16,7 @@ export class MessageServiceClient {
             username: string;
             chatId: string | undefined;
             messageType: String;
-            direction: string
+            direction: string;
         }
     ): Promise<any> {
         const res = await fetch(`${this.baseUrl}/api/message-tracker/messages`, {

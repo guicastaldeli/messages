@@ -11,10 +11,10 @@ public enum CommandSystemMessageList {
         "{username} left"
     ),
     USER_ADDED_GROUP(
-        "{username} was added"
+        "{username} were added"
     ),
     USER_REMOVED_GROUP(
-        "{username} was removed"
+        "{username} were removed"
     ),
 
     /*

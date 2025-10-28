@@ -17,7 +17,7 @@ public class MessagePerspectiveService {
         Map<String, Object> message
     ) {
         MessagePerspectiveResult perspective = perspectiveDetector.detectPerspective(sessionId, message);
-        
+
         Map<String, Object> result = new HashMap<>(message);
         Map<String, Object> perspectiveMap = new HashMap<>();
         perspectiveMap.put("direction", perspective.getDirection());
@@ -28,7 +28,7 @@ public class MessagePerspectiveService {
         perspectiveMap.put("isDirect", perspective.getMetadata().get("isDirect"));
         perspectiveMap.put("isGroup", perspective.getMetadata().get("isGroup"));
         perspectiveMap.put("isSystem", perspective.getMetadata().get("isSystem"));
-        
+        perspectiveMap.put("isAboutCurrentUser", perspectiveDetector.isAboutCurrentUser(perspectiveMap, sessionId));
         result.put("_perspective", perspectiveMap);
 
         return result;

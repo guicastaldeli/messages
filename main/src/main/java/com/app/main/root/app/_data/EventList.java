@@ -204,30 +204,6 @@ public class EventList {
             "",
             false
         ));
-        /* Exit User */
-        configs.put("exit-user", new EventConfig(
-            (sessionId, payload, headerAccessor) -> {
-                String user = (String) payload;
-                long time = System.currentTimeMillis();
-                
-                eventTracker.track(
-                    "exit-user", 
-                    user, 
-                    EventDirection.RECEIVED, 
-                    sessionId, 
-                    user
-                );
-                
-                Map<String, Object> updateMessage = new HashMap<>();
-                updateMessage.put("type", "USER_LEFT");
-                updateMessage.put("username", user);
-                updateMessage.put("sessionId", sessionId);
-                updateMessage.put("timestamp", time);
-                return updateMessage;
-            },
-            "/topic/users",
-            true
-        ));
         /* Create Group */
         configs.put("create-group", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
@@ -277,7 +253,7 @@ public class EventList {
                         @Override
                         public void run() {
                             try {
-                                Thread.sleep(300);
+                                Thread.sleep(2000);
                                 String destination = "/user/queue/messages/group/" + id;
                                 
                                 Map<String, Object> systemMessageData = new HashMap<>();
@@ -292,11 +268,12 @@ public class EventList {
                                     sessionId, 
                                     sessionId
                                 );
-                                Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createMessageWithPerspective(
+                                Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
                                     "GROUP_CREATED", 
                                     systemMessageData, 
                                     sessionId, 
-                                    sessionId
+                                    sessionId,
+                                    id
                                 );
                                 systemMessage.put("groupId", id);
                                 systemMessage.put("chatId", id);
@@ -355,7 +332,7 @@ public class EventList {
                     boolean isValid = serviceManager.getGroupService().getInviteCodes().validateInviteCode(inviteCode);
                     if(!isValid) throw new Exception("Invalid invite code");
 
-                    boolean success = serviceManager.getGroupService().addUserToGroup(groupId, sessionId);
+                    boolean success = serviceManager.getGroupService().addUserToGroup(groupId, userId);
                     if(!success) throw new Exception("Failed to join group :(");
                     serviceManager.getGroupService().addUserToGroupMapping(userId, groupId, sessionId);
 
@@ -382,16 +359,21 @@ public class EventList {
                     for(_User member : groupMembers) {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
-                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createMessageWithPerspective(
+                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
                                 "USER_JOINED_GROUP", 
                                 data, 
                                 sessionId, 
-                                memberSessionId
+                                memberSessionId,
+                                groupId
                             );
                             systemMessage.put("groupId", groupId);
                             systemMessage.put("chatId", groupId);
                             systemMessage.put("chatType", "GROUP");
-
+                            data.put("userId", userId);
+                            data.put("username", username);
+                            data.put("targetSessionid", memberSessionId);
+                            data.put("isAboutCurrentUser", memberSessionId.equals(sessionId));
+                            
                             String destination = "/user/queue/messages/group/" + groupId;
                             socketMethods.send(sessionId, destination, systemMessage);
                             messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
@@ -408,6 +390,74 @@ public class EventList {
                 }
             },
             "/user/queue/join-group-scss",
+            false
+        ));
+        /* Exit User */
+        configs.put("exit-group", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    long time = System.currentTimeMillis();
+                    Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
+                    String userId = (String) data.get("userId");
+                    String username = (String) data.get("username");
+                    String groupId = (String) data.get("groupId");
+                    String groupName = (String) data.get("groupName");
+                    
+                    boolean success = serviceManager.getGroupService().removeUserFromGroup(groupId, userId);
+                    if(!success) throw new Exception("Failed to exit group");
+                    serviceManager.getGroupService().removeUserFromGroupMapping(userId, groupId);
+                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    
+                    eventTracker.track(
+                        "exit-group", 
+                        data, 
+                        EventDirection.RECEIVED, 
+                        sessionId, 
+                        username
+                    );
+
+                    
+                    /* Event Response */
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("id", groupId);
+                    res.put("name", groupName);
+                    res.put("userId", userId);
+                    res.put("joined", true);
+                    res.put("timestamp", time);
+                    res.put("sessionId", sessionId);
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "exit-group-scss", res);
+
+                    /* System Message */
+                    for(_User member : groupMembers) {
+                        String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
+                        if(memberSessionId != null) {
+                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
+                                "USER_LEFT_GROUP", 
+                                data, 
+                                sessionId, 
+                                memberSessionId,
+                                groupId
+                            );
+                            systemMessage.put("groupId", groupId);
+                            systemMessage.put("chatId", groupId);
+                            systemMessage.put("chatType", "GROUP");
+
+                            String destination = "/user/queue/messages/group/" + groupId;
+                            socketMethods.send(sessionId, destination, systemMessage);
+                            messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
+                        }
+                    }
+                    return Collections.emptyMap();
+                } catch(Exception err) {
+                    err.printStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "EXIT_FAILED");
+                    errRes.put("message", err.getMessage());
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "exit-group-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/user/queue/exit-group-scss",
             false
         ));
         /* Generate Group Link */

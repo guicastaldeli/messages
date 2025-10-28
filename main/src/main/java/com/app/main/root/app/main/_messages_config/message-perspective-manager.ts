@@ -34,7 +34,7 @@ export class MessagePerspectiveManager {
         const senderId = data.senderId;
         const currentUserId = this.currentSessionId;
         const isSelf = senderId === currentUserId;
-        const isGroup = data.isGroup || data.chatId?.startsWith('_group');
+        const isGroup = data.isGroup || data.chatId?.startsWith('group_');
         const isSystem = data.isSystem || data.type === 'SYSTEM';
         const shouldShowUsername = !isSelf && data.username;
 
@@ -42,14 +42,15 @@ export class MessagePerspectiveManager {
             return {
                 direction: 'system',
                 perspectiveType: 'SYSTEM_MESSAGE',
-                isDirect: false,
-                isGroup: false,
+                isDirect: !isGroup,
+                isGroup: isGroup,
                 isSystem: true,
                 isBroadcast: false,
                 showUsername: false,
                 displayUsername: null,
-                isCurrentUser: false
-            };
+                isCurrentUser: false,
+                isAboutCurrentUser: false
+            }
         }
         if (isSelf) {
             return {
@@ -62,7 +63,7 @@ export class MessagePerspectiveManager {
                 showUsername: false,
                 displayUsername: null,
                 isCurrentUser: true
-            };
+            }
         } else {
             return {
                 direction: 'other',
@@ -74,7 +75,7 @@ export class MessagePerspectiveManager {
                 showUsername: shouldShowUsername,
                 displayUsername: data.username,
                 isCurrentUser: false
-            };
+            }
         }
     }
 

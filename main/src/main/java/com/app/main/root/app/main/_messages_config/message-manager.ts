@@ -1,10 +1,10 @@
 import { React, ReactDOMServer } from "next/dist/server/route-modules/app-page/vendored/ssr/entrypoints";
 import { SocketClientConnect } from "../socket-client-connect";
 import { ContentGetter } from "../../content-getter";
-import { MessageTypes } from "./message-types";
 import { QueueManager } from "./queue-manager";
 import { Analysis, MessageAnalyzerClient } from "./message-analyzer-client";
 import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
+import { ChatManager } from "../chat/chat-manager";
 import { ApiClient } from "../_api-client/api-client";
 import { MessageHandler, RegisteredMessageHandlers } from "./message-handler";
 
@@ -12,7 +12,7 @@ export class MessageManager {
     private queueManager: QueueManager;
     private contentGetter: ContentGetter;
     public socketClient: SocketClientConnect;
-    private messageTypes: MessageTypes;
+    private chatManager!: ChatManager;
     private messageAnalyzer: MessageAnalyzerClient;
     private apiClient: ApiClient;
     public dashboard: any;
@@ -38,7 +38,6 @@ export class MessageManager {
         this.socketClient = socketClient;
         this.apiClient = apiClient;
         this.contentGetter = new ContentGetter();
-        this.messageTypes = new MessageTypes(this.contentGetter);
         this.queueManager = new QueueManager(socketClient);
         this.messageAnalyzer = new MessageAnalyzerClient();
         this.registeredMessageHandlers = new RegisteredMessageHandlers();
@@ -61,7 +60,7 @@ export class MessageManager {
 
     private getHandlerByType(chatType: ChatType): MessageHandler {
         const handler = this.registeredMessageHandlers.messageHandlers
-                            .find(h => h.canHandle(chatType));
+            .find(h => h.canHandle(chatType));
         if(!handler) throw new Error(`No message handler for chat type: ${chatType}`);
         return handler;
     }
@@ -105,6 +104,7 @@ export class MessageManager {
                 username: usernameInput.value.trim(),
                 sessionId: await this.socketClient.getSocketId()
             }
+            console.log(this.socketId)
 
             try {
                 const sucss = await this.socketClient.sendToDestination(
@@ -308,6 +308,13 @@ export class MessageManager {
                     messageType: isGroupChat ? 'GROUP' : 'DIRECT',
                     direction: 'SENT'
                 });
+                this.chatManager.setLastMessage(
+                    analyzedData.chatId,
+                    analyzedData.messageId,
+                    analyzedData.content,
+                    analyzedData.senderId,
+                    analyzedData.isSystem
+                )
                 console.log('Message saved on server! :)');
             } catch(err) {
                 console.error('Failed to save message :(', err);
@@ -325,14 +332,15 @@ export class MessageManager {
         if(isSystemMessage) {
             const systemKey = `${data.event}_${data.content}_${data.timestamp}`;
             if(this.lastSystemMessageKeys.has(systemKey)) return;
-
             this.lastSystemMessageKeys.add(systemKey);
-            if(this.lastSystemMessageKeys.size > 100) {
-                const keysArray = Array.from(this.lastSystemMessageKeys);
-                this.lastSystemMessageKeys = new Set(keysArray.slice(-50));
-            }
-            
             await this.renderMessage(data, analysis);
+            this.chatManager.setLastMessage(
+                data.chatId,
+                data.messageId,
+                data.content,
+                data.username,
+                data.isSystem
+            );
             return;
         }
 
@@ -343,6 +351,13 @@ export class MessageManager {
         const perspective = data._perspective;
         const direction = perspective?.direction || analysis.direction;
         await this.renderMessage(data, { ...analysis, direction });
+        this.chatManager.setLastMessage(
+            data.chatId,
+            data.messageId,
+            data.content,
+            data.username,
+            data.isSystem
+        );
     }
 
     /* Render Messages */
@@ -379,7 +394,6 @@ export class MessageManager {
                 });
             }
         } else {
-            console.log(data)
             content = this.contentGetter.__userEventMessageContent({
                 content: data.content,
                 timestamp: data.timestamp,
@@ -396,16 +410,53 @@ export class MessageManager {
         container?.insertAdjacentHTML('beforeend', render);
     }
 
+    private async renderSystemMessage(data: any): Promise<void> {
+        if(!this.appEl) return;
+        const container = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
+    
+        const content = this.contentGetter.__userEventMessageContent({
+            content: data.content,
+            timestamp: data.timestamp,
+            messageId: data.messageId,
+            type: data.messageType,
+            priority: data.priority,
+            isDirect: data.isDirect,
+            isGroup: data.isGroup,
+            isSystem: true
+        });
+
+        const render = ReactDOMServer.renderToStaticMarkup(content!);
+        container?.insertAdjacentHTML('beforeend', render);
+    }
+
     /*
     ** Render History
     */
     public async renderHistory(data: any): Promise<void> {
         if(!this.appEl) return;
+        
+        const isSystemMessage = 
+            data.messageType === 'SYSTEM' ||
+            data.type === 'SYSTEM' ||
+            data.isSystem === true;
+        
+        if(isSystemMessage) {
+            await this.renderSystemMessage(data);
+            return;
+        }
+
         const perspective = this.messageAnalyzer.getPerspective().calculateClientPerspective(data);
         const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective({
             ...data,
             _perspective: perspective
         });
         await this.renderMessage(data, analysis);
+    }
+
+    /*
+    ** Set Chat Manager
+    */
+    public setChatManager(instance: ChatManager): void {
+        this.chatManager = instance;
     }
 }

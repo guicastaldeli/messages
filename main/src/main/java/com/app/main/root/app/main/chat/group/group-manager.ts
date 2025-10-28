@@ -8,6 +8,7 @@ import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat-state-service";
 import { Dashboard } from "../../dashboard";
 import { JoinGroupLayout } from "./join-group-form-layout";
+import { Analysis } from "../../_messages_config/message-analyzer-client";
 
 interface Data {
     id: string;
@@ -48,6 +49,11 @@ export class GroupManager {
     private joinRes?: (data: Data) => void;
     private joinRej?: (error: any) => void;
 
+    private onExitSuccess?: (data: any) => void;
+    private onExitError?: (error: any) => void;
+    private exitRes?: (data: any) => void;
+    private exitRej?: (data: any) => void;
+
     constructor(
         socketClient: SocketClientConnect,
         messageManager: MessageManager,
@@ -67,6 +73,46 @@ export class GroupManager {
 
     public async init(): Promise<void> {
         this.socketId = await this.socketClient.getSocketId();
+    }
+
+    /*
+    ** Last Message
+    */
+    public async lastMessage(id: string): Promise<string> {
+        try {
+            const service = await this.apiClient.getMessageService();
+            const messages = await service.getMessagesByChatId(id);
+            if(messages && messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                return lastMessage.content;
+            }
+        } catch(err) {
+            console.error('Failed to get recent messages', err);
+        }
+
+        return '';
+    }
+
+    public updateLastMessage(
+        id: string,
+        messageId: string,
+        content: string,
+        sender: string,
+        isSystem: boolean
+    ): void {
+        const time = new Date().toISOString();
+        const updateEvent = new CustomEvent('last-message-updated', {
+            detail: {
+                chatId: id,
+                messageId: messageId,
+                lastMessage: content,
+                sender: sender,
+                timestamp: time,
+                isCurrentUser: sender === this.uname,
+                isSystem: isSystem
+            }
+        });
+        window.dispatchEvent(updateEvent);
     }
 
     /*
@@ -114,8 +160,9 @@ export class GroupManager {
         const name = this.currentGroupName;
         this.currentGroupName = data.name;
         this.currentGroupId = data.id;
-        chatState.setType('GROUP');
 
+        const lastMessage = await this.lastMessage(this.currentGroupId);
+        chatState.setType('GROUP');
         await this.messageManager.setCurrentChat(
             this.currentGroupId,
             'GROUP',
@@ -131,7 +178,7 @@ export class GroupManager {
             creator: data.creator,
             members: data.members,
             unreadCount: 0,
-            lastMessage: 'No messages yet!! :(',
+            lastMessage: lastMessage,
             lastMessageTime: time
         }
 
@@ -308,6 +355,8 @@ export class GroupManager {
         const name = this.currentGroupName;
         const time = new Date().toISOString();
         this.currentGroupId = data.id;
+
+        const lastMessage = await this.lastMessage(this.currentGroupId);
         chatState.setType('GROUP');
         await this.messageManager.setCurrentChat(
             data.id, 
@@ -336,7 +385,7 @@ export class GroupManager {
             creator: data.creator,
             members: data.members,
             unreadCount: 0,
-            lastMessage: 'No messages yet!! :(',
+            lastMessage: lastMessage,
             lastMessageTime: time
         }
 
@@ -500,6 +549,107 @@ export class GroupManager {
                     this.joinRej(err);
                     this.joinRes = undefined;
                     this.joinRej = undefined;
+                }
+            }
+        });
+    }
+
+    /*
+    **
+    *** Exit Group
+    **
+    */
+    private async handleGroupExitScss(data: any): Promise<void> {
+        const exitedGroupId = data.groupId;
+        if(this.currentGroupId === exitedGroupId) {
+            this.currentGroupId = '';
+            this.currentGroupName = '';
+        }
+
+        if(this.dashboard) {
+            this.dashboard.updateState({
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: true,
+                hideGroup: false,
+                groupName: ''
+            });
+        }
+
+        const exitEvent = new CustomEvent('group-exit-complete', { detail: data });
+        window.dispatchEvent(exitEvent);
+
+        if(this.root) {
+            this.root.unmount();
+            this.root = null;
+        }
+        if(this.onExitSuccess) {
+            this.onExitSuccess(data);
+        }
+    }
+
+    /* Exit Method */
+    public async exitGroup(groupId?: string): Promise<any> {
+        const targetGroupId = groupId || this.currentGroupId;
+        if(!targetGroupId) throw new Error('NO group selected to exit!');
+
+        return new Promise(async (res, rej) => {
+            const client = this.socketId;
+            if(!client) {
+                rej(new Error('No socket connection'));
+                return;
+            }
+
+            const sucssDestination = `/user/${client}/queue/exit-group-scss`;
+            const errDestination = `/user/${client}/queue/exit-group-err`;
+            this.exitRes = res;
+            this.exitRej = rej;
+
+            /* Success */
+            const handleSucss = async (data: any) => {
+                console.log('Suceess!!!')
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                if(this.exitRes) {
+                    this.exitRes(data);
+                    this.exitRes = undefined;
+                    this.exitRej = undefined;
+                }
+                await this.handleGroupExitScss(data);
+            }
+
+            /* Error */
+            const handleErr = (error: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                if(this.exitRej) {
+                    this.exitRej(new Error(error.message));
+                    this.exitRes = undefined;
+                    this.exitRej = undefined;
+                }
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(errDestination, handleErr);
+
+                const data = {
+                    userId: this.socketId,
+                    username: this.uname,
+                    groupId: targetGroupId
+                }
+
+                await this.socketClient.sendToDestination(
+                    '/app/exit-group',
+                    data
+                );
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                if(this.exitRej) {
+                    this.exitRej(err);
+                    this.exitRes = undefined;
+                    this.exitRej = undefined;
                 }
             }
         });

@@ -66,6 +66,7 @@ export class Main extends Component<any, State> {
         );
         this.chatManager.mount();
         await this.chatManager.init();
+        this.messageManager.setChatManager(this.chatManager);
         this.loadData();
     }
 

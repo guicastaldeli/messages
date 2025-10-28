@@ -22,7 +22,7 @@ public class ServiceManager {
         @Lazy MessagePerspectiveService messagePerspectiveService,
         UserService userService,
         DirectService directService,
-        GroupService groupService
+        @Lazy GroupService groupService
     ) {
         this.dbService = dbService;
         this.messageService = messageService;
