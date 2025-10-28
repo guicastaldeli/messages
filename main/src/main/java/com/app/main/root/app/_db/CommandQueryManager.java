@@ -99,6 +99,9 @@ public enum CommandQueryManager {
     REMOVE_USER_FROM_GROUP(
         "DELETE FROM group_members WHERE group_id = ? AND user_id = ?"
     ),
+    GET_MEMBER_ID(
+        "SELECT user_id FROM group_members WHERE group_id = ?"
+    ),
 
     /*
     * ~~~ USER SERVICE ~~~ 

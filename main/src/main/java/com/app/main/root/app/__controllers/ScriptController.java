@@ -30,8 +30,8 @@ public class ScriptController {
             return ResponseEntity.ok()
                     .contentType(MediaType.valueOf("application/javascript"))
                     .body(content);
-        } catch(Exception e) {
-            System.out.println(e);
+        } catch(Exception err) {
+            System.out.println(err);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Failed to load");
@@ -49,8 +49,8 @@ public class ScriptController {
             return ResponseEntity.ok()
                     .contentType(MediaType.valueOf("application/javascript"))
                     .body(content);
-        } catch(Exception e) {
-            System.out.println(e);
+        } catch(Exception err) {
+            System.out.println(err);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Failed to load");
@@ -68,8 +68,8 @@ public class ScriptController {
             return ResponseEntity.ok()
                     .contentType(MediaType.valueOf("text/css"))
                     .body(content);
-        } catch(Exception e) {
-            System.out.println(e);
+        } catch(Exception err) {
+            System.out.println(err);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Failed to load");

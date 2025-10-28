@@ -19,11 +19,11 @@ public class ApiController {
         try {
             List<_RecentChat> chats = serviceManager.getMessageService().getRecentChats(userId, 100);
             return ResponseEntity.ok(chats);
-        } catch (SQLException e) {
-            System.err.println("SQL Error getting recent chats: " + e.getMessage());
+        } catch (SQLException err) {
+            System.err.println("SQL Error getting recent chats: " + err.getMessage());
             return ResponseEntity.internalServerError().body(Collections.emptyList());
-        } catch (Exception e) {
-            System.err.println("Error getting recent chats: " + e.getMessage());
+        } catch (Exception err) {
+            System.err.println("Error getting recent chats: " + err.getMessage());
             return ResponseEntity.badRequest().body(Collections.emptyList());
         }
     }
@@ -37,11 +37,11 @@ public class ApiController {
             } else {
                 return ResponseEntity.notFound().build();
             }
-        } catch (SQLException e) {
-            System.err.println("SQL Error getting user: " + e.getMessage());
+        } catch (SQLException err) {
+            System.err.println("SQL Error getting user: " + err.getMessage());
             return ResponseEntity.internalServerError().build();
-        } catch (Exception e) {
-            System.err.println("Error getting user: " + e.getMessage());
+        } catch (Exception err) {
+            System.err.println("Error getting user: " + err.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }

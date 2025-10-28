@@ -5,7 +5,8 @@ public class EventLog {
     public enum EventDirection {
         SENT,
         RECEIVED,
-        PROCESSED
+        PROCESSED,
+        INTERNAL
     }
 
     private String id;

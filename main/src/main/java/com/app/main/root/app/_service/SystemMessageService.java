@@ -222,8 +222,8 @@ public class SystemMessageService {
             message.put("id", saveMessage);
 
             return message;
-        } catch(SQLException e) {
-            System.err.println("Failed to save system message" + e.getMessage());
+        } catch(SQLException err) {
+            System.err.println("Failed to save system message" + err.getMessage());
             return createMessageWithPerspective(
                 eventType, 
                 data, 
