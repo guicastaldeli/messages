@@ -1,19 +1,20 @@
 import { React, ReactDOMServer } from "next/dist/server/route-modules/app-page/vendored/ssr/entrypoints";
 import { SocketClientConnect } from "../socket-client-connect";
-import { ContentGetter } from "../../content-getter";
 import { QueueManager } from "./queue-manager";
 import { Analysis, MessageAnalyzerClient } from "./message-analyzer-client";
 import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
 import { ChatManager } from "../chat/chat-manager";
 import { ApiClient } from "../_api-client/api-client";
 import { MessageHandler, RegisteredMessageHandlers } from "./message-handler";
+import { MessageComponentGetter } from "./message-component";
+import { UserColorGenerator } from "@/app/_utils/UserColorGenerator";
 
 export class MessageManager {
     private queueManager: QueueManager;
-    private contentGetter: ContentGetter;
     public socketClient: SocketClientConnect;
     private chatManager!: ChatManager;
     private messageAnalyzer: MessageAnalyzerClient;
+    private messageComponent: MessageComponentGetter;
     private apiClient: ApiClient;
     public dashboard: any;
     
@@ -37,9 +38,9 @@ export class MessageManager {
     constructor(socketClient: SocketClientConnect, apiClient: ApiClient) {
         this.socketClient = socketClient;
         this.apiClient = apiClient;
-        this.contentGetter = new ContentGetter();
         this.queueManager = new QueueManager(socketClient);
         this.messageAnalyzer = new MessageAnalyzerClient();
+        this.messageComponent = new MessageComponentGetter();
         this.registeredMessageHandlers = new RegisteredMessageHandlers();
         this.registeredMessageHandlers.register();
     }
@@ -365,66 +366,35 @@ export class MessageManager {
         if(!this.appEl) return;
         const container = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
         const perspective = data._perspective || analysis.perspective;
-        let content: React.ReactElement;
 
-        if(!analysis.context.isSystem) {
-            if(analysis.direction === 'self') {
-                content = this.contentGetter.__self({
-                    username: perspective.showUsername ? data.username : null,
-                    content: data.content,
-                    timestamp: data.timestamp,
-                    messageId: data.messageId,
-                    type: analysis.messageType,
-                    priority: analysis.priority,
-                    isDirect: analysis.context.isDirect,
-                    isGroup: analysis.context.isGroup,
-                    perspective: perspective
-                });
-            } else {
-                content = this.contentGetter.__other({
-                    username: perspective.showUsername ? data.username : null,
-                    content: data.content,
-                    timestamp: data.timestamp,
-                    messageId: data.messageId,
-                    type: analysis.messageType,
-                    priority: analysis.priority,
-                    isDirect: analysis.context.isDirect,
-                    isGroup: analysis.context.isGroup,
-                    perspective: perspective
-                });
-            }
-        } else {
-            content = this.contentGetter.__userEventMessageContent({
-                content: data.content,
-                timestamp: data.timestamp,
-                messageId: data.messageId,
-                type: analysis.messageType,
-                priority: analysis.priority,
-                isDirect: analysis.context.isDirect,
-                isGroup: analysis.context.isGroup,
-                isSystem: true
-            });
+        let userColor = null;
+        const currentChat = this.chatRegistry.getCurrentChat();
+        if(currentChat?.type === 'GROUP' && analysis.direction === 'other') {
+            userColor = UserColorGenerator.getUserColorForGroup(
+                currentChat.id,
+                data.senderId || data.userId || this.currentUserId
+            );
         }
 
-        const render = ReactDOMServer.renderToStaticMarkup(content!);
-        container?.insertAdjacentHTML('beforeend', render);
-    }
-
-    private async renderSystemMessage(data: any): Promise<void> {
-        if(!this.appEl) return;
-        const container = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
-    
-        const content = this.contentGetter.__userEventMessageContent({
+        this.messageComponent.setCurrentUserId(this.currentUserId!);
+        const messageProps = {
+            username: perspective.showUsername,
+            userId: this.currentUserId,
             content: data.content,
             timestamp: data.timestamp,
             messageId: data.messageId,
-            type: data.messageType,
-            priority: data.priority,
-            isDirect: data.isDirect,
-            isGroup: data.isGroup,
-            isSystem: true
-        });
+            type: analysis.messageType,
+            priority: analysis.priority,
+            isDirect: analysis.context.isDirect,
+            isGroup: analysis.context.isGroup,
+            isSystem: analysis.context.isSystem,
+            perspective: perspective,
+            direction: analysis.direction,
+            userColor: userColor?.value,
+            chatType: currentChat?.type,
+        };
 
+        const content = this.messageComponent.__message(messageProps);
         const render = ReactDOMServer.renderToStaticMarkup(content!);
         container?.insertAdjacentHTML('beforeend', render);
     }
@@ -439,9 +409,25 @@ export class MessageManager {
             data.messageType === 'SYSTEM' ||
             data.type === 'SYSTEM' ||
             data.isSystem === true;
-        
         if(isSystemMessage) {
-            await this.renderSystemMessage(data);
+            await this.renderMessage({
+                ...data,
+                isSystem: true,
+                direction: 'other'
+            }, {
+                direction: 'other',
+                messageType: data.messageType || 'SYSTEM',
+                priority: 'NORMAL',
+                metadata: {},
+                context: {
+                    isDirect: false,
+                    isGroup: true,
+                    isSystem: true
+                },
+                perspective: {
+                    showUsername: false
+                }
+            } as unknown as Analysis);
             return;
         }
 

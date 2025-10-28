@@ -118,11 +118,9 @@ body {
     }
 }
 .chat-screen .messages .other-message {
-    background: #c18f8f;
     justify-content: flex-end;
 }
 .chat-screen .messages .self-message {
-    background: #abbdd7;
     position: relative;
     left: 210px;
 }
@@ -184,7 +182,7 @@ li {
     font-style: italic;
 }
 
-.user-event-message-content {
+.system-message-content {
     position: relative;
     display: flex;
     justify-content: center;

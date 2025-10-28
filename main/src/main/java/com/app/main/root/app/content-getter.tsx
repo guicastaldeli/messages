@@ -40,12 +40,6 @@ export class ContentGetter {
         return content;
     }
 
-    //Update
-    __update(data: { data: string }): React.ReactElement {
-        const content = <div className="update">{data.data}</div>;
-        return content;
-    }
-
     //Message Content
     __messageContent(
         messageTypes: Record<string, (data: any) => React.ReactNode>,
