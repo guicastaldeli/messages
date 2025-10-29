@@ -11,7 +11,8 @@
         "symhacks.h": "c",
         "objects.h": "c",
         "core_dispatch.h": "c",
-        "macros.h": "c"
+        "macros.h": "c",
+        "iomanip": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
