@@ -1,5 +1,17 @@
 {
     "python.REPL.enableREPLSmartSend": false,
     "java.configuration.updateBuildConfiguration": "interactive",
-    "java.debug.settings.onBuildFailureProceed": true
+    "java.debug.settings.onBuildFailureProceed": true,
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "xstring": "cpp",
+        "string": "cpp",
+        "vector": "cpp",
+        "*.in": "c",
+        "symhacks.h": "c",
+        "objects.h": "c",
+        "core_dispatch.h": "c",
+        "macros.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }
