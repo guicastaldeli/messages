@@ -128,18 +128,37 @@ export class Main extends Component<any, State> {
                                     {sessionContext && sessionContext.currentSession === 'LOGIN' && (
                                         <div className='screen join-screen'>
                                             <div className='form'>
-                                                <h2>Join chatroom</h2>
                                                 <div className="form-input">
-                                                    <label>Username</label>
-                                                    <input type="text" id="username" />
-                                                </div>
-                                                <div className='form-input'>
+                                                    <h2>Join</h2>
+                                                    <label>Email</label>
+                                                    <input type="text" id="email" />
+                                                    <label>Password</label>
+                                                    <input type="text" id="email" />
+                                                    <div className='form-input'>
                                                     <button 
                                                         id='join-user' 
                                                         onClick={() => this.handleJoin(sessionContext)}
                                                     >
                                                         Join
                                                     </button>
+                                                </div>
+                                                </div>
+                                                <div className="form-input">
+                                                    <h2>Create Account</h2>
+                                                    <label>Email</label>
+                                                    <input type="text" id="email" />
+                                                    <label>Username</label>
+                                                    <input type="text" id="username" />
+                                                    <label>Password</label>
+                                                    <input type="text" id="email" />
+                                                    <div className='form-input'>
+                                                    <button 
+                                                        id='create-user' 
+                                                        onClick={() => this.handleCreate(sessionContext)}
+                                                    >
+                                                        Create
+                                                    </button>
+                                                </div>
                                                 </div>
                                             </div>
                                         </div>

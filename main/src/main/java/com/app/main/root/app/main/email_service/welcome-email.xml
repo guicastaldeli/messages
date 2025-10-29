@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<welcome-email>
+    <metadata>
+        <name>Welcome Email</name>
+        <version>1.0</version>
+        <type>onboarding</type>
+    </metadata>
+    <content>
+        <subject>Welcome to {{appName}}, {{username}}!</subject>
+        <preheader>Your account is ready. Let's get started!</preheader>
+        <layout>
+            <container class="email-wrapper">
+                <hero-section>
+                    <welcome-title>Welcome to {{appName}}!</welcome-title>
+                    <welcome-subtitle>Your account has been successfully created and is ready to use.</welcome-subtitle>
+                </hero-section>
+                <account-info-section>
+                    <section-title>Your Account Details</section-title>
+                    <info-grid>
+                        <info-card>
+                            <info-label>Account ID</info-label>
+                            <account-id>{{userId}}</account-id>
+                        </info-card>
+                    </info-grid>
+                </account-info-section>
+                <email-footer>
+                    <footer-text>
+                        Welcome to our community!.
+                    </footer-text>
+                    <footer-links>
+                        <footer-link href="{{webUrl}}">Home</footer-link>
+                    </footer-links>
+                </email-footer>
+            </container>
+        </layout>
+    </content>
+</welcome-email>

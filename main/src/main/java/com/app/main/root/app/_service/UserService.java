@@ -5,15 +5,19 @@ import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._server.RouteContext;
 import com.app.main.root.app._server.ConnectionTracker;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.sql.*;
+import java.time.LocalDateTime;
 
 @Component
 public class UserService {
@@ -21,6 +25,7 @@ public class UserService {
     private final EventTracker eventTracker;
     private final ConnectionTracker connectionTracker;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ServiceManager serviceManager;
     public final Map<String, String> userToSessionMap = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToUserMap = new ConcurrentHashMap<>();
 
@@ -28,12 +33,14 @@ public class UserService {
         DataSource dataSource,
         EventTracker eventTracker,
         ConnectionTracker connectionTracker,
-        SimpMessagingTemplate messagingTemplate
+        SimpMessagingTemplate messagingTemplate,
+        @Lazy ServiceManager serviceManager
     ) {
         this.dataSource = dataSource;
         this.eventTracker = eventTracker;
         this.connectionTracker = connectionTracker;
         this.messagingTemplate = messagingTemplate;
+        this.serviceManager = serviceManager;
     }
 
     public void addUser(String id, String username, String sessionId) throws SQLException {
@@ -156,6 +163,149 @@ public class UserService {
         } catch(Exception err) {
             System.err.println("Error sending message: " + err.getMessage());
         }
+    }
+
+    /*
+    **
+    ***
+    *** Register User
+    ***
+    **
+    */
+    public Map<String, Object> registerUser(
+        String username,
+        String email,
+        String password,
+        String sessionId
+    ) throws SQLException {
+        if(username == null || username.trim().isEmpty()) throw new IllegalArgumentException("Username is required");
+        if(email == null || serviceManager.getEmailService().isValidEmail(email)) throw new IllegalArgumentException("Email is required");
+        if(password == null || password.length() < 8) throw new IllegalArgumentException("Password is required");
+
+        String userId = "user_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 12);
+        String passwordHash = passwordEncoder.encode(password);
+        String query = CommandQueryManager.REGISTER_USER.get();
+
+        try(
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, userId);
+            stmt.setString(2, username.trim());
+            stmt.setString(3, email.toLowerCase().trim());
+            stmt.setString(4, passwordHash);
+            stmt.setString(5, sessionId);
+            
+            int rowsAffected = stmt.executeUpdate();
+            if(rowsAffected > 0) {
+                createProfile(conn, userId);
+                emailService.sendWelcomeEmail(email, username);
+                linkUserSession(userId, sessionId);
+
+                Map<String, Object> res = new HashMap<>();
+                res.put("userId", userId);
+                res.put("username", username);
+                res.put("email", email);
+
+                eventTracker.track(
+                    "user-registred",
+                    Map.of(
+                        "userId", userId,
+                        "username", username,
+                        "email", email
+                    ),
+                    EventDirection.INTERNAL,
+                    sessionId,
+                    "System"
+                );
+                return res;
+            } else {
+                throw new SQLException("Failed to register user");
+            }
+        }
+    }
+
+    /*
+    **
+    ***
+    *** Login User
+    ***
+    **
+    */
+    public Map<String, Object> loginUser(
+        String accountEmail, 
+        String password, 
+        String sessionId
+    ) throws SQLException {
+        String query = CommandQueryManager.LOGIN_USER.get();
+        try(
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query)
+        ) {
+            stmt.setString(1, accountEmail.toLowerCase().trim());
+            stmt.setString(2, accountEmail.trim());
+
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    String storedHash = rs.getString("password_hash");
+                    String userId = rs.getString("id");
+                    String username = rs.getString("username");
+                    String email = rs.getString("email");
+
+                    if(passwordEncoder.matches(password, storedHash)) {
+                        updateUserSession(conn, userId, sessionId);
+
+                        Map<String, Object> res = new HashMap<>();
+                        res.put("userId", userId);
+                        res.put("username", username);
+                        res.put("email", email);
+                        res.put("sessionId", sessionId);
+
+                        eventTracker.track(
+                            "user-login",
+                            Map.of(
+                                "userId", userId,
+                                "username", username
+                            ),
+                            EventDirection.RECEIVED,
+                            sessionId,
+                            username
+                        );
+
+                        return res;
+                    }
+                }
+            }
+        }
+
+        throw new SecurityException("Invalid credentials");
+    }
+
+    /*
+    * Create Profile 
+    */
+    private void createProfile(Connection conn, String userId) throws SQLException {
+        String query = CommandQueryManager.CREATE_USER_PROFILE.get();
+        try(PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, userId);
+            stmt.setString(2, "New User"); //Switch later
+            stmt.executeUpdate();
+        }
+    }
+
+    /*
+    * Update Sesssion 
+    */
+    private void updateUserSession(Connection conn, String userId, String sessionId) throws SQLException {
+        String query = CommandQueryManager.UPDATE_USER_SESSION.get();
+        Timestamp time = Timestamp.valueOf(LocalDateTime.now());
+        try(PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, sessionId);
+            stmt.setTimestamp(2, time);
+            stmt.setString(3, userId);
+            stmt.executeUpdate();
+        }
+        linkUserSession(userId, sessionId);
     }
 
     /*

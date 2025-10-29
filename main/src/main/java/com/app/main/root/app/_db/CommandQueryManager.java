@@ -118,6 +118,24 @@ public enum CommandQueryManager {
     GET_ALL_USERS(
         "SELECT * FROM users ORDER BY created_at DESC"
     ),
+    REGISTER_USER(
+        """
+            INSERT INTO users (id, username, email, password_hash, session_id)
+            VALUES (?, ?, ?, ?, ?)        
+        """
+    ),
+    CREATE_USER_PROFILE(
+        "INSERT INTO user_profiles (user_id, display_name) VALUES (?, ?)"
+    ),
+    LOGIN_USER(
+        """
+            SELECT id, username, email, password_hash, is_active FROM users
+            WHERE (email = ?) AND is_active = TRUE
+        """
+    ),
+    UPDATE_USER_SESSION(
+        "UPDATE users SET session_id, last_login = ? WHERE id = ?"
+    ),
 
     /*
     * ~~~ MESSAGE SERVICE ~~~ 

@@ -1,5 +1,6 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.DbService;
+import com.app.main.root.app.main.email_service.EmailService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ public class ServiceManager {
     private final UserService userService;
     private final DirectService directService;
     private final GroupService groupService;
+    private final EmailService emailService;
 
     public ServiceManager(
         DbService dbService,
@@ -22,7 +24,8 @@ public class ServiceManager {
         @Lazy MessagePerspectiveService messagePerspectiveService,
         UserService userService,
         DirectService directService,
-        @Lazy GroupService groupService
+        @Lazy GroupService groupService,
+        @Lazy EmailService emailService
     ) {
         this.dbService = dbService;
         this.messageService = messageService;
@@ -31,6 +34,7 @@ public class ServiceManager {
         this.userService = userService;
         this.directService = directService;
         this.groupService = groupService;
+        this.emailService = emailService;
     }
 
     /*
@@ -80,5 +84,12 @@ public class ServiceManager {
     */
     public GroupService getGroupService() {
         return groupService;
+    }
+
+    /*
+    * Email Service 
+    */
+    public EmailService getEmailService() {
+        return emailService;
     }
 }
