@@ -2,6 +2,7 @@ package com.app.main.root.app._service;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
+import com.app.main.root.app._crypto.password.PasswordEncoderWrapper;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._server.RouteContext;
 import com.app.main.root.app._server.ConnectionTracker;
@@ -26,6 +27,7 @@ public class UserService {
     private final ConnectionTracker connectionTracker;
     private final SimpMessagingTemplate messagingTemplate;
     private final ServiceManager serviceManager;
+    private final PasswordEncoderWrapper passwordEncoder;
     public final Map<String, String> userToSessionMap = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToUserMap = new ConcurrentHashMap<>();
 
@@ -34,13 +36,15 @@ public class UserService {
         EventTracker eventTracker,
         ConnectionTracker connectionTracker,
         SimpMessagingTemplate messagingTemplate,
-        @Lazy ServiceManager serviceManager
+        @Lazy ServiceManager serviceManager,
+        @Lazy PasswordEncoderWrapper passwordEncoder
     ) {
         this.dataSource = dataSource;
         this.eventTracker = eventTracker;
         this.connectionTracker = connectionTracker;
         this.messagingTemplate = messagingTemplate;
         this.serviceManager = serviceManager;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public void addUser(String id, String username, String sessionId) throws SQLException {
@@ -199,7 +203,7 @@ public class UserService {
             int rowsAffected = stmt.executeUpdate();
             if(rowsAffected > 0) {
                 createProfile(conn, userId);
-                emailService.sendWelcomeEmail(email, username);
+                serviceManager.getEmailService().sendWelcomeEmail(email, username, userId);
                 linkUserSession(userId, sessionId);
 
                 Map<String, Object> res = new HashMap<>();
