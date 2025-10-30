@@ -8,6 +8,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <wincrypt.h>
+#undef min
+#undef max
 #else
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -42,8 +44,9 @@ std::vector<unsigned char> PasswordEncoder::applyPepper(const std::string& passw
     std::vector<unsigned char> result(EVP_MAX_MD_SIZE);
     unsigned int resultLen = 0;
 
+    const EVP_MD* md = EVP_sha512();
     HMAC(
-        EVP_sha512()
+        md,
         pepper.data(),
         pepper.size(),
         reinterpret_cast<const unsigned char*>(password.data()),
@@ -57,24 +60,24 @@ std::vector<unsigned char> PasswordEncoder::applyPepper(const std::string& passw
 
 std::vector<unsigned char> PasswordEncoder::generateSecureHash(
     const std::vector<unsigned char>& pepperedPassword,
-    const std::vector<unsigned char>& salt,
+    const std::vector<unsigned char>& salt
 ) {
     std::vector<unsigned char> key(HASH_KEY_LENGTH / 8);
     if(PKCS5_PBKDF2_HMAC(
        reinterpret_cast<const char*>(pepperedPassword.data()),
-       pepperedPassword.size(),
+       static_cast<int>(pepperedPassword.size()),
        salt.data(),
-       salt.size(),
-       HASH_INTERATIONS,
+       static_cast<int>(salt.size()),
+       HASH_ITERATIONS,
        EVP_sha512(),
-       key.size(),
+       static_cast<int>(key.size()),
        key.data()) != 1
     ) {
         throw std::runtime_error("PBKDF2 failed");
     }
 
     auto memoryHardResult = applyMemoryHardFunction(key, salt);
-    return applyFinalMac(memoryHardResult, salt);
+    return applyFinalHmac(memoryHardResult, salt);
 }
 
 std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
@@ -82,8 +85,9 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
     const std::vector<unsigned char>& salt
 ) {
     try {
-        std::vector<unsigned char> memory(MEMORY_COST);
+        std::vector<unsigned char> memoryBuffer(MEMORY_COST);
         std::vector<unsigned char> block(EVP_MAX_MD_SIZE);
+        unsigned int blockLen = 0;
 
         EVP_MD_CTX* ctx = EVP_MD_CTX_new();
         if(!ctx) throw std::runtime_error("EVP_MD_CTX_new failed");
@@ -99,26 +103,22 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
             salt.end(),
             combined.begin() + input.size()
         );
-        EVP_Digest(
-            combined.data(),
-            combined.size(),
-            block.data(),
-            &blockLen,
-            EVP_sha512(),
-            nullptr
-        );
+        
+        EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr);
+        EVP_DigestUpdate(ctx, combined.data(), combined.size());
+        EVP_DigestFinal_ex(ctx, block.data(), &blockLen);
         block.resize(blockLen);
 
         for(int i = 0; i < MEMORY_COST; i++) {
-            size_t pos = i % memory.size();
-            size_t copyLen = std::min(block.size(), memory.size() - pos);
+            size_t pos = i % memoryBuffer.size();
+            size_t copyLen = (std::min)(block.size(), memoryBuffer.size() - pos);
             std::copy(
                 block.begin(),
                 block.begin() + copyLen,
-                memory.begin() + pos
+                memoryBuffer.begin() + pos
             );
 
-            EVP_DigestInit_ex(ctx, EVP_sha512, nullptr);
+            EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr);
             EVP_DigestUpdate(ctx, block.data(), block.size());
             EVP_DigestFinal_ex(ctx, block.data(), &blockLen);
             block.resize(blockLen);
@@ -131,7 +131,7 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
             int segmentSize = MEMORY_COST / parallelism;
             int segmentStart = i * segmentSize;
             EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr);
-            EVP_DigestUpdate(ctx, memory.data() + segmentStart, segmentSize);
+            EVP_DigestUpdate(ctx, memoryBuffer.data() + segmentStart, segmentSize);
             EVP_DigestFinal_ex(ctx, result.data() + (i * 32), &blockLen);
         }
         EVP_MD_CTX_free(ctx);
@@ -161,8 +161,9 @@ std::vector<unsigned char> PasswordEncoder::applyFinalHmac(
     std::vector<unsigned char> result(EVP_MAX_MD_SIZE);
     unsigned int resultLen = 0;
 
+    const EVP_MD* md = EVP_sha512();
     HMAC(
-        EVP_sha512(),
+        md,
         salt.data(),
         salt.size(),
         input.data(),
@@ -176,7 +177,7 @@ std::vector<unsigned char> PasswordEncoder::applyFinalHmac(
 
 bool PasswordEncoder::constantTimeEquals(
     const std::vector<unsigned char>& a,
-    const std::vector<unsigned char>& b,
+    const std::vector<unsigned char>& b
 ) {
     if(a.size() != b.size()) return false;
     unsigned char result = 0;
@@ -197,7 +198,7 @@ std::string PasswordEncoder::encode(const std::string& password) {
     auto hash = generateSecureHash(pepperedPassword, salt);
 
     std::stringstream ss;
-    ss << "2$" << HASH_INTERATIONS << "$";
+    ss << "2$" << HASH_ITERATIONS << "$";
 
     auto saltB64 = base64Encode(salt);
     auto hashB64 = base64Encode(hash);
@@ -223,7 +224,7 @@ bool PasswordEncoder::matches(
         }
 
         int version = std::stoi(encodedPassword.substr(0, pos1));
-        int interations = std::stoi(encodedPassword.substr(pos1 + 1, pos2 - pos1 - 1));
+        int iterations = std::stoi(encodedPassword.substr(pos1 + 1, pos2 - pos1 - 1));
         std::string saltB64 = encodedPassword.substr(pos2 + 1, pos3 - pos2 - 1);
         std::string hashB64 = encodedPassword.substr(pos3 + 1);
 
@@ -238,7 +239,7 @@ bool PasswordEncoder::matches(
 }
 
 bool PasswordEncoder::isPasswordStrong(const std::string& password) {
-    if(password.length < 8) return false;
+    if(password.length() < 8) return false;
 
     bool hasUpper = false;
     bool hasLower = false;
@@ -247,13 +248,13 @@ bool PasswordEncoder::isPasswordStrong(const std::string& password) {
     std::string specialChar = "!@#$%^&*()_+-=[]{}|;:,.<>?";
 
     for(char c : password) {
-        if(std:isupper(c)) {
+        if(std::isupper(c)) {
             hasUpper = true;
         } else if(std::islower(c)) {
             hasLower = true;
         } else if(std::isdigit(c)) {
             hasDigit = true;
-        } else if(std::string(specialChar).find(c) != std::string::npos) {
+        } else if(specialChar.find(c) != std::string::npos) {
             hasSpecial = true;
         }
     }
@@ -285,19 +286,19 @@ std::string PasswordEncoder::generateSecurePassword(int length) {
     std::string password;
     std::uniform_int_distribution<> upperDis(0, upper.size() - 1);
     std::uniform_int_distribution<> lowerDis(0, lower.size() - 1);
-    std::uniform_int_distribution<> digitDis(0, digit.size() - 1);
+    std::uniform_int_distribution<> digitDis(0, digits.size() - 1);
     std::uniform_int_distribution<> specialDis(0, special.size() - 1);
     password += upper[upperDis(gen)];
     password += lower[lowerDis(gen)];
     password += digits[digitDis(gen)];
     password += special[specialDis(gen)];
-    for(let i = 4; i < length; i++) password += allChars[dis(gen)];
+    for(int i = 4; i < length; i++) password += allChars[dis(gen)];
     std::shuffle(password.begin(), password.end(), gen);
 
     return password;
 }
 
-std::string PasswordEncoder::base64Encoder(const std::vector<unsigned char>& data) {
+std::string PasswordEncoder::base64Encode(const std::vector<unsigned char>& data) {
     const std::string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
@@ -310,8 +311,8 @@ std::string PasswordEncoder::base64Encoder(const std::vector<unsigned char>& dat
     unsigned char char_array_4[4];
 
     for(size_t idx = 0; idx < data.size(); idx++) {
-        char_array_3[idx++] = data[idx];
-        if(idx == 3) {
+        char_array_3[i++] = data[idx];
+        if(i == 3) {
             char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
             char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
             char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
@@ -345,7 +346,7 @@ std::vector<unsigned char> PasswordEncoder::base64Decode(const std::string& enco
 
     auto is_base64 = [](unsigned char c) {
         return(isalnum(c) || (c == '+') || (c == '/'));
-    }
+    };
 
     int in_len = encoded_string.size();
     int i = 0;
@@ -361,7 +362,7 @@ std::vector<unsigned char> PasswordEncoder::base64Decode(const std::string& enco
         is_base64(encoded_string[in_])
     ) {
         char_array_4[i++] = encoded_string[in_];
-        in_+=;
+        in_++;
 
         if(i == 4) {
             for(i = 0; i < 4; i++) char_array_4[i] = base64_chars.find(char_array_4[i]);
@@ -375,7 +376,7 @@ std::vector<unsigned char> PasswordEncoder::base64Decode(const std::string& enco
         }
 
         if(i) {
-            for(j = i; j < 4. j++) char_array_4[j] = 0;
+            for(j = i; j < 4; j++) char_array_4[j] = 0;
 
             char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
             char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
@@ -383,7 +384,7 @@ std::vector<unsigned char> PasswordEncoder::base64Decode(const std::string& enco
             
             for(j = 0; j < i - 1; j++) ret.push_back(char_array_3[j]);
         }
-
-        return ret;
     }
+
+    return ret;
 }

@@ -11,9 +11,9 @@
 class PasswordEncoder {
     private:
         static const int SALT_LENGTH = 32;
-        static const int HASH_INTERATIONS = 210000;
-        static const int HASH_KEY_LENGTH = 256;
-        static const int MEMORY_COST = 65536;
+        static const int HASH_KEY_LENGTH = 512;
+        static const int HASH_ITERATIONS = 100000;
+        static const int MEMORY_COST = 1024 * 1024;
 
         std::vector<unsigned char> pepper;
         std::vector<unsigned char> generateSalt();
@@ -26,21 +26,28 @@ class PasswordEncoder {
             const std::vector<unsigned char>& input,
             const std::vector<unsigned char>& salt
         );
+        std::vector<unsigned char> applyFinalHmac(
+            const std::vector<unsigned char>& input,
+            const std::vector<unsigned char>& salt
+        );
         bool constantTimeEquals(
             const std::vector<unsigned char>& a,
             const std::vector<unsigned char>& b
         );
+        std::string base64Encode(const std::vector<unsigned char>& data);
+        std::vector<unsigned char> base64Decode(const std::string& encoded_string);
 
     public:
         PasswordEncoder();
         ~PasswordEncoder();
 
-        std::streing encode(const std::string& password);
+        std::string encode(const std::string& password);
         bool matches(
             const std::string& password,
-            const std::string& encodedPassword,
+            const std::string& encodedPassword
         );
+        bool isPasswordStrong(const std::string& password);
         std:: string generateSecurePassword(int length);
-}
+};
 
 #endif

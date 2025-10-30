@@ -5,17 +5,17 @@
 extern "C" {
 #endif
 
-JNIEXPORT jlong JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncoderWrapper_createNativeObject(JNIEnv *env, jobject obj) {
+__declspec(dllexport) JNIEXPORT jlong JNICALL Java_com_app_main_root_app__1crypto_password_PasswordEncoderWrapper_createNativeObject(JNIEnv *env, jobject obj) {
     try {
         PasswordEncoder* encoder = new PasswordEncoder();
-        retrun reinterpret_cast<jlong>(encoder);
+        return reinterpret_cast<jlong>(encoder);
     } catch(const std::exception& err) {
-        env->ThrowNew(env->FindClass("java/lang/RuntimeException"), e.what());
+        env->ThrowNew(env->FindClass("java/lang/RuntimeException"), err.what());
         return 0;
     }
 }
 
-JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncoderWrapper_destroyNativeObject(
+__declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_password_PasswordEncoderWrapper_destroyNativeObject(
     JNIEnv *env, 
     jobject obj,
     jlong nativePtr
@@ -24,7 +24,7 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncod
     delete encoder;
 }
 
-JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncoderWrapper_encodeNative(
+__declspec(dllexport) JNIEXPORT jstring JNICALL Java_com_app_main_root_app__1crypto_password_PasswordEncoderWrapper_encodeNative(
     JNIEnv *env, 
     jobject obj,
     jlong nativePtr,
@@ -35,7 +35,7 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncod
         const char* passwordStr = env->GetStringUTFChars(password, nullptr);
 
         std::string result = encoder->encode(passwordStr);
-        env->ReleaseStringUTFChars(result.c_str());
+        env->ReleaseStringUTFChars(password, passwordStr);
         return env->NewStringUTF(result.c_str());
     } catch(const std::exception& err) {
         env-> ThrowNew(env->FindClass("java/lang/RuntimeException"), err.what());
@@ -43,7 +43,7 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncod
     }
 }
 
-JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncoderWrapper_matchesNative(
+__declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_password_PasswordEncoderWrapper_matchesNative(
     JNIEnv *env, 
     jobject obj,
     jlong nativePtr,
@@ -65,7 +65,7 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncod
     }
 }
 
-JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncoderWrapper_isPasswordStrongNative(
+__declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_password_PasswordEncoderWrapper_isPasswordStrongNative(
     JNIEnv *env, 
     jobject obj,
     jlong nativePtr,
@@ -77,14 +77,14 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncod
 
         bool result = encoder->isPasswordStrong(passwordStr);
         env->ReleaseStringUTFChars(password, passwordStr);
-        return result;
+        return result ? JNI_TRUE : JNI_FALSE;
     } catch(const std::exception& err) {
         env->ThrowNew(env->FindClass("java/lang/RuntimeException"), err.what());
         return false;
     }
 }
 
-JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncoderWrapper_generateSecurePasswordNative(
+__declspec(dllexport) JNIEXPORT jstring JNICALL Java_com_app_main_root_app__1crypto_password_PasswordEncoderWrapper_generateSecurePasswordNative(
     JNIEnv *env, 
     jobject obj,
     jlong nativePtr,
@@ -96,7 +96,7 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app__crypto_password_PasswordEncod
         return env->NewStringUTF(result.c_str());
     } catch(const std::exception& err) {
         env->ThrowNew(env->FindClass("java/lang/RuntimeException"), err.what());
-        return false;
+        return nullptr;
     }
 }
 
