@@ -154,7 +154,7 @@ export class Main extends Component<any, State> {
                                                     <div className='form-input'>
                                                     <button 
                                                         id='create-user' 
-                                                        onClick={() => this.handleCreate(sessionContext)}
+                                                        onClick={() => this.handleJoin(sessionContext)}
                                                     >
                                                         Create
                                                     </button>

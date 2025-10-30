@@ -4,4 +4,4 @@ CREATE TABLE IF NOT EXISTS groups (
     creator_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (creator_id) REFERENCES users(id)
-)
+);

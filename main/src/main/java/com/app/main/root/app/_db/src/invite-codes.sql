@@ -9,4 +9,4 @@ CREATE TABLE IF NOT EXISTS group_invite_codes (
     is_used INTEGER DEFAULT 0,
     used_at DATETIME NULL,
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
-)
+);
