@@ -65,6 +65,3 @@ def timeCallback(time: str, serverTime: bool):
 @app.on_event("startup")
 async def startTimeUpdates():
     await timeStream.update(timeCallback, interval=1000)
-    
-    
-                

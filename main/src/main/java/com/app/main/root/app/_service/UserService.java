@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
+import java.time.LocalDateTime;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,7 +19,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.sql.*;
-import java.time.LocalDateTime;
 
 @Component
 public class UserService {
@@ -222,6 +222,7 @@ public class UserService {
                     sessionId,
                     "System"
                 );
+
                 return res;
             } else {
                 throw new SQLException("Failed to register user");
@@ -290,11 +291,34 @@ public class UserService {
     */
     private void createProfile(Connection conn, String userId) throws SQLException {
         String query = CommandQueryManager.CREATE_USER_PROFILE.get();
+        _User user = new _User();
         try(PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, userId);
-            stmt.setString(2, "New User"); //Switch later
+            stmt.setString(2, user.getUsername());
             stmt.executeUpdate();
         }
+    }
+
+    public Map<String, Object> getUserProfile(String userId) throws SQLException {
+        String query = CommandQueryManager.GET_USER_PROFILE.get();
+        Map<String, Object> profile = new HashMap<>();
+
+        try(
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, userId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    profile.put("displayName", rs.getString("display_name"));
+                    profile.put("avatar_url", rs.getString("avatar_url"));
+                    profile.put("createdAt", rs.getTime("created_at"));
+                    profile.put("updatedAt", rs.getTime("updated_at"));
+                }
+            }
+        }
+
+        return profile;
     }
 
     /*
@@ -310,6 +334,23 @@ public class UserService {
             stmt.executeUpdate();
         }
         linkUserSession(userId, sessionId);
+    }
+
+    /*
+    * Update Last Login 
+    */
+    public void updateLastLogin(String userId) throws SQLException {
+        String query = CommandQueryManager.UPDATE_LAST_LOGIN.get();
+        Timestamp time = Timestamp.valueOf(LocalDateTime.now());
+        
+        try(
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setTimestamp(1, time);
+            stmt.setString(2, userId);
+            stmt.executeUpdate();
+        }
     }
 
     /*
@@ -338,6 +379,64 @@ public class UserService {
     }
 
     /*
+    * Is Online 
+    */
+    public List<_User> getOnlineUsers() throws SQLException {
+        List<_User> allUsers = getAllUsers();
+        List<_User> onlineUsers = new ArrayList<>();
+
+        for(_User user : allUsers) {
+            if(isUserOnline(user.getId())) {
+                onlineUsers.add(user);
+            }
+        }
+
+        return onlineUsers;
+    }
+
+    public boolean isUserOnline(String userId) {
+        return userToSessionMap.containsKey(userId) &&
+            userToSessionMap.get(userId) != null;
+    }
+
+    /*
+    * Is Username Taken 
+    */
+    public boolean isUsernameTaken(String username) throws SQLException {
+        return getUserByUsername(username) != null;
+    }
+
+    /*
+    * Is Email Registered 
+    */
+    public _User getUserByEmail(String email) throws SQLException {
+        String query = CommandQueryManager.GET_USER_BY_EMAIL.get();
+        try(
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, email.toLowerCase().trim());
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    return mapUserFromResultSet(rs);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public boolean isEmailRegistered(String email) throws SQLException {
+        return getUserByEmail(email) != null;
+    }
+
+    public boolean isValidEmail(String email) {
+        if(email == null) return false;
+        String regex = "^[A-Za-z0-9+_.-]+@(.+)$";
+        return email.matches(regex);
+    }
+
+    /*
     **
     ***
     *** Maps
@@ -348,7 +447,22 @@ public class UserService {
         _User user = new _User();
         user.setId(rs.getString("id"));
         user.setUsername(rs.getString("username"));
+        user.setEmail(rs.getString("email"));
         user.setCreatedAt(rs.getTimestamp("created_at"));
         return user;
+    }
+
+    private Map<String, Object> getUserBySessionInfo(String userId) throws SQLException {
+        _User user = getUserById(userId);
+        if(user == null) return null;
+
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("id", user.getId());
+        userInfo.put("username", user.getUsername());
+        userInfo.put("email", user.getEmail());
+        userInfo.put("isOnline", isUserOnline(userId));
+        userInfo.put("sessionId", userToSessionMap.get(userId));
+        userInfo.put("createdAt", user.getCreatedAt());
+        return userInfo;
     }
 }

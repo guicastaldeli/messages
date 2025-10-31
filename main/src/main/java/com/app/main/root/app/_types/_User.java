@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 public class _User {
     private String id;
     private String username;
+    private String email;
     private Timestamp createdAt;
 
     /*
@@ -24,6 +25,16 @@ public class _User {
     }
     public String getUsername() {
         return username;
+    }
+
+    /*
+    * Email 
+    */
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    public String getEmail() {
+        return email;
     }
 
     /*

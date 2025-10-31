@@ -1,4 +1,5 @@
 package com.app.main.root.app.__controllers;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,7 +20,7 @@ public class AuthController {
     public AuthController(
         AuthManager authManager,
         EventTracker eventTracker, 
-        ServiceManager serviceManager
+        @Lazy ServiceManager serviceManager
     ) {
         this.authManager = authManager;
         this.eventTracker = eventTracker;
@@ -44,14 +45,41 @@ public class AuthController {
         } catch(Exception err) {
             System.err.println("Registration failed" + err.getMessage());
             return ResponseEntity.badRequest()
-                    .body(
-                        Map.of(
-                            "error",
-                            "REGISTRATION_FAILED",
-                            "message",
-                            err.getMessage()
-                        )
-                    );
+                .body(
+                    Map.of(
+                        "error",
+                        "REGISTRATION_FAILED",
+                        "message",
+                        err.getMessage()
+                    )
+                );
+        }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestBody AuthManager request) {
+        try {
+            var loginRequest = request.getLoginRequest();
+            System.out.println("Login attempt for: " + loginRequest.getEmail());
+
+            Map<String, Object> result = serviceManager.getUserService().loginUser(
+                loginRequest.getEmail(),
+                loginRequest.getPassword(),
+                loginRequest.getSessionId()
+            );
+
+            System.out.println("Logged!: " + loginRequest.getEmail());
+            return ResponseEntity.ok(result);
+        } catch(Exception err) {
+            return ResponseEntity.badRequest()
+                .body(
+                    Map.of(
+                        "error",
+                        "LOGIN_FAILED",
+                        "message",
+                        err.getMessage()
+                    )
+                );
         }
     }
 }

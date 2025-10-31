@@ -115,6 +115,9 @@ public enum CommandQueryManager {
     GET_USER_BY_USERNAME(
         "SELECT * FROM users WHERE username = ?"
     ),
+    GET_USER_BY_EMAIL(
+        "SELECT * FROM users WHERE email = ?"
+    ),
     GET_ALL_USERS(
         "SELECT * FROM users ORDER BY created_at DESC"
     ),
@@ -135,6 +138,12 @@ public enum CommandQueryManager {
     ),
     UPDATE_USER_SESSION(
         "UPDATE users SET session_id, last_login = ? WHERE id = ?"
+    ),
+    UPDATE_LAST_LOGIN(
+        "UPDATE users SET last_login = ? WHERE id = ?"
+    ),
+    GET_USER_PROFILE(
+        "SELECT * FROM user_profiles where user_id = ?"
     ),
 
     /*

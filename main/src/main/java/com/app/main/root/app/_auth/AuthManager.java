@@ -1,8 +1,8 @@
 package com.app.main.root.app._auth;
 
 public class AuthManager {
-    private final RegisterRequest registerRequest;
-    private final LoginRequest loginRequest;
+    public final RegisterRequest registerRequest;
+    public final LoginRequest loginRequest;
 
     public AuthManager(
         RegisterRequest registerRequest,
