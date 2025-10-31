@@ -6,6 +6,7 @@ import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._data.MemberVerifier;
 import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._server.MessageRouter;
 import com.app.main.root.app._server.RouteContext;
 import com.app.main.root.app._data.SocketMethods;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
-import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -27,8 +27,8 @@ import java.sql.*;
 
 @Component
 public class GroupService {
+    private final DataSourceService dataSourceService;
     private final MessageRouter messageRouter;
-    private final DataSource dataSource;
     private final EventTracker eventTracker;
     private final InviteCodeManager inviteCodeManager;
     private final SimpMessagingTemplate messagingTemplate;
@@ -41,7 +41,7 @@ public class GroupService {
     private final Map<String, Set<String>> sessionGroups = new ConcurrentHashMap<>();
 
     public GroupService(
-        DataSource dataSource, 
+        DataSourceService dataSourceService, 
         SimpMessagingTemplate messagingTemplate,
         EventTracker eventTracker,
         MessageRouter messageRouter,
@@ -49,11 +49,11 @@ public class GroupService {
         ServiceManager serviceManager,
         SocketMethods socketMethods
     ) {
-        this.dataSource = dataSource;
+        this.dataSourceService = dataSourceService;
         this.messagingTemplate = messagingTemplate;
         this.eventTracker = eventTracker;
         try {
-            this.inviteCodeManager = new InviteCodeManager(dataSource);
+            this.inviteCodeManager = new InviteCodeManager(dataSourceService);
         } catch(Exception err) {
             throw new RuntimeException("Failed to init InviteCodeManager", err);
         }
@@ -61,6 +61,10 @@ public class GroupService {
         this.memberVerifier = memberVerifier;
         this.serviceManager = serviceManager;
         this.socketMethods = socketMethods;
+    }
+
+    private Connection getConnection() throws SQLException {
+        return dataSourceService.setDb("group").getConnection();
     }
 
     public Map<String, Object> createGroup(
@@ -74,7 +78,7 @@ public class GroupService {
         Timestamp time = new Timestamp(System.currentTimeMillis());
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, id);
@@ -143,7 +147,7 @@ public class GroupService {
         boolean added = false;
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             try {
@@ -211,7 +215,7 @@ public class GroupService {
         String query = CommandQueryManager.GET_GROUP_BY_ID.get();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, id);
@@ -230,7 +234,7 @@ public class GroupService {
         List<_User> members = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, groupId);
@@ -246,11 +250,10 @@ public class GroupService {
 
     public List<_Group> getUserGroups(String userId) throws SQLException {
         String query = CommandQueryManager.GET_USER_GROUPS.get();
-
         List<_Group> groups = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, userId);
@@ -358,7 +361,7 @@ public class GroupService {
         Map<String, Object> info = new HashMap<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement groupStmt = conn.prepareStatement(groupQuery);
             PreparedStatement membersStmt = conn.prepareStatement(membersQuery);
         ) {
@@ -396,7 +399,7 @@ public class GroupService {
         String query = CommandQueryManager.IS_GROUP_MEMBER.get();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, id);
@@ -419,7 +422,7 @@ public class GroupService {
         boolean removed = false;
 
         try (
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, groupId);
@@ -521,7 +524,7 @@ public class GroupService {
     ) throws SQLException {
         String query = CommandQueryManager.UPDATE_GROUP_LAST_MESSAGE.get();
         try (
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, lastMessage);

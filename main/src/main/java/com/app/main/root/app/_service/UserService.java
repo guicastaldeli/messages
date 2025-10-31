@@ -1,4 +1,5 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
@@ -11,7 +12,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
-import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,7 +22,7 @@ import java.sql.*;
 
 @Component
 public class UserService {
-    private final DataSource dataSource;
+    private final DataSourceService dataSourceService;
     private final EventTracker eventTracker;
     private final ConnectionTracker connectionTracker;
     private final SimpMessagingTemplate messagingTemplate;
@@ -32,14 +32,14 @@ public class UserService {
     private final Map<String, String> sessionToUserMap = new ConcurrentHashMap<>();
 
     public UserService(
-        DataSource dataSource,
+        DataSourceService dataSourceService,
         EventTracker eventTracker,
         ConnectionTracker connectionTracker,
         SimpMessagingTemplate messagingTemplate,
         @Lazy ServiceManager serviceManager,
         @Lazy PasswordEncoderWrapper passwordEncoder
     ) {
-        this.dataSource = dataSource;
+        this.dataSourceService = dataSourceService;
         this.eventTracker = eventTracker;
         this.connectionTracker = connectionTracker;
         this.messagingTemplate = messagingTemplate;
@@ -47,11 +47,15 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    private Connection getConnection() throws SQLException {
+        return dataSourceService.setDb("user").getConnection();
+    }
+
     public void addUser(String id, String username, String sessionId) throws SQLException {
         String query = CommandQueryManager.ADD_USER.get();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, id);
@@ -65,7 +69,7 @@ public class UserService {
         String query = CommandQueryManager.GET_USER_BY_ID.get();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, id);
@@ -84,7 +88,7 @@ public class UserService {
         String query = CommandQueryManager.GET_USER_BY_USERNAME.get();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, username);
@@ -104,7 +108,7 @@ public class UserService {
         List<_User> users = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
             ResultSet rs = stmt.executeQuery()
         ) {
@@ -192,7 +196,7 @@ public class UserService {
         String trimmedUsername = username.trim();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, userId);
@@ -245,7 +249,7 @@ public class UserService {
     ) throws SQLException {
         String query = CommandQueryManager.LOGIN_USER.get();
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, accountEmail.toLowerCase().trim());
@@ -308,7 +312,7 @@ public class UserService {
         Map<String, Object> profile = new HashMap<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, userId);
@@ -348,7 +352,7 @@ public class UserService {
         Timestamp time = Timestamp.valueOf(LocalDateTime.now());
         
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setTimestamp(1, time);
@@ -416,7 +420,7 @@ public class UserService {
     public _User getUserByEmail(String email) throws SQLException {
         String query = CommandQueryManager.GET_USER_BY_EMAIL.get();
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, email.toLowerCase().trim());

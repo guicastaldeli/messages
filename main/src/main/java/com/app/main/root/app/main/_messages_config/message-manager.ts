@@ -97,31 +97,32 @@ export class MessageManager {
     }
     public handleJoin(): Promise<'dashboard'> {
         return new Promise(async (res, rej) => {
-            if(!this.appEl || this.joinHandled) return rej('err');
-            
-            const usernameInput = this.appEl.querySelector<HTMLInputElement>('.join-screen #username');
+            if (!this.appEl || this.joinHandled) {
+                return rej('err');
+            }
+
             this.joinHandled = true;
 
             const data = {
                 userId: await this.socketClient.getSocketId(),
-                username: usernameInput!.value.trim(),
+                username: this.uname,
                 sessionId: await this.socketClient.getSocketId()
-            }
-            console.log(this.socketId)
+            };
+
+            console.log('Joining with data:', data);
 
             try {
-                const sucss = await this.socketClient.sendToDestination(
+                const success = await this.socketClient.sendToDestination(
                     '/app/new-user',
                     data,
                     '/topic/user'
                 );
-                if(!sucss) {
+                if (!success) {
                     this.joinHandled = false;
                     return rej(new Error('Failed to send join request!'));
                 }
-                this.uname = usernameInput!.value;
                 res('dashboard');
-            } catch(err) {
+            } catch (err) {
                 this.joinHandled = false;
                 rej(err);
             }

@@ -1,6 +1,7 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._data.MessagePerspectiveResult;
 import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app.main._messages_config.MessageLog;
@@ -9,7 +10,6 @@ import com.app.main.root.app._data.MessageAnalyzer;
 import com.app.main.root.app._data.MessagePerspectiveDetector;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,24 +18,28 @@ import java.sql.*;
 
 @Component
 public class MessageService {
-    private final DataSource dataSource;
+    private final DataSourceService dataSourceService;
     private final ServiceManager serviceManager;
     private final MessageTracker messageTracker;
     private final MessageAnalyzer messageAnalyzer;
     private final MessagePerspectiveDetector perspectiveDetector;
 
     public MessageService(
-        DataSource dataSource, 
+        DataSourceService dataSourceService, 
         @Lazy ServiceManager serviceManager,
         MessageTracker messageTracker,
         MessageAnalyzer messageAnalyzer,
         MessagePerspectiveDetector messagePerspectiveDetector
     ) {
-        this.dataSource = dataSource;
+        this.dataSourceService = dataSourceService;
         this.serviceManager = serviceManager;
         this.messageTracker = messageTracker;
         this.messageAnalyzer = messageAnalyzer;
         this.perspectiveDetector = messagePerspectiveDetector;
+    }
+
+    private Connection getConnection() throws SQLException {
+        return dataSourceService.setDb("message").getConnection();
     }
 
     /*
@@ -48,10 +52,11 @@ public class MessageService {
         String type
     ) throws SQLException {
         String query = CommandQueryManager.SAVE_MESSAGE.get();
+        int keys = Statement.RETURN_GENERATED_KEYS;
 
         try(
-            Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query, keys)
         ) {
             String fType = type != null ? type : "text";
 
@@ -93,10 +98,11 @@ public class MessageService {
     */
     public int saveSystemMessage(String content,String messageType) throws SQLException {
         String query = CommandQueryManager.SAVE_MESSAGE.get();
+        int keys = Statement.RETURN_GENERATED_KEYS;
 
         try(
-            Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query, keys);
         ) {
             stmt.setString(1, content);
             stmt.setString(2, messageType);
@@ -119,7 +125,7 @@ public class MessageService {
         List<_Message> messages = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, chatId);
@@ -139,7 +145,7 @@ public class MessageService {
         List<_Message> messages = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, chatId);
@@ -160,7 +166,7 @@ public class MessageService {
         List<_RecentChat> recentChats = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, userId);
@@ -183,7 +189,7 @@ public class MessageService {
         List<_Message> messages = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, chatId);

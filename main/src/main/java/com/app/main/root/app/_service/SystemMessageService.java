@@ -4,11 +4,11 @@ import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._data.MessagePerspectiveDetector;
 import com.app.main.root.app._data.MessagePerspectiveResult;
 import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import javax.sql.DataSource;
 import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,22 +19,25 @@ import java.util.*;
 
 @Component
 public class SystemMessageService {
-
+    private final DataSourceService dataSourceService;
     private final MessageTracker messageTracker;
-    private final DataSource dataSource;
     private final ServiceManager serviceManager;
     private final MessagePerspectiveDetector messagePerspectiveDetector;
 
     public SystemMessageService(
-        DataSource dataSource,
+        DataSourceService dataSourceService,
         @Lazy ServiceManager serviceManager,
         @Lazy MessagePerspectiveDetector messagePerspectiveDetector,
         MessageTracker messageTracker
     ) {
-        this.dataSource = dataSource;
+        this.dataSourceService = dataSourceService;
         this.serviceManager = serviceManager;
         this.messagePerspectiveDetector = messagePerspectiveDetector;
         this.messageTracker = messageTracker;
+    }
+
+    private Connection getConnection() throws SQLException {
+        return dataSourceService.setDb("system-messages").getConnection();
     }
 
     /*
@@ -46,9 +49,11 @@ public class SystemMessageService {
         String messageType
     ) throws SQLException {
         String query = CommandQueryManager.SAVE_SYSTEM_MESSAGE.get();
+        int keys = Statement.RETURN_GENERATED_KEYS;
+
         try (
-            Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query, keys);
         ) {
             stmt.setString(1, groupId);
             stmt.setString(2, content);
@@ -75,7 +80,7 @@ public class SystemMessageService {
         List<_Message> messages = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, groupId);

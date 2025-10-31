@@ -1,5 +1,6 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._db.DataSourceService;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.sql.PreparedStatement;
@@ -7,15 +8,18 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import javax.sql.DataSource;
 import java.util.*;
 
 public class InviteCodeManager {
-    private final DataSource dataSource;
+    private final DataSourceService dataSourceService;
 
-    public InviteCodeManager(DataSource dataSource) {
-        this.dataSource = dataSource;
+    public InviteCodeManager(DataSourceService dataSourceService) {
+        this.dataSourceService = dataSourceService;
         this.createIdx();
+    }
+
+    private Connection getConnection() throws SQLException {
+        return dataSourceService.setDb("invite-codes").getConnection();
     }
 
     /*
@@ -27,7 +31,7 @@ public class InviteCodeManager {
         String inviteCodeUsed = CommandQueryManager.EXEC_INDEX_INVITE_USED.get();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             Statement stmt = conn.createStatement();
         ) {
             stmt.execute(groupInviteCode);
@@ -51,7 +55,7 @@ public class InviteCodeManager {
         String query = CommandQueryManager.STORE_INVITE_CODE.get();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             LocalDateTime expiresAt = LocalDateTime.now().plusHours(24);
@@ -77,7 +81,7 @@ public class InviteCodeManager {
         Timestamp time = Timestamp.valueOf(LocalDateTime.now());
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, groupId);
@@ -105,7 +109,7 @@ public class InviteCodeManager {
         Timestamp timestamp = Timestamp.valueOf(LocalDateTime.now());
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setTimestamp(1, timestamp);
@@ -124,7 +128,7 @@ public class InviteCodeManager {
         List<Map<String, Object>> codes = new ArrayList<>();
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, groupId);
@@ -153,7 +157,7 @@ public class InviteCodeManager {
         Timestamp currentTime = Timestamp.valueOf(LocalDateTime.now());
 
         try(
-            Connection conn = dataSource.getConnection();
+            Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, inviteCode);
