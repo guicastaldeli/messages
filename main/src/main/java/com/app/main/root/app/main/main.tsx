@@ -87,24 +87,130 @@ export class Main extends Component<any, State> {
     }
 
     //Join
-    private handleJoin = async (sessionContext: any): Promise<void> => {
-        if(!this.chatManager) throw new Error('Chat manager error');
+    /*
+    **
+    ** THIS *PROBABLY BUGGIER CODE IS A AI CODE FOR-
+    ** TEST PURPOSES ONLY!!!. I DID THIS VERY QUICK! (I MEAN THE AI!)
+    ** SWITCH THIS THING LATER. THANK YOU!!
+    **
+    */
+    private loginEmailRef = React.createRef<HTMLInputElement>();
+    private loginPasswordRef = React.createRef<HTMLInputElement>();
+    private createEmailRef = React.createRef<HTMLInputElement>();
+    private createUsernameRef = React.createRef<HTMLInputElement>();
+    private createPasswordRef = React.createRef<HTMLInputElement>();
+    private handleJoin = async (sessionContext: any, isCreateAccount: boolean = false): Promise<void> => {
+        if (!this.chatManager) {
+            console.error('Chat manager not initialized');
+            return;
+        }
 
         try {
-            const usernameInput = document.getElementById('username') as HTMLInputElement;
-            const username = usernameInput.value.trim();
+            let email, username, password;
 
-            if(sessionContext) {
-                sessionContext.setUsername(username);
-                sessionContext.setUserId(`user_${Date.now()}`);
+            if (isCreateAccount) {
+                if (!this.createEmailRef.current || !this.createUsernameRef.current || !this.createPasswordRef.current) {
+                    alert('Form elements not found');
+                    return;
+                }
+                
+                email = this.createEmailRef.current.value.trim();
+                username = this.createUsernameRef.current.value.trim();
+                password = this.createPasswordRef.current.value.trim();
+
+                if (!email || !username || !password) {
+                    alert('All fields are required for account creation');
+                    return;
+                }
+                try {
+                    const userService = await this.apiClient.getUserService();
+                    const usernameExists = await userService.checkUsernameExists(username);
+                    if (usernameExists) {
+                        alert('Username already taken');
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Error checking username:', err);
+                }
+                try {
+                    const userService = await this.apiClient.getUserService();
+                    const emailExists = await userService.checkUserExists(email);
+                    if (emailExists) {
+                        alert('Email already registered');
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Error checking email:', err);
+                }
+            } else {
+                if (!this.loginEmailRef.current || !this.loginPasswordRef.current) {
+                    alert('Form elements not found');
+                    return;
+                }
+                
+                email = this.loginEmailRef.current.value.trim();
+                password = this.loginPasswordRef.current.value.trim();
+
+                if (!email || !password) {
+                    alert('Email and password are required');
+                    return;
+                }
             }
 
-            await this.messageManager.handleJoin();
-            if(sessionContext) sessionContext.setSession('MAIN_DASHBOARD');
-            this.chatManager.setUsername(username);
-            this.setState({ chatManager: this.chatManager });
-        } catch(err) {
-            console.error(err);
+            const sessionId = sessionContext.sessionId || `session_${Date.now()}`;
+            let result;
+
+            try {
+                const authService = await this.apiClient.getAuthService();
+                if (isCreateAccount) {
+                    result = await authService.registerUser({
+                        email: email,
+                        username: username!,
+                        password: password,
+                        sessionId: sessionId
+                    });
+                } else {
+                    result = await authService.loginUser({
+                        email: email,
+                        password: password,
+                        sessionId: sessionId
+                    });
+                }
+
+                console.log('Auth result:', result);
+                const authData = result;
+
+                if (authData && authData.userId) {
+                    const finalUsername = authData.username;
+                    this.chatManager.setUsername(finalUsername);
+                    
+                    this.setState({ 
+                        chatManager: this.chatManager,
+                        username: finalUsername,
+                        userId: authData.userId
+                    }, async () => {
+                        try {
+                            await this.messageManager.handleJoin();
+                            sessionContext.setSession('MAIN_DASHBOARD');
+                            console.log('Successfully joined and navigated to dashboard!');
+                        } catch (err) {
+                            console.error('Error in handleJoin:', err);
+                            alert('Failed to join chat: ' + err);
+                        }
+                    });
+                } else {
+                    console.error('Invalid auth data:', authData);
+                    throw new Error('Invalid response from server - missing user data');
+                }
+
+            } catch (err: any) {
+                console.error('Authentication API error:', err);
+                alert(`Authentication failed: ${err.message}`);
+            }
+
+        } catch (err: any) {
+            console.error('Authentication error:', err);
+            alert(`Authentication failed: ${err.message}`);
         }
     }
 
@@ -128,37 +234,53 @@ export class Main extends Component<any, State> {
                                     {sessionContext && sessionContext.currentSession === 'LOGIN' && (
                                         <div className='screen join-screen'>
                                             <div className='form'>
+                                                {/* Login Form */}
                                                 <div className="form-input">
-                                                    <h2>Join</h2>
+                                                    <h2>Login</h2>
                                                     <label>Email</label>
-                                                    <input type="text" id="email" />
+                                                    <input 
+                                                        type="email" 
+                                                        ref={this.loginEmailRef}
+                                                    />
                                                     <label>Password</label>
-                                                    <input type="text" id="email" />
+                                                    <input 
+                                                        type="password" 
+                                                        ref={this.loginPasswordRef}
+                                                    />
                                                     <div className='form-input'>
-                                                    <button 
-                                                        id='join-user' 
-                                                        onClick={() => this.handleJoin(sessionContext)}
-                                                    >
-                                                        Join
-                                                    </button>
+                                                        <button 
+                                                            onClick={() => this.handleJoin(sessionContext, false)}
+                                                        >
+                                                            Login
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                </div>
+                                                
+                                                {/* Create Account Form */}
                                                 <div className="form-input">
                                                     <h2>Create Account</h2>
                                                     <label>Email</label>
-                                                    <input type="text" id="email" />
+                                                    <input 
+                                                        type="email" 
+                                                        ref={this.createEmailRef}
+                                                    />
                                                     <label>Username</label>
-                                                    <input type="text" id="username" />
+                                                    <input 
+                                                        type="text" 
+                                                        ref={this.createUsernameRef}
+                                                    />
                                                     <label>Password</label>
-                                                    <input type="text" id="email" />
+                                                    <input 
+                                                        type="password" 
+                                                        ref={this.createPasswordRef}
+                                                    />
                                                     <div className='form-input'>
-                                                    <button 
-                                                        id='create-user' 
-                                                        onClick={() => this.handleJoin(sessionContext)}
-                                                    >
-                                                        Create
-                                                    </button>
-                                                </div>
+                                                        <button 
+                                                            onClick={() => this.handleJoin(sessionContext, true)}
+                                                        >
+                                                            Create Account
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

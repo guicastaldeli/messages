@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS user_profiles;
+DROP TABLE IF EXISTS users;
+
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,

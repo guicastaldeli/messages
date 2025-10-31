@@ -1,15 +1,12 @@
 package com.app.main.root.app._auth;
 
 public class AuthManager {
-    public final RegisterRequest registerRequest;
-    public final LoginRequest loginRequest;
+    public RegisterRequest registerRequest;
+    public LoginRequest loginRequest;
 
-    public AuthManager(
-        RegisterRequest registerRequest,
-        LoginRequest loginRequest
-    ) {
-        this.registerRequest = registerRequest;
-        this.loginRequest = loginRequest;
+    public AuthManager() {
+        this.registerRequest = new RegisterRequest();
+        this.loginRequest = new LoginRequest();
     }
 
     /* Register Request */

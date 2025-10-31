@@ -92,17 +92,19 @@ export class MessageManager {
     }
 
     /* SWITCH LATER TO JOIN CLASS :P */
+    public setUsername(username: string): void {
+        this.uname = username;
+    }
     public handleJoin(): Promise<'dashboard'> {
         return new Promise(async (res, rej) => {
             if(!this.appEl || this.joinHandled) return rej('err');
             
             const usernameInput = this.appEl.querySelector<HTMLInputElement>('.join-screen #username');
-            if(!usernameInput || !usernameInput.value.trim()) return rej(new Error('Username is required'));
             this.joinHandled = true;
 
             const data = {
                 userId: await this.socketClient.getSocketId(),
-                username: usernameInput.value.trim(),
+                username: usernameInput!.value.trim(),
                 sessionId: await this.socketClient.getSocketId()
             }
             console.log(this.socketId)
@@ -117,7 +119,7 @@ export class MessageManager {
                     this.joinHandled = false;
                     return rej(new Error('Failed to send join request!'));
                 }
-                this.uname = usernameInput.value;
+                this.uname = usernameInput!.value;
                 res('dashboard');
             } catch(err) {
                 this.joinHandled = false;

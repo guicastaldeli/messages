@@ -11,9 +11,9 @@
 class PasswordEncoder {
     private:
         static const int SALT_LENGTH = 32;
-        static const int HASH_KEY_LENGTH = 512;
-        static const int HASH_ITERATIONS = 100000;
-        static const int MEMORY_COST = 1024 * 1024;
+        static const int HASH_KEY_LENGTH = 128;
+        static const int HASH_ITERATIONS = 1000;
+        static const int MEMORY_COST = 128 * 128;
 
         std::vector<unsigned char> pepper;
         std::vector<unsigned char> generateSalt();

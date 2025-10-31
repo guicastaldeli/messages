@@ -183,21 +183,22 @@ public class UserService {
         String sessionId
     ) throws SQLException {
         if(username == null || username.trim().isEmpty()) throw new IllegalArgumentException("Username is required");
-        if(email == null || serviceManager.getEmailService().isValidEmail(email)) throw new IllegalArgumentException("Email is required");
+        if(email == null || !serviceManager.getEmailService().isValidEmail(email)) throw new IllegalArgumentException("Email is required");
         if(password == null || password.length() < 8) throw new IllegalArgumentException("Password is required");
 
         String userId = "user_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 12);
-        String passwordHash = passwordEncoder.encode(password);
+        //String passwordHash = passwordEncoder.encode(password);
         String query = CommandQueryManager.REGISTER_USER.get();
+        String trimmedUsername = username.trim();
 
         try(
             Connection conn = dataSource.getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, userId);
-            stmt.setString(2, username.trim());
+            stmt.setString(2, trimmedUsername);
             stmt.setString(3, email.toLowerCase().trim());
-            stmt.setString(4, passwordHash);
+            stmt.setString(4, password);
             stmt.setString(5, sessionId);
             
             int rowsAffected = stmt.executeUpdate();
@@ -208,14 +209,14 @@ public class UserService {
 
                 Map<String, Object> res = new HashMap<>();
                 res.put("userId", userId);
-                res.put("username", username);
+                res.put("username", trimmedUsername);
                 res.put("email", email);
 
                 eventTracker.track(
                     "user-registred",
                     Map.of(
                         "userId", userId,
-                        "username", username,
+                        "username", trimmedUsername,
                         "email", email
                     ),
                     EventDirection.INTERNAL,
@@ -248,7 +249,6 @@ public class UserService {
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, accountEmail.toLowerCase().trim());
-            stmt.setString(2, accountEmail.trim());
 
             try(ResultSet rs = stmt.executeQuery()) {
                 if(rs.next()) {
@@ -257,13 +257,16 @@ public class UserService {
                     String username = rs.getString("username");
                     String email = rs.getString("email");
 
-                    if(passwordEncoder.matches(password, storedHash)) {
+                   // if(passwordEncoder.matches(password, storedHash)) {
+                    if(password != null && storedHash != null && password.equals(storedHash)) {
+
+                    
                         updateUserSession(conn, userId, sessionId);
 
                         Map<String, Object> res = new HashMap<>();
                         res.put("userId", userId);
-                        res.put("username", username);
                         res.put("email", email);
+                        res.put("username", username);
                         res.put("sessionId", sessionId);
 
                         eventTracker.track(
@@ -279,6 +282,7 @@ public class UserService {
 
                         return res;
                     }
+                   // }
                 }
             }
         }

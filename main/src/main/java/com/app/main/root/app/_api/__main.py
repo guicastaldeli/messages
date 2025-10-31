@@ -7,6 +7,8 @@ from connection.connection_service import ConnectionService
 from connection.connection_routes import ConnectionRoutes
 from session.session_service import SessionService
 from session.session_routes import SessionRoutes
+from user.user_service import UserService
+from user.user_routes import UserRoutes
 from __index import router as router
 from config import config
 
@@ -50,6 +52,11 @@ class Main:
         self.messageService = MessageService(DB_API_URL)
         self.messageRoutes = MessageRoutes(self.messageService)
         self.app.include_router(self.messageRoutes.router)
+        
+        ## User
+        self.userService = UserService(SERVER_URL)
+        self.userRoutes = UserRoutes(self.userService)
+        self.app.include_router(self.userRoutes.router)
         
 
 # Init

@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._auth.AuthManager;
+import com.app.main.root.app._auth.RegisterRequest;
+import com.app.main.root.app._auth.LoginRequest;
 import java.util.Map;
 
 @RestController
@@ -17,9 +19,12 @@ public class AuthController {
     private final ServiceManager serviceManager;
     private final AuthManager authManager;
 
+    private RegisterRequest registerRequest;
+    private LoginRequest loginRequest;
+
     public AuthController(
-        AuthManager authManager,
-        EventTracker eventTracker, 
+        @Lazy AuthManager authManager,
+        @Lazy EventTracker eventTracker, 
         @Lazy ServiceManager serviceManager
     ) {
         this.authManager = authManager;
@@ -28,22 +33,22 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody AuthManager request) {
+    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest request) {
         try {
-            var registerRequest = request.getRegisterRequest();
-            System.out.println("Registration attempt for: " + registerRequest.getEmail());
+            System.out.println("Registration attempt for: " + request.getEmail());
 
             Map<String, Object> result = serviceManager.getUserService().registerUser(
-                registerRequest.getUsername(),
-                registerRequest.getEmail(),
-                registerRequest.getPassword(),
-                registerRequest.getSessionId()
+                request.getUsername(),
+                request.getEmail(),
+                request.getPassword(),
+                request.getSessionId()
             );
 
-            System.out.println("Registered!:" + registerRequest.getEmail());
+            System.out.println("Registered!:" + request.getEmail());
             return ResponseEntity.ok(result);
         } catch(Exception err) {
             System.err.println("Registration failed" + err.getMessage());
+            err.printStackTrace();
             return ResponseEntity.badRequest()
                 .body(
                     Map.of(
@@ -57,18 +62,17 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody AuthManager request) {
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest request) {
         try {
-            var loginRequest = request.getLoginRequest();
-            System.out.println("Login attempt for: " + loginRequest.getEmail());
+            System.out.println("Login attempt for: " + request.getEmail());
 
             Map<String, Object> result = serviceManager.getUserService().loginUser(
-                loginRequest.getEmail(),
-                loginRequest.getPassword(),
-                loginRequest.getSessionId()
+                request.getEmail(),
+                request.getPassword(),
+                request.getSessionId()
             );
 
-            System.out.println("Logged!: " + loginRequest.getEmail());
+            System.out.println("Logged!: " + request.getEmail());
             return ResponseEntity.ok(result);
         } catch(Exception err) {
             return ResponseEntity.badRequest()

@@ -137,7 +137,7 @@ public enum CommandQueryManager {
         """
     ),
     UPDATE_USER_SESSION(
-        "UPDATE users SET session_id, last_login = ? WHERE id = ?"
+        "UPDATE users SET session_id = ?, last_login = ? WHERE id = ?"
     ),
     UPDATE_LAST_LOGIN(
         "UPDATE users SET last_login = ? WHERE id = ?"
