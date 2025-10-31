@@ -1,11 +1,19 @@
 package com.app.main.root.app._db;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import javax.sql.DataSource;
 import java.util.*;
 
 @Configuration
+@EnableAutoConfiguration(exclude = {
+    DataSourceAutoConfiguration.class,
+    HibernateJpaAutoConfiguration.class
+})
 public class DbConfig {
     public void verify() {
         System.out.println("Database Config initialized...");
@@ -17,9 +25,17 @@ public class DbConfig {
     }
 
     @Bean
+    @Primary
+    public DataSource dataSource(DbManager dbManager) {
+        Map<String, DataSource> dataSources = dbManager.initAllDatabases();
+        return dataSources.values().iterator().next();
+    } 
+
+    @Bean 
     public Map<String, DataSource> dataSources(DbManager dbManager) {
         return dbManager.initAllDatabases();
     } 
+
 
     @Bean Map<String, JdbcTemplate> jdbcTemplates(Map<String, DataSource> dataSources) {
         Map<String, JdbcTemplate> templates = new HashMap<>();

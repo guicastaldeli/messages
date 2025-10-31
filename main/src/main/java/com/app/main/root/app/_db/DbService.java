@@ -3,7 +3,6 @@ import com.app.main.root.EnvConfig;
 import com.app.main.root.app._utils.ColorConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import javax.sql.DataSource;
 
 @Service
 public class DbService {
@@ -12,17 +11,19 @@ public class DbService {
     public final ColorConverter colorConverter;
     private final DbConfig dbConfig;
     private final DbManager dbManager;
+    private final DataSourceService dataSourceService;
 
     public DbService(
-        DataSource dataSource, 
         ColorConverter colorConverter,
         DbConfig dbConfig,
-        DbManager dbManager
+        DbManager dbManager,
+        DataSourceService dataSourceService
     ) {
         this.restTemplate = new RestTemplate();
         this.colorConverter = colorConverter;
         this.dbConfig = dbConfig;
         this.dbManager = dbManager;
+        this.dataSourceService = dataSourceService;
     }
 
     public void alert() {
@@ -34,5 +35,6 @@ public class DbService {
         );
         if(dbConfig != null) dbConfig.verify();
         if(dbManager != null) dbManager.verify();
+        System.out.println("Available databases: " + dataSourceService.getAvailableDatabases());
     }
 }
