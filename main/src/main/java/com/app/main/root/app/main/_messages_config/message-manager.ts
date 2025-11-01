@@ -26,11 +26,11 @@ export class MessageManager {
     private lastSystemMessageKeys: Set<string> = new Set();
 
     private chatRegistry: ChatRegistry = new ChatRegistry();
-    private uname: any;
     private appEl: HTMLDivElement | null = null;
-    private socketId: string | null = null;
-    private currentUserId: string | null = null;
     private joinHandled: boolean = false;
+    private socketId!: string;
+    private userId!: string;
+    private username!: string;
 
     private isSending: boolean = false;
     private sendQueue: Array<() => Promise<void>> = [];
@@ -50,12 +50,13 @@ export class MessageManager {
         this.appEl = document.querySelector<HTMLDivElement>('.app');
         this.setupMessageHandling();
 
-        this.socketClient.on('connect', (id: string) => {
-            this.socketId = id;
-            this.currentUserId = id;
-        });
-
         await this.socketClient.connect();
+    }
+
+    public async setUserData(sessionId: string, userId: string, username: string): Promise<void> {
+        this.socketId = sessionId;
+        this.userId = userId;
+        this.username = username;
         await this.setupSubscriptions();
     }
 
@@ -70,9 +71,7 @@ export class MessageManager {
     ** Setup Subscriptions
     */
     private async setupSubscriptions(): Promise<void> {
-        const client = await this.socketClient.getSocketId();
-        this.socketId = client;
-        this.messageAnalyzer.init(client, this.currentUserId, this.uname);
+        this.messageAnalyzer.init(this.socketId, this.userId, this.username);
         await this.updateSubscription('CHAT', undefined, 'CHAT');
     }
 
@@ -93,9 +92,13 @@ export class MessageManager {
 
     /* SWITCH LATER TO JOIN CLASS :P */
     public setUsername(username: string): void {
-        this.uname = username;
+        this.username = username;
     }
-    public handleJoin(): Promise<'dashboard'> {
+    public handleJoin(
+        sessionId: string, 
+        userId: string, 
+        username: string
+    ): Promise<'dashboard'> {
         return new Promise(async (res, rej) => {
             if (!this.appEl || this.joinHandled) {
                 return rej('err');
@@ -104,9 +107,9 @@ export class MessageManager {
             this.joinHandled = true;
 
             const data = {
-                userId: await this.socketClient.getSocketId(),
-                username: this.uname,
-                sessionId: await this.socketClient.getSocketId()
+                sessionId: sessionId,
+                userId: userId,
+                username: username
             };
 
             console.log('Joining with data:', data);
@@ -185,7 +188,7 @@ export class MessageManager {
     private async getMetadataType(context: Context): Promise<string> {
         const initData = {
             senderId: this.socketClient,
-            username: this.uname,
+            username: this.username,
             content: 'content',
             chatId: context.id,
             chatType: context.type,
@@ -228,7 +231,7 @@ export class MessageManager {
             const content = {
                 content: msgInput,
                 senderId: senderId,
-                username: this.uname,
+                username: this.username,
                 timestamp: Date.now()
             };
             await this.sendMessage(content);
@@ -245,8 +248,6 @@ export class MessageManager {
     ** Send Message Method
     */
     private async sendMessage(content: any): Promise<boolean> {
-        const client = this.socketId;
-        this.currentUserId = client;
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
         const isGroupChat = currentChat?.type === 'GROUP';
@@ -255,15 +256,19 @@ export class MessageManager {
             console.error('No chatId found');
             return false;
         }
-        if(!client) return false;
+        if(!this.socketId) return false;
+
+        console.log('sendMessage - currentUserId:', this.userId);
+        console.log('sendMessage - username:', this.username);
+        console.log('sendMessage - socketId:', this.socketId);
 
         const data = {
-            senderId: this.currentUserId,
+            senderId: this.userId,
             senderSessionId: this.socketId,
-            username: this.uname,
+            username: this.username,
             content: content.content,
             messageId: content.messageId,
-            targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != client),
+            targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != this.socketId),
             groupId: isGroupChat ? currentChat?.id : undefined,
             chatId: chatId,
             timestamp: time,
@@ -314,6 +319,7 @@ export class MessageManager {
                 });
                 this.chatManager.setLastMessage(
                     analyzedData.chatId,
+                    analyzedData.userId,
                     analyzedData.messageId,
                     analyzedData.content,
                     analyzedData.senderId,
@@ -340,6 +346,7 @@ export class MessageManager {
             await this.renderMessage(data, analysis);
             this.chatManager.setLastMessage(
                 data.chatId,
+                data.userId,
                 data.messageId,
                 data.content,
                 data.username,
@@ -357,6 +364,7 @@ export class MessageManager {
         await this.renderMessage(data, { ...analysis, direction });
         this.chatManager.setLastMessage(
             data.chatId,
+            data.userId,
             data.messageId,
             data.content,
             data.username,
@@ -375,14 +383,14 @@ export class MessageManager {
         if(currentChat?.type === 'GROUP' && analysis.direction === 'other') {
             userColor = UserColorGenerator.getUserColorForGroup(
                 currentChat.id,
-                data.senderId || data.userId || this.currentUserId
+                data.senderId || data.userId || this.userId
             );
         }
 
-        this.messageComponent.setCurrentUserId(this.currentUserId!);
+        this.messageComponent.setCurrentUserId(this.userId!);
         const messageProps = {
             username: perspective.showUsername,
-            userId: this.currentUserId,
+            userId: this.userId,
             content: data.content,
             timestamp: data.timestamp,
             messageId: data.messageId,

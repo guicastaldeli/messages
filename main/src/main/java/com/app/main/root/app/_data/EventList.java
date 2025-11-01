@@ -88,14 +88,15 @@ public class EventList {
                 connectionTracker.updateUsername(sessionId, username);
 
                 try {
-                    String actualUserId = userId != null ? userId : sessionId;
-                    serviceManager.getUserService().addUser(actualUserId, username, sessionId);
+                    serviceManager.getUserService().addUser(userId, username, sessionId);
                     ConnectionInfo connectionInfo = connectionTracker.getConnection(sessionId);
                     if(connectionInfo != null) connectionTracker.logUsernameSet(connectionInfo, username);
+                    serviceManager.getUserService().linkUserSession(userId, sessionId);
                 } catch(Exception err) {
                     System.out.println("Failed to add user: " + err.getMessage());
                 }
 
+                System.out.println("USER ID" + userId);
                 Map<String, Object> res = new HashMap<>();
                 res.put("type", "USER_JOINED");
                 res.put("userId", userId);
@@ -106,6 +107,52 @@ public class EventList {
             },
             "/topic/user",
             true
+        ));
+        /* User Id */
+        configs.put("get-user-id", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                long time = System.currentTimeMillis();
+                String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+
+                eventTracker.track(
+                    "get-user-id",
+                    payload,
+                    EventDirection.RECEIVED,
+                    sessionId,
+                    sessionId
+                );
+
+                Map<String, Object> res = new HashMap<>();
+                res.put("userId", userId);
+                res.put("timestamp", time);
+                res.put("status", "success");
+                return res;
+            },
+            "/queue/user-id",
+            false
+        ));
+        /* User Id */
+        configs.put("get-username", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                long time = System.currentTimeMillis();
+                String username = serviceManager.getUserService().getUsernameBySessionId(sessionId);
+
+                eventTracker.track(
+                    "get-username",
+                    payload,
+                    EventDirection.RECEIVED,
+                    sessionId,
+                    sessionId
+                );
+
+                Map<String, Object> res = new HashMap<>();
+                res.put("username", username);
+                res.put("timestamp", time);
+                res.put("status", "success");
+                return res;
+            },
+            "/queue/username",
+            false
         ));
         /* Chat */
         configs.put("chat", new EventConfig(
@@ -406,6 +453,49 @@ public class EventList {
                 }
             },
             "/user/queue/exit-group-scss",
+            false
+        ));
+        /* Get User Groups */
+        configs.put("get-user-groups", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String userId = (String) data.get("userId");
+                    if(userId == null || userId.trim().isEmpty()) {
+                        throw new IllegalArgumentException("User ID is required!");
+                    }
+
+                    List<Map<String, Object>> userGroups = serviceManager.getUserService()
+                        .getUserGroups(userId);
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("userId", userId);
+                    res.put("groups", userGroups);
+                    res.put("count", userGroups.size());
+                    res.put("status", "success");
+
+                    eventTracker.track(
+                        "get-user-groups",
+                        Map.of(
+                            "userId", userId,
+                            "groupCount", userGroups.size()
+                        ),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        userId
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    err.getStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "LOAD_GROUPS_FAILED");
+                    errRes.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/user-groups-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/user-groups-scss",
             false
         ));
         /* Generate Group Link */

@@ -97,7 +97,7 @@ export class ChatManager {
     ** Update Last Message
     */
     private handleLastMessage = (event: CustomEvent): void => {
-        const { messageId, chatId, lastMessage, sender, timestamp, isCurrentUser, isSystem } = event.detail;
+        const { messageId, chatId, userId, lastMessage, sender, timestamp, isCurrentUser, isSystem } = event.detail;
         console.log(event.detail)
         const systemMessage = this.isSystemMessage(event.detail);
 
@@ -112,6 +112,7 @@ export class ChatManager {
 
         this.updateLastMessage({
             id: chatId,
+            userId: userId,
             messageId: messageId,
             lastMessage: formattedMessage,
             sender: sender,
@@ -121,12 +122,13 @@ export class ChatManager {
 
     public updateLastMessage(detail: {
         id: string;
+        userId: string;
         messageId: string;
         lastMessage: string;
         sender: string;
         timestamp: string;
     }): void {
-        const { id, lastMessage, sender, timestamp, messageId } = detail;
+        const { id, lastMessage, sender, timestamp, messageId, userId } = detail;
         const now = new Date(timestamp);
         
         this.setState((prevState: State) => {
@@ -141,6 +143,7 @@ export class ChatManager {
 
             const updatedChat = {
                 ...originalChat,
+                userId: userId,
                 messageId: messageId,
                 lastMessage: this.formattedLastMessage(lastMessage),
                 lastMessageSender: sender,
@@ -156,6 +159,7 @@ export class ChatManager {
 
     public setLastMessage(
         id: string,
+        userId: string,
         messageId: string,
         content: string,
         sender: string,
@@ -163,6 +167,7 @@ export class ChatManager {
     ): void {
         this.getGroupManager().updateLastMessage(
             id,
+            userId,
             messageId, 
             content, 
             sender,

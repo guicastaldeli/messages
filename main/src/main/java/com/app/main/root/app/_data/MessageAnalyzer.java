@@ -41,6 +41,7 @@ public class MessageAnalyzer {
         String content = (String) payload.get("content");
         String messageId = (String) payload.get("messageId");
         String chatId = (String) payload.get("chatId");
+        String userId = (String) payload.get("userId");
         String groupId = (String) payload.get("groupId");
         String targetUserId = (String) payload.get("targetUserId");
         String username = (String) payload.get("username");
@@ -54,6 +55,7 @@ public class MessageAnalyzer {
 
         return new MessageContext(
             sessionId, 
+            userId,
             content,
             messageId,
             chatId,
@@ -71,14 +73,15 @@ public class MessageAnalyzer {
     */
     private Map<String, Object> setMessage(MessageContext context) {
         String messageId = context.messageId != null ? context.messageId : 
-        "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+            "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
         String type = getMessageType(context);
         long time = System.currentTimeMillis();
 
         Map<String, Object> message = new HashMap<>();
         message.put("username", context.username);
         message.put("content", context.content);
-        message.put("senderId", context.sessionId);
+        message.put("senderId", context.userId);
+        message.put("userId", context.userId);
         message.put("chatId", context.chatId);
         message.put("targetUserId", context.targetUserId);
         message.put("messageId", messageId);
@@ -91,6 +94,7 @@ public class MessageAnalyzer {
 
         Map<String, Object> routingMetadata = new HashMap<>();
         routingMetadata.put("sessionId", context.sessionId);
+        routingMetadata.put("userId", context.userId);
         routingMetadata.put("messageType", type);
         routingMetadata.put("messageId", messageId);
         routingMetadata.put("isDirect", context.isDirect);

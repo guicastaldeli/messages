@@ -120,6 +120,31 @@ public class UserService {
         return users;
     }
 
+    public List<Map<String, Object>> getUserGroups(String userId) throws SQLException {
+        String query = CommandQueryManager.GET_USER_GROUPS.get();
+        List<Map<String, Object>> groups = new ArrayList<>();
+
+        try(
+            Connection conn = dataSourceService.setDb("group").getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query)
+        ) {
+            stmt.setString(1, userId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                while(rs.next()) {
+                    Map<String, Object> group = new HashMap<>();
+                    group.put("id", rs.getString("id"));
+                    group.put("name", rs.getString("name"));
+                    group.put("creatorId", rs.getString("creator_id"));
+                    group.put("createdAt", rs.getString("created_at"));
+                    group.put("memberCount", rs.getString("member_count"));
+                    groups.add(group);
+                }
+            }
+        }
+
+        return groups;
+    } 
+
     /* Username */
     public String getUsernameBySessionId(String sessionId) {
         return sessionToUserMap.get(sessionId);
@@ -130,10 +155,6 @@ public class UserService {
         return userToSessionMap.get(userId);
     }
 
-    /* User Id by Session Id */
-    public String getUserIdBySession(String sessionId) {
-        return sessionToUserMap.get(sessionId);
-    } 
 
     /* Link */
     public void linkUserSession(String userId, String sessionId) {
@@ -190,7 +211,7 @@ public class UserService {
         if(email == null || !serviceManager.getEmailService().isValidEmail(email)) throw new IllegalArgumentException("Email is required");
         if(password == null || password.length() < 8) throw new IllegalArgumentException("Password is required");
 
-        String userId = "user_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 12);
+        String userId = generateUserId();
         //String passwordHash = passwordEncoder.encode(password);
         String query = CommandQueryManager.REGISTER_USER.get();
         String trimmedUsername = username.trim();
@@ -473,4 +494,16 @@ public class UserService {
         userInfo.put("createdAt", user.getCreatedAt());
         return userInfo;
     }
+
+    /*
+    * User Id 
+    */
+    private String generateUserId() {
+        String userId = "user_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 12);
+        return userId;
+    }
+
+    public String getUserIdBySession(String sessionId) {
+        return sessionToUserMap.get(sessionId);
+    } 
 }

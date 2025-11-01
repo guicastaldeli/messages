@@ -2,6 +2,7 @@ package com.app.main.root.app._data;
 
 public class MessageContext {
     public final String sessionId;
+    public final String userId;
     public final String content;
     public final String messageId;
     public final String chatId;
@@ -14,6 +15,7 @@ public class MessageContext {
 
     public MessageContext(
         String sessionId,
+        String userId,
         String content,
         String messageId,
         String chatId,
@@ -25,6 +27,7 @@ public class MessageContext {
         boolean isBroadcast
     ) {
         this.sessionId = sessionId;
+        this.userId = userId;
         this.content = content;
         this.messageId = messageId;
         this.chatId = chatId;

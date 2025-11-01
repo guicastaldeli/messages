@@ -190,9 +190,11 @@ export class Main extends Component<any, State> {
                         userId: authData.userId
                     }, async () => {
                         try {
-                            await this.messageManager.handleJoin();
+                            await this.messageManager.setUserData(authData.sessionId, authData.userId, authData.username);
+                            await this.messageManager.handleJoin(authData.sessionId, authData.userId, authData.username);
                             sessionContext.setSession('MAIN_DASHBOARD');
                             console.log('Successfully joined and navigated to dashboard!');
+                            this.chatManager?.getGroupManager().loadUserGroups(authData.userId);
                         } catch (err) {
                             console.error('Error in handleJoin:', err);
                             alert('Failed to join chat: ' + err);

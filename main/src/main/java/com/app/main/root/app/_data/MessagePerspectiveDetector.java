@@ -20,7 +20,6 @@ public class MessagePerspectiveDetector {
         String messageUsername = (String) data.get("username");
         String chatType = (String) data.get("chatType");
         String messageType = (String) data.get("type");
-        String currentUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
         
         boolean isGroup = 
             "GROUP".equals(chatType) ||
@@ -28,7 +27,7 @@ public class MessagePerspectiveDetector {
             data.containsKey("groupId") || 
             (chatId != null && chatId.startsWith("group_"));
         boolean isSystem = isSystemMessage(data);
-        boolean isSelf = isSelfMessage(sessionId, currentUsername, data);
+        boolean isSelf = isSelfMessage(sessionId, data);
         String displayUsername = determineDisplayUsername(isSelf, isGroup, messageUsername);
 
         if(isSystem) {
@@ -92,21 +91,12 @@ public class MessagePerspectiveDetector {
     *** Normal
     **
     */
-    private boolean isSelfMessage(
-        String sessionId,
-        String currentUsername,
-        Map<String, Object> data
-    ) {
-        String senderId = (String) data.get("senderId");
-        String username = (String) data.get("username");
+    private boolean isSelfMessage(String sessionId, Map<String, Object> data) {
+        String senderId = (String) data.get("userId");
         String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
         boolean result = false;
         
-        if(sessionId.equals(senderId)) {
-            result = true;
-        } else if(currentUserId != null && currentUserId.equals(senderId)) {
-            result = true;
-        } else if(currentUsername != null && currentUsername.equals(username)) {
+        if(currentUserId != null && currentUserId.equals(senderId)) {
             result = true;
         }
         return result;

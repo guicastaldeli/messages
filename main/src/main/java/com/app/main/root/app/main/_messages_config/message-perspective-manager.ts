@@ -4,13 +4,16 @@ import { MessageAnalyzerClient, Analysis, Metadata } from "./message-analyzer-cl
 export class MessagePerspectiveManager {
     private messageAnalyzerClient: MessageAnalyzerClient;
     private currentSessionId: string;
+    private currentUserId: string;
 
     constructor(
         messageAnalyzerClient: MessageAnalyzerClient,
-        currentSessionId: string
+        currentSessionId: string,
+        currentUserId: string
     ) {
         this.messageAnalyzerClient = messageAnalyzerClient;
         this.currentSessionId = currentSessionId;
+        this.currentUserId = currentUserId;
     }
 
     /*
@@ -31,14 +34,13 @@ export class MessagePerspectiveManager {
     }
 
     public calculateClientPerspective(data: any): any {
-        const senderId = data.senderId;
-        const currentUserId = this.currentSessionId;
-        const isSelf = senderId === currentUserId;
+        const senderId = data.userId;
+        const isSelf = senderId === this.currentUserId;
         const isGroup = data.isGroup || data.chatId?.startsWith('group_');
         const isSystem = data.isSystem || data.type === 'SYSTEM';
         const shouldShowUsername = !isSelf && data.username;
 
-        if (isSystem) {
+        if(isSystem) {
             return {
                 direction: 'system',
                 perspectiveType: 'SYSTEM_MESSAGE',
@@ -52,7 +54,7 @@ export class MessagePerspectiveManager {
                 isAboutCurrentUser: false
             }
         }
-        if (isSelf) {
+        if(isSelf) {
             return {
                 direction: 'self',
                 perspectiveType: isGroup ? 'GROUP_SELF_SENT' : 'SELF_SENT',

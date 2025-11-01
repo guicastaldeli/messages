@@ -219,7 +219,7 @@ public class MessageService {
         Map<String, Object> message = new HashMap<>();
         message.put("username", payload.get("username"));
         message.put("content", payload.get("content"));
-        message.put("senderId", payload.get("senderId"));
+        message.put("senderId", payload.get("userId"));
         message.put("chatId", chatId);
         message.put("userId", payload.get("userId"));
         message.put("messageId", payload.get("messageId"));
@@ -232,6 +232,7 @@ public class MessageService {
                 
         Map<String, Object> routingMetadata = new HashMap<>();
         routingMetadata.put("sessionId", sessionId);
+        routingMetadata.put("userId", payload.get("userId"));
         routingMetadata.put("messageType", type + "_MESSAGE");
         routingMetadata.put("messageId", payload.get("messageId"));
         routingMetadata.put("isDirect", "DIRECT".equalsIgnoreCase(type));

@@ -32,10 +32,12 @@ public enum CommandQueryManager {
     ),
     GET_USER_GROUPS(
         """
-            SELECT g.*
-            FROM group_members gm
-            JOIN groups g ON gm.group_id = g.id
-            WHERE gm.user_id = ?        
+            SELECT g.id, g.name, g.creator_id, g.created_at,
+                (SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.id) as member_count
+            FROM groups g
+            INNER join group_members gm ON g.id = gm.group_id
+            WHERE gm.user_id = ?
+            ORDER BY g.created_at DESC     
         """
     ),
     GET_GROUP_INFO(
@@ -43,8 +45,8 @@ public enum CommandQueryManager {
     ),
     GET_GROUP_INFO_MEMBERS(
         """
-            SELECT u.id, u.username FROM group_members gm
-            JOIN users u ON gm.user_id = u.id
+            SELECT gm.user_id as id, gm.user_id as username
+            FROM group_members gm
             WHERE gm.group_id = ?        
         """
     ),

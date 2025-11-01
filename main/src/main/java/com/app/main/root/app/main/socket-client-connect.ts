@@ -12,6 +12,7 @@ export class SocketClientConnect {
     private maxReconnectAttemps = 5;
     private connectionPromise: Promise<void> | null = null;
     private socketId: string | null = null;
+    private userId: string | null = null;
     public eventDiscovery: EventDiscovery;
 
     private resConnection: ((value: void) => void) | null = null;
@@ -279,7 +280,7 @@ export class SocketClientConnect {
                     res(this.socketId!);
                 } else {
                     this.offDestination(resDestination, handle);
-                    rej(new Error('Invalid socked id response'));
+                    rej(new Error('Invalid socket id response'));
                 }
             }
 
@@ -288,6 +289,72 @@ export class SocketClientConnect {
                 if(!sucss) {
                     this.offDestination(resDestination, handle);
                     rej(new Error('Failed to send socket request'));
+                }
+            }).catch(err => {
+                this.offDestination(resDestination, handle);
+                rej(err);
+            });
+        });
+    }
+
+    /*
+    ** User Id
+    */
+    public async getUserId(): Promise<string> {
+        if(this.userId) return Promise.resolve(this.userId);
+        
+        return new Promise(async (res, rej) => {
+            const resDestination = '/queue/user-id';
+
+            const handle = (data: any) => {
+                if(data && data.userId) {
+                    this.userId = data.userId;
+                    this.offDestination(resDestination, handle);
+                    res(this.userId!);
+                } else {
+                    this.offDestination(resDestination, handle);
+                    rej(new Error('Invalid user id response'));
+                }
+            }
+
+            await this.onDestination(resDestination, handle);
+            this.sendToDestination('/app/get-user-id', {}).then(sucss => {
+                if(!sucss) {
+                    this.offDestination(resDestination, handle);
+                    rej(new Error('Failed to send user request'));
+                }
+            }).catch(err => {
+                this.offDestination(resDestination, handle);
+                rej(err);
+            });
+        });
+    }
+
+    /*
+    ** Username
+    */
+    public async getUsername(): Promise<string> {
+        if(this.userId) return Promise.resolve(this.userId);
+        
+        return new Promise(async (res, rej) => {
+            const resDestination = '/queue/username';
+
+            const handle = (data: any) => {
+                if(data && data.userId) {
+                    this.userId = data.userId;
+                    this.offDestination(resDestination, handle);
+                    res(this.userId!);
+                } else {
+                    this.offDestination(resDestination, handle);
+                    rej(new Error('Invalid username response'));
+                }
+            }
+
+            await this.onDestination(resDestination, handle);
+            this.sendToDestination('/app/get-username', {}).then(sucss => {
+                if(!sucss) {
+                    this.offDestination(resDestination, handle);
+                    rej(new Error('Failed to send user request'));
                 }
             }).catch(err => {
                 this.offDestination(resDestination, handle);

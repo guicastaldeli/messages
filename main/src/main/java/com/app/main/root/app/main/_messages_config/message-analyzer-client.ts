@@ -1,5 +1,6 @@
 export interface Context {
     sessionId: string;
+    userId: string;
     content: string;
     targetUserId: string;
     chatId: string;
@@ -83,9 +84,10 @@ export class MessageAnalyzerClient {
 
         const time = Date.now();
         const content = data.content || emptyPlaceholder;
-        const targetUserId = data.targetUserId || data.senderId || emptyPlaceholder;
-        const senderId = data.senderId || emptyPlaceholder;
+        const userId = data.userId || this.currentUserId || emptyPlaceholder;
+        const senderId = data.senderId || userId || emptyPlaceholder;
         const username = data.username || emptyPlaceholder;
+        const targetUserId = data.targetUserId || data.senderId || emptyPlaceholder;
         const isGroup = 
             (data.chatId && data.chatId.startsWith('group_')) ||
             (data.chatType === 'GROUP') ||
@@ -106,8 +108,11 @@ export class MessageAnalyzerClient {
             data.routingMetadata?.type === 'SYSTEM' ||
             Boolean(data.isSystem);
 
+            console.log(data.userId, this.currentUserId)
+
         return {
             sessionId: this.socketId || emptyPlaceholder,
+            userId,
             content,
             targetUserId,
             chatId,
@@ -166,14 +171,15 @@ export class MessageAnalyzerClient {
     ** Set Direction
     */
     public setDirection(data: any): string {
-        if(!this.socketId) return 'other';
-        this.currentUserId = this.socketId;
-        const isSelf = data.senderId !== this.currentUserId
+        const senderId = data.userId || data.senderId;
+        const isSelf = senderId === this.currentUserId;
         return isSelf ? 'self' : 'other';
     }
 
     private setDirectionByContext(context: Context): string {
-        return context.senderId === this.socketId ? 'self' : 'other';
+        const senderId = context.userId || context.senderId;
+        const isSelf = senderId === this.currentUserId;
+        return isSelf ? 'self' : 'other';
     }
 
     /*
@@ -231,7 +237,11 @@ export class MessageAnalyzerClient {
     **
     */
     public getPerspective(): MessagePerspectiveManager {
-        const perspective = new MessagePerspectiveManager(this, this.socketId!);
+        const perspective = new MessagePerspectiveManager(
+            this, 
+            this.socketId!,
+            this.currentUserId!
+        );
         return perspective;
     }
 }
