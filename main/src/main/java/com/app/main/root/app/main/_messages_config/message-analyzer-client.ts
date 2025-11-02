@@ -85,7 +85,7 @@ export class MessageAnalyzerClient {
         const time = Date.now();
         const content = data.content || emptyPlaceholder;
         const userId = data.userId || this.currentUserId || emptyPlaceholder;
-        const senderId = data.senderId || userId || emptyPlaceholder;
+        const senderId = data.senderId || userId || this.currentUserId || emptyPlaceholder;
         const username = data.username || emptyPlaceholder;
         const targetUserId = data.targetUserId || data.senderId || emptyPlaceholder;
         const isGroup = 
@@ -107,8 +107,6 @@ export class MessageAnalyzerClient {
             data._metadata?.type === 'SYSTEM' || 
             data.routingMetadata?.type === 'SYSTEM' ||
             Boolean(data.isSystem);
-
-            console.log(data.userId, this.currentUserId)
 
         return {
             sessionId: this.socketId || emptyPlaceholder,

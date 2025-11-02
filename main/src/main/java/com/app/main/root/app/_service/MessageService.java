@@ -49,7 +49,8 @@ public class MessageService {
         String chatId,
         String senderId,
         String content,
-        String type
+        String type,
+        String username
     ) throws SQLException {
         String query = CommandQueryManager.SAVE_MESSAGE.get();
         int keys = Statement.RETURN_GENERATED_KEYS;
@@ -80,8 +81,8 @@ public class MessageService {
                     messageTracker.track(
                         value, 
                         content, 
-                        senderId, 
-                        "username", 
+                        senderId,
+                        username, 
                         chatId, 
                         messageType, 
                         direction
@@ -214,14 +215,15 @@ public class MessageService {
         String type, 
         Map<String, Object> payload,
         String chatId,
-        String sessionId
+        String sessionId,
+        String currentUserId
     ) { 
         Map<String, Object> message = new HashMap<>();
         message.put("username", payload.get("username"));
         message.put("content", payload.get("content"));
-        message.put("senderId", payload.get("userId"));
+        message.put("senderId", currentUserId);
         message.put("chatId", chatId);
-        message.put("userId", payload.get("userId"));
+        message.put("userId", currentUserId);
         message.put("messageId", payload.get("messageId"));
         message.put("timestamp", payload.get("timestamp"));
         message.put("type", type);

@@ -5,6 +5,7 @@ import { SessionContext, SessionType } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { chatState } from './chat-state-service';
 import { ApiClient } from './_api-client/api-client';
+import { GroupLayout } from './chat/group/group-layout';
 
 interface Props {
     messageManager: MessageManager;
@@ -75,15 +76,18 @@ export class Dashboard extends Component<Props, State> {
     }
 
     handleChatSelect = async (chat: any): Promise<void> => {
-        chatState.setType(chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP');
+        const chatType = chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP'
+        chatState.setType(chatType);
         
         try {
-            const socketId = await this.props.messageManager.socketClient.getSocketId();
             const messageService = await this.apiClient.getMessageService()
-            const messages = await messageService.getMessagesByUser(socketId);
-            const event = new CustomEvent('chat-activated', { detail: { chat, messages } });
-            window.dispatchEvent(event);
-
+            const messages = await messageService.getMessagesByChatId(chat.id);
+            
+            await this.props.messageManager.setCurrentChat(
+                chat.id,
+                chatType,
+                chat.members || []
+            );
             this.updateState({
                 showCreationForm: false,
                 showJoinForm: false,
@@ -97,11 +101,35 @@ export class Dashboard extends Component<Props, State> {
                     messages
                 }
             });
+
+            this.forceUpdate();
+            await this.props.messageManager.renderHistory(messages);
+            
+            const event = new CustomEvent('chat-activated', {
+                detail: {
+                    chat: {
+                        ...chat,
+                        type: chatType
+                    },
+                    messages,
+                    shouldRender: true
+                }
+            });
+            window.dispatchEvent(event);
         } catch(err) {
             console.error('Error loading chat history:', err);
         }
     }
 
+    private handleCloseGroupLayout = (): void => {
+        this.setState({
+            activeChat: null
+        });
+        this.updateState({
+            showGroup: false,
+            groupName: ''
+        });
+    }
     /*
     ** State Related
     */
@@ -134,6 +162,7 @@ export class Dashboard extends Component<Props, State> {
 
     render() {
         const { chatList, activeChat } = this.props;
+        const { messageManager, chatManager } = this.props
 
         return (
             <SessionContext.Consumer>
@@ -197,6 +226,17 @@ export class Dashboard extends Component<Props, State> {
                                     )}
                                 </div>
                             </div>
+
+                            {activeChat && (
+                                <GroupLayout
+                                    messageManager={messageManager}
+                                    groupManager={chatManager.getGroupManager()}
+                                    groupId={activeChat.id}
+                                    groupName={activeChat.name}
+                                    onClose={this.handleCloseGroupLayout}
+                                    mode="chat"
+                                />
+                            )}
                         </>
                     )
                 }}

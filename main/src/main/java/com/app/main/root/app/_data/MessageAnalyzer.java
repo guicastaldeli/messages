@@ -2,6 +2,7 @@ package com.app.main.root.app._data;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.MessageRouter;
+import com.app.main.root.app._service.MessagePerspectiveService;
 import com.app.main.root.app._service.ServiceManager;
 import org.springframework.stereotype.Component;
 import java.util.*;
@@ -103,6 +104,7 @@ public class MessageAnalyzer {
         routingMetadata.put("priority", "NORMAL");
         message.put("routingMetadata", routingMetadata);
 
+        message = applyPerspective(context.sessionId, message);
         return message;
     }
 
@@ -176,5 +178,14 @@ public class MessageAnalyzer {
             context.sessionId,
             "system"
         );
+    }
+
+    public Map<String, Object> applyPerspective(String sessionId, Map<String, Object> message) {
+        try {
+            MessagePerspectiveService perspectiveService = serviceManager.getMessagePerspectiveService();
+            return perspectiveService.applyPerspective(sessionId, message);
+        } catch(Exception e) {
+            return message;
+        }
     }
 }

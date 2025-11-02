@@ -9,7 +9,10 @@ export interface Props {
     groupManager: GroupManager;
     onSuccess?: (data: any) => void;
     onError?: (error: any) => void;
-    mode: 'create' | 'join';
+    onClose?: () => void;
+    groupId?: any;
+    groupName?: string;
+    mode: 'create' | 'join' | 'chat';
 }
 
 interface State {
@@ -25,6 +28,7 @@ interface State {
         hideGroup: boolean;
         groupName: string;
     }
+    messagesLoaded: boolean;
 }
 
 export class GroupLayout extends Component<Props, State> {
@@ -51,7 +55,8 @@ export class GroupLayout extends Component<Props, State> {
                 showGroup: false,
                 hideGroup: false,
                 groupName: ''
-            }
+            },
+            messagesLoaded: false
         }
     }
 
@@ -63,12 +68,40 @@ export class GroupLayout extends Component<Props, State> {
         window.addEventListener('group-activated', this.handleGroupActivation as EventListener);
         window.addEventListener('group-join-complete', this.handleGroupActivation as EventListener);
         window.addEventListener('group-exit-complete', this.handleGroupExit as EventListener);
+        if(this.props.mode === 'chat' && this.props.groupId) {
+            this.loadMessages(this.props.groupId);
+        }
+    }
+    componentDidUpdate(prevProps: Props): void {
+        if(
+            this.props.mode === 'chat' &&
+            this.props.groupId !== prevProps.groupId &&
+            this.props.groupId
+        ) {
+            this.loadMessages(this.props.groupId);
+        }
     }
     componentWillUnmount(): void {
         window.removeEventListener('group-creation-complete', this.handleGroupActivation as EventListener);
         window.removeEventListener('group-activated', this.handleGroupActivation as EventListener);
         window.removeEventListener('group-join-complete', this.handleGroupActivation as EventListener);
         window.removeEventListener('group-exit-complete', this.handleGroupExit as EventListener);
+    }
+
+    private loadMessages = async (groupId: string): Promise<void> => {
+        try {
+            this.setState({ isLoading: true });
+            await this.groupManager.loadMessagesHistory(groupId);
+            this.setState({
+                messagesLoaded: true,
+                isLoading: false
+            });
+        } catch(err) {
+            this.setState({
+                error: 'Failed to load messages',
+                isLoading: false
+            });
+        }
     }
 
     handleGroupActivation = (event: CustomEvent) => {
@@ -90,6 +123,9 @@ export class GroupLayout extends Component<Props, State> {
                 groupName: data.name
             }
         });
+        if(data.id || data.groupId) {
+            this.loadMessages(data.id || data.groupid);
+        }
         console.log('Group activated:', data.name, 'ID:', this.groupManager.currentGroupId);
     }
 

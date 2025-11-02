@@ -52,8 +52,8 @@ export class MessageManager {
 
         await this.socketClient.connect();
     }
-
-    public async setUserData(sessionId: string, userId: string, username: string): Promise<void> {
+    
+    public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
         this.socketId = sessionId;
         this.userId = userId;
         this.username = username;
@@ -377,20 +377,23 @@ export class MessageManager {
         if(!this.appEl) return;
         const container = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
         const perspective = data._perspective || analysis.perspective;
+        const senderId = data.userId;
 
         let userColor = null;
         const currentChat = this.chatRegistry.getCurrentChat();
         if(currentChat?.type === 'GROUP' && analysis.direction === 'other') {
             userColor = UserColorGenerator.getUserColorForGroup(
                 currentChat.id,
-                data.senderId || data.userId || this.userId
+                data.senderId || data.userId || this.userId || senderId
             );
         }
 
+        console.log('SENDER ID', data.senderId)
         this.messageComponent.setCurrentUserId(this.userId!);
         const messageProps = {
             username: perspective.showUsername,
             userId: this.userId,
+            senderId: senderId,
             content: data.content,
             timestamp: data.timestamp,
             messageId: data.messageId,
@@ -399,12 +402,17 @@ export class MessageManager {
             isDirect: analysis.context.isDirect,
             isGroup: analysis.context.isGroup,
             isSystem: analysis.context.isSystem,
-            perspective: perspective,
+            perspective: {
+                ...perspective,
+                direction: analysis.direction,
+                isCurrentUser: perspective.isCurrentUser,
+                showUsername: perspective.showUsername
+            },
             direction: analysis.direction,
             userColor: userColor?.value,
             chatType: currentChat?.type,
         };
-
+        
         const content = this.messageComponent.__message(messageProps);
         const render = ReactDOMServer.renderToStaticMarkup(content!);
         container?.insertAdjacentHTML('beforeend', render);

@@ -224,15 +224,18 @@ public class EventList {
                     String chatId = (String) payloadData.get("chatId");
                     String groupId = (String) payloadData.get("groupId");
                     String actualGroupId = chatId != null ? chatId : groupId;
+                    String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     String routeType = messageAnalyzer.extractRouteType(sessionId, payloadData);
+                    Map<String, Object> messageWithPerspective = messageAnalyzer.applyPerspective(sessionId, payloadData);
 
                     if(actualGroupId != null && actualGroupId.startsWith("group_")) {
                         String destination = "/user/queue/messages/group/" + actualGroupId;
                         Object data = serviceManager.getMessageService().payload(
                             routeType, 
-                            payloadData, 
+                            messageWithPerspective, 
                             actualGroupId, 
-                            sessionId
+                            sessionId,
+                            currentUserId
                         );
                         socketMethods.send(sessionId, destination, data);
                     }
@@ -506,7 +509,7 @@ public class EventList {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
                     String groupId = (String) data.get("groupId");
-                    String userId = (String) data.get("userId");
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     boolean isMember = serviceManager.getGroupService().isUserGroupMember(groupId, userId);
 
                     if(groupId == null || groupId.trim().isEmpty()) {

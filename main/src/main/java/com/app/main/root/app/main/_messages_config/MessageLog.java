@@ -50,6 +50,7 @@ public class MessageLog {
                     messageId='%s',
                     username='%s',
                     chatId='%s',
+                    senderId=%s,
                     type='%s',
                     direction='%s',
                     timestamp='%s',
@@ -84,6 +85,16 @@ public class MessageLog {
     }
     public String getContent() {
         return content;
+    }
+
+    /*
+    * Get Sender Id
+    */
+    public void setSenderId(String id) {
+        this.senderId = id;
+    }
+    public String getSenderId() {
+        return senderId;
     }
 
     /*

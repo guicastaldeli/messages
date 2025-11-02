@@ -22,6 +22,7 @@ export class MessagePerspectiveManager {
     public analyzeWithPerspective(data: any): Analysis {
         const perspective = this.calculateClientPerspective(data);
         const context = this.messageAnalyzerClient.analyzeContext(data);
+        console.log(perspective.direction)
         return {
             context,
             routes: this.messageAnalyzerClient.determineRoutes(context),
@@ -34,7 +35,7 @@ export class MessagePerspectiveManager {
     }
 
     public calculateClientPerspective(data: any): any {
-        const senderId = data.userId;
+        const senderId = data.senderId;
         const isSelf = senderId === this.currentUserId;
         const isGroup = data.isGroup || data.chatId?.startsWith('group_');
         const isSystem = data.isSystem || data.type === 'SYSTEM';

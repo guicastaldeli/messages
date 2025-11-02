@@ -52,12 +52,17 @@ export class MessageServiceClient {
     * Chat Id
     */
     public async getMessagesByChatId(id: string): Promise<any[]> {
-        const res = await fetch(`${this.baseUrl}/api/message-tracker/messages/chatId/${id}`);
-        if(!res.ok) throw new Error('Failed to fetch messages by chat id!');
-
-        const messages = await res.json();
-        console.log(`Retrieved ${messages?.length || 0} messages for chat ${id}:`, messages);
-        return messages || [];
+        try {
+            const res = await fetch(`${this.baseUrl}/api/message-tracker/messages/chatId/${id}`);
+            if(!res.ok) throw new Error('Failed to fetch messages by chat id!');
+    
+            const messages = await res.json();
+            console.log(`Retrieved ${messages?.length || 0} messages for chat ${id}:`, messages);
+            return messages || [];
+        } catch(err) {
+            console.error(err);
+            throw new Error('Failed to fetch messages by chat Id');
+        }
     }
 
     /*

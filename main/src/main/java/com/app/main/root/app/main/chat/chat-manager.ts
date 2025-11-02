@@ -43,25 +43,25 @@ export class ChatManager {
         messageManager: MessageManager,
         apiClient: ApiClient,
         dashboard: Dashboard | null,
-        appEl: HTMLDivElement | null = null, 
-        uname: any,
+        appEl: HTMLDivElement | null = null,
+        username: string,
         setState: React.Component<any, State>['setState']
     ) {
         this.directManager = new DirectManager();
         this.groupManager = new GroupManager(
+            this,
             socketClient, 
             messageManager, 
             apiClient,
             dashboard, 
             appEl, 
-            uname
+            username
         );
         this.setState = setState;
     }
 
-    public async init(): Promise<void> {
-        //await this.directManager.init();
-        await this.groupManager.init();
+    public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
+        await this.groupManager.getUserData(sessionId, userId, username);
     }
 
     public mount(): void {
@@ -84,9 +84,16 @@ export class ChatManager {
     }
 
     private handleChatActivated = (event: CustomEvent): void => {
-        const activeChat: ActiveChat = event.detail;
+        const activeChat: ActiveChat = event.detail.chat;
+        const shouldRender = event.detail.shouldRender;
         chatState.setType(activeChat.type === 'DIRECT' ? 'DIRECT' : 'GROUP');
         this.setState({ activeChat });
+
+        if(activeChat.type === 'GROUP') {
+            this.groupManager.currentGroupId = activeChat.id;
+            this.groupManager.currentGroupName = activeChat.name;
+        }
+        if(shouldRender && this.updateCallback) this.updateCallback([...this.chatList])
     }
 
     public setUpdateCallback(callback: (list: any[]) => void): void {
@@ -191,7 +198,7 @@ export class ChatManager {
     /* Set Username */
     public setUsername(username: string): void {
         const groupManager = this.getGroupManager();
-        if(groupManager) groupManager.uname = username;
+        if(groupManager) groupManager.username = username;
     }
 
     /*

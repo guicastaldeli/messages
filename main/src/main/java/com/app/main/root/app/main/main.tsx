@@ -61,11 +61,10 @@ export class Main extends Component<any, State> {
             this.apiClient,
             this.dashboardInstance,
             this.appContainerRef.current,
-            this.state.username,
+            this.state.username!,
             this.setState.bind(this)
         );
         this.chatManager.mount();
-        await this.chatManager.init();
         this.messageManager.setChatManager(this.chatManager);
         this.loadData();
     }
@@ -157,7 +156,7 @@ export class Main extends Component<any, State> {
                 }
             }
 
-            const sessionId = sessionContext.sessionId || `session_${Date.now()}`;
+            const sessionId = await this.socketClientConnect.getSocketId();
             let result;
 
             try {
@@ -181,19 +180,18 @@ export class Main extends Component<any, State> {
                 const authData = result;
 
                 if (authData && authData.userId) {
-                    const finalUsername = authData.username;
-                    this.chatManager.setUsername(finalUsername);
+                    this.chatManager.setUsername(authData.username);
                     
                     this.setState({ 
                         chatManager: this.chatManager,
-                        username: finalUsername,
+                        username: authData.username,
                         userId: authData.userId
                     }, async () => {
                         try {
-                            await this.messageManager.setUserData(authData.sessionId, authData.userId, authData.username);
+                            await this.chatManager?.getUserData(authData.sessionId, authData.userId, authData.username);
+                            await this.messageManager.getUserData(authData.sessionId, authData.userId, authData.username);
                             await this.messageManager.handleJoin(authData.sessionId, authData.userId, authData.username);
                             sessionContext.setSession('MAIN_DASHBOARD');
-                            console.log('Successfully joined and navigated to dashboard!');
                             this.chatManager?.getGroupManager().loadUserGroups(authData.userId);
                         } catch (err) {
                             console.error('Error in handleJoin:', err);
@@ -246,7 +244,7 @@ export class Main extends Component<any, State> {
                                                     />
                                                     <label>Password</label>
                                                     <input 
-                                                        type="password" 
+                                                        type="text" 
                                                         ref={this.loginPasswordRef}
                                                     />
                                                     <div className='form-input'>
@@ -273,7 +271,7 @@ export class Main extends Component<any, State> {
                                                     />
                                                     <label>Password</label>
                                                     <input 
-                                                        type="password" 
+                                                        type="text" 
                                                         ref={this.createPasswordRef}
                                                     />
                                                     <div className='form-input'>

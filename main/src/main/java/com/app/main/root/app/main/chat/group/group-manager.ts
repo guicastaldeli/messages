@@ -8,6 +8,7 @@ import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat-state-service";
 import { Dashboard } from "../../dashboard";
 import { JoinGroupLayout } from "./join-group-form-layout";
+import { ChatManager } from "../chat-manager";
 
 interface Data {
     id: string;
@@ -21,6 +22,7 @@ interface Data {
 }
 
 export class GroupManager {
+    private chatManager: ChatManager;
     public socketClient: SocketClientConnect;
     private messageManager: MessageManager;
     private apiClient: ApiClient;
@@ -29,7 +31,7 @@ export class GroupManager {
 
     public appEl: HTMLDivElement | null = null;
     private layoutRef = React.createRef<GroupLayout>();
-    public uname: any;
+    public username: string;
     private socketId: string | null = null;
     private userId: string | null = null;
     
@@ -55,25 +57,28 @@ export class GroupManager {
     private exitRej?: (data: any) => void;
 
     constructor(
+        chatManager: ChatManager,
         socketClient: SocketClientConnect,
         messageManager: MessageManager,
         apiClient: ApiClient,
         dashboard: Dashboard | null,
         appEl: HTMLDivElement | null = null, 
-        uname: any
+        username: string
     ) {
+        this.chatManager = chatManager;
         this.socketClient = socketClient;
         this.messageManager = messageManager;
         this.apiClient = apiClient;
         this.dashboard = dashboard;
         this.appEl = appEl;
-        this.uname = uname;
+        this.username = username;
         this.inviteCodeManager = new InviteCodeManager(socketClient);
     }
 
-    public async init(): Promise<void> {
-        this.socketId = await this.socketClient.getSocketId();
-        this.userId = await this.socketClient.getUserId();
+    public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
+        this.socketId = sessionId;
+        this.userId = userId;
+        this.username = username;
     }
 
     /*
@@ -111,7 +116,7 @@ export class GroupManager {
                 lastMessage: content,
                 sender: sender,
                 timestamp: time,
-                isCurrentUser: sender === this.uname,
+                isCurrentUser: sender === this.username,
                 isSystem: isSystem
             }
         });
@@ -121,7 +126,7 @@ export class GroupManager {
     /*
     ** Load History Messages
     */
-    private async loadMessagesHistory(groupId: string): Promise<void> {
+    public async loadMessagesHistory(groupId: string): Promise<void> {
         try {
             await this.waitForMessagesContainer();
             const service = await this.apiClient.getMessageService();
@@ -129,7 +134,12 @@ export class GroupManager {
             if(messages && Array.isArray(messages)) {
                 console.log(`Loading ${messages.length} messages for group ${groupId}`);
                 for(const message of messages) {
-                    await this.messageManager.renderHistory(message);
+                    const updMessage = {
+                        ...message,
+                        currentUserId: this.userId,
+                        currentSessionId: this.socketId
+                    }
+                    await this.messageManager.renderHistory(updMessage);
                 }
             } else {
                 console.log('No messages found for group:', groupId);
@@ -194,32 +204,31 @@ export class GroupManager {
 
     public async loadUserGroups(userId: string): Promise<any> {
         try {
-            
+            await new Promise(res => setTimeout(res, 500));
             const groups = await this.loadGroupsHistory(userId);
+            console.log('Raw groups: ', groups);
             if(!groups || groups.length === 0) return;
 
-            const lastMessage = await this.lastMessage(this.currentGroupId);
-            console.log('Loaded user groups', groups);
+            for(const group of groups) {
+                const lastMessage = await this.lastMessage(group.id);
+                console.log('Loaded user groups', groups);
 
-            groups.forEach(group => {
                 const chatEvent = new CustomEvent('chat-item-added', {
                     detail: {
-                        detail: {
-                            id: group.id,
-                            chatId: group.id,
-                            groupId: group.id,
-                            name: group.name,
-                            type: 'group',
-                            creator: group.creatorId,
-                            members: [],
-                            unreadCount: 0,
-                            lastMessage: lastMessage,
-                            lastMessageTime: group.createdAt
-                        }
+                        id: group.id,
+                        chatId: group.id,
+                        groupId: group.id,
+                        name: group.name,
+                        type: 'GROUP',
+                        creator: group.cerator,
+                        members: [],
+                        unreadCount: 0,
+                        lastMessage: lastMessage,
+                        lastMessageTime: group.createdAt
                     }
                 });
                 window.dispatchEvent(chatEvent);
-            });
+            }
         } catch(err) {
             console.error(err);
         }
@@ -249,7 +258,7 @@ export class GroupManager {
             chatId: this.currentGroupId,
             groupId: this.currentGroupId,
             name: name,
-            type: 'group',
+            type: 'GROUP',
             creator: data.creator,
             members: data.members,
             unreadCount: 0,
@@ -352,17 +361,18 @@ export class GroupManager {
         chatState.setType('GROUP');
         const sessionId = this.socketId;
         const userId = this.userId;
+        console.log(userId)
 
         const data = {
             sessionId: sessionId,
-            creator: this.uname,
+            creator: this.username,
             creatorId: userId,
             groupName: this.currentGroupName.trim()
         }
 
         return new Promise(async (res, rej) => {
-            const sucssDestination = `/user/${userId}/queue/group-creation-scss`;
-            const errDestination = `/user/${userId}/queue/group-creation-err`;
+            const sucssDestination = `/user/${sessionId}/queue/group-creation-scss`;
+            const errDestination = `/user/${sessionId}/queue/group-creation-err`;
             this.creationRes = res;
             this.creationRej = rej;
 
@@ -611,7 +621,7 @@ export class GroupManager {
                 const data = {
                     userId: userId,
                     inviteCode: inviteCode,
-                    username: this.uname
+                    username: this.username
                 }
 
                 await this.socketClient.sendToDestination(
@@ -711,7 +721,7 @@ export class GroupManager {
 
                 const data = {
                     userId: this.userId,
-                    username: this.uname,
+                    username: this.username,
                     groupId: targetGroupId
                 }
 
