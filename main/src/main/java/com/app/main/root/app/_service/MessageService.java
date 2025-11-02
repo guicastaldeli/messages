@@ -65,28 +65,31 @@ public class MessageService {
             stmt.setString(2, senderId);
             stmt.setString(3, content);
             stmt.setString(4, fType);
+            stmt.setString(5, username);
 
             int affectedRows = stmt.executeUpdate();
             if(affectedRows > 0) {
                 try(ResultSet generatedKeys = stmt.getGeneratedKeys()) {
                     if(generatedKeys.next()) {
-                        return generatedKeys.getInt(1);
+                        int messageId = generatedKeys.getInt(1);
+                        String value = String.valueOf(messageId);
+                        MessageLog.MessageType messageType = chatId.startsWith("direct_") ?
+                            MessageLog.MessageType.DIRECT : MessageLog.MessageType.GROUP;
+                        MessageLog.MessageDirection direction = MessageLog.MessageDirection.SENT;
+                        
+                        messageTracker.track(
+                            value, 
+                            content, 
+                            senderId,
+                            username, 
+                            chatId, 
+                            messageType, 
+                            direction
+                        );
+
+                        return messageId;
                     }
 
-                    String value = String.valueOf(generatedKeys.getInt(1));
-                    MessageLog.MessageType messageType = chatId.startsWith("direct_") ?
-                        MessageLog.MessageType.DIRECT : MessageLog.MessageType.GROUP;
-                    MessageLog.MessageDirection direction = MessageLog.MessageDirection.SENT;
-                    
-                    messageTracker.track(
-                        value, 
-                        content, 
-                        senderId,
-                        username, 
-                        chatId, 
-                        messageType, 
-                        direction
-                    );
                 }
             }
 
@@ -94,35 +97,42 @@ public class MessageService {
         }
     }
 
-    /*
-    * Save System Message 
-    */
-    public int saveSystemMessage(String content,String messageType) throws SQLException {
-        String query = CommandQueryManager.SAVE_MESSAGE.get();
-        int keys = Statement.RETURN_GENERATED_KEYS;
+    public List<_Message> getMessagesByChatId() throws SQLException {
+        String query = CommandQueryManager.GET_ALL_MESSAGES_BY_CHAT_ID.get();
+        List<_Message> messages = new ArrayList<>();
 
         try(
             Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query, keys);
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet rs = stmt.executeQuery(); 
         ) {
-            stmt.setString(1, content);
-            stmt.setString(2, messageType);
-
-            int affectedRows = stmt.executeUpdate();
-            if(affectedRows > 0) {
-                try(ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                    if(generatedKeys.next()) {
-                        return generatedKeys.getInt(1);
-                    }
-                }
+            while(rs.next()) {
+                messages.add(mapMessageFromResultSet(rs));
             }
-
-            return -1;
         }
+
+        return messages;
+    }
+
+    public List<_Message> getAllMessages() throws SQLException {
+        String query = CommandQueryManager.GET_ALL_MESSAGES.get();
+        List<_Message> messages = new ArrayList<>();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet rs = stmt.executeQuery();
+        ) {
+            while(rs.next()) {
+                messages.add(mapMessageFromResultSet(rs));
+            }
+        }
+
+        return messages;
     }
 
     public List<_Message> getMessagesByChat(String chatId) throws SQLException {
-        String query = CommandQueryManager.GET_MESSAGES_BY_CHAT.get();
+        String query = CommandQueryManager.GET_ALL_MESSAGES_BY_CHAT_ID.get();
         List<_Message> messages = new ArrayList<>();
 
         try(
@@ -141,8 +151,8 @@ public class MessageService {
         return messages;
     }
 
-    public List<_Message> getMessagesByChatId(String chatId, int limit) throws SQLException {
-        String query = CommandQueryManager.GET_MESSAGES_BY_CHAT_WITH_LIMIT.get();
+    public List<_Message> getMessagesByChatId(String chatId) throws SQLException {
+        String query = CommandQueryManager.GET_ALL_MESSAGES_BY_CHAT_ID.get();
         List<_Message> messages = new ArrayList<>();
 
         try(
@@ -150,7 +160,6 @@ public class MessageService {
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, chatId);
-            stmt.setInt(2, limit);
 
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {
@@ -206,6 +215,25 @@ public class MessageService {
         List<_Message> reversed = new ArrayList<>();
         for(int i = messages.size() - 1; i >= 0; i--) reversed.add(messages.get(i));
         return reversed;
+    }
+
+    public List<_Message> getMessagesByUsername(String username) throws SQLException {
+        String query = CommandQueryManager.GET_MESSAGES_BY_USERNAME.get();
+        List<_Message> messages = new ArrayList<>();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, username);
+            try(ResultSet rs = stmt.executeQuery()) {
+                while(rs.next()) {
+                    messages.add(mapMessageFromResultSet(rs));
+                }
+            }
+        }
+
+        return messages;
     }
 
     /*
@@ -303,7 +331,7 @@ public class MessageService {
     ***
     **
     */
-    private _Message mapMessageFromResultSet(ResultSet rs) throws SQLException {
+    public _Message mapMessageFromResultSet(ResultSet rs) throws SQLException {
         _Message message = new _Message();
         message.setId(rs.getInt("id"));
         message.setChatId(rs.getString("chat_id"));
@@ -324,5 +352,32 @@ public class MessageService {
         chat.setChatType(rs.getString("chat_type"));
         chat.setChatName(rs.getString("chat_name"));
         return chat;
+    }
+
+    /*
+    * Save System Message 
+    */
+    public int saveSystemMessage(String content,String messageType) throws SQLException {
+        String query = CommandQueryManager.SAVE_MESSAGE.get();
+        int keys = Statement.RETURN_GENERATED_KEYS;
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query, keys);
+        ) {
+            stmt.setString(1, content);
+            stmt.setString(2, messageType);
+
+            int affectedRows = stmt.executeUpdate();
+            if(affectedRows > 0) {
+                try(ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if(generatedKeys.next()) {
+                        return generatedKeys.getInt(1);
+                    }
+                }
+            }
+
+            return -1;
+        }
     }
 }

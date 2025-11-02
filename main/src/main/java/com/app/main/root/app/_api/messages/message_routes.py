@@ -35,9 +35,9 @@ class MessageRoutes:
         ## User
         ##
         @self.router.get("/messages/user/{username}")
-        async def getMessagesByUser(username: str):
+        async def getMessagesByUsername(username: str):
             try:
-                content = await self.service.getMessagesByUser(username)
+                content = await self.service.getMessagesByUsername(username)
                 return content
             except HTTPException as e:
                 raise e
@@ -58,44 +58,17 @@ class MessageRoutes:
                 raise HTTPException(status_code=err, detail=f"Failed to load messages of chat {chatId}")
 
         ##
-        ## Type
-        ##
-        @self.router.get("/messages/type/{type}")
-        async def getMessagesByType(type: str):
-            try:
-                content = await self.service.getMessagesByType(type)
-                return content
-            except HTTPException as e:
-                raise e
-            except Exception as err:
-                raise HTTPException(status_code=err, detail=f"Failed to load messages of type {type}")
-            
-
-        ##
-        ## Direction
-        ##
-        @self.router.get("/messages/direction/{direction}")
-        async def getMessagesByDirection(direction: str):
-            try:
-                content = await self.service.getMessagesByDirection(direction)
-                return content
-            except HTTPException as e:
-                raise e
-            except Exception as err:
-                raise HTTPException(status_code=err, detail=f"Failed to load messages with direction {direction}")
-
-        ##
         ## Recent Messages
         ##
-        @self.router.get("/messages/recent/{count}")
-        async def getRecentMessages(count: int):
+        @self.router.get("/messages/recent/{userId}/{count}")
+        async def getRecentMessages(userId: str, count: int):
             try:
-                content = await self.service.getRecentMessages(count)
+                content = await self.service.getRecentMessages(userId, count)
                 return content
             except HTTPException as e:
                 raise e
             except Exception as err:
-                raise HTTPException(status_code=err, detail=f"Failed to load recent {count} messages")
+                raise HTTPException(status_code=err, detail=f"Failed to load recent {count} messages of {userId}")
 
         ##
         ## Count
@@ -126,7 +99,7 @@ class MessageRoutes:
         ##
         ## Clear
         ## 
-        @self.router.get("/clear")
+        @self.router.delete("/clear")
         async def clearMessages():
             try:
                 res = await self.service.clearMessages()

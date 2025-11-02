@@ -157,18 +157,10 @@ public enum CommandQueryManager {
                 chat_id,
                 sender_id,
                 content,
-                message_type
+                message_type,
+                username
             )        
-            VALUES (?, ?, ?, ?)
-        """
-    ),
-    GET_MESSAGES_BY_CHAT(
-        """
-            SELECT m.*, u.username
-            FROM messages m
-            JOIN users u ON m.sender_id = u.id
-            WHERE m.chat_id = ?
-            ORDER BY m.created_at DESC        
+            VALUES (?, ?, ?, ?, ?)
         """
     ),
     GET_MESSAGES_BY_CHAT_WITH_LIMIT(
@@ -192,7 +184,7 @@ public enum CommandQueryManager {
                     ORDER BY created_at DESC LIMIT 1
                 ) as last_message,
                 (
-                    SELECT username FROM users u
+                    SELECT username FROM messages u
                     JOIN messages m3 ON m3.sender_id = u.id
                     WHERE m3.chat_id = m.chat_id
                     ORDER BY m3.created_at DESC LIMIT 1
@@ -206,7 +198,7 @@ public enum CommandQueryManager {
                         (SELECT name FROM groups WHERE id = chat_id)
                     ELSE
                         (
-                            SELECT username FROM users WHERE id =
+                            SELECT username FROM messages WHERE id =
                             CASE
                                 WHEN chat_id = ? THEN sender_id
                                 ELSE chat_id
@@ -226,14 +218,31 @@ public enum CommandQueryManager {
         """
     ),
     GET_RECENT_MESSAGES(
-        """
-            SELECT m.*, u.username
-            FROM messages m
-            LEFT JOIN users u ON m.sender_id = u.id
-            WHERE m.chat_id = ?
-            ORDER BY m.created_at DESC
-            LIMIT ?      
-        """
+        "SELECT * FROM messages ORDER BY created_at DESC LIMIT ?"
+    ),
+    GET_ALL_MESSAGES(
+        "SELECT m.* FROM messages m ORDER BY m.created_at DESC"
+    ),
+    GET_ALL_MESSAGES_BY_CHAT_ID(
+        "SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at DESC"
+    ),
+    GET_MESSAGES_BY_TYPE(
+        "SELECT * FROM messages WHERE message_type = ? ORDER BY cretad_at DESC"
+    ),
+    GET_MESSAGES_BY_USERNAME(
+        "SELECT * FROM messages WHERE username = ? ORDER BY created_at DESC"
+    ),
+    CLEAR_MESSAGES(
+        "DELETE from MESSAGES"
+    ),
+    TOTAL_MESSAGES(
+        "SELECT COUNT(*) as count FROM messages"
+    ),
+    TOTAL_MESSAGES_DIRECT(
+        "SELECT COUNT(*) as count FROM messages WHERE message_type = 'DIRECT'"
+    ),
+    TOTAL_MESSAGES_GROUP(
+        "SELECT COUNT(*) as count FROM messages WHERE message_type = 'GROUP"
     ),
 
     /*

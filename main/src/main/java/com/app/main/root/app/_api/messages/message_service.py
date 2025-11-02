@@ -20,32 +20,20 @@ class MessageService:
     ##
     ## User
     ##
-    async def getMessagesByUser(self, username: str) -> list:
+    async def getMessagesByUsername(self, username: str) -> list:
         return await self._request("get", f"/api/message-tracker/messages/user/{username}")
 
     ##
     ## Chat Id
     ##
-    async def getMessagesByChatId(self, chat_id: str) -> list:
-        return await self._request("get", f"/api/message-tracker/messages/chatId/{chat_id}")
-
-    ##
-    ## Type
-    ##
-    async def getMessagesByType(self, type_: str) -> list:
-        return await self._request("get", f"/api/message-tracker/messages/type/{type_}")
-
-    ##
-    ## Direction
-    ##
-    async def getMessagesByDirection(self, direction: str) -> list:
-        return await self._request("get", f"/api/message-tracker/messages/direction/{direction}")
+    async def getMessagesByChatId(self, chatId: str) -> list:
+        return await self._request("get", f"/api/message-tracker/messages/chatId/{chatId}")
 
     ##
     ## Recent
     ##
-    async def getRecentMessages(self, count: int) -> list:
-        return await self._request("get", f"/api/message-tracker/messages/recent/{count}")
+    async def getRecentMessages(self, userId: str, count: int) -> list:
+        return await self._request("get", f"/api/message-tracker/messages/recent/{userId}/{count}")
 
     ##
     ## Count
@@ -63,7 +51,7 @@ class MessageService:
     ## Clear
     ##
     async def clearMessages(self) -> list:
-        return await self._request("get", "/api/message-tracker/clear")
+        return await self._request("delete", "/api/message-tracker/clear")
     
     ## -----------
     ##   Wrapper

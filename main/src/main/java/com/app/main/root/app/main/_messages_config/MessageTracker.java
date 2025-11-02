@@ -1,26 +1,27 @@
 package com.app.main.root.app.main._messages_config;
+import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app.main._messages_config.MessageLog.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Component
 public class MessageTracker {
     private static MessageTracker instance;
+    @Lazy @Autowired private DataSourceService dataSourceService;
     private final List<MessageLog> logs = new CopyOnWriteArrayList<>();
     private final int maxMessages = 5000;
 
-    public static MessageTracker getInstance() {
-        if(instance == null) {
-            synchronized(MessageTracker.class) {
-                if(instance == null) {
-                    instance = new MessageTracker();
-                }
-            }
-        }
-        return instance;
+    private Connection getConnection() throws SQLException {
+        return dataSourceService.setDb("message").getConnection();
     }
 
     public void track(
@@ -32,108 +33,98 @@ public class MessageTracker {
         MessageType messageType,
         MessageDirection direction
     ) {
-        Date timetamp = new Date();
+        try {
+            Date timetamp = new Date();
+    
+            MessageLog messageLog = new MessageLog(
+                messageId,
+                content,
+                senderId,
+                username,
+                chatId,
+                messageType,
+                direction,
+                timetamp
+            );
 
-        MessageLog messageLog = new MessageLog(
-            messageId,
-            content,
-            senderId,
-            username,
-            chatId,
-            messageType,
-            direction,
-            timetamp
-        );
-        logs.add(messageLog);
-
-        if(logs.size() > maxMessages) {
-            synchronized(logs) {
-                if(logs.size() > maxMessages) {
-                    int excess = logs.size() - maxMessages;
-                    logs.subList(0, excess).clear();
+            logs.add(messageLog);
+            if(logs.size() > maxMessages) {
+                synchronized(logs) {
+                    if(logs.size() > maxMessages) {
+                        int excess = logs.size() - maxMessages;
+                        logs.subList(0, excess).clear();
+                    }
                 }
             }
+    
+            logMessageToConsole(messageLog);
+        } catch(Exception err) {
+            throw new RuntimeException("Failed to save message to db!", err);
         }
-
-        logMessageToConsole(messageLog);
     }
 
     /*
-    * Getters 
+    * Count
     */
-    public List<MessageLog> getAllMessages() {
-        return new ArrayList<>(logs);
-    }
+    public int getMessageCount() throws SQLException {
+        String query = CommandQueryManager.TOTAL_MESSAGES.get();
 
-    public List<MessageLog> getMessagesByUser(String username) {
-        return logs.stream()
-            .filter(log -> username.equals(log.getUsername()))
-            .collect(Collectors.toList());
-    }
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet rs = stmt.executeQuery();
+        ) {
+            if(rs.next()) {
+                return rs.getInt("count");
+            }
+        }
 
-    public List<MessageLog> getMessagesByChatId(String chatId) {
-        return logs.stream()
-            .filter(log -> chatId.equals(log.getChatId()))
-            .collect(Collectors.toList());
-    }
-
-    public List<MessageLog> getMessagesByType(MessageType type) {
-        return logs.stream()
-            .filter(log -> type == log.getMessageType())
-            .collect(Collectors.toList());
-    }
-
-    public List<MessageLog> getMessagesByDirection(MessageDirection direction) {
-        return logs.stream()
-            .filter(log -> direction == log.getDirection())
-            .collect(Collectors.toList());
-    }
-
-    public List<MessageLog> getRecentMessages(int count) {
-        int startIndex = Math.max(0, logs.size() - count);
-        return new ArrayList<>(logs.subList(startIndex, logs.size()));
-    }
-
-    public int getMessageCount() {
-        return logs.size();
+        return 0;
     }
 
     /*
     * Clear Messages 
     */
-    public void clearMessages() {
+    public void clearMessages() throws SQLException {
+        String query = CommandQueryManager.CLEAR_MESSAGES.get();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.executeUpdate();
+        }
+
         logs.clear();
     }
 
-    public Map<String, Long> getMessageStats() {
+    /*
+    * Stats 
+    */
+    public Map<String, Long> getMessageStats() throws SQLException {
         Map<String, Long> stats = new HashMap<>();
 
-        //Direct
-        long directCount = logs.stream()
-        .filter(log -> log.getMessageType() == MessageType.DIRECT)
-        .count();
+        String totalCount = CommandQueryManager.TOTAL_MESSAGES.get();
+        String directCount = CommandQueryManager.TOTAL_MESSAGES_DIRECT.get();
+        String groupCount = CommandQueryManager.TOTAL_MESSAGES_GROUP.get();
 
-        //Group
-        long groupCount = logs.stream()
-        .filter(log -> log.getMessageType() == MessageType.GROUP)
-        .count();
-
-        //Sended
-        long sentCount = logs.stream()
-        .filter(log -> log.getDirection() == MessageDirection.SENT)
-        .count();
-
-        //Received
-        long receivedCount = logs.stream()
-        .filter(log -> log.getDirection() == MessageDirection.RECEIVED)
-        .count();
-
-        stats.put("total", (long) logs.size());
-        stats.put("direct", directCount);
-        stats.put("group", groupCount);
-        stats.put("sent", sentCount);
-        stats.put("received", receivedCount);
+        stats.put("total", getCountFromQuery(totalCount));
+        stats.put("direct", getCountFromQuery(directCount));
+        stats.put("group", getCountFromQuery(groupCount));
         return stats;
+    }
+
+    private long getCountFromQuery(String query) throws SQLException {
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet rs = stmt.executeQuery();
+        ) {
+            if(rs.next()) {
+                return rs.getLong("count");
+            }
+        }
+        return 0;
     }
 
     /*

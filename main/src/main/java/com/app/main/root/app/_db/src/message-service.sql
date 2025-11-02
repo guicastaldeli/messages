@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_id TEXT NOT NULL,
     content TEXT NOT NULL,
     message_type TEXT DEFAULT 'text',
+    username TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sender_id) REFERENCES users(id)
 );
