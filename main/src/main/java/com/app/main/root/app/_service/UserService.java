@@ -215,9 +215,13 @@ public class UserService {
         if(password == null || password.length() < 8) throw new IllegalArgumentException("Password is required");
 
         String userId = generateUserId();
-        //String passwordHash = passwordEncoder.encode(password);
+        String passwordHash = passwordEncoder.encode(password);
         String query = CommandQueryManager.REGISTER_USER.get();
         String trimmedUsername = username.trim();
+
+        System.out.println("Registering user: " + username);
+        System.out.println("Password hash length: " + passwordHash.length());
+        System.out.println("Password hash: " + passwordHash);
 
         try(
             Connection conn = getConnection();
@@ -226,7 +230,7 @@ public class UserService {
             stmt.setString(1, userId);
             stmt.setString(2, trimmedUsername);
             stmt.setString(3, email.toLowerCase().trim());
-            stmt.setString(4, password);
+            stmt.setString(4, passwordHash);
             stmt.setString(5, sessionId);
             
             int rowsAffected = stmt.executeUpdate();
@@ -285,10 +289,11 @@ public class UserService {
                     String username = rs.getString("username");
                     String email = rs.getString("email");
 
-                   // if(passwordEncoder.matches(password, storedHash)) {
-                    if(password != null && storedHash != null && password.equals(storedHash)) {
-
+                    System.out.println("Login attempt for user: " + username);
+                    System.out.println("Stored hash: " + storedHash);
+                    System.out.println("Input password length: " + (password != null ? password.length() : "null"));
                     
+                    if(passwordEncoder.matches(password, storedHash)) {
                         updateUserSession(conn, userId, sessionId);
 
                         Map<String, Object> res = new HashMap<>();
@@ -310,7 +315,6 @@ public class UserService {
 
                         return res;
                     }
-                   // }
                 }
             }
         }

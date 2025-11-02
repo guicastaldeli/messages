@@ -4,6 +4,10 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
+#include <iostream>
+#include <cctype>
+#include <cstdlib>
+#include <fstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -17,8 +21,20 @@
 
 PasswordEncoder::PasswordEncoder() {
     pepper.resize(32);
-    if(RAND_bytes(pepper.data(), pepper.size()) != 1) {
-        throw std::runtime_error("Failed to generate pepper");
+    std::string pepperFile = "pepper.bin";
+
+    std::ifstream file(pepperFile, std::ios::binary);
+    if(file) {
+        file.read(reinterpret_cast<char*>(pepper.data()), pepper.size());
+        std::cout << "Loading pepper from file" << std::endl;
+    } else {
+        if(RAND_bytes(pepper.data(), pepper.size()) != 1) {
+            throw std::runtime_error("Failed to generate pepper");
+        }
+
+        std::ofstream outFile(pepperFile, std::ios::binary);
+        outFile.write(reinterpret_cast<const char*>(pepper.data()), pepper.size());
+        std::cout << "Genereated and saved new pepper" << std::endl;
     }
 }
 
@@ -212,28 +228,65 @@ bool PasswordEncoder::matches(
     const std::string& encodedPassword
 ) {
     try {
-        size_t pos1 = encodedPassword.find('$');
-        size_t pos2 = encodedPassword.find('$', pos1 + 1);
-        size_t pos3 = encodedPassword.find('$', pos2 + 1);
-        if(
-            pos1 == std::string::npos ||
-            pos2 == std::string::npos ||
-            pos3 == std::string::npos
-        ) {
+        std::cout << "=== Password Matching Debug ===" << std::endl;
+        std::cout << "Input password: [" << password << "]" << std::endl;
+        std::cout << "Encoded password: [" << encodedPassword << "]" << std::endl;
+
+        // Parse the encoded password
+        size_t firstDelim = encodedPassword.find('$');
+        if(firstDelim == std::string::npos) {
+            std::cerr << "Invalid encoded password format - missing first $" << std::endl;
+            return false;
+        }
+        size_t secondDelim = encodedPassword.find('$', firstDelim + 1);
+        if(secondDelim == std::string::npos) {
+            std::cerr << "Invalid encoded password format - missing second $" << std::endl;
+            return false;
+        }
+        size_t thirdDelim = encodedPassword.find('$', secondDelim + 1);
+        if(thirdDelim == std::string::npos) {
+            std::cerr << "Invalid encoded password format - missing third $" << std::endl;
             return false;
         }
 
-        int version = std::stoi(encodedPassword.substr(0, pos1));
-        int iterations = std::stoi(encodedPassword.substr(pos1 + 1, pos2 - pos1 - 1));
-        std::string saltB64 = encodedPassword.substr(pos2 + 1, pos3 - pos2 - 1);
-        std::string hashB64 = encodedPassword.substr(pos3 + 1);
+        std::string version = encodedPassword.substr(0, firstDelim);
+        std::string iterationsStr = encodedPassword.substr(firstDelim + 1, secondDelim - firstDelim - 1);
+        std::string saltStr = encodedPassword.substr(secondDelim + 1, thirdDelim - secondDelim - 1);
+        std::string storedHashStr = encodedPassword.substr(thirdDelim + 1);
 
-        auto salt = base64Decode(saltB64);
-        auto storedHash = base64Decode(hashB64);
-        auto pepperedPassword = applyPepper(password);
-        auto testHash = generateSecureHash(pepperedPassword, salt);
-        return constantTimeEquals(testHash, storedHash);
+        std::cout << "Version: " << version << std::endl;
+        std::cout << "Iterations: " << iterationsStr << std::endl;
+        std::cout << "Salt (B64): " << saltStr << std::endl;
+        std::cout << "Stored Hash (B64): " << storedHashStr << std::endl;
+
+        // Decode components
+        std::vector<unsigned char> salt = base64Decode(saltStr);
+        std::vector<unsigned char> storedHash = base64Decode(storedHashStr);
+        
+        std::cout << "Salt length: " << salt.size() << std::endl;
+        std::cout << "Stored hash length: " << storedHash.size() << std::endl;
+
+        // Generate new hash for comparison
+        std::vector<unsigned char> peppered = applyPepper(password);
+        std::vector<unsigned char> newHash = generateSecureHash(peppered, salt);
+        std::string newHashStr = base64Encode(newHash);
+        
+        std::cout << "New Hash (B64): " << newHashStr << std::endl;
+        std::cout << "Hashes match: " << (newHashStr == storedHashStr) << std::endl;
+
+        // Compare
+        std::vector<unsigned char> newHashVec = base64Decode(newHashStr);
+        bool result = constantTimeEquals(newHashVec, storedHash);
+        
+        std::cout << "Final result: " << result << std::endl;
+        std::cout << "=== End Debug ===" << std::endl;
+        
+        return result;
+    } catch(const std::exception& e) {
+        std::cerr << "Exception in matches: " << e.what() << std::endl;
+        return false;
     } catch(...) {
+        std::cerr << "Unknown exception in matches" << std::endl;
         return false;
     }
 }
@@ -302,7 +355,7 @@ std::string PasswordEncoder::base64Encode(const std::vector<unsigned char>& data
     const std::string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
+        "0123456789-_";
 
     std::string ret;
     int i = 0;
@@ -344,45 +397,59 @@ std::vector<unsigned char> PasswordEncoder::base64Decode(const std::string& enco
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789+/";
 
+    std::string standard_encoded = encoded_string;
+    std::replace(standard_encoded.begin(), standard_encoded.end(), '-', '+');
+    std::replace(standard_encoded.begin(), standard_encoded.end(), '_', '/');
+
     auto is_base64 = [](unsigned char c) {
-        return(isalnum(c) || (c == '+') || (c == '/'));
+        return (isalnum(c) || (c == '+') || (c == '/'));
     };
 
-    int in_len = encoded_string.size();
+    int in_len = standard_encoded.size();
     int i = 0;
     int j = 0;
     int in_ = 0;
-    unsigned char char_array_4[4];
-    unsigned char char_array_3[3];
+    unsigned char char_array_4[4], char_array_3[3];
     std::vector<unsigned char> ret;
 
-    while(
-        in_len-- &&
-        (encoded_string[in_] != '=') &&
-        is_base64(encoded_string[in_])
+    while (
+        in_len-- && 
+        (standard_encoded[in_] != '=') && 
+        is_base64(standard_encoded[in_])
     ) {
-        char_array_4[i++] = encoded_string[in_];
+        char_array_4[i++] = standard_encoded[in_]; 
         in_++;
-
+        
         if(i == 4) {
-            for(i = 0; i < 4; i++) char_array_4[i] = base64_chars.find(char_array_4[i]);
+            for(i = 0; i < 4; i++) {
+                char_array_4[i] = base64_chars.find(char_array_4[i]);
+            }
 
             char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
             char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
             char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
 
-            for(i = 0; i < 3; i++) ret.push_back(char_array_3[i]);
+            for(i = 0; i < 3; i++) {
+                ret.push_back(char_array_3[i]);
+            }
             i = 0;
         }
+    }
 
-        if(i) {
-            for(j = i; j < 4; j++) char_array_4[j] = 0;
+    if(i > 0) {
+        for(j = i; j < 4; j++) {
+            char_array_4[j] = 0;
+        }
+        for(j = 0; j < 4; j++) {
+            char_array_4[j] = base64_chars.find(char_array_4[j]);
+        }
 
-            char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-            char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-            char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-            
-            for(j = 0; j < i - 1; j++) ret.push_back(char_array_3[j]);
+        char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+        char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+        char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+        for(j = 0; j < i - 1; j++) {
+            ret.push_back(char_array_3[j]);
         }
     }
 
