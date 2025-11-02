@@ -219,10 +219,6 @@ public class UserService {
         String query = CommandQueryManager.REGISTER_USER.get();
         String trimmedUsername = username.trim();
 
-        System.out.println("Registering user: " + username);
-        System.out.println("Password hash length: " + passwordHash.length());
-        System.out.println("Password hash: " + passwordHash);
-
         try(
             Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
@@ -288,10 +284,6 @@ public class UserService {
                     String userId = rs.getString("id");
                     String username = rs.getString("username");
                     String email = rs.getString("email");
-
-                    System.out.println("Login attempt for user: " + username);
-                    System.out.println("Stored hash: " + storedHash);
-                    System.out.println("Input password length: " + (password != null ? password.length() : "null"));
                     
                     if(passwordEncoder.matches(password, storedHash)) {
                         updateUserSession(conn, userId, sessionId);

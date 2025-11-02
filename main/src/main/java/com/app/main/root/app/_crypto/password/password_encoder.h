@@ -18,6 +18,7 @@ class PasswordEncoder {
         std::vector<unsigned char> pepper;
         std::vector<unsigned char> generateSalt();
         std::vector<unsigned char> applyPepper(const std::string& password);
+        void generateNewPepper(const std::string& fileName);
         std::vector<unsigned char> generateSecureHash(
             const std::vector<unsigned char>& pepperedPassword,
             const std::vector<unsigned char>& salt

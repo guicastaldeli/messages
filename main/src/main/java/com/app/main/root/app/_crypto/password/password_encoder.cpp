@@ -24,17 +24,30 @@ PasswordEncoder::PasswordEncoder() {
     std::string pepperFile = "pepper.bin";
 
     std::ifstream file(pepperFile, std::ios::binary);
-    if(file) {
+    if(file && file.good()) {
         file.read(reinterpret_cast<char*>(pepper.data()), pepper.size());
-        std::cout << "Loading pepper from file" << std::endl;
-    } else {
-        if(RAND_bytes(pepper.data(), pepper.size()) != 1) {
-            throw std::runtime_error("Failed to generate pepper");
+        if(file.gcount() != 32) {
+            std::cerr << "Warning: Pepper file corrupted, generating new one" << std::endl;
+            generateNewPepper(pepperFile);
+        } else {
+            std::cout << "Loading pepper from file" << std::endl;
         }
+    } else {
+        generateNewPepper(pepperFile);
+    }
+}
 
-        std::ofstream outFile(pepperFile, std::ios::binary);
+void PasswordEncoder::generateNewPepper(const std::string& fileName) {
+    if(RAND_bytes(pepper.data(), pepper.size()) != 1) {
+        throw std::runtime_error("Failed to generate pepper");
+    }
+
+    std::ofstream outFile(fileName, std::ios::binary);
+    if(outFile) {
         outFile.write(reinterpret_cast<const char*>(pepper.data()), pepper.size());
         std::cout << "Genereated and saved new pepper" << std::endl;
+    } else {
+        std::cerr << "Warning: Could not save pepper to file" << std::endl;
     }
 }
 
@@ -100,12 +113,14 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
     const std::vector<unsigned char>& input,
     const std::vector<unsigned char>& salt
 ) {
+    EVP_MD_CTX* ctx = nullptr;
+
     try {
         std::vector<unsigned char> memoryBuffer(MEMORY_COST);
         std::vector<unsigned char> block(EVP_MAX_MD_SIZE);
         unsigned int blockLen = 0;
 
-        EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+        ctx = EVP_MD_CTX_new();
         if(!ctx) throw std::runtime_error("EVP_MD_CTX_new failed");
 
         std::vector<unsigned char> combined(input.size() + salt.size());
@@ -134,9 +149,15 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
                 memoryBuffer.begin() + pos
             );
 
-            EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr);
-            EVP_DigestUpdate(ctx, block.data(), block.size());
-            EVP_DigestFinal_ex(ctx, block.data(), &blockLen);
+            if(EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr) != 1) {
+                throw std::runtime_error("EVP_DigestInit_ex failed in loop");
+            }
+            if(EVP_DigestUpdate(ctx, block.data(), block.size()) != 1) {
+                throw std::runtime_error("EVP_DigestUpdate failed in loop");
+            }
+            if(EVP_DigestFinal_ex(ctx, block.data(), &blockLen) != 1) {
+                throw std::runtime_error("EVP_DigestFinal_ex failed in loop");
+            }
             block.resize(blockLen);
         }
 
@@ -146,13 +167,22 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
         for(int i = 0; i < parallelism; i++) {
             int segmentSize = MEMORY_COST / parallelism;
             int segmentStart = i * segmentSize;
-            EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr);
-            EVP_DigestUpdate(ctx, memoryBuffer.data() + segmentStart, segmentSize);
-            EVP_DigestFinal_ex(ctx, result.data() + (i * 32), &blockLen);
+            
+            if(EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr) != 1) {
+                throw std::runtime_error("EVP_DigestInit_ex failed in final");
+            }
+            if(EVP_DigestUpdate(ctx, memoryBuffer.data() + segmentStart, segmentSize) != 1) {
+                throw std::runtime_error("EVP_DigestUpdate failed in final");
+            }
+            unsigned int digestLen = 0;
+            if(EVP_DigestFinal_ex(ctx, result.data() + (i * 32), &digestLen) != 1) {
+                throw std::runtime_error("EVP_DigestFinal_ex failed in final");
+            }
         }
         EVP_MD_CTX_free(ctx);
+        ctx = nullptr;
 
-        std::vector<unsigned char> finalResult(EVP_MAX_MD_SIZE);
+        std::vector<unsigned char> finalResult(64);
         EVP_Digest(
             result.data(),
             result.size(),
@@ -163,6 +193,7 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
         );
         return finalResult;
     } catch(...) {
+        if(ctx) EVP_MD_CTX_free(ctx);
         return input;
     }
 }
@@ -228,24 +259,19 @@ bool PasswordEncoder::matches(
     const std::string& encodedPassword
 ) {
     try {
-        std::cout << "=== Password Matching Debug ===" << std::endl;
-        std::cout << "Input password: [" << password << "]" << std::endl;
-        std::cout << "Encoded password: [" << encodedPassword << "]" << std::endl;
-
-        // Parse the encoded password
         size_t firstDelim = encodedPassword.find('$');
         if(firstDelim == std::string::npos) {
-            std::cerr << "Invalid encoded password format - missing first $" << std::endl;
+            std::cerr << "Invalid encoded password format: missing first $" << std::endl;
             return false;
         }
         size_t secondDelim = encodedPassword.find('$', firstDelim + 1);
         if(secondDelim == std::string::npos) {
-            std::cerr << "Invalid encoded password format - missing second $" << std::endl;
+            std::cerr << "Invalid encoded password format: missing second $" << std::endl;
             return false;
         }
         size_t thirdDelim = encodedPassword.find('$', secondDelim + 1);
         if(thirdDelim == std::string::npos) {
-            std::cerr << "Invalid encoded password format - missing third $" << std::endl;
+            std::cerr << "Invalid encoded password format: missing third $" << std::endl;
             return false;
         }
 
@@ -254,39 +280,22 @@ bool PasswordEncoder::matches(
         std::string saltStr = encodedPassword.substr(secondDelim + 1, thirdDelim - secondDelim - 1);
         std::string storedHashStr = encodedPassword.substr(thirdDelim + 1);
 
-        std::cout << "Version: " << version << std::endl;
-        std::cout << "Iterations: " << iterationsStr << std::endl;
-        std::cout << "Salt (B64): " << saltStr << std::endl;
-        std::cout << "Stored Hash (B64): " << storedHashStr << std::endl;
-
-        // Decode components
         std::vector<unsigned char> salt = base64Decode(saltStr);
         std::vector<unsigned char> storedHash = base64Decode(storedHashStr);
         
-        std::cout << "Salt length: " << salt.size() << std::endl;
-        std::cout << "Stored hash length: " << storedHash.size() << std::endl;
-
-        // Generate new hash for comparison
         std::vector<unsigned char> peppered = applyPepper(password);
         std::vector<unsigned char> newHash = generateSecureHash(peppered, salt);
         std::string newHashStr = base64Encode(newHash);
         
-        std::cout << "New Hash (B64): " << newHashStr << std::endl;
-        std::cout << "Hashes match: " << (newHashStr == storedHashStr) << std::endl;
-
-        // Compare
         std::vector<unsigned char> newHashVec = base64Decode(newHashStr);
         bool result = constantTimeEquals(newHashVec, storedHash);
         
-        std::cout << "Final result: " << result << std::endl;
-        std::cout << "=== End Debug ===" << std::endl;
-        
         return result;
     } catch(const std::exception& e) {
-        std::cerr << "Exception in matches: " << e.what() << std::endl;
+        std::cerr << "Exception **matches" << e.what() << std::endl;
         return false;
     } catch(...) {
-        std::cerr << "Unknown exception in matches" << std::endl;
+        std::cerr << "Unknown exception **matches" << std::endl;
         return false;
     }
 }
