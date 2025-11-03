@@ -116,7 +116,8 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
     EVP_MD_CTX* ctx = nullptr;
 
     try {
-        std::vector<unsigned char> memoryBuffer(MEMORY_COST);
+        const size_t MEMORY_SIZE = 8192;
+        std::vector<unsigned char> memoryBuffer(MEMORY_SIZE);
         std::vector<unsigned char> block(EVP_MAX_MD_SIZE);
         unsigned int blockLen = 0;
 
@@ -140,9 +141,11 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
         EVP_DigestFinal_ex(ctx, block.data(), &blockLen);
         block.resize(blockLen);
 
-        for(int i = 0; i < MEMORY_COST; i++) {
-            size_t pos = i % memoryBuffer.size();
-            size_t copyLen = (std::min)(block.size(), memoryBuffer.size() - pos);
+        const int INTERATIONS = 1000;
+        for(int i = 0; i < INTERATIONS; i++) {
+            size_t pos = i % MEMORY_SIZE;
+            size_t availableSpace = MEMORY_SIZE - pos;
+            size_t copyLen = (std::min)(block.size(), availableSpace);
             std::copy(
                 block.begin(),
                 block.begin() + copyLen,
@@ -162,36 +165,20 @@ std::vector<unsigned char> PasswordEncoder::applyMemoryHardFunction(
         }
 
         std::vector<unsigned char> result(64);
-        const int parallelism = 2;
-
-        for(int i = 0; i < parallelism; i++) {
-            int segmentSize = MEMORY_COST / parallelism;
-            int segmentStart = i * segmentSize;
-            
-            if(EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr) != 1) {
-                throw std::runtime_error("EVP_DigestInit_ex failed in final");
-            }
-            if(EVP_DigestUpdate(ctx, memoryBuffer.data() + segmentStart, segmentSize) != 1) {
-                throw std::runtime_error("EVP_DigestUpdate failed in final");
-            }
-            unsigned int digestLen = 0;
-            if(EVP_DigestFinal_ex(ctx, result.data() + (i * 32), &digestLen) != 1) {
-                throw std::runtime_error("EVP_DigestFinal_ex failed in final");
-            }
+        if(EVP_DigestInit_ex(ctx, EVP_sha512(), nullptr) != 1) {
+            throw std::runtime_error("EVP_DigestInit_ex failed in final");
         }
+        if(EVP_DigestUpdate(ctx, memoryBuffer.data(), memoryBuffer.size()) != 1) {
+            throw std::runtime_error("EVP_DigestUpdate failed in final");
+        }
+        if(EVP_DigestFinal_ex(ctx, result.data(), &blockLen) != 1) {
+            throw std::runtime_error("EVP_DigestFinal_ex failed in final");
+        }
+        result.resize(blockLen);
         EVP_MD_CTX_free(ctx);
         ctx = nullptr;
 
-        std::vector<unsigned char> finalResult(64);
-        EVP_Digest(
-            result.data(),
-            result.size(),
-            finalResult.data(),
-            &blockLen,
-            EVP_sha512(),
-            nullptr
-        );
-        return finalResult;
+        return result;
     } catch(...) {
         if(ctx) EVP_MD_CTX_free(ctx);
         return input;
@@ -400,7 +387,7 @@ std::string PasswordEncoder::base64Encode(const std::vector<unsigned char>& data
     return ret;
 }
 
-std::vector<unsigned char> PasswordEncoder::base64Decode(const std::string& encoded_string) {
+std::vector<unsigned char> PasswordEncoder::base64Decode(const std::string& encoded_string) {    
     const std::string base64_chars = 
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"

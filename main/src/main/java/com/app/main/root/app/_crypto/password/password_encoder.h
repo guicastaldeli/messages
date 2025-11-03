@@ -14,8 +14,8 @@ class PasswordEncoder {
         static const int HASH_KEY_LENGTH = 128;
         static const int HASH_ITERATIONS = 1000;
         static const int MEMORY_COST = 128 * 128;
-
         std::vector<unsigned char> pepper;
+        
         std::vector<unsigned char> generateSalt();
         std::vector<unsigned char> applyPepper(const std::string& password);
         void generateNewPepper(const std::string& fileName);

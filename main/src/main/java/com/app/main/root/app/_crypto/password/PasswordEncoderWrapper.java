@@ -59,6 +59,7 @@ public class PasswordEncoderWrapper {
     }
     
     private long nativePtr;
+    private final Object lock = new Object();
 
     public PasswordEncoderWrapper() {
         this.nativePtr = createNativeObject();
@@ -76,20 +77,28 @@ public class PasswordEncoderWrapper {
         if(password == null || password.trim().isEmpty()) {
             throw new IllegalArgumentException("Password cannot be empty");
         }
-        return encodeNative(nativePtr, password);
+        synchronized(lock) {
+            return encodeNative(nativePtr, password);
+        }
     }
 
     public boolean matches(String password, String encodedPassword) {
         if(password == null || encodedPassword == null) return false;
-        return matchesNative(nativePtr, password, encodedPassword);
+        synchronized(lock) {
+            return matchesNative(nativePtr, password, encodedPassword);
+        }
     }
 
     public boolean isPasswordStrong(String password) {
-        return isPasswordStrongNative(nativePtr, password);
+        synchronized(lock) {
+            return isPasswordStrongNative(nativePtr, password);
+        }
     }
 
     public String generateSecurePassword(int length) {
-        return generateSecurePasswordNative(nativePtr, length);
+        synchronized(lock) {
+            return generateSecurePasswordNative(nativePtr, length);
+        }
     }
 
     public void destroy() {

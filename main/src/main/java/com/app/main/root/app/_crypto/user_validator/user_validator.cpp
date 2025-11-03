@@ -89,7 +89,7 @@ bool UserValidator::hasSuspiciousPatterns(const std::string& input) {
             ) {
                 if(
                     (input[i] + 1 == input[i + 1] && input[i + 1] + 1 == input[i + 2]) ||
-                    (input[i] - 1 == input[i + 1] && input[1 + 1] - 1 == input[i + 2])
+                    (input[i] - 1 == input[i + 1] && input[i + 1] - 1 == input[i + 2])
                 )  {
                     return true;
                 }
@@ -99,7 +99,7 @@ bool UserValidator::hasSuspiciousPatterns(const std::string& input) {
     if(input.length() >= 4) {
         for(size_t i = 0; i < input.length() - 3; ++i) {
             std::string pattern = input.substr(i, 2);
-            if(input.substr(i + 2, 3) == pattern) {
+            if(input.substr(i + 2, 2) == pattern) {
                 return true;
             }
         }

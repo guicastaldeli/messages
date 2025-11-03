@@ -59,6 +59,7 @@ public class UserValidatorWrapper {
     }
 
     private long nativePtr;
+    private final Object lock = new Object();
 
     public UserValidatorWrapper() {
         this.nativePtr = createNativeObject();
@@ -102,13 +103,15 @@ public class UserValidatorWrapper {
         ) {
             return false;
         }
-        return validateRegistrationNative(
-            nativePtr, 
-            username, 
-            email, 
-            password, 
-            ipAddress
-        );
+        synchronized(lock) {
+            return validateRegistrationNative(
+                nativePtr, 
+                username, 
+                email, 
+                password, 
+                ipAddress
+            );
+        }
     }
 
     /*
@@ -122,12 +125,14 @@ public class UserValidatorWrapper {
         ) {
             return false;
         }
-        return validateLoginNative(
-            nativePtr, 
-            email, 
-            password, 
-            ipAddress
-        );
+        synchronized(lock) {
+            return validateLoginNative(
+                nativePtr, 
+                email, 
+                password, 
+                ipAddress
+            );
+        }
     }
 
     /*
@@ -135,7 +140,9 @@ public class UserValidatorWrapper {
     */
     public void recordRegistrationAttempt(String ipAddress) {
         if(ipAddress != null) {
-            recordRegistrationAttemptNative(nativePtr, ipAddress);
+            synchronized(lock) {
+                recordRegistrationAttemptNative(nativePtr, ipAddress);
+            }
         }
     }
 
@@ -144,7 +151,9 @@ public class UserValidatorWrapper {
     */
     public void recordLoginAttempt(String ipAddress) {
         if(ipAddress != null) {
-            recordLoginAttemptNative(nativePtr, ipAddress);
+            synchronized(lock) {
+                recordLoginAttemptNative(nativePtr, ipAddress);
+            }
         }
     }
 
@@ -153,7 +162,9 @@ public class UserValidatorWrapper {
     */
     public boolean isRegistrationRateLimited(String ipAddress) {
         if(ipAddress == null) return false;
-        return isRegistrationRateLimitedNative(nativePtr, ipAddress);
+        synchronized(lock) {
+            return isRegistrationRateLimitedNative(nativePtr, ipAddress);
+        }
     }
 
     /*
@@ -161,7 +172,9 @@ public class UserValidatorWrapper {
     */
     public boolean isLoginRateLimited(String ipAddress) {
         if(ipAddress == null) return false;
-        return isLoginRateLimitedNative(nativePtr, ipAddress);
+        synchronized(lock) {
+            return isLoginRateLimitedNative(nativePtr, ipAddress);
+        }
     }
 
     public void destroy() {
