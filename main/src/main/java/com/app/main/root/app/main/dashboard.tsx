@@ -13,6 +13,7 @@ interface Props {
     chatList: any[];
     activeChat: any;
     apiClient: ApiClient;
+    onChatListUpdate?: (chatList: any[]) => void;
 }
 
 interface State {
@@ -43,6 +44,7 @@ export class Dashboard extends Component<Props, State> {
         if(!this.groupContainerRef.current || !this.props.chatManager) return;
         this.props.chatManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
+        window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
 
         try {
             const socketId = await this.props.messageManager.socketClient.getSocketId();
@@ -54,6 +56,10 @@ export class Dashboard extends Component<Props, State> {
         }
     }
 
+    componentWillUnmount(): void {
+        window.removeEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
+    }
+
     componentDidUpdate(prevProps: Props): void {
         if(
             this.props.chatList && 
@@ -63,10 +69,10 @@ export class Dashboard extends Component<Props, State> {
             this.props.chatManager.setContainer(this.groupContainerRef.current);
         }
 
-        if (prevProps.chatList !== this.props.chatList) {
+        if(prevProps.chatList !== this.props.chatList) {
             this.setState({ chatList: this.props.chatList || [] });
         }
-        if (prevProps.activeChat !== this.props.activeChat) {
+        if(prevProps.activeChat !== this.props.activeChat) {
             this.setState({ activeChat: this.props.activeChat || null });
         }
     }
@@ -130,6 +136,48 @@ export class Dashboard extends Component<Props, State> {
             groupName: ''
         });
     }
+
+    private handleChatItemRemoved = (event: CustomEvent): void => {
+        const { id, groupId, reason } = event.detail;
+        if(reason !== 'group-exit') return;
+
+        const removedId = id || groupId;
+        if(!removedId) return;
+
+        const itemExists = this.state.chatList.some(chat =>
+            chat.id === removedId || chat.groupId === removedId
+        );
+        if(!itemExists) return;
+
+        if(this.props.onChatListUpdate) {
+            const updatedList = this.props.chatList.filter(chat =>
+                chat.id !== removedId && chat.groupId !== removedId
+            );
+            this.props.onChatListUpdate(updatedList);
+        }
+
+        this.setState(prevState => ({
+            chatList: prevState.chatList.filter(chat => {
+                const shouldKeep = chat.id !== removedId && chat.groupId != removedId;
+                return shouldKeep;
+            })
+        }));
+        this.setState(prevState => {
+            if (
+                prevState.activeChat && 
+                (prevState.activeChat.id === removedId ||
+                prevState.activeChat.groupId === removedId)
+            ) {
+                return { activeChat: null };
+            }
+            return null;
+        });
+        this.updateState({
+            showGroup: false,
+            groupName: ''
+        });
+    }
+
     /*
     ** State Related
     */

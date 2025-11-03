@@ -253,11 +253,10 @@ export class GroupLayout extends Component<Props, State> {
         }
 
         try {
+            await new Promise(res => setTimeout(res, 500));
             const groupId = this.groupManager.currentGroupId;
             const link = await this.groupManager.getInviteCodeManager().generate(groupId);
-            this.setState({
-                generatedLink: link
-            });
+            this.setState({ generatedLink: link });
         } catch(err: any) {
             console.error('Failed to generate invite link:', err);
         }

@@ -396,11 +396,11 @@ public class EventList {
                 try {
                     long time = System.currentTimeMillis();
                     Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
-                    String userId = (String) data.get("userId");
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     String username = (String) data.get("username");
                     String groupId = (String) data.get("groupId");
                     String groupName = (String) data.get("groupName");
-                    
+
                     boolean success = serviceManager.getGroupService().removeUserFromGroup(groupId, userId);
                     if(!success) throw new Exception("Failed to exit group");
                     serviceManager.getGroupService().removeUserFromGroupMapping(userId, groupId);
@@ -511,6 +511,7 @@ public class EventList {
                     String groupId = (String) data.get("groupId");
                     String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     boolean isMember = serviceManager.getGroupService().isUserGroupMember(groupId, userId);
+                    if(!isMember) throw new Exception("User: " + userId + "is not a member!");
 
                     if(groupId == null || groupId.trim().isEmpty()) {
                         throw new IllegalArgumentException("Group Id is required");

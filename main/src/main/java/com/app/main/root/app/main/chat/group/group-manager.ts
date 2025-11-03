@@ -646,7 +646,7 @@ export class GroupManager {
     **
     */
     private async handleGroupExitScss(data: any): Promise<void> {
-        const exitedGroupId = data.groupId;
+        const exitedGroupId = data.id;
         if(this.currentGroupId === exitedGroupId) {
             this.currentGroupId = '';
             this.currentGroupName = '';
@@ -656,11 +656,21 @@ export class GroupManager {
             this.dashboard.updateState({
                 showCreationForm: false,
                 showJoinForm: false,
-                showGroup: true,
-                hideGroup: false,
+                showGroup: false,
+                hideGroup: true,
                 groupName: ''
             });
         }
+
+        const removeEvent = new CustomEvent('chat-item-removed', {
+            detail: {
+                id: exitedGroupId,
+                groupId: exitedGroupId,
+                reason: 'group-exit'
+            }
+        });
+        window.dispatchEvent(removeEvent);
+        console.log(removeEvent)
 
         const exitEvent = new CustomEvent('group-exit-complete', { detail: data });
         window.dispatchEvent(exitEvent);
@@ -677,10 +687,13 @@ export class GroupManager {
     /* Exit Method */
     public async exitGroup(groupId?: string): Promise<any> {
         const targetGroupId = groupId || this.currentGroupId;
+        console.log('groupId', groupId)
+        console.log('currentGroupId', this.currentGroupId)
         if(!targetGroupId) throw new Error('NO group selected to exit!');
 
         return new Promise(async (res, rej) => {
-            const client = this.userId;
+            const client = this.socketId;
+            console.log('EXITR GROUP CLIENT: ', client)
             if(!client) {
                 rej(new Error('No socket connection'));
                 return;
@@ -693,7 +706,6 @@ export class GroupManager {
 
             /* Success */
             const handleSucss = async (data: any) => {
-                console.log('Suceess!!!')
                 this.socketClient.offDestination(sucssDestination, handleSucss);
                 this.socketClient.offDestination(errDestination, handleErr);
                 if(this.exitRes) {
@@ -722,9 +734,11 @@ export class GroupManager {
                 const data = {
                     userId: this.userId,
                     username: this.username,
-                    groupId: targetGroupId
+                    groupId: targetGroupId,
+                    groupName: this.currentGroupName
                 }
 
+                console.log('EXITR GROUP CLIENT: ', client)
                 await this.socketClient.sendToDestination(
                     '/app/exit-group',
                     data
