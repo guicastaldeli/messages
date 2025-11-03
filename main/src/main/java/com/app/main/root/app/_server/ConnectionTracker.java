@@ -2,6 +2,9 @@ package com.app.main.root.app._server;
 import com.app.main.root.app.__controllers.UserAgentParserController;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._utils.ColorConverter;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -142,6 +145,23 @@ public class ConnectionTracker {
             }
         }
         return activeSessions;
+    }
+
+    /*
+    * Get Ip 
+    */
+    public String getClientIpAddress(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if(xForwardedFor != null && xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+
+        String xRealIp = request.getHeader("X-Real-IP");
+        if(xRealIp != null && !xRealIp.isEmpty()) {
+            return xRealIp;
+        }
+
+        return request.getRemoteAddr();
     }
 
     /*

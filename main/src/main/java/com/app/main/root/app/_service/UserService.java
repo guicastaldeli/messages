@@ -4,6 +4,7 @@ import com.app.main.root.app._types._User;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._crypto.password.PasswordEncoderWrapper;
+import com.app.main.root.app._crypto.user_validator.UserValidatorWrapper;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._server.RouteContext;
 import com.app.main.root.app._server.ConnectionTracker;
@@ -28,6 +29,7 @@ public class UserService {
     private final SimpMessagingTemplate messagingTemplate;
     private final ServiceManager serviceManager;
     private final PasswordEncoderWrapper passwordEncoder;
+    private final UserValidatorWrapper userValidator;
     public final Map<String, String> userToSessionMap = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToUserMap = new ConcurrentHashMap<>();
 
@@ -37,7 +39,8 @@ public class UserService {
         ConnectionTracker connectionTracker,
         SimpMessagingTemplate messagingTemplate,
         @Lazy ServiceManager serviceManager,
-        @Lazy PasswordEncoderWrapper passwordEncoder
+        @Lazy PasswordEncoderWrapper passwordEncoder,
+        UserValidatorWrapper userValidator
     ) {
         this.dataSourceService = dataSourceService;
         this.eventTracker = eventTracker;
@@ -45,6 +48,7 @@ public class UserService {
         this.messagingTemplate = messagingTemplate;
         this.serviceManager = serviceManager;
         this.passwordEncoder = passwordEncoder;
+        this.userValidator = userValidator;
     }
 
     private Connection getConnection() throws SQLException {
@@ -208,8 +212,14 @@ public class UserService {
         String username,
         String email,
         String password,
-        String sessionId
+        String sessionId,
+        String ipAddress
     ) throws SQLException {
+        if(!userValidator.validateRegistration(username, email, password, ipAddress)) {
+            throw new IllegalArgumentException("Invalid registration data!");
+        }
+        userValidator.recordRegistrationAttempt(ipAddress);
+
         if(username == null || username.trim().isEmpty()) throw new IllegalArgumentException("Username is required");
         if(email == null || !serviceManager.getEmailService().isValidEmail(email)) throw new IllegalArgumentException("Email is required");
         if(password == null || password.length() < 8) throw new IllegalArgumentException("Password is required");
@@ -269,8 +279,14 @@ public class UserService {
     public Map<String, Object> loginUser(
         String accountEmail, 
         String password, 
-        String sessionId
+        String sessionId,
+        String ipAddress
     ) throws SQLException {
+        if(!userValidator.validateLogin(accountEmail, password, ipAddress)) {
+            throw new SecurityException("Invalid login data!");
+        }
+        userValidator.recordLoginAttempt(ipAddress);
+        
         String query = CommandQueryManager.LOGIN_USER.get();
         try(
             Connection conn = getConnection();

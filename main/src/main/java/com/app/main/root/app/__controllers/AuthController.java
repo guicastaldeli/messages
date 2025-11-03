@@ -41,7 +41,8 @@ public class AuthController {
                 request.getUsername(),
                 request.getEmail(),
                 request.getPassword(),
-                request.getSessionId()
+                request.getSessionId(),
+                request.getIpAddress()
             );
 
             System.out.println("Registered!:" + request.getEmail());
@@ -69,7 +70,8 @@ public class AuthController {
             Map<String, Object> result = serviceManager.getUserService().loginUser(
                 request.getEmail(),
                 request.getPassword(),
-                request.getSessionId()
+                request.getSessionId(),
+                request.getIpAddress()
             );
 
             System.out.println("Logged!: " + request.getEmail());
