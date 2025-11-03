@@ -230,12 +230,12 @@ bool UserValidator::hasSuspiciousActivity(const std::string& ipAddress) {
     int totalRecentAttempts = 0;
 
     if(regIt != registrationAttempts.end()) {
-        cleanOldAttempts(regIt -> second);
-        totalRecentAttempts += regIt -> second.size();
+        cleanOldAttempts(regIt->second);
+        totalRecentAttempts += regIt->second.size();
     }
     if(loginIt != loginAttempts.end()) {
-        cleanOldAttempts(loginIt -> second);
-        totalRecentAttempts += loginIt -> second.size();
+        cleanOldAttempts(loginIt->second);
+        totalRecentAttempts += loginIt->second.size();
     }
 
     return totalRecentAttempts > (MAX_REGISTRATION_ATTEMPTS_PER_HOUR + MAX_LOGIN_ATTEMPTS_PER_HOUR);

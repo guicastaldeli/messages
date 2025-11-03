@@ -11,8 +11,8 @@ __declspec(dllexport) JNIEXPORT jlong JNICALL Java_com_app_main_root_app__1crypt
     try {
         PasswordEncoder* encoder = new PasswordEncoder();
         return reinterpret_cast<jlong>(encoder);
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating PasswordEncoder: " << e.what() << std::endl;
+    } catch (const std::exception& err) {
+        std::cerr << "Error creating PasswordEncoder: " << err.what() << std::endl;
         return 0;
     } catch (...) {
         std::cerr << "Unknown error creating PasswordEncoder" << std::endl;
@@ -30,9 +30,9 @@ __declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto
             PasswordEncoder* encoder = reinterpret_cast<PasswordEncoder*>(nativePtr);
             delete encoder;
         }
-    } catch (const std::exception& e) {
-        std::cerr << "Error destroying PasswordEncoder: " << e.what() << std::endl;
-    } catch (...) {
+    } catch(const std::exception& err) {
+        std::cerr << "Error destroying PasswordEncoder: " << err.what() << std::endl;
+    } catch(...) {
         std::cerr << "Unknown error destroying PasswordEncoder" << std::endl;
     }
 }
@@ -43,7 +43,7 @@ __declspec(dllexport) JNIEXPORT jstring JNICALL Java_com_app_main_root_app__1cry
     jlong nativePtr,
     jstring password
 ) {
-    if (nativePtr == 0 || password == NULL) {
+    if(nativePtr == 0 || password == NULL) {
         return NULL;
     }
     
@@ -52,17 +52,17 @@ __declspec(dllexport) JNIEXPORT jstring JNICALL Java_com_app_main_root_app__1cry
     
     try {
         passwordStr = env->GetStringUTFChars(password, NULL);
-        if (!passwordStr) return NULL;
+        if(!passwordStr) return NULL;
         
         std::string result = encoder->encode(std::string(passwordStr));
         env->ReleaseStringUTFChars(password, passwordStr);
         
         return env->NewStringUTF(result.c_str());
-    } catch (const std::exception& e) {
-        std::cerr << "Error encoding password: " << e.what() << std::endl;
-        if (passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
+    } catch(const std::exception& err) {
+        std::cerr << "Error encoding password: " << err.what() << std::endl;
+        if(passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
         return NULL;
-    } catch (...) {
+    } catch(...) {
         std::cerr << "Unknown error encoding password" << std::endl;
         if (passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
         return NULL;
@@ -76,7 +76,7 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
     jstring password,
     jstring encodedPassword
 ) {
-    if (nativePtr == 0 || password == NULL || encodedPassword == NULL) {
+    if(nativePtr == 0 || password == NULL || encodedPassword == NULL) {
         return JNI_FALSE;
     }
     
@@ -100,15 +100,15 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
         env->ReleaseStringUTFChars(encodedPassword, encodedPasswordStr);
         
         return result ? JNI_TRUE : JNI_FALSE;
-    } catch (const std::exception& e) {
-        std::cerr << "Error matching password: " << e.what() << std::endl;
-        if (passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
-        if (encodedPasswordStr) env->ReleaseStringUTFChars(encodedPassword, encodedPasswordStr);
+    } catch(const std::exception& err) {
+        std::cerr << "Error matching password: " << err.what() << std::endl;
+        if(passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
+        if(encodedPasswordStr) env->ReleaseStringUTFChars(encodedPassword, encodedPasswordStr);
         return JNI_FALSE;
-    } catch (...) {
+    } catch(...) {
         std::cerr << "Unknown error matching password" << std::endl;
-        if (passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
-        if (encodedPasswordStr) env->ReleaseStringUTFChars(encodedPassword, encodedPasswordStr);
+        if(passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
+        if(encodedPasswordStr) env->ReleaseStringUTFChars(encodedPassword, encodedPasswordStr);
         return JNI_FALSE;
     }
 }
