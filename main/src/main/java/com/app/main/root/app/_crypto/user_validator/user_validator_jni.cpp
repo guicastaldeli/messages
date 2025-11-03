@@ -135,7 +135,7 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
         passwordStr = env->GetStringUTFChars(password, NULL);
         ipAddressStr = env->GetStringUTFChars(ipAddress, NULL);
 
-        if(!emailStr || !passwordStr || ipAddressStr) {
+        if(!emailStr || !passwordStr || !ipAddressStr) {
             if(emailStr) env->ReleaseStringUTFChars(email, emailStr);
             if(passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
             if(ipAddressStr) env->ReleaseStringUTFChars(ipAddress, ipAddressStr);

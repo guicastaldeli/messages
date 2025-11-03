@@ -210,6 +210,13 @@ bool UserValidator::validatePassword(const std::string& password) {
 
 void UserValidator::recordRegistrationAttempt(const std::string& ipAddress) {
     std::lock_guard<std::mutex> lock(rateLimitMutex);
+    auto& attempts = registrationAttempts[ipAddress];
+    attempts.push_back(std::chrono::steady_clock::now());
+    cleanOldAttempts(attempts);
+}
+
+void UserValidator::recordLoginAttempt(const std::string& ipAddress) {
+    std::lock_guard<std::mutex> lock(rateLimitMutex);
     auto& attempts = loginAttempts[ipAddress];
     attempts.push_back(std::chrono::steady_clock::now());
     cleanOldAttempts(attempts);

@@ -7,6 +7,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app._service.ServiceManager;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import com.app.main.root.app._auth.AuthManager;
 import com.app.main.root.app._auth.RegisterRequest;
 import com.app.main.root.app._auth.LoginRequest;
@@ -33,7 +36,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
         try {
             System.out.println("Registration attempt for: " + request.getEmail());
 
@@ -42,7 +45,7 @@ public class AuthController {
                 request.getEmail(),
                 request.getPassword(),
                 request.getSessionId(),
-                request.getIpAddress()
+                request.getIpAddress(httpRequest)
             );
 
             System.out.println("Registered!:" + request.getEmail());
@@ -63,7 +66,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         try {
             System.out.println("Login attempt for: " + request.getEmail());
 
@@ -71,7 +74,7 @@ public class AuthController {
                 request.getEmail(),
                 request.getPassword(),
                 request.getSessionId(),
-                request.getIpAddress()
+                request.getIpAddress(httpRequest)
             );
 
             System.out.println("Logged!: " + request.getEmail());

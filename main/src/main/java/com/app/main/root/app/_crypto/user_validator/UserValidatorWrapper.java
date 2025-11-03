@@ -81,7 +81,7 @@ public class UserValidatorWrapper {
         String ipAddress
     );
     private native void recordRegistrationAttemptNative(long nativePtr, String ipAddress);
-    private native void recordLoginAttemptNative(long natrivePtr, String ipAddress);
+    private native void recordLoginAttemptNative(long nativePtr, String ipAddress);
     private native boolean isRegistrationRateLimitedNative(long nativePtr, String ipAddress);
     private native boolean isLoginRateLimitedNative(long nativePtr, String ipAddress);
 
