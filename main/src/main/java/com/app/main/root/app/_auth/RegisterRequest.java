@@ -1,10 +1,6 @@
 package com.app.main.root.app._auth;
-import com.app.main.root.app._server.ConnectionTracker;
-import org.springframework.beans.factory.annotation.Autowired;
-import jakarta.servlet.http.HttpServletRequest;
 
 public class RegisterRequest {
-    @Autowired private ConnectionTracker connectionTracker;
     private String email;
     private String username;
     private String password;
@@ -40,11 +36,6 @@ public class RegisterRequest {
     }
     public String getSessionId() {
         return sessionId;
-    }
-
-    /* Ip */
-    public String getIpAddress(HttpServletRequest httpRequest) {
-        return connectionTracker.getClientIpAddress(httpRequest);
     }
 }
  

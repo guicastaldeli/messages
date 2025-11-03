@@ -172,7 +172,7 @@ bool UserValidator::validateUsername(const std::string& username) {
     if(username.length() < MIN_USERNAME_LENGTH || username.length() > MAX_USERNAME_LENGTH) {
         return false;
     }
-    if(!isValidEmailFormat(username)) {
+    if(!isValidUsernameFormat(username)) {
         return false;
     }
 
