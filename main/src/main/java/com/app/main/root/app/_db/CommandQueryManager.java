@@ -149,6 +149,51 @@ public enum CommandQueryManager {
     ),
 
     /*
+    * ~~~ CONTACT SERVICE ~~~ 
+    */
+    CHECK_CONTACT_PENDING_REQUEST(
+    "SELECT id FROM contact_requests WHERE from_user_id AND to_user_id = ? AND status = 'pending'"
+    ),
+    ADD_CONTACT_REQUEST(
+        "INSERT INTO contact_requests (id, from_user_id, to_user_id, status) WHERE (?, ?, ?, 'pending')"
+    ),
+    VERIFY_REQUEST(
+        "SELECT from_user_id, to_user_id FROM contact_requests WHERE id = ? AND to_user_id AND status = 'pending'"
+    ),
+    UPDATE_CONTACT_STATUS(
+        "UPDATE contact_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    ),
+    ADD_CONTACT(
+        "INSERT INTO user_contacts (id, user_id, contact_id) VALUES (?, ?, ?)"
+    ),
+    IS_CONTACT(
+        "SELECT id FROM user_contacts WHERE user_id = ? AND contact_id = ?"
+    ),
+    GET_CONTACTS(
+        """
+            SELECT u.id, u.username, uc.created_at,
+            CASE WHEN us.session_id IS NOT THEN 1 ELSE 0 END as is_online
+            FROM user_contacts uc
+            JOIN users u ON uc.contact_id = u.id
+            LEFT JOIN users us ON uc.contact_id = us.id AND us.session_id IS NOT NULL
+            WHERE uc.user_id = ?
+            ORDER BY u.username        
+        """
+    ),
+    GET_PENDING_CONTACTS(
+        """
+            SELECT cr.id, cr.from_user_id, u.username, cr.created_at
+            FROM contact_requests cr
+            JOIN users u ON cr.from_user_id = u.id
+            WHERE cr.to_user_id = ? AND cr.status = 'pending'
+            ORDER BY cr.created_at DESC        
+        """
+    ),
+    REMOVE_CONTACT(
+        "DELETE FROM user_contacts WHERE user_id = ? AND contact_id = ?"
+    ),
+
+    /*
     * ~~~ MESSAGE SERVICE ~~~ 
     */
     SAVE_MESSAGE(
