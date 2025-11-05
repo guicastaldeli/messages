@@ -165,24 +165,6 @@ public class ContactService {
     }
 
     /*
-    * Notify Contact Added
-    */
-    private void notifyContactAdded(String fUserId, String sUserId) {
-        String[] userIds = { fUserId, sUserId };
-        long time = System.currentTimeMillis();
-
-        for(String userId : userIds) {
-            String sessionId = serviceManager.getUserService().getSessionByUserId(userId);
-            if(sessionId != null) {
-                Map<String, Object> notification = new HashMap<>();
-                notification.put("type", "contact_added");
-                notification.put("timestamp", time);
-                serviceManager.getUserService().sendMessageToUser(sessionId, "contact-added", notification);
-            }
-        }
-    }
-
-    /*
     * Is Contact 
     */
     public boolean isContact(String userId, String contactId) throws SQLException {
@@ -204,14 +186,32 @@ public class ContactService {
     */
     public boolean removeContact(String userId, String contactId) throws SQLException {
         String query = CommandQueryManager.REMOVE_CONTACT.get();
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query);
-        ) {
-            stmt.setString(1, userId);
-            stmt.setString(2, contactId);
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
+        try(Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String userUsername = serviceManager.getUserService().getUsernameByUserId(userId);
+                String contactUsername = serviceManager.getUserService().getUsernameByUserId(contactId);
+
+                try(PreparedStatement stmt = conn.prepareStatement(query)) {
+                    stmt.setString(1, userId);
+                    stmt.setString(2, contactId);
+                    stmt.executeUpdate();
+                }
+
+                try(PreparedStatement stmt = conn.prepareStatement(query)) {
+                    stmt.setString(1, contactId);
+                    stmt.setString(2, userId);
+                    stmt.executeUpdate();
+                }
+
+                conn.commit();
+                notifyContactRemoved(userId, contactId, userUsername, contactUsername);
+                return true;
+            } catch(SQLException err) {
+                conn.rollback();
+                System.err.println("Failed to remove contact: " + err.getMessage());
+                throw err;
+            }
         }
     }
 
@@ -272,5 +272,54 @@ public class ContactService {
         }
 
         return requests;
+    }
+
+    /*
+    **
+    *** Notifications
+    ** 
+    */
+    private void notifyContactAdded(String fUserId, String sUserId) {
+        String[] userIds = { fUserId, sUserId };
+        long time = System.currentTimeMillis();
+
+        for(String userId : userIds) {
+            String sessionId = serviceManager.getUserService().getSessionByUserId(userId);
+            if(sessionId != null) {
+                Map<String, Object> notification = new HashMap<>();
+                notification.put("type", "contact_added");
+                notification.put("timestamp", time);
+                serviceManager.getUserService().sendMessageToUser(sessionId, "contact-added", notification);
+            }
+        }
+    }
+
+    private void notifyContactRemoved(
+        String userId,
+        String contactId,
+        String userUsername,
+        String contactUsername
+    ) {
+        String[] userIds = { userId, contactId };
+        long time = System.currentTimeMillis();
+
+        for(String currentUserId : userIds) {
+            String sessionId = serviceManager.getUserService().getSessionByUserId(currentUserId);
+            if(sessionId != null) {
+                Map<String, Object> notification = new HashMap<>();
+                notification.put("type", "contact_removed");
+                notification.put("timestamp", time);
+
+                if(currentUserId.equals(userId)) {
+                    notification.put("removedUser", contactUsername);
+                    notification.put("action", "you_removed");
+                } else {
+                    notification.put("removedUser", userUsername);
+                    notification.put("action", "removed_you");
+                }
+
+                serviceManager.getUserService().sendMessageToUser(sessionId, "contact-removed", notification);
+            }
+        }
     }
 }
