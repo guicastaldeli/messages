@@ -131,7 +131,7 @@ public class EventList {
             "/queue/user-id",
             false
         ));
-        /* User Id */
+        /* Get Username */
         configs.put("get-username", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 long time = System.currentTimeMillis();
@@ -152,6 +152,164 @@ public class EventList {
                 return res;
             },
             "/queue/username",
+            false
+        ));
+        /* Send Contact Request */
+        configs.put("send-contact-request", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String fromUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String toUsername = (String) data.get("username");
+
+                    Map<String, Object> res = serviceManager.getContactService()
+                        .sendContactRequest(fromUserId, toUsername);
+
+                    eventTracker.track(
+                        "send-contact-request",
+                        res,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        fromUserId
+                    );
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "CONTACT_REQUEST_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/contact-request-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/contact-request-scss",
+            false
+        ));
+        /* Response Contact Request */
+        configs.put("response-contact-request", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String requestId = (String) data.get("requestId");
+                    boolean accept = (Boolean) data.get("accept");
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+
+                    Map<String, Object> res = serviceManager.getContactService()
+                        .responseContactRequest(requestId, userId, accept);
+
+                    eventTracker.track(
+                        "response-contact-request",
+                        res,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        userId
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "CONTACT_RESPONSE_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/contact-response-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/contact-response-scss",
+                false
+        ));
+        /* Get Contacts */
+        configs.put("get-contacts", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    List<Map<String, Object>> contacts = serviceManager.getContactService().getContacts(userId);
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("contacts", contacts);
+                    res.put("count", contacts.size());
+
+                    eventTracker.track(
+                        "get-contacts",
+                        res,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        userId
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "LOAD_CONTACTS_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/contacts-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/contacts-scss",
+            false
+        ));
+        /* Get Pending Contacts */
+        configs.put("get-pending-requests", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    List<Map<String, Object>> requests = serviceManager.getContactService()
+                        .getPendingContactRequests(userId);
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("requests", requests);
+                    res.put("count", requests.size());
+
+                    eventTracker.track(
+                        "get-pending-requests",
+                        res,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        userId
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "LOAD_PENDING_REQUESTS_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/pending-requests-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/pending-requests-scss",
+            false
+        ));
+        /* Remove Contact */
+        configs.put("remove-contact", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String contactId = (String) data.get("contactId");
+                    boolean success = serviceManager.getContactService().removeContact(userId, contactId);
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("success", success);
+                    res.put("contactId", contactId);
+
+                    eventTracker.track(
+                        "remove-contact",
+                        res,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        userId
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "REMOVE_CONTACT_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/remove-contact-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/remove-contact-scss",
             false
         ));
         /* Chat */

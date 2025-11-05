@@ -73,7 +73,9 @@ public class ContactService {
             notification.put("type", "contact_request");
             notification.put("requestId", requestId);
             notification.put("fromUserId", fromUserId);
-            notification.put("fromUsername", serviceManager.getUserService().getUsernameBySessionId(fromUserId));
+
+            String fromUsername = serviceManager.getUserService().getUsernameByUserId(fromUserId);
+            notification.put("fromUsername", fromUsername);
             notification.put("timestamp", time);
             serviceManager.getUserService().sendMessageToUser(toUserSession, "contact-request", notification);
         }
@@ -92,23 +94,25 @@ public class ContactService {
     */
     public Map<String, Object> responseContactRequest(String requestId, String userId, boolean accept) throws SQLException {
         String status = accept ? "accepted" : "rejected";
-        String vQuery = CommandQueryManager.VERIFY_REQUEST.get();
 
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(vQuery);
-        ) {
-            stmt.setString(1, requestId);
-            stmt.setString(2, userId);
-            try(ResultSet rs = stmt.executeQuery()) {
-                if(!rs.next()) {
-                    throw new IllegalArgumentException("Contact request not found");
+        try(Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String fromUserId;
+                String toUserId;
+
+                String vQuery = CommandQueryManager.VERIFY_REQUEST.get();
+                try(PreparedStatement stmt = conn.prepareStatement(vQuery)) {
+                    stmt.setString(1, requestId);
+                    stmt.setString(2, userId);
+                    try(ResultSet rs = stmt.executeQuery()) {
+                        if(!rs.next()) throw new IllegalArgumentException("Contact request not found");
+                        fromUserId = rs.getString("from_user_id");
+                        toUserId = rs.getString("to_user_id");
+                    }
                 }
 
-                String fromUserId = rs.getString("from_user_id");
-                String toUserId = rs.getString("to_user_id");
                 String uQuery = CommandQueryManager.UPDATE_CONTACT_STATUS.get();
-
                 try(PreparedStatement updateStmt = conn.prepareStatement(uQuery)) {
                     updateStmt.setString(1, status);
                     updateStmt.setString(2, requestId);
@@ -116,19 +120,20 @@ public class ContactService {
                 }
 
                 if(accept) {
-                    addContact(fromUserId, toUserId);
-                    addContact(toUserId, fromUserId);
-                    notifyContactAdded(fromUserId, toUserId);
+                    addContact(conn, fromUserId, toUserId);
+                    addContact(conn, toUserId, fromUserId);
                 }
+                conn.commit();
+                if(accept) notifyContactAdded(fromUserId, toUserId);
 
                 String fromUserSession = serviceManager.getUserService().getSessionByUserId(fromUserId);
-                if(fromUserSession != null) {
+                if (fromUserSession != null) {
                     Map<String, Object> notification = new HashMap<>();
                     notification.put("type", "contact_request_response");
                     notification.put("requestId", requestId);
                     notification.put("accepted", accept);
                     notification.put("respondentId", userId);
-                    notification.put("respondentUsername", serviceManager.getUserService().getUsernameBySessionId(userId));
+                    notification.put("respondentUsername", serviceManager.getUserService().getUsernameByUserId(userId));
                     serviceManager.getUserService().sendMessageToUser(fromUserSession, "contact-request-response", notification);
                 }
 
@@ -137,6 +142,10 @@ public class ContactService {
                 result.put("accepted", accept);
                 result.put("fromUserId", fromUserId);
                 return result;
+            } catch(SQLException err) {
+                conn.rollback();
+                System.err.println("Transaction rolled back: " + err.getMessage());
+                throw err;
             }
         }
     }
@@ -144,14 +153,10 @@ public class ContactService {
     /*
     * Add Contact 
     */
-    private void addContact(String userId, String contactId) throws SQLException {
-        String contactEntryId = "contact_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    private void addContact(Connection conn, String userId, String contactId) throws SQLException {
+        String contactEntryId = "contact_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 12);
         String query = CommandQueryManager.ADD_CONTACT.get();
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query);
-        ) {
+        try(PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, contactEntryId);
             stmt.setString(2, userId);
             stmt.setString(3, contactId);
@@ -186,7 +191,7 @@ public class ContactService {
             Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
-            stmt.setString(1, query);
+            stmt.setString(1, userId);
             stmt.setString(2, contactId);
             try(ResultSet rs = stmt.executeQuery()) {
                 return rs.next();

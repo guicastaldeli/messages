@@ -152,13 +152,13 @@ public enum CommandQueryManager {
     * ~~~ CONTACT SERVICE ~~~ 
     */
     CHECK_CONTACT_PENDING_REQUEST(
-    "SELECT id FROM contact_requests WHERE from_user_id AND to_user_id = ? AND status = 'pending'"
+    "SELECT id FROM contact_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'"
     ),
     ADD_CONTACT_REQUEST(
-        "INSERT INTO contact_requests (id, from_user_id, to_user_id, status) WHERE (?, ?, ?, 'pending')"
+        "INSERT INTO contact_requests (id, from_user_id, to_user_id, status) VALUES (?, ?, ?, 'pending')"
     ),
     VERIFY_REQUEST(
-        "SELECT from_user_id, to_user_id FROM contact_requests WHERE id = ? AND to_user_id AND status = 'pending'"
+        "SELECT from_user_id, to_user_id FROM contact_requests WHERE id = ? AND to_user_id = ? AND status = 'pending'"
     ),
     UPDATE_CONTACT_STATUS(
         "UPDATE contact_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
@@ -171,13 +171,20 @@ public enum CommandQueryManager {
     ),
     GET_CONTACTS(
         """
-            SELECT u.id, u.username, uc.created_at,
-            CASE WHEN us.session_id IS NOT THEN 1 ELSE 0 END as is_online
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                uc.created_at,
+                CASE
+                    WHEN us.session_id IS NOT NULL THEN 1
+                    ELSE 0
+                END as is_online
             FROM user_contacts uc
             JOIN users u ON uc.contact_id = u.id
             LEFT JOIN users us ON uc.contact_id = us.id AND us.session_id IS NOT NULL
             WHERE uc.user_id = ?
-            ORDER BY u.username        
+            ORDER BY u.username
         """
     ),
     GET_PENDING_CONTACTS(
@@ -272,7 +279,7 @@ public enum CommandQueryManager {
         "SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at DESC"
     ),
     GET_MESSAGES_BY_TYPE(
-        "SELECT * FROM messages WHERE message_type = ? ORDER BY cretad_at DESC"
+        "SELECT * FROM messages WHERE message_type = ? ORDER BY created_at DESC"    
     ),
     GET_MESSAGES_BY_USERNAME(
         "SELECT * FROM messages WHERE username = ? ORDER BY created_at DESC"
@@ -287,7 +294,7 @@ public enum CommandQueryManager {
         "SELECT COUNT(*) as count FROM messages WHERE message_type = 'DIRECT'"
     ),
     TOTAL_MESSAGES_GROUP(
-        "SELECT COUNT(*) as count FROM messages WHERE message_type = 'GROUP"
+        "SELECT COUNT(*) as count FROM messages WHERE message_type = 'GROUP'"
     ),
 
     /*

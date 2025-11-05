@@ -14,6 +14,7 @@ public class ServiceManager {
     private final MessagePerspectiveService messagePerspectiveService;
     private final UserService userService;
     private final DirectService directService;
+    private final ContactService contactService;
     private final GroupService groupService;
     private final EmailService emailService;
 
@@ -24,6 +25,7 @@ public class ServiceManager {
         @Lazy MessagePerspectiveService messagePerspectiveService,
         UserService userService,
         DirectService directService,
+        ContactService contactService,
         @Lazy GroupService groupService,
         @Lazy EmailService emailService
     ) {
@@ -32,6 +34,7 @@ public class ServiceManager {
         this.systemMessageService = systemMessageService;
         this.messagePerspectiveService = messagePerspectiveService;
         this.userService = userService;
+        this.contactService = contactService;
         this.directService = directService;
         this.groupService = groupService;
         this.emailService = emailService;
@@ -77,6 +80,13 @@ public class ServiceManager {
     */
     public DirectService getDirectService() {
         return directService;
+    }
+
+    /*
+    * Contact Service 
+    */
+    public ContactService getContactService() {
+        return contactService;
     }
 
     /*

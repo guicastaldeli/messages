@@ -29,8 +29,8 @@ export class MessageManager {
     private appEl: HTMLDivElement | null = null;
     private joinHandled: boolean = false;
     private socketId!: string;
-    private userId!: string;
-    private username!: string;
+    public userId!: string;
+    public username!: string;
 
     private isSending: boolean = false;
     private sendQueue: Array<() => Promise<void>> = [];

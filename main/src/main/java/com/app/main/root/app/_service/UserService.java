@@ -162,6 +162,11 @@ public class UserService {
         return userToSessionMap.get(userId);
     }
 
+    /* Username by User Id */
+    public String getUsernameByUserId(String userId) throws SQLException {
+        _User user = getUserById(userId);
+        return user != null ? user.getUsername() : null;
+    }
 
     /* Link */
     public void linkUserSession(String userId, String sessionId) {

@@ -6,6 +6,8 @@ import { ChatManager } from './chat/chat-manager';
 import { chatState } from './chat-state-service';
 import { ApiClient } from './_api-client/api-client';
 import { GroupLayout } from './chat/group/group-layout';
+import { ContactServiceClient } from './_contact_config/contact-service-client';
+import { ContactLayout } from './_contact_config/contact-layout';
 
 interface Props {
     messageManager: MessageManager;
@@ -21,11 +23,13 @@ interface State {
     groups: any[];
     chatList: any[];
     activeChat: any;
+    contactService: ContactServiceClient | null;
 }
 
 export class Dashboard extends Component<Props, State> {
     private groupContainerRef: React.RefObject<HTMLDivElement | null>;
     private apiClient: ApiClient;
+    private contactService: ContactServiceClient | null = null;
 
     constructor(props: Props) {
         super(props);
@@ -33,7 +37,8 @@ export class Dashboard extends Component<Props, State> {
             currentSession: 'MAIN_DASHBOARD',
             groups: [],
             chatList: props.chatList || [],
-            activeChat: props.activeChat || null
+            activeChat: props.activeChat || null,
+            contactService: null
         }
         this.groupContainerRef = React.createRef();
         this.apiClient = props.apiClient;
@@ -45,6 +50,14 @@ export class Dashboard extends Component<Props, State> {
         this.props.chatManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
+
+        this.contactService = new ContactServiceClient({
+            socketClient: this.props.messageManager.socketClient,
+            messageManager: this.props.messageManager,
+            userId: this.props.messageManager.userId,
+            username: this.props.messageManager.username
+        });
+        this.contactService.setupEventListeners();
 
         try {
             const socketId = await this.props.messageManager.socketClient.getSocketId();
@@ -223,6 +236,11 @@ export class Dashboard extends Component<Props, State> {
                         <>
                             {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
+                                    <div className="sidebar">
+                                        {this.contactService && (
+                                            <ContactLayout contactService={this.contactService!}></ContactLayout>
+                                        )}
+                                    </div>
                                     <header>
                                         <div id="actions-bar">
                                             <button 
