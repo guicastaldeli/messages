@@ -106,6 +106,16 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
         }
     }
 
+    const handleContactClick = (contact: any) => {
+        const event = new CustomEvent('contact-clicked', {
+            detail: {
+                contactId: contact.id,
+                username: contact.username
+            }
+        });
+        window.dispatchEvent(event);
+    }
+
     return (
         <div className="contacts-panel">
             <div className="contacts-header">
@@ -172,7 +182,11 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
                     <p>No contacts yet. Add some friends... :')</p>
                 ) : (
                     contacts.map(contact => (
-                        <div key={contact.id} className="contact-item">
+                        <div 
+                            key={contact.id} 
+                            className="contact-item"
+                            onClick={() => handleContactClick(contact)}
+                        >
                             <div className="contact-info">
                                 <span className={`username ${contact.isOnline ? 'online' : 'offline'}`}>
                                     {contact.username}

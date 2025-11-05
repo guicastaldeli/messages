@@ -1,13 +1,64 @@
 package com.app.main.root.app._service;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.springframework.stereotype.Component;
 import com.app.main.root.app._server.RouteContext;
 
 @Component
 public class DirectService {
-    private final UserService userService;
+    private final ServiceManager serviceManager;
 
-    public DirectService(UserService userService) {
-        this.userService = userService;
+    public DirectService(ServiceManager serviceManager) {
+        this.serviceManager = serviceManager;
+    }
+
+    /*
+    * Get Participants 
+    */
+    public String[] getChatParticipants(String chatId) {
+        if(chatId.startsWith("direct_")) {
+            String[] parts = chatId.split("_");
+            if(parts.length == 3) {
+                return new String[]{parts[1], parts[2]};
+            }
+        }
+        return new String[0];
+    }
+
+    /*
+    * Validate Chat Access 
+    */
+    public boolean userAccessChat(String userId, String chatId) {
+        String[] participants = getChatParticipants(chatId);
+        return Arrays.asList(participants).contains(userId);
+    }
+
+    /*
+    * Get Other
+    */
+    public String getOtherParticipant(String chatId, String currentUserId) {
+        String[] participants = getChatParticipants(chatId);
+        for(String participant : participants) {
+            if(!participant.equals(currentUserId)) {
+                return participant;
+            }
+        }
+        return null;
+    }
+
+    public String getOtherParticipantUsername(String chatId, String currentUserId) {
+        String otherParticipantId = getOtherParticipant(chatId, currentUserId);
+        if(otherParticipantId != null) {
+            try {
+                serviceManager.getUserService().getUsernameByUserId(otherParticipantId);
+            } catch(Exception err) {
+                System.err.println("Error getting username for other: " + err.getMessage());
+            }
+        }
+        return null;
     }
     
     /*
@@ -20,7 +71,36 @@ public class DirectService {
     public void handleDirectRoutes(RouteContext context) {
         handleSelfRoute(context);
         handleOthersRoute(context);
-    } 
+    }
+
+    /* Direct */
+    private void hadleDirectMessageRoute(RouteContext context) {
+        String chatId = (String) context.message.get("chatId");
+        String recipientId = (String) context.message.get("recipientId");
+        String senderId = (String) context.message.get("senderId");
+
+        if(chatId != null && chatId.startsWith("direct_")) {
+            Set<String> targetSessions = new HashSet<>();
+            targetSessions.add(context.sessionId);
+            if(recipientId != null) {
+                try {
+                    if(serviceManager.getContactService().isContact(senderId, recipientId)) {
+                        String recipientSession = serviceManager.getUserService().getSessionByUserId(recipientId);
+                        if(recipientSession != null) {
+                            targetSessions.add(recipientSession);
+                        }
+                    }
+                } catch(Exception err) {
+                    System.err.println("Error... direct route: " + err.getMessage());
+                }
+            }
+
+            targetSessions.add(context.sessionId);
+            context.targetSessions.addAll(targetSessions);
+            context.metadata.put("chatId", chatId);
+            context.metadata.put("queue", "/user/queue/messages/direct");
+        }
+    }
 
     /* Self */
     private void handleSelfRoute(RouteContext context) {
@@ -30,13 +110,29 @@ public class DirectService {
 
     /* Others */
     private void handleOthersRoute(RouteContext context) {
-        String targetUserId = (String) context.message.get("targetUserId");
-        if(targetUserId != null) {
-            String targetSession = userService.getSessionByUserId(targetUserId);
-            if(targetSession != null && !targetSession.equals(context.sessionId)) {
-                context.targetSessions.add(targetSession);
-                context.metadata.put("queue", "/user/queue/messages/direct/others");
+        String recipientId = (String) context.message.get("recipientId");
+        String senderId = (String) context.message.get("senderId");
+        if(recipientId != null && senderId != null) {
+            try {
+                if(serviceManager.getContactService().isContact(senderId, senderId)) {
+                    String recipientSession = serviceManager.getUserService().getSessionByUserId(recipientId);
+                    if(recipientSession != null && !recipientSession.equals(context.sessionId)) {
+                        context.targetSessions.add(recipientSession);
+                        context.metadata.put("queue", "/user/queue/messages/direct/others");
+                    }
+                }
+            } catch(Exception err) {
+                System.err.println("Error in others route: " + err.getMessage());
             }
         }
+    }
+
+    /*
+    * Id 
+    */
+    public String generateDirectChatId(String fUserId, String sUserId)  {
+        List<String> sortedIds = Arrays.asList(fUserId, sUserId);
+        sortedIds.sort(String::compareTo);
+        return "direct_" + sortedIds.get(0) + "_" + sortedIds.get(1);
     }
 }

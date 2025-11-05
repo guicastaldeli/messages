@@ -24,7 +24,7 @@ public class ServiceManager {
         @Lazy SystemMessageService systemMessageService,
         @Lazy MessagePerspectiveService messagePerspectiveService,
         UserService userService,
-        DirectService directService,
+        @Lazy DirectService directService,
         ContactService contactService,
         @Lazy GroupService groupService,
         @Lazy EmailService emailService

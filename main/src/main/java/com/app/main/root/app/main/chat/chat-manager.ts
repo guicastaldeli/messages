@@ -47,7 +47,13 @@ export class ChatManager {
         username: string,
         setState: React.Component<any, State>['setState']
     ) {
-        this.directManager = new DirectManager();
+        this.directManager = new DirectManager(
+            this,
+            socketClient,
+            messageManager,
+            apiClient,
+            messageManager.chatRegistry
+        );
         this.groupManager = new GroupManager(
             this,
             socketClient, 
@@ -61,6 +67,7 @@ export class ChatManager {
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
+        await this.directManager.getUserData(sessionId, userId, username);
         await this.groupManager.getUserData(sessionId, userId, username);
     }
 
@@ -185,6 +192,8 @@ export class ChatManager {
     /* Set Container */
     public setContainer(container: HTMLElement): void {
         this.container = container;
+        const directManager = this.getDirectManager();
+        if(directManager) directManager.container = container;
         const groupManager = this.getGroupManager();
         if(groupManager) groupManager.container = container;
     }

@@ -99,7 +99,7 @@ export class MessageAnalyzerClient {
         const chatId = 
             data.chatId || 
             (isGroup ? data.groupId :
-            (isDirect ? DirectManager.generateChatId(data.senderId, targetUserId) :
+            (isDirect ? data.chatId :
             emptyPlaceholder));
         const isSystem = 
             data.type === 'SYSTEM' ||

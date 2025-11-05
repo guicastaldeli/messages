@@ -25,7 +25,7 @@ export class MessageManager {
     private lastMessageIds: Map<string, string> = new Map();
     private lastSystemMessageKeys: Set<string> = new Set();
 
-    private chatRegistry: ChatRegistry = new ChatRegistry();
+    public chatRegistry: ChatRegistry;
     private appEl: HTMLDivElement | null = null;
     private joinHandled: boolean = false;
     private socketId!: string;
@@ -43,6 +43,7 @@ export class MessageManager {
         this.messageComponent = new MessageComponentGetter();
         this.registeredMessageHandlers = new RegisteredMessageHandlers();
         this.registeredMessageHandlers.register();
+        this.chatRegistry = new ChatRegistry();
     }
 
     public async init(): Promise<void> {
@@ -112,8 +113,6 @@ export class MessageManager {
                 username: username
             };
 
-            console.log('Joining with data:', data);
-
             try {
                 const success = await this.socketClient.sendToDestination(
                     '/app/new-user',
@@ -135,7 +134,7 @@ export class MessageManager {
     /*
     ** Setup Message Handling
     */
-    private setupMessageHandling(): void {
+    public setupMessageHandling(): void {
         if(!this.appEl) return;
 
         this.appEl.addEventListener('click', (e) => {
@@ -197,7 +196,6 @@ export class MessageManager {
 
         const analysis = this.messageAnalyzer.analyzeMessage(initData);
         const type = analysis.metadata.type || analysis.messageType.split('_')[0];
-        console.log(`Metadata type: ${type}`);
         return type;
     }
 
@@ -205,6 +203,7 @@ export class MessageManager {
     ** Send Message Handler
     */
     public async handleSendMessage(): Promise<void> {
+        console.log("VOID")
         if(this.isSending) return;
         this.isSending = true;
 
@@ -234,8 +233,9 @@ export class MessageManager {
                 username: this.username,
                 timestamp: Date.now()
             };
-            await this.sendMessage(content);
 
+            console.log('message:', content);
+            await this.sendMessage(content);
             msgInputEl.focus();
         } catch(err) {
             console.error(err);
@@ -250,7 +250,6 @@ export class MessageManager {
     private async sendMessage(content: any): Promise<boolean> {
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
-        const isGroupChat = currentChat?.type === 'GROUP';
         const chatId = currentChat?.id;
         if(!chatId) {
             console.error('No chatId found');
@@ -258,9 +257,9 @@ export class MessageManager {
         }
         if(!this.socketId) return false;
 
-        console.log('sendMessage - currentUserId:', this.userId);
-        console.log('sendMessage - username:', this.username);
-        console.log('sendMessage - socketId:', this.socketId);
+        const isGroupChat = chatId.startsWith('group_');
+        const isDirectChat = chatId.startsWith('direct_');
+        const chatType = isGroupChat ? 'GROUP' : (isDirectChat ? 'DIRECT' : 'CHAT');
 
         const data = {
             senderId: this.userId,
@@ -272,8 +271,8 @@ export class MessageManager {
             groupId: isGroupChat ? currentChat?.id : undefined,
             chatId: chatId,
             timestamp: time,
-            chatType: content.chatType || currentChat?.type || isGroupChat ? 'GROUP' : 'DIRECT',
-            type: 'CHAT',
+            chatType: content.chatType || chatType,
+            type: chatType,
         }
 
         const analysis = this.messageAnalyzer.analyzeMessage(data);
@@ -300,7 +299,7 @@ export class MessageManager {
 
         const res = await this.queueManager.sendWithRouting(
             analyzedData,
-            metaType,
+            metaType || chatType.toLowerCase(),
             {
                 priority: analysis.priority,
                 metadata: analysis.metadata
@@ -388,7 +387,6 @@ export class MessageManager {
             );
         }
 
-        console.log('SENDER ID', data.senderId)
         this.messageComponent.setCurrentUserId(this.userId!);
         const messageProps = {
             username: perspective.showUsername,

@@ -352,6 +352,36 @@ public class EventList {
                         sessionId,
                         "client"
                     );
+                    String chatId = (String) payloadData.get("chatId");
+                    String recipientId = (String) payloadData.get("recipientId");
+                    String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+
+                    String routeType = messageAnalyzer.extractRouteType(sessionId, payloadData);
+                    if(chatId != null && chatId.startsWith("direct_")) {
+                        String destination = "/user/queue/messages/direct/" + chatId;
+                        Object data = serviceManager.getMessageService().payload(
+                            routeType, 
+                            payloadData, 
+                            chatId, 
+                            sessionId, 
+                            currentUserId
+                        );
+                        socketMethods.send(sessionId, destination, data);
+
+                        String recipientSession = serviceManager.getUserService().getSessionByUserId(recipientId);
+                        if(recipientSession != null) {
+                            Object recipientData = serviceManager.getMessageService().payload(
+                                routeType, 
+                                payloadData, 
+                                chatId, 
+                                sessionId, 
+                                currentUserId
+                            );
+                            socketMethods.send(recipientSession, destination, recipientData);
+                        }
+                    }
+
+                    return Collections.emptyMap();
                 } catch(Exception err) {
                     eventTracker.track(
                         "DIRECT_MESSAGE_ERR",
@@ -364,7 +394,7 @@ public class EventList {
 
                 return Collections.emptyMap();
             },
-            "/user/queue/messages/direct",
+            "",
             false
         ));
         configs.put("group", new EventConfig(

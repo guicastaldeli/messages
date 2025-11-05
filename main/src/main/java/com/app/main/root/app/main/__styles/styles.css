@@ -202,4 +202,170 @@ li:hover {
   background-color: #cfcfcf;
   box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.2470588235);
   font-weight: bolder;
+}
+
+.contacts-panel {
+  padding: 1rem;
+  background: #f5f5f5;
+  border-right: 1px solid #ddd;
+  height: 100%;
+  overflow-y: auto;
+}
+.contacts-panel .contacts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ddd;
+}
+.contacts-panel .contacts-header h3 {
+  margin: 0;
+  color: #333;
+}
+.contacts-panel .contacts-header .btn-primary-add {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.contacts-panel .contacts-header .btn-primary-add:hover {
+  background: #0056b3;
+}
+.contacts-panel .add-contact-form {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+.contacts-panel .add-contact-form input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.contacts-panel .add-contact-form button {
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.contacts-panel .add-contact-form button:first-of-type {
+  background: #28a745;
+  color: white;
+}
+.contacts-panel .add-contact-form button:first-of-type:hover {
+  background: #218838;
+}
+.contacts-panel .add-contact-form button:first-of-type:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+.contacts-panel .add-contact-form button:last-of-type {
+  background: #6c757d;
+  color: white;
+}
+.contacts-panel .add-contact-form button:last-of-type:hover {
+  background: #545b62;
+}
+.contacts-panel .pending-requests {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+}
+.contacts-panel .pending-requests h4 {
+  margin: 0 0 0.5rem 0;
+  color: #856404;
+}
+.contacts-panel .pending-requests .contact-request {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: white;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+.contacts-panel .pending-requests .contact-request .request-actions button {
+  margin-left: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.contacts-panel .pending-requests .contact-request .request-actions button.btn-accept-req {
+  background: #28a745;
+  color: white;
+}
+.contacts-panel .pending-requests .contact-request .request-actions button.btn-accept-req:hover {
+  background: #218838;
+}
+.contacts-panel .pending-requests .contact-request .request-actions button.btn-reject-req {
+  background: #dc3545;
+  color: white;
+}
+.contacts-panel .pending-requests .contact-request .request-actions button.btn-reject-req:hover {
+  background: #c82333;
+}
+.contacts-panel .contacts-list .contact-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+.contacts-panel .contacts-list .contact-item .contact-info {
+  flex: 1;
+}
+.contacts-panel .contacts-list .contact-item .contact-info .username {
+  display: block;
+  width: -moz-fit-content;
+  width: fit-content;
+  font-weight: bold;
+}
+.contacts-panel .contacts-list .contact-item .contact-info .username:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+.contacts-panel .contacts-list .contact-item .contact-info .username.online {
+  color: #28a745;
+}
+.contacts-panel .contacts-list .contact-item .contact-info .username.offline {
+  color: #6c757d;
+}
+.contacts-panel .contacts-list .contact-item .contact-info .username .status {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #28a745;
+  border-radius: 50%;
+  margin-left: 0.5rem;
+}
+.contacts-panel .contacts-list .contact-item .contact-info .contact-email {
+  font-size: 0.8rem;
+  color: #888;
+}
+.contacts-panel .contacts-list .contact-item .contact-actions .btn-remove {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.contacts-panel .contacts-list .contact-item .contact-actions .btn-remove:hover {
+  background: #c82333;
 }/*# sourceMappingURL=styles.css.map */

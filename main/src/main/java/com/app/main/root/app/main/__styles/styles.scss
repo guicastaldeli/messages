@@ -346,7 +346,13 @@ li {
                 
                 .username {
                     display: block;
+                    width: fit-content;
                     font-weight: bold;
+
+                    &:hover {
+                        cursor: pointer;
+                        text-decoration: underline;
+                    }
                     
                     &.online {
                         color: #28a745;
