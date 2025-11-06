@@ -1,11 +1,14 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._server.RouteContext;
+import org.springframework.stereotype.Component;
+import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-
-import org.springframework.stereotype.Component;
-import com.app.main.root.app._server.RouteContext;
 
 @Component
 public class DirectService {
@@ -131,8 +134,17 @@ public class DirectService {
     * Id 
     */
     public String generateDirectChatId(String fUserId, String sUserId)  {
-        List<String> sortedIds = Arrays.asList(fUserId, sUserId);
-        sortedIds.sort(String::compareTo);
-        return "direct_" + sortedIds.get(0) + "_" + sortedIds.get(1);
+        List<String> ids = Arrays.asList(fUserId, sUserId);
+        Collections.sort(ids);
+        return "direct_" + String.join("_", ids);
+    }
+
+    public Map<String, Object> getChatId(String currentUserId, String contactId) throws SQLException {
+        String chatId = generateDirectChatId(currentUserId, contactId);
+        Map<String, Object> res = new HashMap<>();
+        res.put("chatId", chatId);
+        res.put("fUserId", currentUserId);
+        res.put("sUserId", contactId);
+        return res;
     }
 }

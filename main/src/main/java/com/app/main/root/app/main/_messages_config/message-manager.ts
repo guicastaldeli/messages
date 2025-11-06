@@ -6,7 +6,7 @@ import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
 import { ChatManager } from "../chat/chat-manager";
 import { ApiClient } from "../_api-client/api-client";
 import { MessageHandler, RegisteredMessageHandlers } from "./message-handler";
-import { MessageComponentGetter } from "./message-component";
+import { MessageComponentGetter } from "./_message-component";
 import { UserColorGenerator } from "@/app/_utils/UserColorGenerator";
 
 export class MessageManager {
@@ -173,7 +173,7 @@ export class MessageManager {
         chatType: ChatType,
         members?: string[]
     ): Promise<void> {
-        const context = this.chatRegistry.getContext(chatType, members || []);
+        const context = this.chatRegistry.getContext(chatType, members || [], chatId);
         context.id = chatId;
         context.type = chatType;
         this.chatRegistry.setCurrentChat(context);
@@ -250,7 +250,7 @@ export class MessageManager {
     private async sendMessage(content: any): Promise<boolean> {
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
-        const chatId = currentChat?.id;
+        const chatId = currentChat?.id || currentChat?.chatId;
         if(!chatId) {
             console.error('No chatId found');
             return false;

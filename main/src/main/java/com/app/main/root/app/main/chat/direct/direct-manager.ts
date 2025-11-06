@@ -30,7 +30,6 @@ export class DirectManager {
 
     private socketId: string | null = null;
     public userId!: string;
-    private username!: string;
 
     public root: Root | null = null;
     public container!: HTMLElement;
@@ -59,17 +58,18 @@ export class DirectManager {
     /*
     ** User Data
     */
-    public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
+    public async getUserData(sessionId: string, userId: string): Promise<void> {
         this.socketId = sessionId;
         this.userId = userId;
-        this.username = username;
     }
 
     /*
     ** Open Chat
     */
     public async openChat(contactId: string, contactUsername: string): Promise<void> {
-        const chatId = this.chatRegistry.generateChatId('DIRECT', [this.userId, contactId]);
+        if(!this.container || !(this.container instanceof HTMLElement)) return;
+
+        const chatId = await this.getChatId(contactId);
         this.currentParticipant = { id: contactId, username: contactUsername }
         this.currentChatId = chatId;
 
@@ -85,7 +85,7 @@ export class DirectManager {
             detail: {
                 chatId: chatId,
                 participant: this.currentParticipant,
-                type: 'DIRECT'
+                userInitiated: true
             }
         });
         window.dispatchEvent(chatEvent);
@@ -97,6 +97,24 @@ export class DirectManager {
         
         if(!this.root) this.root = createRoot(this.container);
         this.root.render(content);
+    }
+
+    /*
+    ** Last Message
+    */
+    public async lastMessage(id: string): Promise<string> {
+        try {
+            const service = await this.apiClient.getMessageService();
+            const messages = await service.getMessagesByChatId(id);
+            if(messages && messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                return lastMessage.content;
+            }
+        } catch(err) {
+            console.error('Failed to get recent messages', err);
+        }
+
+        return '';
     }
 
     /*
@@ -115,5 +133,37 @@ export class DirectManager {
         } catch(err) {
             console.error(err);
         }
+    }
+
+    /*
+    ** Chat Id
+    */
+    private async getChatId(contactId: string): Promise<string> {        
+        return new Promise(async (res, rej) => {
+            const resDestination = '/queue/direct-chat-id-scss';
+
+            const handle = (data: any) => {
+                if(data && data.chatId) {
+                    this.socketClient.offDestination(resDestination, handle);
+                    res(data.chatId);
+                } else {
+                    this.socketClient.offDestination(resDestination, handle);
+                    rej(new Error('Invalid chat id response'));
+                }
+            }
+
+            await this.socketClient.onDestination(resDestination, handle);
+            this.socketClient.sendToDestination('/app/get-direct-chat-id', {
+                contactId: contactId
+            }).then(sucss => {
+                if(!sucss) {
+                    this.socketClient.offDestination(resDestination, handle);
+                    rej(new Error('Failed to send chat id request'));
+                }
+            }).catch(err => {
+                this.socketClient.offDestination(resDestination, handle);
+                rej(err);
+            });
+        });
     }
 }

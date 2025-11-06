@@ -73,4 +73,26 @@ export class MessageServiceClient {
         if(!res.ok) throw new Error('Failed to fetch user messages!');
         return res.json();
     }
+
+    /*
+    ** Get Messages Peage
+    */
+    public async getMessagesPage(chatId: string, page: number, size: number): Promise<any[]> {
+        const res = await fetch(
+            `${this.baseUrl}/api/message-tracker/messages/chatId/?chatId=${chatId}?page=${page}&pageSize${size}`
+        );
+        if(!res.ok) throw new Error('Failed to fetch messages page');
+        return res.json();
+    }
+
+    /*
+    ** Get Chat Count
+    */
+    public async getMessageChatCount(chatId: string): Promise<number> {
+        const res = await fetch(
+            `${this.baseUrl}/api/message-tracker/messages/chatId/${chatId}/count`
+        );
+        if(!res.ok) throw new Error('Failed to fetch messages count');
+        return res.json(); 
+    }
 }

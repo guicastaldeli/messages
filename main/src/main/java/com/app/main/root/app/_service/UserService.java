@@ -124,6 +124,37 @@ public class UserService {
         return users;
     }
 
+    /*
+    * Get User Chats 
+    */
+    public List<Map<String, Object>> getUserDirect(String userId) throws SQLException {
+        String query = CommandQueryManager.GET_USER_DIRECT.get();
+        List<Map<String, Object>> chats = new ArrayList<>();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, userId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                while(rs.next()) {
+                    Map<String, Object> chat = new HashMap<>();
+                    String contactId = rs.getString("contact_id");
+                    Map<String, Object> idMap = serviceManager.getDirectService().getChatId(userId, contactId);
+                    String id = (String) idMap.get("chatId");
+
+                    chat.put("id", id);
+                    chat.put("contactId", contactId);
+                    chat.put("contactUsername", rs.getString("username"));
+                    chat.put("type", "DIRECT");
+                    chats.add(chat);
+                }
+            }
+        }
+
+        return chats;
+    }
+
     public List<Map<String, Object>> getUserGroups(String userId) throws SQLException {
         String query = CommandQueryManager.GET_USER_GROUPS.get();
         List<Map<String, Object>> groups = new ArrayList<>();

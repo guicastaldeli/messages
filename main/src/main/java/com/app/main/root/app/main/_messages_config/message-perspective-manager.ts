@@ -22,7 +22,6 @@ export class MessagePerspectiveManager {
     public analyzeWithPerspective(data: any): Analysis {
         const perspective = this.calculateClientPerspective(data);
         const context = this.messageAnalyzerClient.analyzeContext(data);
-        console.log(perspective.direction)
         return {
             context,
             routes: this.messageAnalyzerClient.determineRoutes(context),

@@ -80,159 +80,6 @@ export class GroupManager {
         this.userId = userId;
         this.username = username;
     }
-
-    /*
-    ** Last Message
-    */
-    public async lastMessage(id: string): Promise<string> {
-        try {
-            const service = await this.apiClient.getMessageService();
-            const messages = await service.getMessagesByChatId(id);
-            if(messages && messages.length > 0) {
-                const lastMessage = messages[messages.length - 1];
-                return lastMessage.content;
-            }
-        } catch(err) {
-            console.error('Failed to get recent messages', err);
-        }
-
-        return '';
-    }
-
-    public updateLastMessage(
-        id: string,
-        userId: string,
-        messageId: string,
-        content: string,
-        sender: string,
-        isSystem: boolean
-    ): void {
-        const time = new Date().toISOString();
-        const updateEvent = new CustomEvent('last-message-updated', {
-            detail: {
-                chatId: id,
-                userId: userId,
-                messageId: messageId,
-                lastMessage: content,
-                sender: sender,
-                timestamp: time,
-                isCurrentUser: sender === this.username,
-                isSystem: isSystem
-            }
-        });
-        window.dispatchEvent(updateEvent);
-    }
-
-    /*
-    ** Load History Messages
-    */
-    public async loadMessagesHistory(groupId: string): Promise<void> {
-        try {
-            await this.waitForMessagesContainer();
-            const service = await this.apiClient.getMessageService();
-            const messages = await service.getMessagesByChatId(groupId);
-            if(messages && Array.isArray(messages)) {
-                console.log(`Loading ${messages.length} messages for group ${groupId}`);
-                for(const message of messages) {
-                    const updMessage = {
-                        ...message,
-                        currentUserId: this.userId,
-                        currentSessionId: this.socketId
-                    }
-                    await this.messageManager.renderHistory(updMessage);
-                }
-            } else {
-                console.log('No messages found for group:', groupId);
-            }
-        } catch(err) {
-            console.error('Failed to load messages: ', err);
-        }
-    }
-
-    private async waitForMessagesContainer(): Promise<void> {
-        return new Promise((res) => {
-            const checkContainer = () => {
-                const container = document.querySelector('.chat-screen .messages');
-                if(container) {
-                    res();
-                } else {
-                    setTimeout(checkContainer, 100);
-                }
-            }
-            checkContainer();
-        });
-    }
-
-    /*
-    ** Load History Groups
-    */
-    private async loadGroupsHistory(userId: string): Promise<any[]> {
-        return new Promise(async (res, rej) => {
-            const sucssDestination = '/queue/user-groups-scss';
-            const errDestination = '/queue/user-groups-err';
-
-            /* Success */
-            const handleSucss = (data: any) => {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
-                res(data.groups || []);
-            }
-
-            /* Error */
-            const handleErr = (error: any) => {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
-                rej(new Error(error.message));
-            }
-
-            try {
-                this.socketClient.onDestination(sucssDestination, handleSucss);
-                this.socketClient.onDestination(errDestination, handleErr);
-
-                await this.socketClient.sendToDestination(
-                    '/app/get-user-groups',
-                    { userId: userId },
-                    sucssDestination
-                );
-            } catch(err) {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
-                rej(err);
-            }
-        });
-    }
-
-    public async loadUserGroups(userId: string): Promise<any> {
-        try {
-            await new Promise(res => setTimeout(res, 500));
-            const groups = await this.loadGroupsHistory(userId);
-            console.log('Raw groups: ', groups);
-            if(!groups || groups.length === 0) return;
-
-            for(const group of groups) {
-                const lastMessage = await this.lastMessage(group.id);
-                console.log('Loaded user groups', groups);
-
-                const chatEvent = new CustomEvent('chat-item-added', {
-                    detail: {
-                        id: group.id,
-                        chatId: group.id,
-                        groupId: group.id,
-                        name: group.name,
-                        type: 'GROUP',
-                        creator: group.cerator,
-                        members: [],
-                        unreadCount: 0,
-                        lastMessage: lastMessage,
-                        lastMessageTime: group.createdAt
-                    }
-                });
-                window.dispatchEvent(chatEvent);
-            }
-        } catch(err) {
-            console.error(err);
-        }
-    }
     
     /*
     **
@@ -245,7 +92,8 @@ export class GroupManager {
         this.currentGroupName = data.name;
         this.currentGroupId = data.id;
 
-        const lastMessage = await this.lastMessage(this.currentGroupId);
+        const lastMessage = await this.chatManager.getLoader()
+            .lastMessage(this.currentGroupId);
         chatState.setType('GROUP');
         await this.messageManager.setCurrentChat(
             this.currentGroupId,
@@ -442,7 +290,8 @@ export class GroupManager {
         const time = new Date().toISOString();
         this.currentGroupId = data.id;
 
-        const lastMessage = await this.lastMessage(this.currentGroupId);
+        const lastMessage = await this.chatManager.getLoader()
+            .lastMessage(this.currentGroupId);
         chatState.setType('GROUP');
         await this.messageManager.setCurrentChat(
             data.id, 
@@ -460,7 +309,7 @@ export class GroupManager {
             });
         }
 
-        this.loadMessagesHistory(data.id);
+        this.chatManager.getLoader().loadMessagesHistory(data.id);
 
         const chatItem = {
             id: this.currentGroupId,

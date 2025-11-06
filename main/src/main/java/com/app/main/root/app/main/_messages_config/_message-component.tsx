@@ -1,5 +1,4 @@
-import React, { ReactElement } from 'react';
-import * as ReactDOMServer from 'react-dom/server';
+import React from 'react';
 import { UserColorGenerator } from "@/app/_utils/UserColorGenerator";
 
 export interface MessageProps {

@@ -1,0 +1,186 @@
+import { SocketClientConnect } from "../socket-client-connect";
+import { ApiClient } from "../_api-client/api-client";
+import { MessageManager } from "../_messages_config/message-manager";
+
+export class Loader {
+    private socketClient: SocketClientConnect;
+    private apiClient: ApiClient;
+    private messageManager: MessageManager;
+
+    private socketId: string | null = null;
+    private userId: string | null = null;
+    private username: string | null = null;
+
+    constructor(
+        socketClient: SocketClientConnect, 
+        apiClient: ApiClient,
+        messageManager: MessageManager
+    ) {
+        this.socketClient = socketClient;
+        this.apiClient = apiClient;
+        this.messageManager = messageManager;
+    }
+
+    public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
+        this.socketId = sessionId;
+        this.userId = userId;
+        this.username = username;
+    }
+
+    /*
+    ** Last Message
+    */
+    public async lastMessage(id: string): Promise<string> {
+        try {
+            const service = await this.apiClient.getMessageService();
+            const messages = await service.getMessagesByChatId(id);
+            if(messages && messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                return lastMessage.content;
+            }
+        } catch(err) {
+            console.error('Failed to get recent messages', err);
+        }
+
+        return '';
+    }
+
+    public updateLastMessage(
+        id: string,
+        userId: string,
+        messageId: string,
+        content: string,
+        sender: string,
+        isSystem: boolean
+    ): void {
+        const time = new Date().toISOString();
+        const updateEvent = new CustomEvent('last-message-updated', {
+            detail: {
+                chatId: id,
+                userId: userId,
+                messageId: messageId,
+                lastMessage: content,
+                sender: sender,
+                timestamp: time,
+                isCurrentUser: sender === this.username,
+                isSystem: isSystem
+            }
+        });
+        window.dispatchEvent(updateEvent);
+    }
+
+    /*
+    ** Load History Messages
+    */
+    public async loadMessagesHistory(id: string): Promise<void> {
+        try {
+            await this.waitForMessagesContainer();
+            const service = await this.apiClient.getMessageService();
+            const messages = await service.getMessagesByChatId(id);
+            if(messages && Array.isArray(messages)) {
+                console.log(`Loading ${messages.length} messages for ${id}`);
+                for(const message of messages) {
+                    const updMessage = {
+                        ...message,
+                        currentUserId: this.userId,
+                        currentSessionId: this.socketId
+                    }
+                    await this.messageManager.renderHistory(updMessage);
+                }
+            } else {
+                console.log('No messages found for:', id);
+            }
+        } catch(err) {
+            console.error('Failed to load messages: ', err);
+        }
+    }
+
+    private async waitForMessagesContainer(): Promise<void> {
+        return new Promise((res) => {
+            const checkContainer = () => {
+                const container = document.querySelector('.chat-screen .messages');
+                if(container) {
+                    res();
+                } else {
+                    setTimeout(checkContainer, 100);
+                }
+            }
+            checkContainer();
+        });
+    }
+
+    private async loadHistory(userId: string): Promise<any[]> {
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/user-chats-scss';
+            const errDestination = '/queue/user-chats-err';
+
+            /* Success */
+            const handleSucss = (data: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+
+                let chats: any[] = [];
+                if(data && typeof data === 'object') {
+                    const directChats = Array.isArray(data.direct) ? data.direct : [];
+                    const groupChats = Array.isArray(data.groups) ? data.groups : [];
+                    chats = [...directChats, ...groupChats];
+                }
+                res(chats);
+            }
+
+            /* Error */
+            const handleErr = (error: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(error.message));
+            }
+
+            try {
+                this.socketClient.onDestination(sucssDestination, handleSucss);
+                this.socketClient.onDestination(errDestination, handleErr);
+
+                await this.socketClient.sendToDestination(
+                    '/app/get-user-chats',
+                    { userId: userId },
+                    sucssDestination
+                );
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
+        });
+    }
+
+    public async loadChats(userId: string): Promise<any> {
+        try {
+            await new Promise(res => setTimeout(res, 500));
+            const chats = await this.loadHistory(userId);
+            if(!chats || chats.length === 0) return;
+
+            for(const chat of chats) {
+                const lastMessage = await this.lastMessage(chat.id);
+                const type = chat.type;
+                console.log(chat);
+
+                const chatEvent = new CustomEvent('chat-item-added', {
+                    detail: {
+                        id: chat.chatId,
+                        chatId: chat.id,
+                        groupId: chat.id,
+                        name: chat.name || chat.contactUsername,
+                        type: type,
+                        creator: chat.creator || chat.creatorId,
+                        members: [],
+                        unreadCount: 0,
+                        lastMessage: lastMessage,
+                        lastMessageTime: chat.createdAt
+                    }
+                });
+                window.dispatchEvent(chatEvent);
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    }
+}

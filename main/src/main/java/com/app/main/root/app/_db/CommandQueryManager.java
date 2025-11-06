@@ -7,6 +7,23 @@ public enum CommandQueryManager {
     VALIDATE_DATABASE(
         "SELECT name FROM sqlite_master WHERE type='table' LIMIT 1"
     ),
+
+    /*
+    * ~~~ DIRECT SERVICE ~~~ 
+    */
+    GET_USER_DIRECT(
+        """
+            SELECT 
+                uc.id,
+                uc.contact_id,
+                u.username,
+                uc.created_at
+            FROM user_contacts uc
+            JOIN users u ON uc.contact_id = u.id
+            WHERE uc.user_id = ?
+            ORDER BY uc.created_at DESC
+        """
+    ),
     
     /*
     * ~~~ GROUP SERVICE ~~~ 

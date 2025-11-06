@@ -4,6 +4,7 @@ import { SocketClientConnect } from "../socket-client-connect";
 import { MessageManager } from "../_messages_config/message-manager";
 import { ApiClient } from "../_api-client/api-client";
 import { Dashboard } from "../dashboard";
+import { Loader } from "./loader";
 import { DirectManager } from "./direct/direct-manager";
 import { GroupManager } from "./group/group-manager";
 
@@ -13,7 +14,6 @@ export interface Item {
     type: 'DIRECT' | 'GROUP';
     lastMessage?: string;
     timestamp?: Date;
-    unreadCount: number;
 }
 
 export interface ActiveChat {
@@ -32,9 +32,13 @@ export class ChatManager {
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
-    private updateCallback: ((chatList: any[]) => void) | null = null;
-    private setState: React.Component<any, State>['setState']; 
 
+    private updateCallback: ((chatList: any[]) => void) | null = null;
+    private setState: React.Component<any, State>['setState'];
+    private updateQueue: Array<() => void> = [];
+    private isUpdating = false;
+
+    private loader: Loader;
     private directManager: DirectManager;
     private groupManager: GroupManager;
 
@@ -47,6 +51,11 @@ export class ChatManager {
         username: string,
         setState: React.Component<any, State>['setState']
     ) {
+        this.loader = new Loader(
+            socketClient, 
+            apiClient, 
+            messageManager
+        );
         this.directManager = new DirectManager(
             this,
             socketClient,
@@ -67,8 +76,9 @@ export class ChatManager {
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
-        await this.directManager.getUserData(sessionId, userId, username);
-        await this.groupManager.getUserData(sessionId, userId, username);
+        await this.loader.getUserData(sessionId, userId, username);
+        await this.directManager.getUserData(sessionId, userId);
+
     }
 
     public mount(): void {
@@ -83,11 +93,36 @@ export class ChatManager {
         window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);
     }
 
+    private queueUpdate(updateFn: () => void): void {
+        this.updateQueue.push(updateFn);
+        this.processQueue();
+    }
+
+    private processQueue(): void {
+        if(this.isUpdating || this.updateQueue.length === 0) return;
+        this.isUpdating = true;
+
+        const updateFn = this.updateQueue.shift();
+        if(updateFn) updateFn();
+
+        setTimeout(() => {
+            this.isUpdating = false;
+            this.processQueue();
+        }, 0);
+    }
+
     private handleChatItemAdded = (event: CustomEvent): void => {
         const newChat: Item = event.detail;
-        this.setState(prevState => ({
-            chatList: [...prevState.chatList, newChat]
-        }));
+        this.queueUpdate(() => {
+            this.setState(prevState => {
+                const chatExists = prevState.chatList.some(chat => chat.id === newChat.id);
+                if(chatExists) return prevState;
+                return {
+                    ...prevState,
+                    chatList: [...prevState.chatList, newChat]
+                }
+            });
+        });
     }
 
     private handleChatActivated = (event: CustomEvent): void => {
@@ -111,19 +146,18 @@ export class ChatManager {
     ** Update Last Message
     */
     private handleLastMessage = (event: CustomEvent): void => {
-        const { messageId, chatId, userId, lastMessage, sender, timestamp, isCurrentUser, isSystem } = event.detail;
-        console.log(event.detail)
+        const { messageId, chatId, userId, lastMessage, sender, timestamp, isCurrentUser } = event.detail;
         const systemMessage = this.isSystemMessage(event.detail);
+        const formattedMessage = this.formattedMessage(chatId, lastMessage, isCurrentUser, sender, systemMessage);
 
-        let formattedMessage;
-        if(systemMessage) {
-            formattedMessage = lastMessage;
-        } else {
-            formattedMessage = isCurrentUser 
-                ? `You: ${lastMessage}`
-                : `${sender}: ${lastMessage}`;
+        if(lastMessage && lastMessage.trim() !== '') {
+            this.ensureChatExists(
+                chatId,
+                sender,
+                timestamp,
+                userId
+            );
         }
-
         this.updateLastMessage({
             id: chatId,
             userId: userId,
@@ -148,8 +182,20 @@ export class ChatManager {
         this.setState((prevState: State) => {
             const chatIndex = prevState.chatList.findIndex(chat => chat.id === id);
             if(chatIndex === -1) {
-                console.warn(`Chat with id ${id} not found!`);
-                return prevState;
+                const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
+                const chatName = chatType === 'DIRECT' ? sender : id;
+
+                const item: Item = {
+                    id: id,
+                    name: chatName,
+                    type: chatType,
+                    lastMessage: this.formattedLastMessage(lastMessage),
+                    timestamp: now
+                }
+                return {
+                    ...prevState,
+                    chatList: [item, ...prevState.chatList]
+                }
             }
 
             const updatedChatList = [...prevState.chatList];
@@ -171,6 +217,31 @@ export class ChatManager {
         });
     }
 
+    private ensureChatExists(
+        chatId: string, 
+        sender: string, 
+        timestamp: string,
+        userId: string
+    ): void {
+        this.setState((prevState: State) => {
+            const chatExists = prevState.chatList.some(chat => chat.id === chatId);
+            if(chatExists) return prevState;
+
+            const chatType = chatId.startsWith('direct') ? 'DIRECT' : 'GROUP';
+            const chatName = chatType === 'DIRECT' ? sender : chatId;
+            const item: Item = {
+                id: chatId,
+                name: chatName,
+                type: chatType,
+                timestamp: new Date(timestamp)
+            }
+            window.dispatchEvent(new CustomEvent('chat-item-added', {
+                detail: item
+            }));
+            return { chatList: [item, ...prevState.chatList] }
+        });
+    }
+
     public setLastMessage(
         id: string,
         userId: string,
@@ -179,7 +250,7 @@ export class ChatManager {
         sender: string,
         isSystem: boolean
     ): void {
-        this.getGroupManager().updateLastMessage(
+        this.loader.updateLastMessage(
             id,
             userId,
             messageId, 
@@ -211,22 +282,37 @@ export class ChatManager {
     }
 
     /*
-    ** Direct Manager
+    ** Formatted Message
     */
-    public getDirectManager(): DirectManager {
-        return this.directManager;
+    private formattedMessage(
+        chatId: string, 
+        lastMessage: string, 
+        isCurrentUser: string, 
+        sender: string,
+        systemMessage: boolean
+    ): string {
+        const isDirect = chatId.startsWith('direct_');
+        let formattedMessage;
+
+        if(isDirect) {
+            if(systemMessage) {
+                formattedMessage = lastMessage;
+            } else {
+                formattedMessage = lastMessage;
+            }
+        } else {
+            if(systemMessage) {
+                formattedMessage = lastMessage;
+            } else {
+                formattedMessage = isCurrentUser 
+                    ? `You: ${lastMessage}`
+                    : `${sender}: ${lastMessage}`;
+            }
+        }
+
+        return formattedMessage;
     }
 
-    /*
-    ** Group Manager
-    */
-    public getGroupManager(): GroupManager {
-        return this.groupManager;
-    }
-
-    /*
-    ** Formatted Last Message
-    */
     private formattedLastMessage(message: string): string {
         if(message.length > 15) return message.substring(0, 15) + '...';
         return message;
@@ -240,5 +326,26 @@ export class ChatManager {
         if(message.messageId.includes('sys_')) return true;
         if(message.type === 'SYSTEM') return true;
         return false;
+    }
+
+    /*
+    ** Get Loader
+    */
+    public getLoader(): Loader {
+        return this.loader;
+    }
+
+    /*
+    ** Get Direct Manager
+    */
+    public getDirectManager(): DirectManager {
+        return this.directManager;
+    }
+
+    /*
+    ** Get Group Manager
+    */
+    public getGroupManager(): GroupManager {
+        return this.groupManager;
     }
 }

@@ -192,7 +192,7 @@ export class Main extends Component<any, State> {
                             await this.messageManager.getUserData(authData.sessionId, authData.userId, authData.username);
                             await this.messageManager.handleJoin(authData.sessionId, authData.userId, authData.username);
                             sessionContext.setSession('MAIN_DASHBOARD');
-                            this.chatManager?.getGroupManager().loadUserGroups(authData.userId);
+                            this.chatManager?.getLoader().loadChats(authData.userId);
                         } catch (err) {
                             console.error('Error in handleJoin:', err);
                             alert('Failed to join chat: ' + err);

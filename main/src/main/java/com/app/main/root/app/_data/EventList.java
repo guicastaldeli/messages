@@ -647,7 +647,7 @@ public class EventList {
             false
         ));
         /* Get User Groups */
-        configs.put("get-user-groups", new EventConfig(
+        configs.put("get-user-chats", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
@@ -656,19 +656,24 @@ public class EventList {
                         throw new IllegalArgumentException("User ID is required!");
                     }
 
+                    List<Map<String, Object>> userDirect = serviceManager.getUserService()
+                        .getUserDirect(userId);
                     List<Map<String, Object>> userGroups = serviceManager.getUserService()
                         .getUserGroups(userId);
-
+                        
                     Map<String, Object> res = new HashMap<>();
+                    int total = userDirect.size() + userGroups.size();
                     res.put("userId", userId);
+                    res.put("direct", userDirect);
                     res.put("groups", userGroups);
-                    res.put("count", userGroups.size());
+                    res.put("count", total);
                     res.put("status", "success");
 
                     eventTracker.track(
-                        "get-user-groups",
+                        "get-user-chats",
                         Map.of(
                             "userId", userId,
+                            "directCount", userDirect.size(),
                             "groupCount", userGroups.size()
                         ),
                         EventDirection.RECEIVED,
@@ -680,13 +685,44 @@ public class EventList {
                 } catch(Exception err) {
                     err.getStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
-                    errRes.put("error", "LOAD_GROUPS_FAILED");
+                    errRes.put("error", "LOAD_CHATS_FAILED");
                     errRes.put("message", err.getMessage());
-                    socketMethods.send(sessionId, "/queue/user-groups-err", errRes);
+                    socketMethods.send(sessionId, "/queue/user-chats-err", errRes);
                     return Collections.emptyMap();
                 }
             },
-            "/queue/user-groups-scss",
+            "/queue/user-chats-scss",
+            false
+        ));
+        configs.put("get-direct-chat-id", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String contactId = (String) data.get("contactId");
+
+                    Map<String, Object> res = serviceManager.getDirectService()
+                        .getChatId(currentUserId, contactId);
+                        
+                    eventTracker.track(
+                        "get-direct-chat-id",
+                        res,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        currentUserId
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    err.getStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "CHAT_ID_GENERATION_FAILED");
+                    errRes.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/direct-chat-id-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/direct-chat-id-scss",
             false
         ));
         /* Generate Group Link */

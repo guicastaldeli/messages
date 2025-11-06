@@ -270,7 +270,7 @@ export class Dashboard extends Component<Props, State> {
                                         <ul>
                                             {chatList.map((chat, i) => (
                                                 <li
-                                                    key={chat.id || i}
+                                                    key={chat.id || `${chat.type}_${i}`}
                                                     className={`chat-item${
                                                         activeChat && 
                                                         activeChat.id === chat.id ? 'active' : ''
@@ -278,7 +278,7 @@ export class Dashboard extends Component<Props, State> {
                                                     onClick={() => this.handleChatSelect(chat)}
                                                 >
                                                     <div className="chat-icon">
-                                                        {chat.type === 'direct' ? 'd' : 'g'}
+                                                        {chat.type === 'DIRECT' ? 'd' : 'g'}
                                                     </div>
                                                     <div className="chat-info">
                                                         <div id="chat-name">{chat.name}</div>
