@@ -11,6 +11,7 @@ import { Item } from './chat/chat-manager';
 import { ActiveChat } from './chat/chat-manager';
 
 interface State {
+    messages: Map<string, any[]>;
     chatManager: ChatManager | null;
     chatList: Item[];
     activeChat: ActiveChat | null;

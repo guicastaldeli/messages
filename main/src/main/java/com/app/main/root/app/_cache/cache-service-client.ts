@@ -1,4 +1,4 @@
-import { ApiClient } from "../_api-client/api-client";
+import { ApiClient } from "../main/_api-client/api-client";
 
 interface CacheConfig {
     pageSize: number;
