@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from messages.message_service import MessageService
 
 class MessageRoutes:        
@@ -30,45 +30,88 @@ class MessageRoutes:
                 raise e
             except Exception as err:
                 raise HTTPException(status_code=err, detail=f"Failed to load messages")
-            
-        ##
-        ## User
-        ##
-        @self.router.get("/messages/user/{username}")
-        async def getMessagesByUsername(username: str):
-            try:
-                content = await self.service.getMessagesByUsername(username)
-                return content
-            except HTTPException as e:
-                raise e
-            except Exception as err:
-                raise HTTPException(status_code=err, detail=f"Failed to load messages for user {username}")
 
         ##
         ## Chat Id
         ##
-        @self.router.get("/messages/chatId/{chatId}")
-        async def getMessagesByChatId(chatId: str):
+        @self.router.get("/messages/chatId/{chatId}/page")
+        async def getMessagesByChatId(
+            chatId: str,
+            page: int = Query(0, description="Page number"),
+            pageSize: int = Query(100, description="Page size")
+        ):
             try:
-                content = await self.service.getMessagesByChatId(chatId)
+                content = await self.service.getMessagesByChatId(chatId, page, pageSize)
                 return content
             except HTTPException as e:
                 raise e
             except Exception as err:
-                raise HTTPException(status_code=err, detail=f"Failed to load messages of chat {chatId}")
+                raise HTTPException(
+                    status_code=err, 
+                    detail=f"Failed to load messages for chat {chatId}: {str(err)}"
+                )
+            
+        @self.router.get("/messages/chatId/{chatId}/count")
+        async def getMessageCountByChatId(chatId: str):
+            try:
+                content = await self.service.getMessagesCountByChatId(chatId)
+                return content
+            except HTTPException as e:
+                raise e
+            except Exception as err:
+                raise HTTPException(
+                    status_code=err, 
+                    detail=f"Failed to load message count for chat {chatId}: {str(err)}"
+                )
 
         ##
         ## Recent Messages
         ##
-        @self.router.get("/messages/recent/{userId}/{count}")
-        async def getRecentMessages(userId: str, count: int):
+        @self.router.get("/messages/recent/{userId}")
+        async def getRecentMessages(
+            userId: str = Query(..., description="User ID"),
+            page: int = Query(0, description="Page number"),
+            pageSize: int = Query(20, description="Page size")
+        ):
             try:
-                content = await self.service.getRecentMessages(userId, count)
+                content = await self.service.getRecentMessages(userId, page, pageSize)
                 return content
             except HTTPException as e:
                 raise e
             except Exception as err:
-                raise HTTPException(status_code=err, detail=f"Failed to load recent {count} messages of {userId}")
+                raise HTTPException(
+                    status_code=err, 
+                    detail=f"Failed to load recent messages for {userId}: {str(err)}"
+                )
+                
+        @self.router.get("/messages/recent/{userId}/count")
+        async def getRecentMessagesCount(userId: str = Query(..., description="User ID")):
+            try:
+                content = await self.service.getRecentChatsCount(userId)
+                return content
+            except HTTPException as e:
+                raise e
+            except Exception as err:
+                raise HTTPException(
+                    status_code=err, 
+                    detail=f"Failed to load recent message count for {userId}: {str(err)}"
+                )
+            
+        ##
+        ## User
+        ##
+        @self.router.get("/messages/userId/{userId}")
+        async def getMessagesByUserId(userId: str):
+            try:
+                content = await self.service.getMessagesByUserId(userId)
+                return content
+            except HTTPException as e:
+                raise e
+            except Exception as err:
+                raise HTTPException(
+                    status_code=err, 
+                    detail=f"Failed to load messages for user {userId}"
+                )
 
         ##
         ## Count

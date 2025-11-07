@@ -63,27 +63,52 @@ public class MessageTrackerController {
     }
 
     /*
-    * User 
-    */
-    @GetMapping("/messages/user/{username}")
-    public List<_Message> getMessagesByUser(@PathVariable String username) throws SQLException {
-        return serviceManager.getMessageService().getMessagesByUsername(username);
-    }
-
-    /*
     * Chat Id 
     */
     @GetMapping("/messages/chatId/{chatId}")
-    public List<_Message> getMessagesByChatId(@PathVariable String chatId) throws SQLException {
-        return serviceManager.getMessageService().getMessagesByChatId(chatId);
+    public List<_Message> getMessagesByChatId(
+        @PathVariable String chatId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "100") int pageSize
+    ) throws SQLException {
+        return serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+    }
+
+    public Map<String, Object> getMessageCountByChatId(@PathVariable String chatId) throws SQLException {
+        int count = serviceManager.getMessageService().getMessageCountByChatId(chatId);
+        Map<String, Object> res = new HashMap<>();
+        res.put("chatId", chatId);
+        res.put("count", count);
+        return res;
     }
 
     /*
     * Recent Messages 
     */
-    @GetMapping("/messages/recent/{userId}/{count}")
-    public List<_RecentChat> getRecentMessages(@PathVariable String userId, @PathVariable int count) throws SQLException {
-        return serviceManager.getMessageService().getRecentChats(userId, count);
+    @GetMapping("/messages/recent/{userId}")
+    public List<_RecentChat> getRecentMessages(
+        @PathVariable String userId, 
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int pageSize
+    ) throws SQLException {
+        return serviceManager.getMessageService().getRecentChats(userId, page, pageSize);
+    }
+
+    @GetMapping("/messages/recent/{userId}/count")
+    public Map<String, Object> getRecentChatsCount(@PathVariable String userId) throws SQLException {
+        int count = serviceManager.getMessageService().getRecentChatsCount(userId);
+        Map<String, Object> res = new HashMap<>();
+        res.put("userId", userId);
+        res.put("count", count);
+        return res;
+    }
+
+    /*
+    * User 
+    */
+    @GetMapping("/messages/userId/{userId}")
+    public List<_Message> getMessagesByUserId(@PathVariable String userId) throws SQLException {
+        return serviceManager.getMessageService().getMessagesByUserId(userId);
     }
 
     /*

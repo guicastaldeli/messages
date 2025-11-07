@@ -6,6 +6,7 @@ import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
+import com.app.main.root.app.__controllers.UserController;
 import com.app.main.root.app._data.MessageAnalyzer;
 import com.app.main.root.app._data.MessagePerspectiveDetector;
 import org.springframework.context.annotation.Lazy;
@@ -18,6 +19,8 @@ import java.sql.*;
 
 @Component
 public class MessageService {
+
+    private final UserController userController;
     private final DataSourceService dataSourceService;
     private final ServiceManager serviceManager;
     private final MessageTracker messageTracker;
@@ -30,12 +33,13 @@ public class MessageService {
         MessageTracker messageTracker,
         MessageAnalyzer messageAnalyzer,
         MessagePerspectiveDetector messagePerspectiveDetector
-    ) {
+    , UserController userController) {
         this.dataSourceService = dataSourceService;
         this.serviceManager = serviceManager;
         this.messageTracker = messageTracker;
         this.messageAnalyzer = messageAnalyzer;
         this.perspectiveDetector = messagePerspectiveDetector;
+        this.userController = userController;
     }
 
     private Connection getConnection() throws SQLException {
@@ -97,7 +101,35 @@ public class MessageService {
         }
     }
 
-    public List<_Message> getMessagesByChatId() throws SQLException {
+    /*
+    **
+    *** Message by Chat Id
+    ** 
+    */
+    public List<_Message> getMessagesByChatId(String chatId, int page, int pageSize) throws SQLException {
+        String query = CommandQueryManager.GET_MESSAGES_BY_CHAT_ID.get();
+        List<_Message> messages = new ArrayList<>();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            int offset = page * pageSize;
+            stmt.setString(1, chatId);
+            stmt.setInt(2, pageSize);
+            stmt.setInt(3, offset);
+
+            try(ResultSet rs = stmt.executeQuery()) {
+                while(rs.next()) {
+                    messages.add(mapMessageFromResultSet(rs));
+                }
+            }
+        }
+
+        return messages;
+    }
+
+    public List<_Message> getAllMessagesByChatId() throws SQLException {
         String query = CommandQueryManager.GET_ALL_MESSAGES_BY_CHAT_ID.get();
         List<_Message> messages = new ArrayList<>();
 
@@ -114,6 +146,125 @@ public class MessageService {
         return messages;
     }
 
+    public int getMessageCountByChatId(String chatId) throws SQLException {
+        String query = CommandQueryManager.GET_MESSAGE_COUNT_BY_CHAT_ID.get();
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, chatId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getInt("count");
+                }
+            }
+        }
+        return 0;
+    }
+
+    /*
+    **
+    *** Recent Chats
+    ** 
+    */
+    public List<_RecentChat> getRecentChats(String userId, int limit, int offset) throws SQLException {
+        String query = CommandQueryManager.GET_RECENT_CHATS.get();
+        List<_RecentChat> recentChats = new ArrayList<>();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query)
+        ) {
+            stmt.setString(1, userId);
+            stmt.setString(2, userId);
+            stmt.setInt(3, limit);
+
+            try(ResultSet rs = stmt.executeQuery()) {
+                while(rs.next()) {
+                    recentChats.add(mapRecentChatFromResultSet(rs));
+                }
+            }
+        }
+
+        return recentChats;
+    }
+
+    public Map<String, Object> getRecentChatsPages(String userId, int page, int pageSize) throws SQLException {
+        int offset = page * pageSize;
+        List<_RecentChat> chats = getRecentChats(userId, pageSize, offset);
+        int totalChats = getRecentChatsCount(userId);
+        int totalPages = (int) Math.ceil((double) totalChats / pageSize);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("chats", chats);
+        res.put("currentPage", page);
+        res.put("pageSize", pageSize);
+        res.put("totalChats", totalChats);
+        res.put("totalPages", totalPages);
+        res.put("hasMore", page < totalPages - 1);
+        return res;
+    }
+
+    public int getRecentChatsCount(String userId) throws SQLException {
+        String query = CommandQueryManager.GET_RECENT_CHATS_COUNT.get();
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query)
+        ) {
+            stmt.setString(1, userId);
+            stmt.setString(2, userId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getInt("total_chats");
+                }
+            }
+        }
+        return 0;
+    }
+
+    /*
+    * Messages by User Id 
+    */
+    public List<_Message> getMessagesByUserId(String userId) throws SQLException {
+        String query = CommandQueryManager.GET_MESSAGES_BY_USER_ID.get();
+        List<_Message> messages = new ArrayList<>();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, userId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                while(rs.next()) {
+                    messages.add(mapMessageFromResultSet(rs));
+                }
+            }
+        }
+
+        return messages;
+    }
+
+    /*
+    * Messages Pages 
+    */
+    public Map<String, Object> getMessagesPage(String chatId, int page, int pageSize) throws SQLException {
+        List<_Message> messages = getMessagesByChatId(chatId, page, pageSize);
+        int totalCount = getMessageCountByChatId(chatId);
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("messages", messages);
+        res.put("currentPage", page);
+        res.put("pageSize", pageSize);
+        res.put("totalMessages", totalCount);
+        res.put("totalPages", totalPages);
+        res.put("hasMore", page < totalPages - 1);
+        return res;
+    }
+
+    /*
+    * Get All Messages 
+    */
     public List<_Message> getAllMessages() throws SQLException {
         String query = CommandQueryManager.GET_ALL_MESSAGES.get();
         List<_Message> messages = new ArrayList<>();
@@ -131,113 +282,10 @@ public class MessageService {
         return messages;
     }
 
-    public List<_Message> getMessagesByChat(String chatId) throws SQLException {
-        String query = CommandQueryManager.GET_ALL_MESSAGES_BY_CHAT_ID.get();
-        List<_Message> messages = new ArrayList<>();
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query)
-        ) {
-            stmt.setString(1, chatId);
-
-            try(ResultSet rs = stmt.executeQuery()) {
-                while(rs.next()) {
-                    messages.add(mapMessageFromResultSet(rs));
-                }
-            }
-        }
-
-        return messages;
-    }
-
-    public List<_Message> getMessagesByChatId(String chatId) throws SQLException {
-        String query = CommandQueryManager.GET_ALL_MESSAGES_BY_CHAT_ID.get();
-        List<_Message> messages = new ArrayList<>();
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query)
-        ) {
-            stmt.setString(1, chatId);
-
-            try(ResultSet rs = stmt.executeQuery()) {
-                while(rs.next()) {
-                    messages.add(mapMessageFromResultSet(rs));
-                }
-            }
-        }
-
-        return messages;
-    }
-
-    public List<_RecentChat> getRecentChats(String userId, int limit) throws SQLException {
-        String query = CommandQueryManager.GET_RECENT_CHATS.get();
-        List<_RecentChat> recentChats = new ArrayList<>();
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query)
-        ) {
-            stmt.setString(1, userId);
-            stmt.setString(2, userId);
-            stmt.setString(3, userId);
-            stmt.setInt(4, limit);
-
-            try(ResultSet rs = stmt.executeQuery()) {
-                while(rs.next()) {
-                    recentChats.add(mapRecentChatFromResultSet(rs));
-                }
-            }
-        }
-
-        return recentChats;
-    }
-
-    public List<_Message> getRecentMessages(String chatId, int limit) throws SQLException {
-        String query = CommandQueryManager.GET_RECENT_MESSAGES.get();
-        List<_Message> messages = new ArrayList<>();
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query)
-        ) {
-            stmt.setString(1, chatId);
-            stmt.setInt(2, limit);
-
-            try(ResultSet rs = stmt.executeQuery()) {
-                while(rs.next()) {
-                    messages.add(mapMessageFromResultSet(rs));
-                }
-            }
-        }
-
-        List<_Message> reversed = new ArrayList<>();
-        for(int i = messages.size() - 1; i >= 0; i--) reversed.add(messages.get(i));
-        return reversed;
-    }
-
-    public List<_Message> getMessagesByUsername(String username) throws SQLException {
-        String query = CommandQueryManager.GET_MESSAGES_BY_USERNAME.get();
-        List<_Message> messages = new ArrayList<>();
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query);
-        ) {
-            stmt.setString(1, username);
-            try(ResultSet rs = stmt.executeQuery()) {
-                while(rs.next()) {
-                    messages.add(mapMessageFromResultSet(rs));
-                }
-            }
-        }
-
-        return messages;
-    }
-
     /*
-    * Payload 
+    **
+    *** Payload
+    **  
     */
     public Map<String, Object> payload(
         String type, 

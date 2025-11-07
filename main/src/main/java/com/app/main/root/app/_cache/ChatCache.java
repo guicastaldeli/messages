@@ -4,12 +4,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.*;
 
 public class ChatCache {
-    private final List<_Message> messages = new ArrayList<>();
-    private final Set<Integer> loadedPages = new HashSet<>();
-    private int totalMessageCount;
-    private long lastAccessTime = System.currentTimeMillis();
-    private boolean hasMore = true;
-    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    public final List<_Message> messages = new ArrayList<>();
+    public final Set<Integer> loadedPages = new HashSet<>();
+    public int totalMessageCount;
+    public long lastAccessTime = System.currentTimeMillis();
+    public boolean hasMore = true;
+    public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public ChatCache(int totalMessageCount) {
         this.totalMessageCount = totalMessageCount;

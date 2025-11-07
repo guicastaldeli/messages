@@ -232,15 +232,17 @@ public enum CommandQueryManager {
             VALUES (?, ?, ?, ?, ?)
         """
     ),
-    GET_MESSAGES_BY_CHAT_WITH_LIMIT(
+    GET_MESSAGES_BY_CHAT_ID(
         """
-            SELECT m.*, u.username
+            SELECT m.*
             FROM messages m
-            LEFT JOIN users u ON m.sender_id = u.id
             WHERE m.chat_id = ?
-            ORDER BY m.created_at ASC
-            LIMIT ?        
+            ORDER BY m.created_at DESC
+            LIMIT ? OFFSET ? 
         """
+    ),
+    GET_MESSAGE_COUNT_BY_CHAT_ID(
+        "SELECT COUNT(*) as count FROM messages WHERE chat_id = ?"
     ),
     GET_RECENT_CHATS(
         """
@@ -286,8 +288,12 @@ public enum CommandQueryManager {
             LIMIT ?
         """
     ),
-    GET_RECENT_MESSAGES(
-        "SELECT * FROM messages ORDER BY created_at DESC LIMIT ?"
+    GET_RECENT_CHATS_COUNT(
+        """
+            SELECT COUNT(DISTINCT chat_id) as total_chats
+            FROM messages
+            WHERE sender_id = ? OR chat_id = ?        
+        """
     ),
     GET_ALL_MESSAGES(
         "SELECT m.* FROM messages m ORDER BY m.created_at DESC"
@@ -295,11 +301,8 @@ public enum CommandQueryManager {
     GET_ALL_MESSAGES_BY_CHAT_ID(
         "SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at DESC"
     ),
-    GET_MESSAGES_BY_TYPE(
-        "SELECT * FROM messages WHERE message_type = ? ORDER BY created_at DESC"    
-    ),
-    GET_MESSAGES_BY_USERNAME(
-        "SELECT * FROM messages WHERE username = ? ORDER BY created_at DESC"
+    GET_MESSAGES_BY_USER_ID(
+        "SELECT * FROM messages WHERE sender_id = ? ORDER BY created_at DESC"
     ),
     CLEAR_MESSAGES(
         "DELETE from MESSAGES"

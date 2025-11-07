@@ -16,24 +16,46 @@ class MessageService:
     ##
     async def getMessages(self) -> list:
         return await self._request("get", "/api/message-tracker/get-messages")
+    
+    ##
+    ## Recent
+    ##
+    async def getRecentMessages(
+        self, 
+        userId: str,
+        page: int = 0,
+        pageSize: int = 100
+    ) -> list:
+        return await self._request(
+            "get", 
+            f"/api/message-tracker/messages/recent/{userId}?page={page}&pageSize={pageSize}"
+        )
+        
+    async def getRecentChatsCount(self, userId: str) -> dict:
+        return await self._request("get", f"/api/messages/chats/recent/{userId}/count")
+    
+    ##
+    ## Chat Id
+    ##
+    async def getMessagesByChatId(
+        self, 
+        chatId: str,
+        page: int = 0,
+        pageSize: int = 100
+    ) -> dict:
+        return await self._request(
+            "get", 
+            f"/api/message-tracker/messages/chatId/{chatId}?page={page}&pageSize={pageSize}"
+        )
+        
+    async def getMessagesCountByChatId(self, chatId: str) -> dict:
+        return await self._request("get", f"/api/message-tracker/messages/chatId/{chatId}/count")
 
     ##
     ## User
     ##
-    async def getMessagesByUsername(self, username: str) -> list:
-        return await self._request("get", f"/api/message-tracker/messages/user/{username}")
-
-    ##
-    ## Chat Id
-    ##
-    async def getMessagesByChatId(self, chatId: str) -> list:
-        return await self._request("get", f"/api/message-tracker/messages/chatId/{chatId}")
-
-    ##
-    ## Recent
-    ##
-    async def getRecentMessages(self, userId: str, count: int) -> list:
-        return await self._request("get", f"/api/message-tracker/messages/recent/{userId}/{count}")
+    async def getMessagesByUserId(self, userId: str) -> list:
+        return await self._request("get", f"/api/message-tracker/messages/userId/{userId}")
 
     ##
     ## Count
