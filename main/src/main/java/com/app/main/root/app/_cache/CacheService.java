@@ -193,13 +193,13 @@ public class CacheService {
     private void cleanupExpired() {
         long cuttoffTime = 
             System.currentTimeMillis() -
-            TimeUnit.MICROSECONDS.toMillis(evictionTimeMinutes);
+            TimeUnit.MINUTES.toMillis(evictionTimeMinutes);
 
-        Iterator<Map.Entry<String, ChatCache>> interator = cache.entrySet().iterator();
-        while(interator.hasNext()) {
-            Map.Entry<String, ChatCache> entry = interator.next();
+        Iterator<Map.Entry<String, ChatCache>> iterator = cache.entrySet().iterator();
+        while(iterator.hasNext()) {
+            Map.Entry<String, ChatCache> entry = iterator.next();
             if(entry.getValue().lastAccessTime < cuttoffTime) {
-                interator.remove();
+                iterator.remove();
             }
         }
     }

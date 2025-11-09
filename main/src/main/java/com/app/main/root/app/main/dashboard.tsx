@@ -1,5 +1,5 @@
 import './__styles/styles.scss';
-import React, { Component } from 'react';
+import React, { Component, use } from 'react';
 import { MessageManager } from './_messages_config/message-manager';
 import { SessionContext, SessionType } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
@@ -31,6 +31,9 @@ export class Dashboard extends Component<Props, State> {
     private apiClient: ApiClient;
     private contactService: ContactServiceClient | null = null;
 
+    private socketId!: string;
+    private userId!: string;
+
     constructor(props: Props) {
         super(props);
         this.state = {
@@ -42,6 +45,11 @@ export class Dashboard extends Component<Props, State> {
         }
         this.groupContainerRef = React.createRef();
         this.apiClient = props.apiClient;
+    }
+
+    public async getUserData(sessionId: string, userId: string): Promise<void> {
+        this.socketId = sessionId;
+        this.userId = userId;
     }
 
     async componentDidMount(): Promise<void> {
@@ -60,9 +68,8 @@ export class Dashboard extends Component<Props, State> {
         this.contactService.setupEventListeners();
 
         try {
-            const socketId = await this.props.messageManager.socketClient.getSocketId();
             const messageService = await this.apiClient.getMessageService()
-            const chatList = await messageService.getMessagesByUser(socketId);
+            const chatList = await messageService.getMessagesByUserId(this.userId);
             this.setState({ chatList });
         } catch(err) {
             console.error('Error loading chat list', err);
@@ -96,17 +103,15 @@ export class Dashboard extends Component<Props, State> {
 
     handleChatSelect = async (chat: any): Promise<void> => {
         const chatType = chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP'
+        const chatId = chat.id || chat.chatId;
         chatState.setType(chatType);
         
         try {
             const messageService = await this.apiClient.getMessageService()
-            const messages = await messageService.getMessagesByChatId(chat.id);
+            const res = await messageService.getMessagesByChatId(chat.id || chat.chatId, 0);
+            const messages = res.messages || [];
+            console.log(messages);
             
-            await this.props.messageManager.setCurrentChat(
-                chat.id,
-                chatType,
-                chat.members || []
-            );
             this.updateState({
                 showCreationForm: false,
                 showJoinForm: false,
@@ -117,12 +122,19 @@ export class Dashboard extends Component<Props, State> {
             this.setState({
                 activeChat: {
                     ...chat,
-                    messages
+                    messages: messages
                 }
             });
-
+            await this.props.messageManager.setCurrentChat(
+                chatId,
+                chatType,
+                chat.members || []
+            );
+            
             this.forceUpdate();
             await this.props.messageManager.renderHistory(messages);
+            this.props.messageManager.getChunkManager()
+                .getVisualizerIndexService().setChatContainer();
             
             const event = new CustomEvent('chat-activated', {
                 detail: {

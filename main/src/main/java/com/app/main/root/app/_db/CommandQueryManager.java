@@ -37,6 +37,9 @@ public enum CommandQueryManager {
     GET_GROUP_BY_ID(
         "SELECT * FROM groups WHERE id = ?"
     ),
+    GET_GROUP_NAME(
+        "SELECT name FROM groups WHERE id = ?"
+    ),
     GET_GROUP_MEMBERS(
         """
             SELECT
@@ -133,6 +136,9 @@ public enum CommandQueryManager {
     ),
     GET_USER_BY_USERNAME(
         "SELECT * FROM users WHERE username = ?"
+    ),
+    GET_USERNAME(
+        "SELECT username FROM users WHERE id = ?"
     ),
     GET_USER_BY_EMAIL(
         "SELECT * FROM users WHERE email = ?"
@@ -252,36 +258,25 @@ public enum CommandQueryManager {
                 (
                     SELECT content FROM messages m2
                     WHERE m2.chat_id = m.chat_id
-                    ORDER BY created_at DESC LIMIT 1
+                    ORDER BY m2.created_at DESC LIMIT 1
                 ) as last_message,
                 (
-                    SELECT username FROM messages u
-                    JOIN messages m3 ON m3.sender_id = u.id
+                    SELECT m3.username FROM messages m3
                     WHERE m3.chat_id = m.chat_id
                     ORDER BY m3.created_at DESC LIMIT 1
                 ) as last_sender,
                 CASE
                     WHEN chat_id LIKE 'group_%' THEN 'group'
                     ELSE 'direct'
-                END as chat_type,
-                CASE
-                    WHEN chat_id LIKE 'group_%' THEN
-                        (SELECT name FROM groups WHERE id = chat_id)
-                    ELSE
-                        (
-                            SELECT username FROM messages WHERE id =
-                            CASE
-                                WHEN chat_id = ? THEN sender_id
-                                ELSE chat_id
-                            END
-                        ) 
-                END as chat_name
+                END as chat_type
             FROM messages m
             WHERE chat_id IN 
             (
                 SELECT DISTINCT chat_id
                 FROM messages
-                WHERE sender_id = ? OR chat_id = ?
+                WHERE sender_id = ? 
+                    OR chat_id = ?
+                    OR (chat_id LIKE 'direct_%' AND chat_id LIKE ?)
             )
             GROUP BY chat_id
             ORDER BY last_message_time DESC

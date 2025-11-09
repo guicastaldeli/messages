@@ -7,9 +7,12 @@ import { Dashboard } from "../dashboard";
 import { Loader } from "./loader";
 import { DirectManager } from "./direct/direct-manager";
 import { GroupManager } from "./group/group-manager";
+import { CacheServiceClient } from "@/app/_cache/cache-service-client";
 
 export interface Item {
     id: string;
+    chatId?: string;
+    groupId?: string;
     name: string;
     type: 'DIRECT' | 'GROUP';
     lastMessage?: string;
@@ -39,10 +42,12 @@ export class ChatManager {
     private isUpdating = false;
 
     private loader: Loader;
+    private cacheService: CacheServiceClient
     private directManager: DirectManager;
     private groupManager: GroupManager;
 
     constructor(
+        cacheService: CacheServiceClient,
         socketClient: SocketClientConnect,
         messageManager: MessageManager,
         apiClient: ApiClient,
@@ -51,17 +56,21 @@ export class ChatManager {
         username: string,
         setState: React.Component<any, State>['setState']
     ) {
+        this.cacheService = cacheService;
+        
         this.loader = new Loader(
             socketClient, 
             apiClient, 
-            messageManager
+            messageManager,
+            cacheService
         );
         this.directManager = new DirectManager(
             this,
             socketClient,
             messageManager,
             apiClient,
-            messageManager.chatRegistry
+            messageManager.chatRegistry,
+            cacheService
         );
         this.groupManager = new GroupManager(
             this,
@@ -78,7 +87,7 @@ export class ChatManager {
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
         await this.loader.getUserData(sessionId, userId, username);
         await this.directManager.getUserData(sessionId, userId);
-
+        await this.groupManager.getUserData(sessionId, userId, username);
     }
 
     public mount(): void {
@@ -150,14 +159,6 @@ export class ChatManager {
         const systemMessage = this.isSystemMessage(event.detail);
         const formattedMessage = this.formattedMessage(chatId, lastMessage, isCurrentUser, sender, systemMessage);
 
-        if(lastMessage && lastMessage.trim() !== '') {
-            this.ensureChatExists(
-                chatId,
-                sender,
-                timestamp,
-                userId
-            );
-        }
         this.updateLastMessage({
             id: chatId,
             userId: userId,
@@ -166,6 +167,12 @@ export class ChatManager {
             sender: sender,
             timestamp: timestamp
         });
+        this.ensureChatExists(
+            chatId,
+            sender,
+            timestamp,
+            formattedMessage
+        );
     }
 
     public updateLastMessage(detail: {
@@ -182,20 +189,7 @@ export class ChatManager {
         this.setState((prevState: State) => {
             const chatIndex = prevState.chatList.findIndex(chat => chat.id === id);
             if(chatIndex === -1) {
-                const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
-                const chatName = chatType === 'DIRECT' ? sender : id;
-
-                const item: Item = {
-                    id: id,
-                    name: chatName,
-                    type: chatType,
-                    lastMessage: this.formattedLastMessage(lastMessage),
-                    timestamp: now
-                }
-                return {
-                    ...prevState,
-                    chatList: [item, ...prevState.chatList]
-                }
+                return prevState;
             }
 
             const updatedChatList = [...prevState.chatList];
@@ -221,20 +215,41 @@ export class ChatManager {
         chatId: string, 
         sender: string, 
         timestamp: string,
-        userId: string
+        lastMessage: string
     ): void {
         this.setState((prevState: State) => {
-            const chatExists = prevState.chatList.some(chat => chat.id === chatId);
-            if(chatExists) return prevState;
-
-            const chatType = chatId.startsWith('direct') ? 'DIRECT' : 'GROUP';
-            const chatName = chatType === 'DIRECT' ? sender : chatId;
+            const chatExists = prevState.chatList.some(chat =>
+                chat.id === chatId ||
+                chat.chatId === chatId ||
+                chat.groupId === chatId
+            );
+            if(chatExists) {
+                const updatedChatList = prevState.chatList.map(chat => {
+                    if(
+                        chat.id === chatId ||
+                        chat.chatId === chatId ||
+                        chat.groupId === chatId
+                    ) {
+                        return {
+                            ...chat,
+                            lastMessage: lastMessage,
+                            timestamp: new Date(timestamp)
+                        }
+                    }
+                    return chat;
+                });
+                return { chatList: updatedChatList }
+            }
+            const chatType = chatId.startsWith('direct_') ? 'DIRECT' : 'GROUP';
+            const chatName = sender;
+            
             const item: Item = {
                 id: chatId,
                 name: chatName,
                 type: chatType,
                 timestamp: new Date(timestamp)
             }
+            
             window.dispatchEvent(new CustomEvent('chat-item-added', {
                 detail: item
             }));

@@ -40,29 +40,118 @@ export class MessageServiceClient {
     }
 
     /*
-    * Users
-    */
-    public async getMessagesByUser(username: string | null): Promise<any[]> {
-        const res = await fetch(`${this.baseUrl}/api/message-tracker/messages/user/${username}`);
-        if(!res.ok) throw new Error('Failed to fetch user messages!');
-        return res.json();
-    }
-
-    /*
     * Chat Id
     */
-    public async getMessagesByChatId(id: string): Promise<any[]> {
+    public async getMessagesByChatId(id: string, page: number = 0): Promise<{
+        messages: any[];
+        currentPage: number;
+        pageSize: number;
+        totalMessages: number;
+        totalPages: number;
+        hasMore: boolean
+    }> {
+        const pageSize: number = 20;
+
         try {
-            const res = await fetch(`${this.baseUrl}/api/message-tracker/messages/chatId/${id}`);
+            const res = await fetch(
+                `${this.baseUrl}/api/message-tracker/messages/chatId/${id}?page=${page}&pageSize=${pageSize}`
+            );
             if(!res.ok) throw new Error('Failed to fetch messages by chat id!');
     
-            const messages = await res.json();
-            console.log(`Retrieved ${messages?.length || 0} messages for chat ${id}:`, messages);
-            return messages || [];
+            let data = await res.json();
+            let messages = Array.isArray(data) ? data : (data.messages || []);
+            messages = messages.map((message: any) => ({
+                ...message,
+                visualized: false
+            }))
+            if(Array.isArray(data)) {
+                data = messages;
+            } else {
+                data.messages = messages;
+            }
+            const messageCount = messages.length;
+            console.log(`Retrieved page ${page} (${messageCount} messages) for chat ${id}`);
+            if(Array.isArray(data)) {
+                return {
+                    messages: data,
+                    currentPage: page,
+                    pageSize: pageSize,
+                    totalMessages: data.length,
+                    totalPages: Math.ceil(data.length / pageSize),
+                    hasMore: data.length >= pageSize
+                }
+            } else {
+                return data;
+            }
         } catch(err) {
             console.error(err);
             throw new Error('Failed to fetch messages by chat Id');
         }
+    }
+
+    /*
+    ** Get Count by Chat Id
+    */
+    public async getMessageCountByChatId(chatId: string): Promise<number> {
+        const res = await fetch(
+            `${this.baseUrl}/api/message-tracker/messages/chatId/${chatId}/count`
+        );
+        if(!res.ok) throw new Error('Failed to fetch messages count');
+        return res.json(); 
+    }
+
+    /*
+    ** Recent Chats
+    */
+    public async getRecentChats(
+        userId: string,
+        page: number = 0,
+        pageSize: number = 20
+    ): Promise<{
+        chats: any[];
+        currentPage: number;
+        pageSize: number;
+        totalChats: number;
+        totalPages: number;
+        hasMore: boolean
+    }> {
+        try {
+            const res = await fetch(
+                `${this.baseUrl}/api/message-tracker/messages/recent/${userId}?page=${page}&pageSize=${pageSize}`
+            );
+            if(!res.ok) throw new Error('Failed to fetch recent chats');
+            
+            const data = res.json();
+            return data;
+        } catch(err) {
+            console.error(err);
+            throw new Error('Failed to fetch recent chats');
+        }
+    }
+
+    /*
+    ** Recent Chats Count
+    */
+    public async getRecentChatsCount(userId: string): Promise<number> {
+        try {
+            const res = await fetch(`${this.baseUrl}/api/message-tracker/messages/recent/${userId}/count`);
+            if(!res.ok) throw new Error('Failed to fetch recent chats count');
+
+            const data = await res.json();
+            return data.count || 0;
+        } catch(err) {
+            console.error(err);
+            throw new Error('Failed to fetch recent chats count');
+        }
+    }
+
+    /*
+    * Users
+    */
+    public async getMessagesByUserId(userId: string): Promise<any[]> {
+        const res = await fetch(`${this.baseUrl}/api/message-tracker/messages/userId/${userId}`);
+        if(!res.ok) throw new Error('Failed to fetch user messages!');
+        return res.json();
     }
 
     /*
@@ -72,27 +161,5 @@ export class MessageServiceClient {
         const res = await fetch(`${this.baseUrl}/api/message-tracker/stats`);
         if(!res.ok) throw new Error('Failed to fetch user messages!');
         return res.json();
-    }
-
-    /*
-    ** Get Messages Peage
-    */
-    public async getMessagesPage(chatId: string, page: number, size: number): Promise<any[]> {
-        const res = await fetch(
-            `${this.baseUrl}/api/message-tracker/messages/chatId/?chatId=${chatId}?page=${page}&pageSize${size}`
-        );
-        if(!res.ok) throw new Error('Failed to fetch messages page');
-        return res.json();
-    }
-
-    /*
-    ** Get Chat Count
-    */
-    public async getMessageChatCount(chatId: string): Promise<number> {
-        const res = await fetch(
-            `${this.baseUrl}/api/message-tracker/messages/chatId/${chatId}/count`
-        );
-        if(!res.ok) throw new Error('Failed to fetch messages count');
-        return res.json(); 
     }
 }

@@ -91,7 +91,6 @@ export class GroupLayout extends Component<Props, State> {
     private loadMessages = async (groupId: string): Promise<void> => {
         try {
             this.setState({ isLoading: true });
-            await this.groupManager.loadMessagesHistory(groupId);
             this.setState({
                 messagesLoaded: true,
                 isLoading: false

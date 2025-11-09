@@ -1,9 +1,11 @@
 import './__styles/styles.scss';
-import React, { useRef } from 'react';
+import React from 'react';
 import { Component } from 'react';
 import { ApiClient } from './_api-client/api-client';
-import { MessageManager } from './_messages_config/message-manager';
 import { SocketClientConnect } from './socket-client-connect';
+import { MessageManager } from './_messages_config/message-manager';
+import { CacheServiceClient } from '../_cache/cache-service-client';
+import { CachePreloaderService } from '../_cache/cache-preloader-service';
 import { Dashboard } from './dashboard';
 import { SessionProvider, SessionType, SessionContext } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
@@ -11,7 +13,6 @@ import { Item } from './chat/chat-manager';
 import { ActiveChat } from './chat/chat-manager';
 
 interface State {
-    messages: Map<string, any[]>;
     chatManager: ChatManager | null;
     chatList: Item[];
     activeChat: ActiveChat | null;
@@ -21,10 +22,12 @@ interface State {
 }
 
 export class Main extends Component<any, State> {
-    private messageManager!: MessageManager;
     private socketClientConnect: SocketClientConnect;
     private apiClient: ApiClient;
-    private chatManager?: ChatManager;
+    private cacheService: CacheServiceClient;
+    private cachePreloader: CachePreloaderService;
+    private chatManager!: ChatManager;
+    private messageManager!: MessageManager;
 
     private appContainerRef = React.createRef<HTMLDivElement>();
     private dashboardInstance: Dashboard | null = null;
@@ -33,7 +36,14 @@ export class Main extends Component<any, State> {
         super(props);
         this.socketClientConnect = SocketClientConnect.getInstance();
         this.apiClient = new ApiClient();
-        this.messageManager = new MessageManager(this.socketClientConnect, this.apiClient);
+        this.cacheService = CacheServiceClient.getInstance();
+        this.messageManager = new MessageManager(
+            this.socketClientConnect, 
+            this.apiClient, 
+            this.cacheService
+        );
+        this.cachePreloader = new CachePreloaderService(this.apiClient, this.cacheService);
+        this.cacheService.setApi(this.apiClient);
         this.state = { 
             chatManager: null,
             chatList: [],
@@ -44,19 +54,10 @@ export class Main extends Component<any, State> {
         }
     }
 
-    private loadData = async(): Promise<void> => {
-        try {
-            const messageService = await this.apiClient.getMessageService();
-            const trackedMessages = await messageService.getMessagesByUser(this.state.userId);
-            this.setState({ chatList: trackedMessages });
-        } catch(err) {
-            console.error('Failed to load chat data:', err);
-        }
-    }
-
     async componentDidMount(): Promise<void> {
         await this.connect();
         this.chatManager = new ChatManager(
+            this.cacheService,
             this.socketClientConnect,
             this.messageManager,
             this.apiClient,
@@ -67,11 +68,23 @@ export class Main extends Component<any, State> {
         );
         this.chatManager.mount();
         this.messageManager.setChatManager(this.chatManager);
+        if(this.state.userId) await this.cacheService.initCache(this.state.userId);
         this.loadData();
     }
 
     componentWillUnmount(): void {
         if(this.chatManager) this.chatManager.unmount();
+    }
+    
+
+    private loadData = async(): Promise<void> => {
+        try {
+            const messageService = await this.apiClient.getMessageService();
+            const trackedMessages = await messageService.getMessagesByUserId(this.state.userId!);
+            this.setState({ chatList: trackedMessages });
+        } catch(err) {
+            console.error('Failed to load chat data:', err);
+        }
     }
 
     private async connect(): Promise<void> {
@@ -189,11 +202,14 @@ export class Main extends Component<any, State> {
                         userId: authData.userId
                     }, async () => {
                         try {
-                            await this.chatManager?.getUserData(authData.sessionId, authData.userId, authData.username);
                             await this.messageManager.getUserData(authData.sessionId, authData.userId, authData.username);
                             await this.messageManager.handleJoin(authData.sessionId, authData.userId, authData.username);
+                            await this.cacheService.initCache(authData.userId);
+                            await this.cachePreloader.startPreloading(authData.userId);
+                            await this.dashboardInstance?.getUserData(authData.sessionId, authData.userId);
+                            await this.chatManager.getUserData(authData.sessionId, authData.userId, authData.username);
+                            this.chatManager.getLoader().loadChats(authData.userId);
                             sessionContext.setSession('MAIN_DASHBOARD');
-                            this.chatManager?.getLoader().loadChats(authData.userId);
                         } catch (err) {
                             console.error('Error in handleJoin:', err);
                             alert('Failed to join chat: ' + err);

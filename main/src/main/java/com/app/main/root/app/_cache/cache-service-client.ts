@@ -8,7 +8,7 @@ interface CacheConfig {
     cleanupThreshold: number;
 }
 
-interface CacheData {
+export interface CacheData {
     messages: (any | null)[];
     loadedPages: Set<number>;
     totalMessagesCount: number;
@@ -32,8 +32,8 @@ export class CacheServiceClient {
     private pendingRequests: Map<string, Promise<any>> = new Map();
     private evictionListeners: ((chatId: string) => void)[] = [];
     private config: CacheConfig = {
-        pageSize: 100,
-        maxPages: 20,
+        pageSize: 20,
+        maxPages: 100,
         preloadPages: 2,
         maxCachedChats: 100,
         cleanupThreshold: 0.8
@@ -72,13 +72,15 @@ export class CacheServiceClient {
     public async initCache(userId: string): Promise<void> {
         try {
             const messageService = await this.apiClient.getMessageService();
-            const recentChats = messageService.getMessagesByUser(userId);
-            const preloadPromises = (await recentChats).map(chat =>
-                this.preloadChatData(chat.id, userId)
+            const recentChats = await messageService.getRecentChats(userId, 0, 50);
+            const chats = recentChats.chats || [];
+            const preloadPromises = chats.map(chat =>
+                this.preloadChatData(chat.id || chat.chatId, userId)
             );
             await Promise.all(preloadPromises);
         } catch(err) {
             console.log('Cache initialization failed: ', err);
+            throw err;
         }
     }
 
@@ -90,13 +92,13 @@ export class CacheServiceClient {
         try {
             const messageService = await this.apiClient.getMessageService();
 
-            const [messages, totalCount] = await Promise.all([
-                messageService.getMessagesPage(chatId, 0, this.config.pageSize),
-                messageService.getMessageChatCount(chatId)
+            const [countData, pageData] = await Promise.all([
+                messageService.getMessageCountByChatId(chatId),
+                messageService.getMessagesByChatId(chatId, 0)
             ]);
 
-            this.init(chatId, totalCount);
-            this.addMessagesPage(chatId, messages, 0);
+            this.init(chatId, countData);
+            this.addMessagesPage(chatId, pageData.messages, 0);
             this.preloadAdjacentPages(chatId, 0);
         } catch(err) {
             console.error(`Preload for ${chatId} failed`, err);
@@ -135,10 +137,16 @@ export class CacheServiceClient {
     ** Fech and Cache Page
     */
     private async fetchAndCachePage(chatId: string, page: number): Promise<any[]> {
-        const messages = await this.fetchAndCachePage(chatId, page);
-        this.addMessagesPage(chatId, messages, page);
-        this.preloadAdjacentPages(chatId, page);
-        return messages;
+        try {
+            const messageService = await this.apiClient.getMessageService();
+            const pageData = await messageService.getMessagesByChatId(chatId, page);
+            this.addMessagesPage(chatId, pageData.messages, page);
+            this.preloadAdjacentPages(chatId, page);
+            return pageData.messages;
+        } catch(err) {
+            console.error(`Failed to fetch page ${page} for the chat ${chatId}:`, err);
+            throw err;
+        }
     }
 
     private preloadAdjacentPages(chatId: string, currentPage: number): void {
@@ -249,6 +257,14 @@ export class CacheServiceClient {
     private evictChat(chatId: string): void {
         this.cache.delete(chatId);
         this.accessQueue = this.accessQueue.filter(id => id !== chatId);
+
+        const keysToDelete: string[] = [];
+        this.pendingRequests.forEach((_, k) => {
+            if(k.startsWith(`${chatId}_`)) {
+                keysToDelete.push(k);
+            }
+        });
+        keysToDelete.forEach(k => this.pendingRequests.delete(k));
         this.evictionListeners.forEach(listener => listener(chatId));
     }
 
@@ -315,5 +331,71 @@ export class CacheServiceClient {
         return data.messages.slice(startIdx, endIdx).filter(msg => msg !== null);
     }
 
+    private cleanup(): void {
+        if(this.cache.size <= this.config.maxCachedChats) return;
+        const sortedChats = Array.from(this.cache.entries())
+            .sort(([,a], [,b]) => a.lastAccessTime - b.lastAccessTime);
+
+        const chatsToRemove = Math.floor(this.cache.size * this.config.cleanupThreshold);
+        for(let i = 0; i < chatsToRemove; i++) {
+            this.evictChat(sortedChats[i][0]);
+        }
+    }
+
+    public isChatCached(id: string): boolean {
+        return this.cache.has(id);
+    }
+
+    private getMessagesInRange(
+        chatId: string, 
+        start: number, 
+        end: number
+    ): any[] {
+        const data = this.cache.get(chatId);
+        if(!data) return [];
+        return data.messages.slice(start, end + 1).filter(msg => msg !== null);
+    }
+
+    private getTotalMessages(chatId: string): number {
+        const data = this.cache.get(chatId);
+        return data ? data.totalMessagesCount : 0;
+    }
+
+    private hasMoreMessages(chatId: string): boolean {
+        const data = this.cache.get(chatId);
+        return data ? data.hasMore : false;
+    }
+
+    public async getMessagesWithScroll(
+        chatId: string,
+        scrollPosition: number,
+        containerHeight: number,
+        currentMessages: any[]
+    ): Promise<{
+        messages: any[],
+        hasMore: boolean
+    }> {
+        this.selectChat(chatId);
+        const approxMessageHeight = 80;
+        const bufferMessages = 20;
+
+        const startIdx = Math.max(0, Math.floor(scrollPosition / approxMessageHeight) - bufferMessages);
+        const endIdx = Math.min(
+            this.getTotalMessages(chatId) - 1,
+            startIdx + Math.ceil(containerHeight / approxMessageHeight) +
+            bufferMessages
+        );
+
+        await this.loadMissingPages(chatId, startIdx, endIdx);
+        const visibleMessages = this.getMessagesInRange(chatId, startIdx, endIdx);
+        return {
+            messages: visibleMessages,
+            hasMore: this.hasMoreMessages(chatId)
+        }
+    }
+
+    public getCacheData(chatId: string): CacheData | undefined {
+    return this.cache.get(chatId);
+}
 
 }

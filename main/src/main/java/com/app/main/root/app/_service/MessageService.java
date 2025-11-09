@@ -15,11 +15,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.sql.DataSource;
+
 import java.sql.*;
 
 @Component
 public class MessageService {
-
     private final UserController userController;
     private final DataSourceService dataSourceService;
     private final ServiceManager serviceManager;
@@ -32,8 +34,9 @@ public class MessageService {
         @Lazy ServiceManager serviceManager,
         MessageTracker messageTracker,
         MessageAnalyzer messageAnalyzer,
-        MessagePerspectiveDetector messagePerspectiveDetector
-    , UserController userController) {
+        MessagePerspectiveDetector messagePerspectiveDetector, 
+        UserController userController
+    ) {
         this.dataSourceService = dataSourceService;
         this.serviceManager = serviceManager;
         this.messageTracker = messageTracker;
@@ -177,11 +180,29 @@ public class MessageService {
         ) {
             stmt.setString(1, userId);
             stmt.setString(2, userId);
-            stmt.setInt(3, limit);
+            stmt.setString(3, "%" + userId + "%");
+            stmt.setInt(4, limit);
 
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {
-                    recentChats.add(mapRecentChatFromResultSet(rs));
+                    String chatId = rs.getString("chat_id");
+                    String chatType = rs.getString("chat_type");
+                    String chatName;
+
+                    if("group".equals(chatType)) {
+                        chatName = getGroupName(chatId);
+                    } else {
+                        chatName = getDirectChatName(chatId, userId);
+                    }
+
+                    _RecentChat chat = new _RecentChat();
+                    chat.setChatId(chatId);
+                    chat.setLastMessageTime(rs.getTimestamp("last_message_time"));
+                    chat.setLastMessage(rs.getString("last_message"));
+                    chat.setLastSender(rs.getString("last_sender"));
+                    chat.setChatType(chatType);
+                    chat.setChatName(chatName);
+                    recentChats.add(chat);
                 }
             }
         }
@@ -427,5 +448,60 @@ public class MessageService {
 
             return -1;
         }
+    }
+
+    /* * * * *
+    * ___ Methods with other DB Connections ___
+    */
+    private String getGroupName(String groupId) throws SQLException {
+        String query = CommandQueryManager.GET_GROUP_NAME.get();
+        DataSource db = dataSourceService.setDb("group");
+
+        try(
+            Connection conn = db.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query)
+        ) {
+            stmt.setString(1, groupId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getString("name");
+                }
+            }
+        }
+
+        return "Group Chat*";
+    }
+
+    private String getDirectChatName(String chatId, String currentUserId) throws SQLException {
+        String query = CommandQueryManager.GET_USERNAME.get();
+        DataSource db = dataSourceService.setDb("user");
+
+        try(
+            Connection conn = db.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            String otherUserId = extractOtherUserId(chatId, currentUserId);
+            stmt.setString(1, otherUserId);
+
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getString("username");
+                }
+            }
+        }
+
+        return "User*";
+    }
+
+    private String extractOtherUserId(String chatId, String currentUserId) {
+        if(chatId.startsWith("direct_")) {
+            String[] parts = chatId.split("_");
+            for(String part : parts) {
+                if(!part.equals("direct") && !part.equals(currentUserId)) {
+                    return part;
+                }
+            }
+        }
+        return chatId;
     }
 }

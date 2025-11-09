@@ -20,19 +20,20 @@ class MessageService:
     ##
     ## Recent
     ##
-    async def getRecentMessages(
+    async def getRecentChats(
         self, 
         userId: str,
         page: int = 0,
-        pageSize: int = 100
+        pageSize: int = 20
     ) -> list:
         return await self._request(
             "get", 
             f"/api/message-tracker/messages/recent/{userId}?page={page}&pageSize={pageSize}"
+
         )
         
     async def getRecentChatsCount(self, userId: str) -> dict:
-        return await self._request("get", f"/api/messages/chats/recent/{userId}/count")
+        return await self._request("get", f"/api/messages/recent/{userId}/count")
     
     ##
     ## Chat Id
@@ -41,7 +42,7 @@ class MessageService:
         self, 
         chatId: str,
         page: int = 0,
-        pageSize: int = 100
+        pageSize: int = 20
     ) -> dict:
         return await self._request(
             "get", 

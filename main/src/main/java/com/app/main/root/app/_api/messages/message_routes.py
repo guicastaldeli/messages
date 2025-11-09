@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Path
 from messages.message_service import MessageService
 
 class MessageRoutes:        
@@ -34,11 +34,11 @@ class MessageRoutes:
         ##
         ## Chat Id
         ##
-        @self.router.get("/messages/chatId/{chatId}/page")
+        @self.router.get("/messages/chatId/{chatId}")
         async def getMessagesByChatId(
             chatId: str,
             page: int = Query(0, description="Page number"),
-            pageSize: int = Query(100, description="Page size")
+            pageSize: int = Query(20, description="Page size")
         ):
             try:
                 content = await self.service.getMessagesByChatId(chatId, page, pageSize)
@@ -68,13 +68,13 @@ class MessageRoutes:
         ## Recent Messages
         ##
         @self.router.get("/messages/recent/{userId}")
-        async def getRecentMessages(
-            userId: str = Query(..., description="User ID"),
+        async def getRecentChats(
+            userId: str = Path(..., description="User ID"),
             page: int = Query(0, description="Page number"),
             pageSize: int = Query(20, description="Page size")
         ):
             try:
-                content = await self.service.getRecentMessages(userId, page, pageSize)
+                content = await self.service.getRecentChats(userId, page, pageSize)
                 return content
             except HTTPException as e:
                 raise e
@@ -85,7 +85,7 @@ class MessageRoutes:
                 )
                 
         @self.router.get("/messages/recent/{userId}/count")
-        async def getRecentMessagesCount(userId: str = Query(..., description="User ID")):
+        async def getRecentChatsCount(userId: str = Path(..., description="User ID")):
             try:
                 content = await self.service.getRecentChatsCount(userId)
                 return content
@@ -101,7 +101,7 @@ class MessageRoutes:
         ## User
         ##
         @self.router.get("/messages/userId/{userId}")
-        async def getMessagesByUserId(userId: str):
+        async def getMessagesByUserId(userId: str = Path(..., description="User ID")):
             try:
                 content = await self.service.getMessagesByUserId(userId)
                 return content

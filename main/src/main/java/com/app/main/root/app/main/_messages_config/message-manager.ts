@@ -8,13 +8,17 @@ import { ApiClient } from "../_api-client/api-client";
 import { MessageHandler, RegisteredMessageHandlers } from "./message-handler";
 import { MessageComponentGetter } from "./_message-component";
 import { UserColorGenerator } from "@/app/_utils/UserColorGenerator";
+import { CacheServiceClient } from "@/app/_cache/cache-service-client";
+import { ChunkManager } from "./chunk-manager";
 
 export class MessageManager {
     private queueManager: QueueManager;
     public socketClient: SocketClientConnect;
     private chatManager!: ChatManager;
+    private cacheService: CacheServiceClient;
     private messageAnalyzer: MessageAnalyzerClient;
-    private messageComponent: MessageComponentGetter;
+    public messageComponent: MessageComponentGetter;
+    private chunkManager!: ChunkManager;
     private apiClient: ApiClient;
     public dashboard: any;
     
@@ -35,7 +39,18 @@ export class MessageManager {
     private isSending: boolean = false;
     private sendQueue: Array<() => Promise<void>> = [];
 
-    constructor(socketClient: SocketClientConnect, apiClient: ApiClient) {
+    private scrollState: Map<string, {
+        lastScrollTop: number;
+        lastContainerHeight: number;
+        lastTotalHeight: number;
+        currentPage: number
+    }> = new Map();
+
+    constructor(
+        socketClient: SocketClientConnect, 
+        apiClient: ApiClient, 
+        cacheService: CacheServiceClient
+    ) {
         this.socketClient = socketClient;
         this.apiClient = apiClient;
         this.queueManager = new QueueManager(socketClient);
@@ -44,14 +59,15 @@ export class MessageManager {
         this.registeredMessageHandlers = new RegisteredMessageHandlers();
         this.registeredMessageHandlers.register();
         this.chatRegistry = new ChatRegistry();
+        this.cacheService = cacheService;
     }
 
     public async init(): Promise<void> {
         if(typeof document === 'undefined') return;
         this.appEl = document.querySelector<HTMLDivElement>('.app');
         this.setupMessageHandling();
-
         await this.socketClient.connect();
+        this.chunkManager = new ChunkManager(this, this.cacheService, this.appEl!);
     }
     
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
@@ -88,6 +104,7 @@ export class MessageManager {
 
         this.currentHandler = this.getHandlerByType(handlerType!);
         const pattern = this.currentHandler.getSubscriptionPattern(chatId || 'default');
+        console.log('UOPDATEBBQEHFIUE', chatId)
         await this.queueManager.subscribe(pattern, this.handleChatMessage.bind(this));
     }
 
@@ -177,6 +194,7 @@ export class MessageManager {
         context.id = chatId;
         context.type = chatType;
         this.chatRegistry.setCurrentChat(context);
+
         const type = await this.getMetadataType(context);
         await this.updateSubscription(type, chatId, chatType);
     }
@@ -372,7 +390,7 @@ export class MessageManager {
     }
 
     /* Render Messages */
-    private async renderMessage(data: any, analysis: Analysis): Promise<void> {
+    public async renderMessage(data: any, analysis: Analysis): Promise<void> {
         if(!this.appEl) return;
         const container = this.appEl.querySelector<HTMLDivElement>('.chat-screen .messages');
         const perspective = data._perspective || analysis.perspective;
@@ -420,12 +438,23 @@ export class MessageManager {
     ** Render History
     */
     public async renderHistory(data: any): Promise<void> {
-        if(!this.appEl) return;
-        
+        if(!this.appEl) throw new Error('App Element not found');
+
+        const messages = Array.isArray(data) ? data : [data];
+        if(messages.length === 0) return;
+
+        const container = await this.waitForMessagesContainer();
+        if(!container) return;
+
+        for(const messageData of messages) await this.renderSingleMessage(messageData);
+    }
+
+    private async renderSingleMessage(data: any): Promise<void> {
         const isSystemMessage = 
             data.messageType === 'SYSTEM' ||
             data.type === 'SYSTEM' ||
             data.isSystem === true;
+
         if(isSystemMessage) {
             await this.renderMessage({
                 ...data,
@@ -453,7 +482,30 @@ export class MessageManager {
             ...data,
             _perspective: perspective
         });
+        
         await this.renderMessage(data, analysis);
+    }
+
+    public async waitForMessagesContainer(): Promise<HTMLDivElement | null> {
+        return new Promise((res) => {
+            let attempts = 0;
+            const maxAttempts = 50;
+
+            const checkContainer = () => {
+                const container = this.appEl!.querySelector<HTMLDivElement>('.chat-screen .messages');
+                if(container) {
+                    res(container);
+                } else {
+                    attempts++
+                    if(attempts >= maxAttempts) {
+                        res(null);
+                        return;
+                    }
+                    setTimeout(checkContainer, 100);
+                }
+            }
+            checkContainer();
+        });
     }
 
     /*
@@ -461,5 +513,19 @@ export class MessageManager {
     */
     public setChatManager(instance: ChatManager): void {
         this.chatManager = instance;
+    }
+
+    /*
+    ** Get Analyzer
+    */
+    public getAnalyzer(): MessageAnalyzerClient {
+        return this.messageAnalyzer;
+    }
+
+    /*
+    ** Get Chunk Manager
+    */
+    public getChunkManager(): ChunkManager {
+        return this.chunkManager;
     }
 }
