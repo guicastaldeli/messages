@@ -5,10 +5,16 @@ import { Analysis } from './message-analyzer-client';
 
 export class MessageElementRenderer {
     private messageManager: MessageManager;
-    private app: HTMLDivElement;
+    private app!: HTMLElement;
 
-    constructor(messageManager: MessageManager, app: HTMLDivElement) {
+    private lastScrollTop: number = 0;
+    private lastScrollHeight: number = 0;
+
+    constructor(messageManager: MessageManager) {
         this.messageManager = messageManager;
+    }
+
+    public setApp(app: HTMLElement) {
         this.app = app;
     }
 
@@ -22,10 +28,34 @@ export class MessageElementRenderer {
         const container = await this.messageManager.getContainer();
         if(!container) return;
 
-        this.messageManager.messageRoots.forEach(root => root.unmount());
-        this.messageManager.messageRoots.clear();
+        this.lastScrollTop = container.scrollTop;
+        this.lastScrollHeight = container.scrollHeight;
 
-        for(const data of messages) await this.renderElement(data);
+        const exMessagesIds = new Set(this.messageManager.messageRoots.keys());
+        const newMessages = messages.filter(msg => {
+            const id = msg.id || msg.messageId;
+            return !exMessagesIds.has(id);
+        });
+
+        const sortedMessages = newMessages.sort((a, b) => {
+            const indexA = a.virtualIndex !== undefined ? a.virtualIndex : 0;
+            const indexB = b.virtualIndex !== undefined ? b.virtualIndex : 0;
+            return indexA - indexB;
+        });
+
+        for(const data of sortedMessages) await this.renderElement(data);
+        this.restoreScrollPos(container);
+    }
+
+    private restoreScrollPos(container: HTMLDivElement): void {
+        setTimeout(() => {
+            if(this.lastScrollHeight > 0) {
+                const heightDiff = container.scrollHeight - this.lastScrollHeight;
+                container.scrollTop = this.lastScrollTop + heightDiff;
+            }
+            this.lastScrollTop = 0;
+            this.lastScrollHeight = 0;
+        }, 50);
     }
 
     /*

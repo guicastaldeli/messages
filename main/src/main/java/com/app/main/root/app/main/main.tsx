@@ -43,7 +43,7 @@ export class Main extends Component<any, State> {
             this.cacheService
         );
         this.cachePreloader = new CachePreloaderService(this.apiClient, this.cacheService);
-        this.cacheService.setApi(this.apiClient);
+        this.cacheService.setApiClient(this.apiClient);
         this.state = { 
             chatManager: null,
             chatList: [],

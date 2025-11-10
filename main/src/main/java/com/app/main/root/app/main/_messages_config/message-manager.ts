@@ -61,8 +61,16 @@ export class MessageManager {
         this.registeredMessageHandlers.register();
         this.chatRegistry = new ChatRegistry();
         this.cacheService = cacheService;
-        this.messageElementRenderer = new MessageElementRenderer(this, this.appEl!);
+        this.messageElementRenderer = new MessageElementRenderer(this);
         this.chunkRenderer = new ChunkRenderer(this);
+    }
+
+    public async init(): Promise<void> {
+        if(typeof document === 'undefined') return;
+        this.appEl = document.querySelector<HTMLDivElement>('.app');
+        this.messageElementRenderer.setApp(this.appEl!);
+        this.setupMessageHandling();
+        await this.socketClient.connect();
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
@@ -193,7 +201,8 @@ export class MessageManager {
         const type = await this.getMetadataType(context);
         await this.updateSubscription(type, chatId, chatType);
         this.currentChatId = chatId;
-        this.currentPage = 0
+        this.currentPage = 0;
+        this.chunkRenderer.reset();
         
         this.messageRoots.forEach(root => root.unmount());
         this.messageRoots.clear();
@@ -201,13 +210,27 @@ export class MessageManager {
 
         if(this.scrollHandler) {
             const container = await this.getContainer();
-            if(!container) throw new Error('container err!');
-            container.removeEventListener('scroll', this.scrollHandler);
+            if(container) {
+                container.removeEventListener('scroll', this.scrollHandler);
+            }
             this.scrollHandler = null;
         }
 
-        this.loadHistory(chatId, 0);
-        await this.chunkRenderer.setupScrollHandler();
+        const cacheData = this.cacheService.getCacheData(chatId);
+        if(cacheData && cacheData.messages.size > 0) {
+            await this.chunkRenderer.loadCachedPages(chatId);
+            await this.chunkRenderer.setupScrollHandler();
+            
+            const container = await this.getContainer();
+            if(container) {
+                setTimeout(() => {
+                    container.scrollTop = container.scrollHeight;
+                }, 100);
+            }
+        } else {
+            this.loadHistory(chatId, 0);
+            await this.chunkRenderer.setupScrollHandler();
+        }
     }
 
     /*
@@ -442,18 +465,16 @@ export class MessageManager {
 
             if(response.messages && response.messages.length > 0) {
                 this.cacheService.addMessagesPage(chatId, response.messages, page);
-                const cacheData = this.cacheService.getCacheData(chatId);
-                if(cacheData) {
-                    const allMessages = this.cacheService.getMessagesInRange(
-                        chatId,
-                        0,
-                        cacheData.messageOrder.length - 1
-                    );
-                    await this.messageElementRenderer.renderHistory(allMessages);
-                }
-                this.currentPage = page;
-                if(response.hasMore && page === this.currentPage) {
-                    this.chunkRenderer.preloadNextPage(chatId, page + 1);
+                const startIndex = page * 20;
+                const endIndex = startIndex + response.messages.length - 1;
+                const newMessages = this.cacheService.getMessagesInRange(
+                    chatId,
+                    startIndex,
+                    endIndex
+                );
+                await this.messageElementRenderer.renderHistory(newMessages);
+                if(page > this.currentPage) {
+                    this.currentPage = page;
                 }
             }
         } catch(err) {
@@ -461,6 +482,13 @@ export class MessageManager {
         } finally {
             this.isLoadingHistory = false;
         }
+    }
+
+    public cleanupCurrentChat(): void {
+        this.messageRoots.forEach(root => root.unmount());
+        this.messageRoots.clear();
+        this.currentChatId = null;
+        this.container = null;
     }
 
     /*

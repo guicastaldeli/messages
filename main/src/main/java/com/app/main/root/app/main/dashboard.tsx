@@ -107,11 +107,6 @@ export class Dashboard extends Component<Props, State> {
         chatState.setType(chatType);
         
         try {
-            const messageService = await this.apiClient.getMessageService()
-            const res = await messageService.getMessagesByChatId(chat.id || chat.chatId, 0);
-            const messages = res.messages || [];
-            console.log(messages);
-            
             this.updateState({
                 showCreationForm: false,
                 showJoinForm: false,
@@ -124,13 +119,8 @@ export class Dashboard extends Component<Props, State> {
                 chatType,
                 chat.members || []
             );
-            await this.props.messageManager.renderHistory(messages);
-
             this.setState({
-                activeChat: {
-                    ...chat,
-                    messages: messages
-                }
+                activeChat: { ...chat }
             });
             
             const event = new CustomEvent('chat-activated', {
@@ -139,7 +129,6 @@ export class Dashboard extends Component<Props, State> {
                         ...chat,
                         type: chatType
                     },
-                    messages,
                     shouldRender: true
                 }
             });

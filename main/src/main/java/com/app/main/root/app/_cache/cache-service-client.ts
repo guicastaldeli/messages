@@ -56,10 +56,10 @@ export class CacheServiceClient {
                 lastUpdated: time
             });
         }
-        this.touchChat(chatId);
+        this.selectChat(chatId);
     }
 
-    public setApi(apiClient: ApiClient): void {
+    public setApiClient(apiClient: ApiClient): void {
         this.apiClient = apiClient;
     }
 
@@ -101,21 +101,21 @@ export class CacheServiceClient {
     }
 
     /*
-    ** Get Messages - OPTIMIZED
+    ** Get Messages
     */
     public async getMessages(
         chatId: string,
         page: number = 0,
         forceRefresh: boolean = false
     ): Promise<any[]> {
-        this.touchChat(chatId);
+        this.selectChat(chatId);
         const cacheKey = `${chatId}_${page}`;
 
         if(!forceRefresh && this.isPageLoaded(chatId, page)) {
             return this.getCachedPage(chatId, page);
         }
         if(this.pendingRequests.has(cacheKey)) {
-            return this.pendingRequests.get(cacheKey)!;
+            return this.pendingRequests.get(cacheKey);
         }
 
         const requestPromise = this.fetchAndCachePage(chatId, page);
@@ -129,7 +129,7 @@ export class CacheServiceClient {
     }
 
     /*
-    ** Fetch and Cache Page
+    ** Fetch and Cache
     */
     private async fetchAndCachePage(chatId: string, page: number): Promise<any[]> {
         try {
@@ -143,107 +143,121 @@ export class CacheServiceClient {
         }
     }
 
-    /*
-    ** Add Messages Page - OPTIMIZED with Map
-    */
     public addMessagesPage(
-    chatId: string, 
-    messages: any[], 
-    page: number = 0
-): void {
-    if(!this.cache.has(chatId)) {
-        this.init(
-            chatId, 
-            messages.length + (page * this.config.pageSize)
-        );
-    }
-    
-    const data = this.cache.get(chatId)!;
-    
-    // Add messages to Map and maintain order
-    messages.forEach((message, index) => {
-        const messageId = message.id || message.messageId;
-        if (!data.messages.has(messageId)) {
-            data.messages.set(messageId, message);
-            
-            // Calculate position in the overall message order
-            const position = (page * this.config.pageSize) + index;
-            
-            // Ensure the array is large enough
-            while (data.messageOrder.length <= position) {
-                data.messageOrder.push('');
-            }
-            
-            // Insert at correct position
-            data.messageOrder[position] = messageId;
+        chatId: string, 
+        messages: any[], 
+        page: number = 0
+    ): void {
+        if(!this.cache.has(chatId)) {
+            this.init(
+                chatId, 
+                messages.length + (page * this.config.pageSize)
+            );
         }
-    });
+        
+        const data = this.cache.get(chatId)!;
+        const startIndex = page * this.config.pageSize;
 
-    // Clean up any empty slots
-    data.messageOrder = data.messageOrder.filter(id => id !== '');
+        messages.forEach((m, i) => {
+            const id = m.id || m.messageId;
+            if(!data.messages.has(id)) {
+                data.messages.set(id, m);
 
-    const time = Date.now();
-    data.loadedPages.add(page);
-    data.lastAccessTime = time;
-    data.lastUpdated = time;
-    
-    // Update total count if this page reveals more messages
-    const revealedCount = (page * this.config.pageSize) + messages.length;
-    if (revealedCount > data.totalMessagesCount) {
-        data.totalMessagesCount = revealedCount;
+                const insertIndex = startIndex + i;
+                if(insertIndex >= data.messageOrder.length) {
+                    while(data.messageOrder.length < insertIndex) {
+                        data.messageOrder.push('');
+                    }
+                    data.messageOrder.push(id);
+                } else {
+                    data.messageOrder[insertIndex] = id;
+                }
+            }
+        });
+
+        data.messageOrder = data.messageOrder.filter(
+            id => id !== '' &&
+            id !== undefined &&
+            id !== null
+        );
+
+        const time = Date.now();
+        data.loadedPages.add(page);
+        data.lastAccessTime = time;
+        data.lastUpdated = time;
+        data.hasMore = data.messages.size < data.totalMessagesCount;
+        data.isFullyLoaded = !data.hasMore && this.allPagesLoaded(chatId);
     }
-    
-    data.hasMore = data.messages.size < data.totalMessagesCount;
-    data.isFullyLoaded = !data.hasMore && this.allPagesLoaded(chatId);
-    
-    this.enforceMemoryLimits(chatId);
-    
-    console.log(`Added page ${page} to cache. Total messages: ${data.messages.size}, Has more: ${data.hasMore}`);
-}
 
     /*
-    ** Add Message - OPTIMIZED
+    ** Add Message
     */
-    public addMessage(chatId: string, message: any): void {
-        if(!this.cache.has(chatId)) this.init(chatId, 1);
+    public addMessage(
+        chatId: string, 
+        messages: any,
+        page: number = 0
+    ): void {
+        if(!this.cache.has(chatId)) {
+            this.init(
+                chatId,
+                messages.length +
+                (page * this.config.pageSize) 
+            );
+        }
 
         const data = this.cache.get(chatId)!;
+        messages.forEach((m: any, i: any) => {
+            const id = m.id || m.messageId;
+            if(!data.messages.has(id)) {
+                data.messages.set(id, m);
+                const position = (page * this.config.pageSize) + i;
+                while(data.messageOrder.length <= position) {
+                    data.messageOrder.push('');
+                }
+                data.messageOrder[position] = id;
+            }
+        });
+
         const time = Date.now();
-        const messageId = message.id || message.messageId;
-        
-        if (!data.messages.has(messageId)) {
-            data.messages.set(messageId, message);
-            data.messageOrder.push(messageId);
-            data.totalMessagesCount++;
-            data.lastUpdated = time;
-            this.touchChat(chatId);
+        data.messageOrder = data.messageOrder.filter(id => id !== '');
+        data.loadedPages.add(page);
+        data.lastAccessTime = time;
+        data.lastUpdated = time;
+
+        const revealedCount = (page * this.config.pageSize) + messages.length;
+        if(revealedCount > data.totalMessagesCount) {
+            data.totalMessagesCount = revealedCount;
         }
+
+        data.hasMore = data.messages.size < data.totalMessagesCount;
+        data.isFullyLoaded = !data.hasMore && this.allPagesLoaded(chatId);
+        console.log(`Added page ${page} to cache. Total messages: ${data.messages.size}, Has more: ${data.hasMore}`);
     }
 
     /*
-    ** Get messages in range for virtualization - NEW METHOD
+    ** Messages in Range
     */
-    public getMessagesInRange(
+     public getMessagesInRange(
         chatId: string, 
         start: number, 
         end: number
     ): any[] {
         const data = this.cache.get(chatId);
         if(!data) return [];
-        
+
         const result: any[] = [];
-        for (let i = start; i <= Math.min(end, data.messageOrder.length - 1); i++) {
-            const messageId = data.messageOrder[i];
-            const message = data.messages.get(messageId);
-            if (message) {
-                result.push({ ...message, virtualIndex: i });
-            }
+        const endIndex = Math.min(end, data.messageOrder.length - 1);
+        for(let i = start; i <= endIndex; i++) {
+            const id = data.messageOrder[i];
+            const message = data.messages.get(id);
+            if(message) result.push({ ...message, virtualIndex: i });
         }
+
         return result;
     }
 
     /*
-    ** Get total messages count
+    ** Get Total Messages
     */
     public getTotalMessages(chatId: string): number {
         const data = this.cache.get(chatId);
@@ -251,7 +265,7 @@ export class CacheServiceClient {
     }
 
     /*
-    ** Check if page is loaded
+    ** Is Page Loaded
     */
     private isPageLoaded(chatId: string, page: number): boolean {
         const data = this.cache.get(chatId);
@@ -259,7 +273,7 @@ export class CacheServiceClient {
     }
 
     /*
-    ** Get cached page
+    ** Get Cached Page
     */
     private getCachedPage(chatId: string, page: number): any[] {
         const data = this.cache.get(chatId)!;
@@ -277,37 +291,9 @@ export class CacheServiceClient {
         return result;
     }
 
-    /*
-    ** Memory management
-    */
-    private enforceMemoryLimits(chatId: string): void {
-        const data = this.cache.get(chatId);
-        if (!data) return;
-
-        const maxMessages = 500;
-        if (data.messages.size > maxMessages) {
-            // Remove oldest messages
-            const messagesToRemove = data.messages.size - maxMessages;
-            for (let i = 0; i < messagesToRemove; i++) {
-                const oldestMessageId = data.messageOrder[i];
-                data.messages.delete(oldestMessageId);
-            }
-            data.messageOrder = data.messageOrder.slice(messagesToRemove);
-            data.totalMessagesCount = data.messages.size;
-        }
-    }
-
-    private touchChat(chatId: string): void {
+    private selectChat(chatId: string): void {
         this.accessQueue = this.accessQueue.filter(id => id !== chatId);
         this.accessQueue.push(chatId);
-        
-        if (this.accessQueue.length > this.config.maxCachedChats) {
-            const toRemove = this.accessQueue.shift();
-            if (toRemove) {
-                this.cache.delete(toRemove);
-                this.evictionListeners.forEach(listener => listener(toRemove));
-            }
-        }
     }
 
     private allPagesLoaded(chatId: string): boolean {
@@ -320,14 +306,6 @@ export class CacheServiceClient {
         }
 
         return true;
-    }
-
-    private shouldLoadPage(chatId: string, page: number): boolean {
-        const data = this.cache.get(chatId);
-        if(!data) return false;
-
-        const totalPages = Math.ceil(data.totalMessagesCount / this.config.pageSize);
-        return page >= 0 && page < totalPages;
     }
 
     public isChatCached(id: string): boolean {
@@ -348,14 +326,16 @@ export class CacheServiceClient {
         messages: any[],
         hasMore: boolean
     }> {
-        this.touchChat(chatId);
+        this.selectChat(chatId);
         const approxMessageHeight = 80;
         const bufferMessages = 20;
 
         const startIdx = Math.max(0, Math.floor(scrollPosition / approxMessageHeight) - bufferMessages);
         const endIdx = Math.min(
             this.getTotalMessages(chatId) - 1,
-            startIdx + Math.ceil(containerHeight / approxMessageHeight) + bufferMessages
+            startIdx + 
+            Math.ceil(containerHeight / approxMessageHeight) + 
+            bufferMessages
         );
 
         const visibleMessages = this.getMessagesInRange(chatId, startIdx, endIdx);
@@ -375,23 +355,6 @@ export class CacheServiceClient {
 
     public removeEvictionListener(listener: (chatId: string) => void): void {
         this.evictionListeners = this.evictionListeners.filter(l => l !== listener);
-    }
-
-    public debugCacheState(chatId: string): void {
-        const data = this.cache.get(chatId);
-        if (!data) {
-            console.log(`No cache data for ${chatId}`);
-            return;
-        }
-        
-        console.log(`=== CACHE STATE for ${chatId} ===`);
-        console.log(`Total messages: ${data.messages.size}`);
-        console.log(`Message order length: ${data.messageOrder.length}`);
-        console.log(`Loaded pages: ${Array.from(data.loadedPages).sort((a, b) => a - b)}`);
-        console.log(`Total messages count: ${data.totalMessagesCount}`);
-        console.log(`Has more: ${data.hasMore}`);
-        console.log(`Is fully loaded: ${data.isFullyLoaded}`);
-        console.log(`===================`);
     }
 
     public clear(): void {
