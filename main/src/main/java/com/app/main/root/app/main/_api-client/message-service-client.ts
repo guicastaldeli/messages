@@ -93,12 +93,17 @@ export class MessageServiceClient {
     ** Get Count by Chat Id
     */
     public async getMessageCountByChatId(chatId: string): Promise<number> {
-        const res = await fetch(
-            `${this.baseUrl}/api/message-tracker/messages/chatId/${chatId}/count`
-        );
-        if(!res.ok) throw new Error('Failed to fetch messages count');
-        return res.json(); 
-    }
+    const res = await fetch(
+        `${this.baseUrl}/api/message-tracker/messages/chatId/${chatId}/count`
+    );
+    if(!res.ok) throw new Error('Failed to fetch messages count');
+    
+    const data = await res.json();
+    console.log(`🔢 Message count for ${chatId}:`, data);
+    
+    // Make sure we return a number
+    return typeof data === 'number' ? data : (data.count || data.total || 0);
+}
 
     /*
     ** Recent Chats
@@ -122,6 +127,7 @@ export class MessageServiceClient {
             if(!res.ok) throw new Error('Failed to fetch recent chats');
             
             const data = res.json();
+            console.log({res})
             return data;
         } catch(err) {
             console.error(err);

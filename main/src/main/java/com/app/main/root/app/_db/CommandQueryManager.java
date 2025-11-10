@@ -252,35 +252,35 @@ public enum CommandQueryManager {
     ),
     GET_RECENT_CHATS(
         """
-            SELECT
-                chat_id,
-                MAX(created_at) as last_message_time,
-                (
-                    SELECT content FROM messages m2
-                    WHERE m2.chat_id = m.chat_id
-                    ORDER BY m2.created_at DESC LIMIT 1
-                ) as last_message,
-                (
-                    SELECT m3.username FROM messages m3
-                    WHERE m3.chat_id = m.chat_id
-                    ORDER BY m3.created_at DESC LIMIT 1
-                ) as last_sender,
-                CASE
-                    WHEN chat_id LIKE 'group_%' THEN 'group'
-                    ELSE 'direct'
-                END as chat_type
-            FROM messages m
-            WHERE chat_id IN 
+        SELECT
+            chat_id,
+            MAX(created_at) as last_message_time,
             (
-                SELECT DISTINCT chat_id
-                FROM messages
-                WHERE sender_id = ? 
-                    OR chat_id = ?
-                    OR (chat_id LIKE 'direct_%' AND chat_id LIKE ?)
-            )
-            GROUP BY chat_id
-            ORDER BY last_message_time DESC
-            LIMIT ?
+                SELECT content FROM messages m2
+                WHERE m2.chat_id = m.chat_id
+                ORDER BY m2.created_at DESC LIMIT 1
+            ) as last_message,
+            (
+                SELECT m3.username FROM messages m3
+                WHERE m3.chat_id = m.chat_id
+                ORDER BY m3.created_at DESC LIMIT 1
+            ) as last_sender,
+            CASE
+                WHEN chat_id LIKE 'group_%' THEN 'group'
+                ELSE 'direct'
+            END as chat_type
+        FROM messages m
+        WHERE chat_id IN 
+        (
+            SELECT DISTINCT chat_id
+            FROM messages
+            WHERE sender_id = ? 
+                OR chat_id = ?
+                OR (chat_id LIKE 'direct_%' AND chat_id LIKE ?)
+        )
+        GROUP BY chat_id
+        ORDER BY last_message_time DESC
+        LIMIT ? OFFSET ?
         """
     ),
     GET_RECENT_CHATS_COUNT(

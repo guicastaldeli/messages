@@ -67,7 +67,12 @@ export class MessageManager {
         this.appEl = document.querySelector<HTMLDivElement>('.app');
         this.setupMessageHandling();
         await this.socketClient.connect();
-        this.chunkManager = new ChunkManager(this, this.cacheService, this.appEl!);
+        this.chunkManager = new ChunkManager(
+            this, 
+            this.cacheService,
+            this.apiClient, 
+            this.appEl!
+        );
     }
     
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
@@ -197,6 +202,7 @@ export class MessageManager {
 
         const type = await this.getMetadataType(context);
         await this.updateSubscription(type, chatId, chatType);
+        this.chunkManager.getVisualizerIndexService().resetForChat(chatId);
     }
 
     /*
@@ -412,7 +418,7 @@ export class MessageManager {
             senderId: senderId,
             content: data.content,
             timestamp: data.timestamp,
-            messageId: data.messageId,
+            messageId: data.messageId || data.id,
             type: analysis.messageType,
             priority: analysis.priority,
             isDirect: analysis.context.isDirect,
@@ -432,6 +438,7 @@ export class MessageManager {
         const content = this.messageComponent.__message(messageProps);
         const render = ReactDOMServer.renderToStaticMarkup(content!);
         container?.insertAdjacentHTML('beforeend', render);
+        this.chunkManager.getVisualizerIndexService().addMessageForTracking(data.id);
     }
 
     /*
@@ -447,6 +454,7 @@ export class MessageManager {
         if(!container) return;
 
         for(const messageData of messages) await this.renderSingleMessage(messageData);
+        this.chunkManager.getVisualizerIndexService().startViewportMonitoring();
     }
 
     private async renderSingleMessage(data: any): Promise<void> {

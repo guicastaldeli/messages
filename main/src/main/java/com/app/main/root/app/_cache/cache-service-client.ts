@@ -74,8 +74,9 @@ export class CacheServiceClient {
             const messageService = await this.apiClient.getMessageService();
             const recentChats = await messageService.getRecentChats(userId, 0, 50);
             const chats = recentChats.chats || [];
+            console.log(recentChats.chats)
             const preloadPromises = chats.map(chat =>
-                this.preloadChatData(chat.id || chat.chatId, userId)
+                this.preloadChatData(chat.id || chat.chatId)
             );
             await Promise.all(preloadPromises);
         } catch(err) {
@@ -87,8 +88,8 @@ export class CacheServiceClient {
     /*
     ** Preload Data
     */
-    private async preloadChatData(chatId: string, userId: string): Promise<void> {
-        if(this.cache.has(chatId)) return;
+    private async preloadChatData(chatId: string): Promise<void> {
+        console.log('PRELOAD PRELOADPRELOADPRELOADPRELOAD')
         try {
             const messageService = await this.apiClient.getMessageService();
 

@@ -173,6 +173,7 @@ public class MessageService {
     public List<_RecentChat> getRecentChats(String userId, int limit, int offset) throws SQLException {
         String query = CommandQueryManager.GET_RECENT_CHATS.get();
         List<_RecentChat> recentChats = new ArrayList<>();
+        int actualLimit = Math.max(1, limit);
 
         try(
             Connection conn = getConnection();
@@ -181,14 +182,18 @@ public class MessageService {
             stmt.setString(1, userId);
             stmt.setString(2, userId);
             stmt.setString(3, "%" + userId + "%");
-            stmt.setInt(4, limit);
+            stmt.setInt(4, actualLimit);
+            stmt.setInt(5, offset);
 
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {
                     String chatId = rs.getString("chat_id");
                     String chatType = rs.getString("chat_type");
-                    String chatName;
+                    String lastMessage = rs.getString("last_message");
+                    String lastSender = rs.getString("last_sender");
+                    Timestamp lastMessageTime = rs.getTimestamp("last_message_time");
 
+                    String chatName;
                     if("group".equals(chatType)) {
                         chatName = getGroupName(chatId);
                     } else {
@@ -197,9 +202,9 @@ public class MessageService {
 
                     _RecentChat chat = new _RecentChat();
                     chat.setChatId(chatId);
-                    chat.setLastMessageTime(rs.getTimestamp("last_message_time"));
-                    chat.setLastMessage(rs.getString("last_message"));
-                    chat.setLastSender(rs.getString("last_sender"));
+                    chat.setLastMessageTime(lastMessageTime);
+                    chat.setLastMessage(lastMessage);
+                    chat.setLastSender(lastSender);
                     chat.setChatType(chatType);
                     chat.setChatName(chatName);
                     recentChats.add(chat);

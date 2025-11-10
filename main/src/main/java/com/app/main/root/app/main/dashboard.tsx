@@ -119,22 +119,19 @@ export class Dashboard extends Component<Props, State> {
                 hideGroup: false,
                 groupName: chat.name
             });
+            await this.props.messageManager.setCurrentChat(
+                chatId,
+                chatType,
+                chat.members || []
+            );
+            await this.props.messageManager.renderHistory(messages);
+
             this.setState({
                 activeChat: {
                     ...chat,
                     messages: messages
                 }
             });
-            await this.props.messageManager.setCurrentChat(
-                chatId,
-                chatType,
-                chat.members || []
-            );
-            
-            this.forceUpdate();
-            await this.props.messageManager.renderHistory(messages);
-            this.props.messageManager.getChunkManager()
-                .getVisualizerIndexService().setChatContainer();
             
             const event = new CustomEvent('chat-activated', {
                 detail: {

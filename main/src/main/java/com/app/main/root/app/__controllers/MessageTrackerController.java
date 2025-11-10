@@ -74,6 +74,7 @@ public class MessageTrackerController {
         return serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
     }
 
+    @GetMapping("/messages/chatId/{chatId}/count")
     public Map<String, Object> getMessageCountByChatId(@PathVariable String chatId) throws SQLException {
         int count = serviceManager.getMessageService().getMessageCountByChatId(chatId);
         Map<String, Object> res = new HashMap<>();
@@ -91,7 +92,8 @@ public class MessageTrackerController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int pageSize
     ) throws SQLException {
-        return serviceManager.getMessageService().getRecentChats(userId, page, pageSize);
+        int offset = page * pageSize;
+        return serviceManager.getMessageService().getRecentChats(userId, page, offset);
     }
 
     @GetMapping("/messages/recent/{userId}/count")
