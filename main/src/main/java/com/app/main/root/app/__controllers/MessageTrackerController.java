@@ -93,7 +93,7 @@ public class MessageTrackerController {
         @RequestParam(defaultValue = "20") int pageSize
     ) throws SQLException {
         int offset = page * pageSize;
-        return serviceManager.getMessageService().getRecentChats(userId, page, offset);
+        return serviceManager.getMessageService().getRecentChats(userId, pageSize, offset);
     }
 
     @GetMapping("/messages/recent/{userId}/count")

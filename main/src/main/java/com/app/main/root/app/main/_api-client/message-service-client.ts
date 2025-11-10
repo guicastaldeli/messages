@@ -93,17 +93,14 @@ export class MessageServiceClient {
     ** Get Count by Chat Id
     */
     public async getMessageCountByChatId(chatId: string): Promise<number> {
-    const res = await fetch(
-        `${this.baseUrl}/api/message-tracker/messages/chatId/${chatId}/count`
-    );
-    if(!res.ok) throw new Error('Failed to fetch messages count');
-    
-    const data = await res.json();
-    console.log(`🔢 Message count for ${chatId}:`, data);
-    
-    // Make sure we return a number
-    return typeof data === 'number' ? data : (data.count || data.total || 0);
-}
+        const res = await fetch(
+            `${this.baseUrl}/api/message-tracker/messages/chatId/${chatId}/count`
+        );
+        if(!res.ok) throw new Error('Failed to fetch messages count');
+        
+        const data = await res.json();
+        return typeof data === 'number' ? data : (data.count || data.total || 0);
+    }
 
     /*
     ** Recent Chats
@@ -121,14 +118,21 @@ export class MessageServiceClient {
         hasMore: boolean
     }> {
         try {
-            const res = await fetch(
+            const url = await fetch(
                 `${this.baseUrl}/api/message-tracker/messages/recent/${userId}?page=${page}&pageSize=${pageSize}`
             );
-            if(!res.ok) throw new Error('Failed to fetch recent chats');
+            if(!url.ok) throw new Error('Failed to fetch recent chats');
             
-            const data = res.json();
-            console.log({res})
-            return data;
+            const data = await url.json();
+            const res = {
+                chats: data,
+                currentPage: page,
+                pageSize: pageSize,
+                totalChats: data.length,
+                totalPages: Math.ceil(data.length / pageSize),
+                hasMore: true
+            }
+            return res;
         } catch(err) {
             console.error(err);
             throw new Error('Failed to fetch recent chats');

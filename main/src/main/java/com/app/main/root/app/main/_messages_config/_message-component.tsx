@@ -18,7 +18,7 @@ export interface MessageProps {
     currentUserId?: string;
 }
 
-const MessageWrapper: React.FC<MessageProps> = ({
+const MessageWrapper: React.FC<MessageProps> = React.memo(({
     username,
     content,
     timestamp,
@@ -64,9 +64,14 @@ const MessageWrapper: React.FC<MessageProps> = ({
         >
             <div className="user">{username}</div>
             <div className="content">{content}</div>
+            <div className="timestamp">
+                {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
         </div>
     )
-}
+});
+
+MessageWrapper.displayName = 'MessageWrapper';
 
 export class MessageComponentGetter {
     private currentUserId: string | undefined;
@@ -91,8 +96,10 @@ export class MessageComponentGetter {
             userColor,
             chatType
         } = data;
+        
         return (
             <MessageWrapper
+                key={messageId}
                 username={username}
                 content={content}
                 timestamp={timestamp}
