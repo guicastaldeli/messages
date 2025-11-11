@@ -10,6 +10,7 @@ import { MessageComponentGetter } from "./_message-component";
 import { CacheServiceClient } from "@/app/_cache/cache-service-client";
 import { MessageElementRenderer } from "./message-element-renderer";
 import { ChunkRenderer } from "./chunk-renderer";
+import { ChatStateManager } from '../chat/chat-state-manager';
 
 export class MessageManager {
     private queueManager: QueueManager;
@@ -20,6 +21,7 @@ export class MessageManager {
     public messageComponent: MessageComponentGetter;
     private messageElementRenderer: MessageElementRenderer;
     private chunkRenderer: ChunkRenderer;
+    private chatStateManager = ChatStateManager.getIntance();
     private apiClient: ApiClient;
     public dashboard: any;
     
@@ -380,6 +382,7 @@ export class MessageManager {
                 direction: analysis.direction || 'self'
             }
             this.cacheService.addMessage(chatId, messageToCache);
+            if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
             this.chatManager.setLastMessage(
                 analyzedData.chatId,
                 analyzedData.userId,
@@ -422,6 +425,15 @@ export class MessageManager {
         this.lastMessageIds.set(messageType, data.messageId);
         const perspective = data._perspective;
         const direction = perspective?.direction || analysis.direction;
+
+        if(data.chatId && data.chatId.startsWith('direct_') && direction !== 'self') {
+            const currentCount = this.chatStateManager.getMessageCount(data.chatId);
+            if(currentCount === 0) {
+                this.chatStateManager.incrementMessageCount(data.chatId); 
+            } else {
+                this.chatStateManager.updateMessageCount(data.chatId, currentCount + 1);
+            }
+        }
         await this.messageElementRenderer.setMessage(data, { ...analysis, direction });
         this.chatManager.setLastMessage(
             data.chatId,
@@ -470,6 +482,9 @@ export class MessageManager {
         try {
             const messageService = await this.apiClient.getMessageService();
             const response = await messageService.getMessagesByChatId(chatId, page);
+
+            const totalMessages = response.messages.length || 0;
+            this.chatStateManager.initChatState(chatId, totalMessages);
 
             if(response.messages && response.messages.length > 0) {
                 this.cacheService.addMessagesPage(chatId, response.messages, page);

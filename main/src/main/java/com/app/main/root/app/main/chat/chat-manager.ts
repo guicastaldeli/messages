@@ -35,6 +35,7 @@ export class ChatManager {
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
+    private userId!: string;
 
     private updateCallback: ((chatList: any[]) => void) | null = null;
     private setState: React.Component<any, State>['setState'];
@@ -81,19 +82,20 @@ export class ChatManager {
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
+        this.userId = userId;
         await this.directManager.getUserData(sessionId, userId);
         await this.groupManager.getUserData(sessionId, userId, username);
     }
 
     public mount(): void {
-        window.addEventListener('chat-should-be-created', this.handleChatItemAdded as EventListener);
+       // window.addEventListener('chat-should-be-created', this.handleChatItemAdded as EventListener);
         window.addEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
         window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
         window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
     }
 
     public unmount(): void {
-        window.removeEventListener('chat-should-be-created', this.handleChatItemAdded as EventListener);
+        //window.removeEventListener('chat-should-be-created', this.handleChatItemAdded as EventListener);
         window.removeEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
         window.removeEventListener('chat-activated', this.handleChatActivated as EventListener);
         window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);

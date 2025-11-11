@@ -18,6 +18,8 @@ export class ChatStateManager {
     ** Setup Event Listeners
     */
     private setupEventListeners(): void {
+        if(typeof window === 'undefined') return;
+        
         window.addEventListener('direct-chat-opened', ((e: CustomEvent) => {
             const { chatId } = e.detail;
             if(this.getMessageCount(chatId) === 0) {
@@ -38,10 +40,6 @@ export class ChatStateManager {
         this.emptyChats.delete(chatId);
     }
 
-    private isChatEmpty(chatId: string): boolean {
-        return this.emptyChats.has(chatId);
-    }
-
     /*
     ** Increment Message Count
     */
@@ -52,6 +50,16 @@ export class ChatStateManager {
         if(newCount === 1) {
             this.markChatAsActive(chatId);
             this.triggerChatCreation(chatId);
+        }
+    }
+
+    /*
+    ** Update Message Count
+    */
+    public updateMessageCount(chatId: string, count: number): void {
+        this.chatMessageCounts.set(chatId, count);
+        if(count > 0) {
+            this.markChatAsActive(chatId);
         }
     }
 

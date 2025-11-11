@@ -5,11 +5,13 @@ import { ApiClient } from "../../_api-client/api-client";
 import { chatState } from "../../chat/chat-state-service";
 import { DirectLayout } from "./direct-layout";
 import { createRoot, Root } from "react-dom/client";
+import { ChatStateManager } from "../chat-state-manager";
 
 export class DirectManager {
     private socketClient: SocketClientConnect;
     private messageManager: MessageManager;
     private apiClient: ApiClient;
+    private chatStateManager = ChatStateManager.getIntance();
 
     public currentChatId: string = '';
     public currentParticipant: { id: string; username: string } | null = null;
@@ -134,5 +136,17 @@ export class DirectManager {
                 rej(err);
             });
         });
+    }
+
+    /*
+    ** Create Item
+    */
+    public createItem(chatId: string): void {
+        const currentCount = this.chatStateManager.getMessageCount(chatId);
+        if(currentCount === 0) {
+            this.chatStateManager.incrementMessageCount(chatId);
+        } else {
+            this.chatStateManager.updateMessageCount(chatId, currentCount + 1);
+        }
     }
 }
