@@ -1,9 +1,9 @@
 import React from "react";
-import { chatState } from "../chat-state-service";
+import { chatState } from "../chat/chat-state-service";
 import { SocketClientConnect } from "../socket-client-connect";
 import { MessageManager } from "../_messages_config/message-manager";
 import { ApiClient } from "../_api-client/api-client";
-import { Dashboard } from "../dashboard";
+import { Dashboard } from "../_dashboard";
 import { Loader } from "./loader";
 import { DirectManager } from "./direct/direct-manager";
 import { GroupManager } from "./group/group-manager";
@@ -58,7 +58,11 @@ export class ChatManager {
     ) {
         this.cacheService = cacheService;
         this.apiClient = apiClient;
-        this.loader = new Loader(socketClient, this);
+        this.loader = new Loader(
+            socketClient, 
+            apiClient, 
+            this
+        );
         this.directManager = new DirectManager(
             socketClient,
             messageManager,
@@ -82,12 +86,14 @@ export class ChatManager {
     }
 
     public mount(): void {
+        window.addEventListener('chat-should-be-created', this.handleChatItemAdded as EventListener);
         window.addEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
         window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
         window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
     }
 
     public unmount(): void {
+        window.removeEventListener('chat-should-be-created', this.handleChatItemAdded as EventListener);
         window.removeEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
         window.removeEventListener('chat-activated', this.handleChatActivated as EventListener);
         window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);
@@ -115,8 +121,18 @@ export class ChatManager {
         const newChat: Item = event.detail;
         this.queueUpdate(() => {
             this.setState(prevState => {
-                const chatExists = prevState.chatList.some(chat => chat.id === newChat.id);
-                if(chatExists) return prevState;
+                const chatExists = prevState.chatList.some(chat =>
+                    chat.id === newChat.id ||
+                    chat.chatId === newChat.id ||
+                    chat.groupId === newChat.id ||
+                    (chat.chatId && chat.chatId === newChat.id) ||
+                    (chat.groupId && chat.groupId === newChat.groupId)
+                );
+                if(chatExists) {
+                    console.log('Chat already exists!', newChat.id);
+                    return prevState;
+                }
+                console.log('Adding new chat:', newChat.id, newChat.name);
                 return {
                     ...prevState,
                     chatList: [...prevState.chatList, newChat]
@@ -241,9 +257,6 @@ export class ChatManager {
                 timestamp: new Date(timestamp)
             }
             
-            window.dispatchEvent(new CustomEvent('chat-item-added', {
-                detail: item
-            }));
             return { chatList: [item, ...prevState.chatList] }
         });
     }

@@ -5,8 +5,8 @@ import { MessageManager } from "../../_messages_config/message-manager";
 import { InviteCodeManager } from "./invite-code-manager";
 import { ApiClient } from "../../_api-client/api-client";
 import { GroupLayout } from "./group-layout";
-import { chatState } from "../../chat-state-service";
-import { Dashboard } from "../../dashboard";
+import { chatState } from "../../chat/chat-state-service";
+import { Dashboard } from "../../_dashboard";
 import { JoinGroupLayout } from "./join-group-form-layout";
 import { ChatManager } from "../chat-manager";
 
@@ -92,8 +92,7 @@ export class GroupManager {
         this.currentGroupName = data.name;
         this.currentGroupId = data.id;
 
-        const lastMessage = await this.chatManager.getLoader()
-            .lastMessage(this.currentGroupId);
+        const lastMessage = await this.chatManager.lastMessage(this.currentGroupId);
         chatState.setType('GROUP');
         await this.messageManager.setCurrentChat(
             this.currentGroupId,
@@ -290,8 +289,7 @@ export class GroupManager {
         const time = new Date().toISOString();
         this.currentGroupId = data.id;
 
-        const lastMessage = await this.chatManager.getLoader()
-            .lastMessage(this.currentGroupId);
+        const lastMessage = await this.chatManager.lastMessage(this.currentGroupId);
         chatState.setType('GROUP');
         await this.messageManager.setCurrentChat(
             data.id, 
@@ -308,8 +306,6 @@ export class GroupManager {
                 groupName: data.name
             });
         }
-
-        this.chatManager.getLoader().loadMessagesHistory(data.id);
 
         const chatItem = {
             id: this.currentGroupId,

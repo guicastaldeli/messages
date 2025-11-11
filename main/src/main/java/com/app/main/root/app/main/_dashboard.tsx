@@ -1,13 +1,13 @@
-import './__styles/styles.scss';
-import React, { Component, use } from 'react';
-import { MessageManager } from './_messages_config/message-manager';
-import { SessionContext, SessionType } from './_session/session-provider';
-import { ChatManager } from './chat/chat-manager';
-import { chatState } from './chat-state-service';
-import { ApiClient } from './_api-client/api-client';
-import { GroupLayout } from './chat/group/group-layout';
-import { ContactServiceClient } from './_contact_config/contact-service-client';
-import { ContactLayout } from './_contact_config/contact-layout';
+import "./__styles/styles.scss";
+import React, { Component } from "react";
+import { MessageManager } from "./_messages_config/message-manager";
+import { SessionContext, SessionType } from "./_session/session-provider";
+import { ChatManager } from "./chat/chat-manager";
+import { chatState } from "./chat/chat-state-service";
+import { ApiClient } from "./_api-client/api-client";
+import { GroupLayout } from "./chat/group/group-layout";
+import { ContactServiceClient } from "./_contact_config/contact-service-client";
+import { ContactLayout } from "./_contact_config/contact-layout";
 
 interface Props {
     messageManager: MessageManager;

@@ -6,7 +6,7 @@ import { SocketClientConnect } from './socket-client-connect';
 import { MessageManager } from './_messages_config/message-manager';
 import { CacheServiceClient } from '../_cache/cache-service-client';
 import { CachePreloaderService } from '../_cache/cache-preloader-service';
-import { Dashboard } from './dashboard';
+import { Dashboard } from './_dashboard';
 import { SessionProvider, SessionType, SessionContext } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
 import { Item } from './chat/chat-manager';

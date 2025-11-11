@@ -1,15 +1,21 @@
 import { SocketClientConnect } from "../socket-client-connect";
+import { ApiClient } from "../_api-client/api-client";
 import { ChatManager } from "./chat-manager";
+import { ChatStateManager } from "./chat-state-manager";
 
 export class Loader {
     private socketClient: SocketClientConnect;
+    private apiClient: ApiClient;
     private chatManager: ChatManager;
+    private chatStateManager = ChatStateManager.getIntance();
 
     constructor(
         socketClient: SocketClientConnect,
+        apiClient: ApiClient,
         chatManager: ChatManager
     ) {
         this.socketClient = socketClient;
+        this.apiClient = apiClient;
         this.chatManager = chatManager;
     }
 
@@ -63,13 +69,17 @@ export class Loader {
             if(!chats || chats.length === 0) return;
 
             for(const chat of chats) {
+                if(chat.type === 'DIRECT') {
+                    const hasMessages = await this.chatHasMessages(chat.id);
+                    this.chatStateManager.initChatState(chat.id, hasMessages ? 1 : 0);
+                    if(!hasMessages) continue;
+                }
                 const lastMessage = await this.chatManager.lastMessage(chat.id);
                 const type = chat.type;
-                console.log(chat);
 
                 const chatEvent = new CustomEvent('chat-item-added', {
                     detail: {
-                        id: chat.chatId,
+                        id: chat.id,
                         chatId: chat.id,
                         groupId: chat.id,
                         name: chat.name || chat.contactUsername,
@@ -88,5 +98,14 @@ export class Loader {
         }
     }
 
-   
+    private async chatHasMessages(id: string): Promise<boolean> {
+        try {
+            const service = await this.apiClient.getMessageService();
+            const res = await service.getMessagesByChatId(id);
+            return res.messages && res.messages.length > 0;
+        } catch(err) {
+            console.error('Failed to check messages', err);
+            return false;
+        }
+    }
 }

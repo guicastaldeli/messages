@@ -2,7 +2,7 @@ import React from "react";
 import { SocketClientConnect } from "../../socket-client-connect";
 import { MessageManager } from "../../_messages_config/message-manager";
 import { ApiClient } from "../../_api-client/api-client";
-import { chatState } from "../../chat-state-service";
+import { chatState } from "../../chat/chat-state-service";
 import { DirectLayout } from "./direct-layout";
 import { createRoot, Root } from "react-dom/client";
 
@@ -54,6 +54,11 @@ export class DirectManager {
         const chatId = await this.getChatId(contactId);
         this.currentParticipant = { id: contactId, username: contactUsername }
         this.currentChatId = chatId;
+
+        const openEvent = new CustomEvent('direct-chat-opened', {
+            detail: { chatId, contactId, contactUsername }
+        });
+        window.dispatchEvent(openEvent);
 
         chatState.setType('DIRECT');
         await this.messageManager.setCurrentChat(
