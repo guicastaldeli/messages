@@ -75,6 +75,9 @@ export class MessageElementRenderer {
     
         let userColor = null;
         const currentChat = this.messageManager.chatRegistry.getCurrentChat();
+        if(currentChat?.type === 'DIRECT' && analysis.direction === 'other') {
+            userColor = UserColorGenerator.getColor('pink');
+        }
         if(currentChat?.type === 'GROUP' && analysis.direction === 'other') {
             userColor = UserColorGenerator.getUserColorForGroup(
                 currentChat.id,

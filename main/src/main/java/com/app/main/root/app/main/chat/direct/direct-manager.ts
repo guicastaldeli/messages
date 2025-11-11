@@ -2,20 +2,14 @@ import React from "react";
 import { SocketClientConnect } from "../../socket-client-connect";
 import { MessageManager } from "../../_messages_config/message-manager";
 import { ApiClient } from "../../_api-client/api-client";
-import { ChatManager } from "../chat-manager";
-import { ChatRegistry } from "../chat-registry";
 import { chatState } from "../../chat-state-service";
 import { DirectLayout } from "./direct-layout";
 import { createRoot, Root } from "react-dom/client";
-import { CacheServiceClient } from "@/app/_cache/cache-service-client";
 
 export class DirectManager {
     private socketClient: SocketClientConnect;
     private messageManager: MessageManager;
     private apiClient: ApiClient;
-    private chatManager: ChatManager;
-    private chatRegistry: ChatRegistry;
-    private cacheService: CacheServiceClient;
 
     public currentChatId: string = '';
     public currentParticipant: { id: string; username: string } | null = null;
@@ -27,19 +21,13 @@ export class DirectManager {
     public container!: HTMLElement;
 
     constructor(
-        chatManager: ChatManager,
         socketClient: SocketClientConnect,
         messageManager: MessageManager,
-        apiClient: ApiClient,
-        chatRegistry: ChatRegistry,
-        cacheService: CacheServiceClient
+        apiClient: ApiClient
     ) {
-        this.chatManager = chatManager;
         this.socketClient = socketClient;
         this.messageManager = messageManager;
         this.apiClient = apiClient;
-        this.chatRegistry = chatRegistry;
-        this.cacheService = cacheService;
         this.setupEventListeners();
     }
 
@@ -73,7 +61,6 @@ export class DirectManager {
             'DIRECT',
             [this.userId, contactId]
         );
-        await this.renderMessages(chatId);
 
         const chatEvent = new CustomEvent('direct-activated', {
             detail: {
@@ -94,26 +81,6 @@ export class DirectManager {
     }
 
     /*
-    ** Render Messages
-    */
-    public async renderMessages(chatId: string): Promise<void> {
-        try {
-            const messages = await this.cacheService.getMessages(chatId, 0);
-            for(const message of messages) {
-                const updMessage = {
-                    ...message,
-                    currentUserId: this.userId,
-                    currentSessionId: this.socketId
-                }
-                await this.messageManager.renderHistory(updMessage);
-            }
-            console.log(`Rendered ${messages.length} cached messages for direct chat :)`);
-        } catch(err) {
-            console.error(err);
-        }
-    }
-
-    /*
     ** Last Message
     */
     public async lastMessage(id: string): Promise<string> {
@@ -122,7 +89,7 @@ export class DirectManager {
             const res = await service.getMessagesByChatId(id);
             const messages = res.messages || [];
             if(messages && messages.length > 0) {
-                const lastMessage = messages[messages.length - 1];
+                const lastMessage = messages[messages.length - 1]
                 return lastMessage.content;
             }
         } catch(err) {

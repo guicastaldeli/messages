@@ -31,7 +31,7 @@ interface State {
 }
 
 export class ChatManager {
-    private apiClient!: ApiClient;
+    private apiClient: ApiClient;
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
@@ -57,20 +57,12 @@ export class ChatManager {
         setState: React.Component<any, State>['setState']
     ) {
         this.cacheService = cacheService;
-        
-        this.loader = new Loader(
-            socketClient, 
-            apiClient, 
-            messageManager,
-            cacheService
-        );
+        this.apiClient = apiClient;
+        this.loader = new Loader(socketClient, this);
         this.directManager = new DirectManager(
-            this,
             socketClient,
             messageManager,
-            apiClient,
-            messageManager.chatRegistry,
-            cacheService
+            apiClient
         );
         this.groupManager = new GroupManager(
             this,
@@ -85,7 +77,6 @@ export class ChatManager {
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
-        await this.loader.getUserData(sessionId, userId, username);
         await this.directManager.getUserData(sessionId, userId);
         await this.groupManager.getUserData(sessionId, userId, username);
     }
@@ -159,7 +150,7 @@ export class ChatManager {
         const systemMessage = this.isSystemMessage(event.detail);
         const formattedMessage = this.formattedMessage(chatId, lastMessage, isCurrentUser, sender, systemMessage);
 
-        this.updateLastMessage({
+        this.updateChatMessage({
             id: chatId,
             userId: userId,
             messageId: messageId,
@@ -175,7 +166,7 @@ export class ChatManager {
         );
     }
 
-    public updateLastMessage(detail: {
+    public updateChatMessage(detail: {
         id: string;
         userId: string;
         messageId: string;
@@ -265,7 +256,7 @@ export class ChatManager {
         sender: string,
         isSystem: boolean
     ): void {
-        this.loader.updateLastMessage(
+        this.updateLastMessage(
             id,
             userId,
             messageId, 
@@ -331,6 +322,51 @@ export class ChatManager {
     private formattedLastMessage(message: string): string {
         if(message.length > 15) return message.substring(0, 15) + '...';
         return message;
+    }
+
+    /*
+    ** Last Message
+    */
+    public async lastMessage(id: string): Promise<string> {
+        try {
+            const service = await this.apiClient.getMessageService();
+            const res = await service.getMessagesByChatId(id, 0);
+            const messages = res.messages || [];
+            if(messages && messages.length > 0) {
+                const sortedMessages = messages.sort((a, b) => {
+                    return parseInt(b.id) - parseInt(a.id);
+                });
+                return sortedMessages[0].content;
+            }
+        } catch(err) {
+            console.error('Failed to get recent messages', err);
+        }
+
+        return '';
+    }
+
+    public updateLastMessage(
+        id: string,
+        userId: string,
+        messageId: string,
+        content: string,
+        sender: string,
+        isSystem: boolean
+    ): void {
+        const time = new Date().toISOString();
+        const updateEvent = new CustomEvent('last-message-updated', {
+            detail: {
+                chatId: id,
+                userId: userId,
+                messageId: messageId,
+                lastMessage: content,
+                sender: sender,
+                timestamp: time,
+                isCurrentUser: sender,
+                isSystem: isSystem
+            }
+        });
+        window.dispatchEvent(updateEvent);
     }
 
     /*

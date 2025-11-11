@@ -151,7 +151,8 @@ export class CacheServiceClient {
         if(!this.cache.has(chatId)) {
             this.init(
                 chatId, 
-                messages.length + (page * this.config.pageSize)
+                messages.length + 
+                (page * this.config.pageSize)
             );
         }
         
@@ -164,9 +165,9 @@ export class CacheServiceClient {
                 data.messages.set(id, m);
 
                 const insertIndex = startIndex + i;
-                if(insertIndex >= data.messageOrder.length) {
+                if(insertIndex >= data.messageOrder.length - 1) {
                     while(data.messageOrder.length < insertIndex) {
-                        data.messageOrder.push('');
+                        data.messageOrder.push(id);
                     }
                     data.messageOrder.push(id);
                 } else {
@@ -176,9 +177,7 @@ export class CacheServiceClient {
         });
 
         data.messageOrder = data.messageOrder.filter(
-            id => id !== '' &&
-            id !== undefined &&
-            id !== null
+            id => id !== ''
         );
 
         const time = Date.now();
@@ -194,50 +193,38 @@ export class CacheServiceClient {
     */
     public addMessage(
         chatId: string, 
-        messages: any,
+        messages: any | any[],
         page: number = 0
     ): void {
         if(!this.cache.has(chatId)) {
-            this.init(
-                chatId,
-                messages.length +
-                (page * this.config.pageSize) 
-            );
+            this.init(chatId, 0);
         }
 
         const data = this.cache.get(chatId)!;
-        messages.forEach((m: any, i: any) => {
+        const messageArray = Array.isArray(messages) ? messages : [messages];
+        
+        messageArray.forEach((m: any) => {
             const id = m.id || m.messageId;
             if(!data.messages.has(id)) {
                 data.messages.set(id, m);
-                const position = (page * this.config.pageSize) + i;
-                while(data.messageOrder.length <= position) {
-                    data.messageOrder.push('');
-                }
-                data.messageOrder[position] = id;
+                data.messageOrder.push(id);
             }
         });
 
         const time = Date.now();
-        data.messageOrder = data.messageOrder.filter(id => id !== '');
+        data.messageOrder = data.messageOrder.filter(id => id && data.messages.has(id));
         data.loadedPages.add(page);
         data.lastAccessTime = time;
         data.lastUpdated = time;
-
-        const revealedCount = (page * this.config.pageSize) + messages.length;
-        if(revealedCount > data.totalMessagesCount) {
-            data.totalMessagesCount = revealedCount;
-        }
-
+        data.totalMessagesCount = Math.max(data.totalMessagesCount, data.messageOrder.length);
         data.hasMore = data.messages.size < data.totalMessagesCount;
         data.isFullyLoaded = !data.hasMore && this.allPagesLoaded(chatId);
-        console.log(`Added page ${page} to cache. Total messages: ${data.messages.size}, Has more: ${data.hasMore}`);
     }
 
     /*
     ** Messages in Range
     */
-     public getMessagesInRange(
+    public getMessagesInRange(
         chatId: string, 
         start: number, 
         end: number

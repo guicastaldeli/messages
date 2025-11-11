@@ -81,21 +81,27 @@ export class Dashboard extends Component<Props, State> {
     }
 
     componentDidUpdate(prevProps: Props): void {
-        if(
-            this.props.chatList && 
-            this.props.chatManager !== prevProps.chatManager &&
-            this.groupContainerRef.current 
-        ) {
-            this.props.chatManager.setContainer(this.groupContainerRef.current);
-        }
-
-        if(prevProps.chatList !== this.props.chatList) {
-            this.setState({ chatList: this.props.chatList || [] });
-        }
-        if(prevProps.activeChat !== this.props.activeChat) {
-            this.setState({ activeChat: this.props.activeChat || null });
-        }
+    if(
+        this.props.chatList && 
+        this.props.chatManager !== prevProps.chatManager &&
+        this.groupContainerRef.current 
+    ) {
+        this.props.chatManager.setContainer(this.groupContainerRef.current);
     }
+
+    // Combine state updates
+    let stateUpdates: Partial<State> = {};
+    if(prevProps.chatList !== this.props.chatList) {
+        stateUpdates.chatList = this.props.chatList || [];
+    }
+    if(prevProps.activeChat !== this.props.activeChat) {
+        stateUpdates.activeChat = this.props.activeChat || null;
+    }
+    
+    if(Object.keys(stateUpdates).length > 0) {
+        this.setState(stateUpdates as Pick<State, keyof State>);
+    }
+}
 
     private setSession = (session: SessionType): void => {
         this.setState({ currentSession: session });

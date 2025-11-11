@@ -47,30 +47,6 @@ export class DirectLayout extends Component<Props, State> {
         if(this.props.onBack) this.props.onBack();
     }
 
-    private handleSendMessage = async (): Promise<void> => {
-        const { messageManager, directManager } = this.props;
-        const { currentChat } = this.state;
-
-        if (!currentChat) {
-            console.error('No active chat to send message to');
-            return;
-        }
-
-        try {
-            // Ensure the message manager knows about the current direct chat
-            await messageManager.setCurrentChat(
-                currentChat.chatId,
-                'DIRECT',
-                [directManager.userId, currentChat.participant.id]
-            );
-            
-            // Now call the send message handler
-            await messageManager.handleSendMessage();
-        } catch (err) {
-            console.error('Failed to send message:', err);
-        }
-    }
-
     render() {
         const { isActive, currentChat } = this.state;
         if(!isActive || !currentChat) return null;

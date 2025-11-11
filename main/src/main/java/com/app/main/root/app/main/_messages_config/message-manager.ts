@@ -368,18 +368,26 @@ export class MessageManager {
                     messageType: isGroupChat ? 'GROUP' : 'DIRECT',
                     direction: 'SENT'
                 });
-                this.chatManager.setLastMessage(
-                    analyzedData.chatId,
-                    analyzedData.userId,
-                    analyzedData.messageId,
-                    analyzedData.content,
-                    analyzedData.senderId,
-                    analyzedData.isSystem
-                )
                 console.log('Message saved on server! :)');
             } catch(err) {
                 console.error('Failed to save message :(', err);
             }
+            const messageToCache = {
+                ...analyzedData,
+                id: analyzedData.messageId,
+                userId: analyzedData.senderId,
+                isSystem: analyzedData.isSystem,
+                direction: analysis.direction || 'self'
+            }
+            this.cacheService.addMessage(chatId, messageToCache);
+            this.chatManager.setLastMessage(
+                analyzedData.chatId,
+                analyzedData.userId,
+                analyzedData.messageId,
+                analyzedData.content,
+                analyzedData.senderId,
+                analyzedData.isSystem
+            );
         }
         return res;
     }

@@ -243,7 +243,7 @@ public enum CommandQueryManager {
             SELECT m.*
             FROM messages m
             WHERE m.chat_id = ?
-            ORDER BY m.created_at DESC
+            ORDER BY m.created_at DESC, m.id DESC
             LIMIT ? OFFSET ? 
         """
     ),

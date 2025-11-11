@@ -1,86 +1,16 @@
 import { SocketClientConnect } from "../socket-client-connect";
-import { ApiClient } from "../_api-client/api-client";
-import { MessageManager } from "../_messages_config/message-manager";
-import { CacheServiceClient } from "@/app/_cache/cache-service-client";
+import { ChatManager } from "./chat-manager";
 
 export class Loader {
     private socketClient: SocketClientConnect;
-    private apiClient: ApiClient;
-    private messageManager: MessageManager;
-    private cacheService: CacheServiceClient;
-
-    private socketId: string | null = null;
-    private userId: string | null = null;
-    private username: string | null = null;
+    private chatManager: ChatManager;
 
     constructor(
-        socketClient: SocketClientConnect, 
-        apiClient: ApiClient,
-        messageManager: MessageManager,
-        cacheService: CacheServiceClient
+        socketClient: SocketClientConnect,
+        chatManager: ChatManager
     ) {
         this.socketClient = socketClient;
-        this.apiClient = apiClient;
-        this.messageManager = messageManager;
-        this.cacheService = cacheService;
-    }
-
-    public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
-        this.socketId = sessionId;
-        this.userId = userId;
-        this.username = username;
-    }
-
-    /*
-    ** Load History Messages
-    */
-    public async loadMessagesHistory(id: string): Promise<void> {
-        try {
-            const cachedMessages = await this.cacheService.getMessages(id, 0);
-            if(cachedMessages.length > 0) {
-                console.log(`Loaded ${cachedMessages.length} messages for ${id}`);
-                for(const message of cachedMessages) {
-                    const updMessage = {
-                        ...message,
-                        currentUserId: this.userId,
-                        currentSessionId: this.socketId
-                    }
-                    await this.messageManager.renderHistory(updMessage);
-                }
-            } else {
-                console.log('No cached messages! loding from API.');
-                const service = await this.apiClient.getMessageService();
-                const messages = await service.getMessagesByChatId(id, 0);
-                if(messages && Array.isArray(messages)) {
-                    for(const message of messages) {
-                        const updMessage = {
-                            ...message,
-                            currentUserId: this.userId,
-                            currentSessionId: this.socketId
-                        }
-                        await this.messageManager.renderHistory(updMessage);
-                    }
-                    this.cacheMessages(id, messages);
-                }
-            }
-        } catch(err) {
-            console.error('Failed to load messages: ', err);
-        }
-    }
-
-    private cacheMessages(chatId: string, messages: any[]): void {
-        try {
-            const pageSize = 20;
-            for(let page = 0; page < Math.ceil(messages.length / pageSize); page++) {
-                const startIdx = page * pageSize;
-                const endIdx = Math.min(startIdx + pageSize, messages.length);
-                const pageMessages = messages.slice(startIdx, endIdx);
-                this.cacheService.addMessagesPage(chatId, pageMessages, page);
-            }
-            this.cacheService.init(chatId, messages.length);
-        } catch(err) {
-            console.error('Failed to cache messages!:', err);
-        }
+        this.chatManager = chatManager;
     }
 
     private async loadHistory(userId: string): Promise<any[]> {
@@ -133,7 +63,7 @@ export class Loader {
             if(!chats || chats.length === 0) return;
 
             for(const chat of chats) {
-                const lastMessage = await this.lastMessage(chat.id);
+                const lastMessage = await this.chatManager.lastMessage(chat.id);
                 const type = chat.type;
                 console.log(chat);
 
@@ -158,46 +88,5 @@ export class Loader {
         }
     }
 
-    /*
-    ** Last Message
-    */
-    public async lastMessage(id: string): Promise<string> {
-        try {
-            const service = await this.apiClient.getMessageService();
-            const res = await service.getMessagesByChatId(id, 0);
-            const messages = res.messages || [];
-            if(messages && messages.length > 0) {
-                const lastMessage = messages[messages.length - 1];
-                return lastMessage.content;
-            }
-        } catch(err) {
-            console.error('Failed to get recent messages', err);
-        }
-
-        return '';
-    }
-
-    public updateLastMessage(
-        id: string,
-        userId: string,
-        messageId: string,
-        content: string,
-        sender: string,
-        isSystem: boolean
-    ): void {
-        const time = new Date().toISOString();
-        const updateEvent = new CustomEvent('last-message-updated', {
-            detail: {
-                chatId: id,
-                userId: userId,
-                messageId: messageId,
-                lastMessage: content,
-                sender: sender,
-                timestamp: time,
-                isCurrentUser: sender === this.username,
-                isSystem: isSystem
-            }
-        });
-        window.dispatchEvent(updateEvent);
-    }
+   
 }
