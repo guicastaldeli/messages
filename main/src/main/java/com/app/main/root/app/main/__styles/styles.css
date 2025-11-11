@@ -363,14 +363,19 @@ li:hover {
 .contacts-panel .contacts-list .contact-item .contact-info .username.online {
   color: #28a745;
 }
+.contacts-panel .contacts-list .contact-item .contact-info .username.online .status {
+  background: #28a745;
+}
 .contacts-panel .contacts-list .contact-item .contact-info .username.offline {
-  color: #6c757d;
+  color: #dc3545;
+}
+.contacts-panel .contacts-list .contact-item .contact-info .username.offline .status {
+  background: #dc3545;
 }
 .contacts-panel .contacts-list .contact-item .contact-info .username .status {
   display: inline-block;
   width: 8px;
   height: 8px;
-  background: #28a745;
   border-radius: 50%;
   margin-left: 0.5rem;
 }

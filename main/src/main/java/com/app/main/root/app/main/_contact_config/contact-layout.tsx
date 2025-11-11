@@ -15,17 +15,6 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
             hasSubscribedRef.current = true;
             loadContacts();
             loadPendingRequests();
-
-            /*
-            const handleContactAdded = () => {
-                loadContacts();
-                loadPendingRequests();
-            }
-            window.addEventListener('contact-added', handleContactAdded);
-            return () => {
-                window.removeEventListener('contact-added', handleContactAdded);
-            }
-                */
         }
     }, [contactService]);
 

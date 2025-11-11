@@ -134,7 +134,7 @@ export class ChatManager {
                     console.log('Chat already exists!', newChat.id);
                     return prevState;
                 }
-                console.log('Adding new chat:', newChat.id, newChat.name);
+                //console.log('Adding new chat:', newChat.id, newChat.name);
                 return {
                     ...prevState,
                     chatList: [...prevState.chatList, newChat]

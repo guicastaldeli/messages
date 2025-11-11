@@ -1,7 +1,9 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
+import com.app.main.root.app._server.ConnectionTracker;
 import com.app.main.root.app._types._User;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.Connection;
@@ -14,6 +16,7 @@ import java.util.*;
 public class ContactService {
     private final ServiceManager serviceManager;
     private final DataSourceService dataSourceService;
+    @Autowired @Lazy private ConnectionTracker connectionTracker;
     
     public ContactService(
         @Lazy ServiceManager serviceManager,
@@ -232,10 +235,13 @@ public class ContactService {
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {
                     Map<String, Object> contact = new HashMap<>();
-                    contact.put("id", rs.getString("id"));
+                    String contactId = rs.getString("id");
+                    Boolean isOnline = contactOnline(contactId);
+                    
+                    contact.put("id", contactId);
                     contact.put("username", rs.getString("username"));
                     contact.put("email", rs.getString("email"));
-                    contact.put("isOnline", rs.getString("is_online"));
+                    contact.put("isOnline", isOnline);
                     contact.put("addedAt", rs.getTimestamp("created_at"));
                     contacts.add(contact);
                 }
@@ -292,6 +298,18 @@ public class ContactService {
                 serviceManager.getUserService().sendMessageToUser(sessionId, "contact-added", notification);
             }
         }
+    }
+
+    private boolean contactOnline(String contactId) {
+        String contactSessionId = serviceManager.getUserService().getSessionByUserId(contactId);
+        if(contactSessionId == null) return false;
+
+        boolean isOnline = connectionTracker.getActiveConnections()
+            .stream()
+            .anyMatch(
+                connInfo -> contactSessionId.equals(connInfo.sessionId)
+            );
+        return isOnline;
     }
 
     private void notifyContactRemoved(

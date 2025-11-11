@@ -188,11 +188,6 @@ export class ContactServiceClient {
         });
         this.socketClient.onDestination('/user/queue/contact-added', (message: any) => {
             console.log(`New contact added ${message.username}`);
-            /*
-            window.dispatchEvent(new CustomEvent('contact-added', {
-                detail: { username: message.username }
-            }));
-            */
         });
     }
 }
