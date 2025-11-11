@@ -388,7 +388,7 @@ export class MessageManager {
                 analyzedData.userId,
                 analyzedData.messageId,
                 analyzedData.content,
-                analyzedData.senderId,
+                analyzedData.username,
                 analyzedData.isSystem
             );
         }
