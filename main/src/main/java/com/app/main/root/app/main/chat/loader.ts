@@ -19,6 +19,9 @@ export class Loader {
         this.chatManager = chatManager;
     }
 
+    /*
+    ** Load Chat History
+    */
     private async loadHistory(userId: string): Promise<any[]> {
         return new Promise(async (res, rej) => {
             const sucssDestination = '/queue/user-chats-scss';
@@ -62,20 +65,18 @@ export class Loader {
         });
     }
 
-    public async loadChats(userId: string): Promise<any> {
+    /*
+    ** Load Chat Items
+    */
+    public async loadChatItems(userId: string): Promise<any> {
         try {
             await new Promise(res => setTimeout(res, 500));
             const chats = await this.loadHistory(userId);
             if(!chats || chats.length === 0) return;
 
             for(const chat of chats) {
-                if(chat.type === 'DIRECT') {
-                    const hasMessages = await this.chatHasMessages(chat.id);
-                    this.chatStateManager.initChatState(chat.id, hasMessages ? 1 : 0);
-                    if(!hasMessages) continue;
-                }
-                const lastMessage = await this.chatManager.lastMessage(chat.id);
-                const type = chat.type;
+                const shouldContinue = await this.setChatState(chat);
+                if(!shouldContinue) continue;
 
                 const chatEvent = new CustomEvent('chat-item-added', {
                     detail: {
@@ -83,11 +84,11 @@ export class Loader {
                         chatId: chat.id,
                         groupId: chat.id,
                         name: chat.name || chat.contactUsername,
-                        type: type,
+                        type: chat.type,
                         creator: chat.creator || chat.creatorId,
                         members: [],
                         unreadCount: 0,
-                        lastMessage: lastMessage,
+                        lastMessage: await this.setLastMessage(chat),
                         lastMessageTime: chat.createdAt
                     }
                 });
@@ -107,5 +108,35 @@ export class Loader {
             console.error('Failed to check messages', err);
             return false;
         }
+    }
+
+    private async setLastMessage(chat: any): Promise<string> {
+        const chatId = chat.id;
+        const lastMessageData = await this.chatManager.lastMessage(chatId);
+        if(!lastMessageData) return 'Err';
+        const formattedMessage = this.chatManager.formattedMessage(
+            chatId,
+            lastMessageData.content,
+            lastMessageData.sender,
+            chatId,
+            lastMessageData.isSystem
+        );
+
+        if(chat.type === 'DIRECT') {
+            return formattedMessage; 
+        } else {
+            return this.chatManager.formattedLastMessage(formattedMessage);
+        }
+    }
+
+    private async setChatState(chat: any): Promise<boolean> {
+        const chatId = chat.id;
+        const type = chat.type;
+        if(type === 'DIRECT') {
+            const hasMessages = await this.chatHasMessages(chatId);
+            this.chatStateManager.initChatState(chatId, hasMessages ? 1 : 0);
+            if(!hasMessages) return false;
+        }
+        return true;
     }
 }

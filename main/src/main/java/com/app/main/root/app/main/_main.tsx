@@ -208,7 +208,7 @@ export class Main extends Component<any, State> {
                             await this.cachePreloader.startPreloading(authData.userId);
                             await this.dashboardInstance?.getUserData(authData.sessionId, authData.userId);
                             await this.chatManager.getUserData(authData.sessionId, authData.userId, authData.username);
-                            this.chatManager.getLoader().loadChats(authData.userId);
+                            this.chatManager.getLoader().loadChatItems(authData.userId);
                             sessionContext.setSession('MAIN_DASHBOARD');
                         } catch (err) {
                             console.error('Error in handleJoin:', err);

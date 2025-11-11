@@ -164,10 +164,25 @@ export class ChatManager {
     ** Update Last Message
     */
     private handleLastMessage = (event: CustomEvent): void => {
-        const { messageId, chatId, userId, lastMessage, sender, timestamp, isCurrentUser } = event.detail;
-        const systemMessage = this.isSystemMessage(event.detail);
-        const formattedMessage = this.formattedMessage(chatId, lastMessage, isCurrentUser, sender, systemMessage);
+        const { 
+            messageId, 
+            chatId, 
+            userId, 
+            lastMessage, 
+            sender, 
+            timestamp, 
+            isCurrentUser 
+        } = event.detail;
 
+        const systemMessage = this.isSystemMessage(event.detail);
+        const formattedMessage = this.formattedMessage(
+            chatId, 
+            lastMessage, 
+            isCurrentUser, 
+            sender, 
+            systemMessage
+        
+        );
         this.updateChatMessage({
             id: chatId,
             userId: userId,
@@ -305,7 +320,7 @@ export class ChatManager {
     /*
     ** Formatted Message
     */
-    private formattedMessage(
+    public formattedMessage(
         chatId: string, 
         lastMessage: string, 
         isCurrentUser: string, 
@@ -334,15 +349,20 @@ export class ChatManager {
         return formattedMessage;
     }
 
-    private formattedLastMessage(message: string): string {
-        if(message.length > 15) return message.substring(0, 15) + '...';
+    public formattedLastMessage(message: string): string {
+        if(message.length > 10) return message.substring(0, 15) + '...';
         return message;
     }
 
     /*
     ** Last Message
     */
-    public async lastMessage(id: string): Promise<string> {
+    public async lastMessage(id: string): Promise<{
+        content: string,
+        currentUserId: string, 
+        sender: string, 
+        isSystem: boolean
+    } | null> {
         try {
             const service = await this.apiClient.getMessageService();
             const res = await service.getMessagesByChatId(id, 0);
@@ -351,13 +371,20 @@ export class ChatManager {
                 const sortedMessages = messages.sort((a, b) => {
                     return parseInt(b.id) - parseInt(a.id);
                 });
-                return sortedMessages[0].content;
+
+                const lastMsg = sortedMessages[0];
+                return {
+                    content: lastMsg.content,
+                    currentUserId: lastMsg.sender || lastMsg.senderId,
+                    sender: lastMsg.sender || lastMsg.senderId,
+                    isSystem: lastMsg.isSystem || false
+                }
             }
         } catch(err) {
             console.error('Failed to get recent messages', err);
         }
 
-        return '';
+        return null;
     }
 
     public updateLastMessage(
