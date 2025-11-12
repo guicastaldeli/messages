@@ -315,7 +315,7 @@ export class MessageManager {
 
         const isGroupChat = chatId.startsWith('group_');
         const isDirectChat = chatId.startsWith('direct_');
-        const messageId = `msg_${time}_${Math.random().toString(36).substr(2, 9)}`
+        const tempMessageId = `msg_${time}_${Math.random().toString(36).substr(2, 9)}`
         const chatType = isGroupChat ? 'GROUP' : (isDirectChat ? 'DIRECT' : 'CHAT');
 
         const data = {
@@ -323,13 +323,14 @@ export class MessageManager {
             senderSessionId: this.socketId,
             username: this.username,
             content: content.content,
-            messageId: messageId,
+            messageId: tempMessageId,
             targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != this.socketId),
             groupId: isGroupChat ? currentChat?.id : undefined,
             chatId: chatId,
             timestamp: time,
             chatType: content.chatType || chatType,
             type: chatType,
+            isTemp: true
         }
 
         const analysis = this.messageAnalyzer.analyzeMessage(data);
@@ -364,7 +365,8 @@ export class MessageManager {
         );
         if(res) {
             try {
-                (await this.apiClient.getMessageService()).saveMessages({
+                const messageService = await this.apiClient.getMessageService();
+                const savedMessage = await messageService.saveMessages({
                     messageId: analyzedData.messageId,
                     content: analyzedData.content,
                     senderId: analyzedData.senderId,
@@ -374,20 +376,30 @@ export class MessageManager {
                     direction: 'SENT'
                 });
                 console.log('Message saved on server! :)');
-                console.log(analyzedData.messageId)
-                console.log(analyzedData.senderId)
+                const messageToCache = {
+                    ...analyzedData,
+                    id: savedMessage.id || savedMessage.messageId,
+                    messageId: savedMessage.id || savedMessage.messageId,
+                    userId: analyzedData.senderId,
+                    isSystem: analyzedData.isSystem,
+                    direction: analysis.direction || 'self',
+                    timestamp: time,
+                    isTemp: false
+                }
+                this.cacheService.addMessage(chatId, messageToCache);
             } catch(err) {
                 console.error('Failed to save message :(', err);
+                const messageToCache = {
+                    ...analyzedData,
+                    id: tempMessageId,
+                    userId: analyzedData.senderId,
+                    isSystem: analyzedData.isSystem,
+                    direction: analysis.direction || 'self',
+                    timestamp: time,
+                    isTemp: true
+                }
+                this.cacheService.addMessage(chatId, messageToCache);
             }
-            const messageToCache = {
-                ...analyzedData,
-                id: analyzedData.messageId,
-                userId: analyzedData.senderId,
-                isSystem: analyzedData.isSystem,
-                direction: analysis.direction || 'self',
-                timestamp: time
-            }
-            this.cacheService.addMessage(chatId, messageToCache);
             if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
             this.chatManager.setLastMessage(
                 analyzedData.chatId,
@@ -489,28 +501,35 @@ export class MessageManager {
             const messageService = await this.apiClient.getMessageService();
             const response = await messageService.getMessagesByChatId(chatId, page);
             const totalMessages = (response.messages ? response.messages.length + (page * 20) : 0);
-            
             if (page === 0) {
                 this.chatStateManager.initChatState(chatId, totalMessages);
             }
 
             if(response.messages && response.messages.length > 0) {
+                const startIndex = page * 20;
+                const endIndex = startIndex + Math.min(response.messages.length, 20) - 1;
+
+                //Loaded Messages
                 const sortedMessages = response.messages.sort((a, b) => {
-                    const timeA = a.timestamp || 0;
-                    const timeB = b.timestamp || 0;
+                    const timeA = a.timestamp || a.createdAt ||0;
+                    const timeB = b.timestamp || b.createdAt || 0;
                     return timeA - timeB;
                 });
                 this.cacheService.addMessagesPage(chatId, sortedMessages, page);
                 if(page > this.currentPage) this.currentPage = page;
                 
-                const startIndex = page * 20;
-                const endIndex = startIndex + Math.min(response.messages.length, 20) - 1;
+                //New Messages
                 const newMessages = this.cacheService.getMessagesInRange(
                     chatId,
                     startIndex,
                     endIndex
                 );
-                await this.messageElementRenderer.renderHistory(newMessages);
+                const sortedNewMessages = newMessages.sort((a, b) => {
+                    const timeA = a.timestamp || a.createdAt ||0;
+                    const timeB = b.timestamp || b.createdAt || 0;
+                    return timeA - timeB;
+                });
+                await this.messageElementRenderer.renderHistory(sortedNewMessages);
             } else {
                 const cacheData = this.cacheService.getCacheData(chatId);
                 if (cacheData) {

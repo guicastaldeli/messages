@@ -43,7 +43,6 @@ export class CacheServiceClient {
 
     public init(chatId: string, totalMessagesCount: number = 0): void {
         const time = Date.now();
-
         if(!this.cache.has(chatId)) {
             this.cache.set(chatId, {
                 messages: new Map(),
@@ -160,9 +159,14 @@ export class CacheServiceClient {
         }
         
         const data = this.cache.get(chatId)!;
+        const sortedMessages = messages.sort((a, b) => {
+            const timeA = a.timestamp || a.createdAt || 0;
+            const timeB = b.timestamp || b.createdAt || 0;
+            return timeA - timeB;
+        });
         const startIndex = page * this.config.pageSize;
 
-        messages.forEach((m, i) => {
+        sortedMessages.forEach((m, i) => {
             const id = m.id || m.messageId;
             if(!data.messages.has(id)) {
                 data.messages.set(id, m);
@@ -250,7 +254,11 @@ export class CacheServiceClient {
             const message = data.messages.get(id);
             if(message) result.push({ ...message, virtualIndex: i });
         }
-        return result;
+        return result.sort((a, b) => {
+            const timeA = a.timestamp || a.createdAt || 0;
+            const timeB = b.timestamp || b.createdAt || 0;
+            return timeA - timeB;
+        });
     }
 
     /*
