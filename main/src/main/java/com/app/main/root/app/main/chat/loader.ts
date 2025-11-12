@@ -34,9 +34,13 @@ export class Loader {
 
                 let chats: any[] = [];
                 if(data && typeof data === 'object') {
-                    const directChats = Array.isArray(data.direct) ? data.direct : [];
-                    const groupChats = Array.isArray(data.groups) ? data.groups : [];
-                    chats = [...directChats, ...groupChats];
+                    if(Array.isArray(data.chats)) {
+                        chats = data.chats;
+                    } else {
+                        const directChats = Array.isArray(data.direct) ? data.direct : [];
+                        const groupChats = Array.isArray(data.groups) ? data.groups : [];
+                        chats = [...directChats, ...groupChats];    
+                    }
                 }
                 res(chats);
             }
@@ -74,7 +78,8 @@ export class Loader {
             const chats = await this.loadHistory(userId);
             if(!chats || chats.length === 0) return;
 
-            for(const chat of chats) {
+            const sortedChats = this.sortChats(chats);
+            for(const chat of sortedChats) {
                 const shouldContinue = await this.setChatState(chat);
                 if(!shouldContinue) continue;
 
@@ -89,7 +94,8 @@ export class Loader {
                         members: [],
                         unreadCount: 0,
                         lastMessage: await this.setLastMessage(chat),
-                        lastMessageTime: chat.createdAt
+                        lastMessageTime: chat.lastMessageTime || chat.createdAt,
+                        timestamp: new Date(chat.lastMessageTime || chat.createdAt)
                     }
                 });
                 window.dispatchEvent(chatEvent);
@@ -97,6 +103,14 @@ export class Loader {
         } catch(err) {
             console.error(err);
         }
+    }
+
+    private sortChats(chats: any[]): any[] {
+        return chats.sort((a, b) => {
+            const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : new Date(a.createdAt).getTime();
+            const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : new Date(b.createdAt).getTime();
+            return timeB - timeA;
+        });
     }
 
     private async chatHasMessages(id: string): Promise<boolean> {

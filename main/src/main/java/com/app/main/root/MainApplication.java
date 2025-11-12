@@ -44,7 +44,7 @@ public class MainApplication {
 			alert();
 			init(context);
 		} catch(Exception mainError) {
-			handleError("MAIN APP INIT FAILED", mainError);
+			//handleError("MAIN APP INIT FAILED", mainError);
 		}
 	} 
 

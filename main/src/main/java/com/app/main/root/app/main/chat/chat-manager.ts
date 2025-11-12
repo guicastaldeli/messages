@@ -35,7 +35,7 @@ export class ChatManager {
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
-    private userId!: string;
+    public userId!: string;
 
     private updateCallback: ((chatList: any[]) => void) | null = null;
     private setState: React.Component<any, State>['setState'];

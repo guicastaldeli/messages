@@ -300,7 +300,7 @@ public enum CommandQueryManager {
         "SELECT * FROM messages WHERE sender_id = ? ORDER BY created_at DESC"
     ),
     CLEAR_MESSAGES(
-        "DELETE from MESSAGES"
+        "DELETE from messages"
     ),
     TOTAL_MESSAGES(
         "SELECT COUNT(*) as count FROM messages"
@@ -310,6 +310,15 @@ public enum CommandQueryManager {
     ),
     TOTAL_MESSAGES_GROUP(
         "SELECT COUNT(*) as count FROM messages WHERE message_type = 'GROUP'"
+    ),
+    GET_LAST_MESSAGE_BY_CHAT_ID(
+        """
+            SELECT content, sender_id, created_at as timestamp
+            FROM messages
+            WHERE chat_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1        
+        """
     ),
 
     /*

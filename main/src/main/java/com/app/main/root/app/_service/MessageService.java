@@ -399,6 +399,29 @@ public class MessageService {
     }
 
     /*
+    * Get Last Message By Chat Id 
+    */
+    public Map<String, Object> getLastMessagesByChatId(String chatId) throws SQLException {
+        String query = CommandQueryManager.GET_LAST_MESSAGE_BY_CHAT_ID.get();
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, chatId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    Map<String, Object> lastMessage = new HashMap<>();
+                    lastMessage.put("content", rs.getString("content"));
+                    lastMessage.put("senderId", rs.getString("sender_id"));
+                    lastMessage.put("timestamp", rs.getString("timestamp"));
+                    return lastMessage;
+                }
+            }
+        }
+        return null;
+    }
+
+    /*
     **
     ***
     *** Maps
@@ -429,7 +452,9 @@ public class MessageService {
     }
 
     /*
-    * Save System Message 
+    **
+    *** Save System Message
+    ** 
     */
     public int saveSystemMessage(String content,String messageType) throws SQLException {
         String query = CommandQueryManager.SAVE_MESSAGE.get();

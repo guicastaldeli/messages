@@ -55,7 +55,8 @@ public class ContactService {
         }
 
         //Insert Request
-        String requestId = "contact_req_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 12);
+        String requestId = "contact_req_" + System.currentTimeMillis() + 
+            "_" + UUID.randomUUID().toString().substring(0, 12);
         String irQuery = CommandQueryManager.ADD_CONTACT_REQUEST.get();
         try(
             Connection conn = getConnection();
@@ -157,8 +158,11 @@ public class ContactService {
     * Add Contact 
     */
     private void addContact(Connection conn, String userId, String contactId) throws SQLException {
-        String contactEntryId = "contact_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 12);
+        String contactEntryId = 
+            "contact_" + System.currentTimeMillis() + "_" + 
+            UUID.randomUUID().toString().substring(0, 12);
         String query = CommandQueryManager.ADD_CONTACT.get();
+
         try(PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, contactEntryId);
             stmt.setString(2, userId);

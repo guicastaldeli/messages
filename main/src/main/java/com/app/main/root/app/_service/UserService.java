@@ -158,7 +158,6 @@ public class UserService {
     public List<Map<String, Object>> getUserGroups(String userId) throws SQLException {
         String query = CommandQueryManager.GET_USER_GROUPS.get();
         List<Map<String, Object>> groups = new ArrayList<>();
-        System.out.println("Loading groups for user: " + userId);
 
         try(
             Connection conn = dataSourceService.setDb("group").getConnection();
@@ -173,15 +172,14 @@ public class UserService {
                     group.put("creatorId", rs.getString("creator_id"));
                     group.put("createdAt", rs.getString("created_at"));
                     group.put("memberCount", rs.getString("member_count"));
+                    group.put("type", "GROUP");
                     groups.add(group);
-                    System.out.println("Found group: " + rs.getString("name"));
                 }
             }
         }
 
-        System.out.println("Total groups found: " + groups.size());
         return groups;
-    } 
+    }
 
     /* Username */
     public String getUsernameBySessionId(String sessionId) {

@@ -96,7 +96,6 @@ public class EventList {
                     System.out.println("Failed to add user: " + err.getMessage());
                 }
 
-                System.out.println("USER ID" + userId);
                 Map<String, Object> res = new HashMap<>();
                 res.put("type", "USER_JOINED");
                 res.put("userId", userId);
@@ -656,26 +655,19 @@ public class EventList {
                         throw new IllegalArgumentException("User ID is required!");
                     }
 
-                    List<Map<String, Object>> userDirect = serviceManager.getUserService()
-                        .getUserDirect(userId);
-                    List<Map<String, Object>> userGroups = serviceManager.getUserService()
-                        .getUserGroups(userId);
+                    List<Map<String, Object>> userChats = serviceManager
+                        .gerChatOrganizerService()
+                        .getChats(userId);
                         
                     Map<String, Object> res = new HashMap<>();
-                    int total = userDirect.size() + userGroups.size();
                     res.put("userId", userId);
-                    res.put("direct", userDirect);
-                    res.put("groups", userGroups);
-                    res.put("count", total);
+                    res.put("chats", userChats);
+                    res.put("count", userChats.size());
                     res.put("status", "success");
 
                     eventTracker.track(
                         "get-user-chats",
-                        Map.of(
-                            "userId", userId,
-                            "directCount", userDirect.size(),
-                            "groupCount", userGroups.size()
-                        ),
+                        Map.of("userId", userId, "chatCount", userChats.size()),
                         EventDirection.RECEIVED,
                         sessionId,
                         userId
