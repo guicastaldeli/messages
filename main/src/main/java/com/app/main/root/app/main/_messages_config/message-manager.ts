@@ -198,14 +198,14 @@ export class MessageManager {
         const context = this.chatRegistry.getContext(chatType, members || [], chatId);
         context.id = chatId;
         context.type = chatType;
-        this.chatRegistry.setCurrentChat(context);
 
+        this.chatRegistry.setCurrentChat(context);
         const type = await this.getMetadataType(context);
         await this.updateSubscription(type, chatId, chatType);
+
         this.currentChatId = chatId;
         this.currentPage = 0;
         this.chunkRenderer.reset();
-        
         this.messageRoots.forEach(root => root.unmount());
         this.messageRoots.clear();
         this.container = null;
@@ -216,6 +216,9 @@ export class MessageManager {
                 container.removeEventListener('scroll', this.scrollHandler);
             }
             this.scrollHandler = null;
+        }
+        if(!this.cacheService.isChatCached(chatId)) {
+            this.cacheService.init(chatId, 0);
         }
 
         const cacheData = this.cacheService.getCacheData(chatId);
@@ -287,7 +290,6 @@ export class MessageManager {
                 timestamp: Date.now()
             };
 
-            console.log('message:', content);
             await this.sendMessage(content);
             msgInputEl.focus();
         } catch(err) {
@@ -313,6 +315,7 @@ export class MessageManager {
 
         const isGroupChat = chatId.startsWith('group_');
         const isDirectChat = chatId.startsWith('direct_');
+        const messageId = `msg_${time}_${Math.random().toString(36).substr(2, 9)}`
         const chatType = isGroupChat ? 'GROUP' : (isDirectChat ? 'DIRECT' : 'CHAT');
 
         const data = {
@@ -320,7 +323,7 @@ export class MessageManager {
             senderSessionId: this.socketId,
             username: this.username,
             content: content.content,
-            messageId: `msg_${time}_${Math.random().toString(36).substr(2, 9)}`,
+            messageId: messageId,
             targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != this.socketId),
             groupId: isGroupChat ? currentChat?.id : undefined,
             chatId: chatId,
@@ -371,6 +374,8 @@ export class MessageManager {
                     direction: 'SENT'
                 });
                 console.log('Message saved on server! :)');
+                console.log(analyzedData.messageId)
+                console.log(analyzedData.senderId)
             } catch(err) {
                 console.error('Failed to save message :(', err);
             }
@@ -379,7 +384,8 @@ export class MessageManager {
                 id: analyzedData.messageId,
                 userId: analyzedData.senderId,
                 isSystem: analyzedData.isSystem,
-                direction: analysis.direction || 'self'
+                direction: analysis.direction || 'self',
+                timestamp: time
             }
             this.cacheService.addMessage(chatId, messageToCache);
             if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
@@ -482,26 +488,38 @@ export class MessageManager {
         try {
             const messageService = await this.apiClient.getMessageService();
             const response = await messageService.getMessagesByChatId(chatId, page);
-
-            const totalMessages = response.messages.length || 0;
-            this.chatStateManager.initChatState(chatId, totalMessages);
+            const totalMessages = (response.messages ? response.messages.length + (page * 20) : 0);
+            
+            if (page === 0) {
+                this.chatStateManager.initChatState(chatId, totalMessages);
+            }
 
             if(response.messages && response.messages.length > 0) {
-                this.cacheService.addMessagesPage(chatId, response.messages, page);
+                const sortedMessages = response.messages.sort((a, b) => {
+                    const timeA = a.timestamp || 0;
+                    const timeB = b.timestamp || 0;
+                    return timeA - timeB;
+                });
+                this.cacheService.addMessagesPage(chatId, sortedMessages, page);
+                if(page > this.currentPage) this.currentPage = page;
+                
                 const startIndex = page * 20;
-                const endIndex = startIndex + response.messages.length - 1;
+                const endIndex = startIndex + Math.min(response.messages.length, 20) - 1;
                 const newMessages = this.cacheService.getMessagesInRange(
                     chatId,
                     startIndex,
                     endIndex
                 );
                 await this.messageElementRenderer.renderHistory(newMessages);
-                if(page > this.currentPage) {
-                    this.currentPage = page;
+            } else {
+                const cacheData = this.cacheService.getCacheData(chatId);
+                if (cacheData) {
+                    cacheData.hasMore = false;
+                    cacheData.isFullyLoaded = true;
                 }
             }
         } catch(err) {
-            console.error(`Failed to laod history for page ${page}:`, err);
+            console.error(`Failed to load history for page ${page}:`, err);
         } finally {
             this.isLoadingHistory = false;
         }

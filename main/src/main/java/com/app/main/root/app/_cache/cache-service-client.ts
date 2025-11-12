@@ -143,6 +143,9 @@ export class CacheServiceClient {
         }
     }
 
+    /*
+    ** Add Messages Page
+    */
     public addMessagesPage(
         chatId: string, 
         messages: any[], 
@@ -163,11 +166,11 @@ export class CacheServiceClient {
             const id = m.id || m.messageId;
             if(!data.messages.has(id)) {
                 data.messages.set(id, m);
-
                 const insertIndex = startIndex + i;
-                if(insertIndex >= data.messageOrder.length - 1) {
-                    while(data.messageOrder.length < insertIndex) {
-                        data.messageOrder.push(id);
+            
+                if (insertIndex >= data.messageOrder.length) {
+                    while (data.messageOrder.length < insertIndex) {
+                        data.messageOrder.push('');
                     }
                     data.messageOrder.push(id);
                 } else {
@@ -176,16 +179,16 @@ export class CacheServiceClient {
             }
         });
 
-        data.messageOrder = data.messageOrder.filter(
-            id => id !== ''
-        );
-
         const time = Date.now();
+        data.messageOrder = data.messageOrder.filter(id => id && id !== '');
         data.loadedPages.add(page);
         data.lastAccessTime = time;
         data.lastUpdated = time;
-        data.hasMore = data.messages.size < data.totalMessagesCount;
-        data.isFullyLoaded = !data.hasMore && this.allPagesLoaded(chatId);
+        
+        const receivedFullPage = messages.length === this.config.pageSize;
+        data.hasMore = receivedFullPage;
+        data.totalMessagesCount = Math.max(data.totalMessagesCount, data.messageOrder.length);
+        data.isFullyLoaded = !data.hasMore;
     }
 
     /*
@@ -202,7 +205,6 @@ export class CacheServiceClient {
 
         const data = this.cache.get(chatId)!;
         const messageArray = Array.isArray(messages) ? messages : [messages];
-        
         messageArray.forEach((m: any) => {
             const id = m.id || m.messageId;
             if(!data.messages.has(id)) {
@@ -216,9 +218,18 @@ export class CacheServiceClient {
         data.loadedPages.add(page);
         data.lastAccessTime = time;
         data.lastUpdated = time;
-        data.totalMessagesCount = Math.max(data.totalMessagesCount, data.messageOrder.length);
-        data.hasMore = data.messages.size < data.totalMessagesCount;
-        data.isFullyLoaded = !data.hasMore && this.allPagesLoaded(chatId);
+        const totalMessagesKnown = data.messageOrder.length;
+        const estimatedTotal = Math.max(data.totalMessagesCount, totalMessagesKnown);
+        const totalPossiblePages = Math.ceil(estimatedTotal / this.config.pageSize);
+        const currentPagesLoaded = data.loadedPages.size;
+        
+        data.hasMore =
+            currentPagesLoaded < totalPossiblePages || 
+            (messages.length === this.config.pageSize);
+        
+        data.isFullyLoaded = 
+            !data.hasMore && 
+            data.loadedPages.size === totalPossiblePages;
     }
 
     /*
@@ -239,7 +250,6 @@ export class CacheServiceClient {
             const message = data.messages.get(id);
             if(message) result.push({ ...message, virtualIndex: i });
         }
-
         return result;
     }
 
@@ -268,12 +278,10 @@ export class CacheServiceClient {
         const endIdx = Math.min(startIdx + this.config.pageSize, data.messageOrder.length);
         
         const result: any[] = [];
-        for (let i = startIdx; i < endIdx; i++) {
+        for(let i = startIdx; i < endIdx; i++) {
             const messageId = data.messageOrder[i];
             const message = data.messages.get(messageId);
-            if (message) {
-                result.push(message);
-            }
+            if(message) result.push(message);
         }
         return result;
     }
@@ -283,25 +291,22 @@ export class CacheServiceClient {
         this.accessQueue.push(chatId);
     }
 
-    private allPagesLoaded(chatId: string): boolean {
-        const data = this.cache.get(chatId);
-        if(!data) return false;
-
-        const totalPages = Math.ceil(data.totalMessagesCount / this.config.pageSize);
-        for(let page = 0; page < totalPages; page++) {
-            if(!this.isPageLoaded(chatId, page)) return false;
-        }
-
-        return true;
-    }
-
     public isChatCached(id: string): boolean {
         return this.cache.has(id);
     }
 
     public hasMoreMessages(chatId: string): boolean {
         const data = this.cache.get(chatId);
-        return data ? data.hasMore : false;
+        if(!data) return false;
+        if(data.isFullyLoaded) return false;
+        if(data.hasMore) return true;
+
+        const estimatedTotalMessages = Math.max(
+            data.totalMessagesCount, 
+            data.messageOrder.length
+        );
+        const loadedCount = data.messageOrder.length;
+        return loadedCount < estimatedTotalMessages;
     }
 
     public getMessagesWithScroll(

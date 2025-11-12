@@ -33,7 +33,7 @@ export class MessageElementRenderer {
 
         const exMessagesIds = new Set(this.messageManager.messageRoots.keys());
         const newMessages = messages.filter(msg => {
-            const id = msg.id || msg.messageId;
+            const id = msg.id;
             return !exMessagesIds.has(id);
         });
 
