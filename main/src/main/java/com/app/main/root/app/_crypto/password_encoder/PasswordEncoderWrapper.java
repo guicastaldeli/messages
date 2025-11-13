@@ -1,4 +1,4 @@
-package com.app.main.root.app._crypto.password;
+package com.app.main.root.app._crypto.password_encoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PasswordEncoderWrapper {
-    private static final String DLL_PATH = "./src/main/java/com/app/main/root/app/_crypto/password/build/";
+    private static final String DLL_PATH = "./src/main/java/com/app/main/root/app/_crypto/password_encoder/build/";
     
     static {
         loadNativeLibraries();

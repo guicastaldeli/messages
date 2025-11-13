@@ -3,7 +3,7 @@ import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
-import com.app.main.root.app._crypto.password.PasswordEncoderWrapper;
+import com.app.main.root.app._crypto.password_encoder.PasswordEncoderWrapper;
 import com.app.main.root.app._crypto.user_validator.UserValidatorWrapper;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._server.RouteContext;
