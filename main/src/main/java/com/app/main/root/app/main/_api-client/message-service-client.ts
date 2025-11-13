@@ -61,9 +61,8 @@ export class MessageServiceClient {
             let data = await res.json();
             let messages = Array.isArray(data) ? data : (data.messages || []);
             messages = messages.map((message: any) => ({
-                ...message,
-                visualized: false
-            }))
+                ...message
+            }));
             if(Array.isArray(data)) {
                 data = messages;
             } else {

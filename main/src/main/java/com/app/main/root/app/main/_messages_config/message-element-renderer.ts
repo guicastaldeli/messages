@@ -43,6 +43,7 @@ export class MessageElementRenderer {
             return timeA - timeB;
         });
 
+        console.log(sortedMessages)
         for(const data of sortedMessages) await this.renderElement(data);
         this.restoreScrollPos(container);
     }
@@ -110,13 +111,19 @@ export class MessageElementRenderer {
             },
             direction: analysis.direction,
             userColor: userColor?.value,
-            chatType: currentChat?.type,
+            chatType: currentChat?.type
         }
     
         const el = document.createElement('div');
         el.classList = 'message-container';
         el.setAttribute('data-message-id', messageId);
-        container.appendChild(el);
+        const messageIdStr = messageId ? messageId.toString() : '';
+        const isNewMessage = messageIdStr && messageIdStr.startsWith('msg_');
+        if (isNewMessage) {
+            container.appendChild(el);
+        } else {
+            container.insertBefore(el, container.firstChild);
+        }
     
         const root = ReactDOM.createRoot(el);
         root.render(this.messageManager.messageComponent.__message(messageProps));

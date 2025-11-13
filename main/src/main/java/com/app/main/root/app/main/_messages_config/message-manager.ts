@@ -153,6 +153,23 @@ export class MessageManager {
         });
     }
 
+    public async renderAllCachedMessages(chatId: string): Promise<void> {
+        const cacheData = this.cacheService.getCacheData(chatId);
+        if(!cacheData) return;
+
+        const allCachedMessages = Array.from(cacheData.messages.values())
+            .sort((a, b) => {
+                const timeA = a.timestamp || a.createdAt || 0;
+                const timeB = b.timestamp || b.createdAt || 0;
+                return timeA - timeB;
+            });
+
+        
+        for(const message of allCachedMessages) {
+            await this.messageElementRenderer.renderElement(message);
+        }
+    }
+
     /*
     ** Setup Message Handling
     */
@@ -223,8 +240,9 @@ export class MessageManager {
 
         const cacheData = this.cacheService.getCacheData(chatId);
         if(cacheData && cacheData.messages.size > 0) {
-            await this.chunkRenderer.loadCachedPages(chatId);
+            await this.renderAllCachedMessages(chatId);
             await this.chunkRenderer.setupScrollHandler();
+            
             const container = await this.getContainer();
             if(container) {
                 setTimeout(() => {
@@ -507,23 +525,28 @@ export class MessageManager {
             if(response.messages && response.messages.length > 0) {
                 const startIndex = page * 20;
                 const endIndex = startIndex + Math.min(response.messages.length, 20) - 1;
-                this.cacheService.addMessagesPage(chatId, response.messages, page);
+
+                //Loaded Messages
+                const sortedMessages = response.messages.sort((a, b) => {
+                    const timeA = a.timestamp || a.createdAt ||0;
+                    const timeB = b.timestamp || b.createdAt || 0;
+                    return timeA - timeB;
+                });
+                this.cacheService.addMessagesPage(chatId, sortedMessages, page);
                 if(page > this.currentPage) this.currentPage = page;
                 
+                //New Messages
                 const newMessages = this.cacheService.getMessagesInRange(
                     chatId,
                     startIndex,
                     endIndex
                 );
-                await this.messageElementRenderer.renderHistory(newMessages);
-                if (page === 0) {
-                    const container = await this.getContainer();
-                    if (container) {
-                        setTimeout(() => {
-                            container.scrollTop = container.scrollHeight;
-                        }, 100);
-                    }
-                }
+                const sortedNewMessages = newMessages.sort((a, b) => {
+                    const timeA = a.timestamp || a.createdAt || 0;
+                    const timeB = b.timestamp || b.createdAt || 0;
+                    return timeA - timeB;
+                });
+                await this.messageElementRenderer.renderHistory(sortedNewMessages);
             } else {
                 const cacheData = this.cacheService.getCacheData(chatId);
                 if (cacheData) {

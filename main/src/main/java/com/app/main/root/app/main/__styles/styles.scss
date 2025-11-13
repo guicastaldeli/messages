@@ -112,7 +112,7 @@ body {
     overflow-x: hidden;
     height: calc(100% - 100px);
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
 }
 
 .messages {
