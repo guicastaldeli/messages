@@ -162,7 +162,7 @@ export class CacheServiceClient {
         const sortedMessages = messages.sort((a, b) => {
             const timeA = a.timestamp || a.createdAt || 0;
             const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
+            return timeB - timeA;
         });
         const startIndex = page * this.config.pageSize;
 
@@ -239,7 +239,7 @@ export class CacheServiceClient {
     /*
     ** Messages in Range
     */
-    public getMessagesInRange(
+     public getMessagesInRange(
         chatId: string, 
         start: number, 
         end: number
@@ -254,12 +254,14 @@ export class CacheServiceClient {
             const message = data.messages.get(id);
             if(message) result.push({ ...message, virtualIndex: i });
         }
+        
         return result.sort((a, b) => {
             const timeA = a.timestamp || a.createdAt || 0;
             const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
+            return timeB - timeA;
         });
     }
+
 
     /*
     ** Get Total Messages
@@ -291,7 +293,11 @@ export class CacheServiceClient {
             const message = data.messages.get(messageId);
             if(message) result.push(message);
         }
-        return result;
+        return result.sort((a, b) => {
+            const timeA = a.timestamp || a.createdAt || 0;
+            const timeB = b.timestamp || b.createdAt || 0;
+            return timeB - timeA;
+        });
     }
 
     private selectChat(chatId: string): void {

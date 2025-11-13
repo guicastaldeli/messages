@@ -69,8 +69,6 @@ export class MessageServiceClient {
             } else {
                 data.messages = messages;
             }
-            const messageCount = messages.length;
-            //console.log(`Retrieved page ${page} (${messageCount} messages) for chat ${id}`);
             if(Array.isArray(data)) {
                 return {
                     messages: data,

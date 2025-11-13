@@ -225,7 +225,6 @@ export class MessageManager {
         if(cacheData && cacheData.messages.size > 0) {
             await this.chunkRenderer.loadCachedPages(chatId);
             await this.chunkRenderer.setupScrollHandler();
-            
             const container = await this.getContainer();
             if(container) {
                 setTimeout(() => {
@@ -508,28 +507,23 @@ export class MessageManager {
             if(response.messages && response.messages.length > 0) {
                 const startIndex = page * 20;
                 const endIndex = startIndex + Math.min(response.messages.length, 20) - 1;
-
-                //Loaded Messages
-                const sortedMessages = response.messages.sort((a, b) => {
-                    const timeA = a.timestamp || a.createdAt ||0;
-                    const timeB = b.timestamp || b.createdAt || 0;
-                    return timeA - timeB;
-                });
-                this.cacheService.addMessagesPage(chatId, sortedMessages, page);
+                this.cacheService.addMessagesPage(chatId, response.messages, page);
                 if(page > this.currentPage) this.currentPage = page;
                 
-                //New Messages
                 const newMessages = this.cacheService.getMessagesInRange(
                     chatId,
                     startIndex,
                     endIndex
                 );
-                const sortedNewMessages = newMessages.sort((a, b) => {
-                    const timeA = a.timestamp || a.createdAt ||0;
-                    const timeB = b.timestamp || b.createdAt || 0;
-                    return timeA - timeB;
-                });
-                await this.messageElementRenderer.renderHistory(sortedNewMessages);
+                await this.messageElementRenderer.renderHistory(newMessages);
+                if (page === 0) {
+                    const container = await this.getContainer();
+                    if (container) {
+                        setTimeout(() => {
+                            container.scrollTop = container.scrollHeight;
+                        }, 100);
+                    }
+                }
             } else {
                 const cacheData = this.cacheService.getCacheData(chatId);
                 if (cacheData) {

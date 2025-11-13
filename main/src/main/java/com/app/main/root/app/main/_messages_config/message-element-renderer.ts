@@ -40,7 +40,7 @@ export class MessageElementRenderer {
         const sortedMessages = newMessages.sort((a, b) => {
             const timeA = a.timestamp || a.createdAt || 0;
             const timeB = b.timestamp || b.createdAT || 0;
-            return timeA - timeB
+            return timeA - timeB;
         });
 
         for(const data of sortedMessages) await this.renderElement(data);
