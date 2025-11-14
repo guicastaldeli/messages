@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PasswordEncoderWrapper {
-    private static final String DLL_PATH = "./src/main/java/com/app/main/root/app/_crypto/password_encoder/build/";
+    private static final String DLL_PATH = "src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/";
     
     static {
         loadNativeLibraries();

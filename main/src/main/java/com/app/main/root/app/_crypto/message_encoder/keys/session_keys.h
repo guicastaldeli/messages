@@ -12,13 +12,19 @@ struct SessionKeys {
     std::vector<unsigned char> chainKeyReceive;
     uint32_t messageCountSend;
     uint32_t messageCountReceive;
+    std::vector<unsigned char> serialize() const;
+    static SessionKeys deserialize(const std::vector<unsigned char>& data);
 };
 
 class SessionManager {
 private:
     std::map<std::string, SessionKeys> sessions;
+    std::string storagePath;
 
 public:
+    SessionManager();
+    SessionManager(const std::string& storagePath);
+    
     bool hasSession(const std::string& participantId);
     SessionKeys& getSession(const std::string& participantId);
     void createSession(
@@ -26,6 +32,12 @@ public:
         const SessionKeys& keys
     );
     void removeSession(const std::string& participantId);
+
+    bool saveSessions();
+    bool loadSessions();
+    std::string getStoragePath() const {
+        return storagePath;
+    }
 };
 
 #endif

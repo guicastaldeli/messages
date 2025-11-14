@@ -3,6 +3,7 @@ import com.app.main.root.app._types._User;
 import com.app.main.root.app._types._Group;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
+import com.app.main.root.app._crypto.message_encoder.PreKeyBundle;
 import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._data.MemberVerifier;
 import com.app.main.root.app._db.CommandQueryManager;
@@ -114,6 +115,15 @@ public class GroupService {
             .map(_User::getId)
             .collect(Collectors.toList());
 
+        try {
+            if(!serviceManager.getMessageService().hasChatEncryption(id)) {
+                PreKeyBundle bundle = serviceManager.getMessageService().getChatPreKeyBundle(id);
+                serviceManager.getMessageService().initChatEncryption(id, bundle);
+            }
+        } catch(Exception err) {
+            System.err.println("Failed to initialize group encryption: " + err.getMessage());
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("id", id);
         result.put("name", name);
@@ -123,6 +133,7 @@ public class GroupService {
         result.put("memberDetails", members);
         result.put("totalMembers", members.size());
         result.put("createdAt", time);
+        result.put("encryptionInit", true);
         if(verification != null) {
             result.put("verification", verification);
             result.put("verificationStatus", verification.isSuccess());
@@ -633,6 +644,15 @@ public class GroupService {
     private void handleGroupRoute(RouteContext context) {
         String chatId = (String) context.message.get("chatId");
         if(chatId != null && chatId.startsWith("group_")) {
+            try {
+                if(!serviceManager.getMessageService().hasChatEncryption(chatId)) {
+                    PreKeyBundle bundle = serviceManager.getMessageService().getChatPreKeyBundle(chatId);
+                    serviceManager.getMessageService().initChatEncryption(chatId, bundle);
+                }
+            } catch(Exception err) {
+                System.err.println("Group encryption init failed: " + err.getMessage());
+            }
+            
             Set<String> groupSessions = this.groupSessions.get(chatId);
             if(groupSessions != null) {
                 Set<String> validSessions = new HashSet<>();

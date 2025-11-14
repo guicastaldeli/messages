@@ -6,7 +6,7 @@
 class AESOperations {
 private:
     static const int KEY_LENGTH = 32;
-    static const int IV_LENGTH = 16;
+    static const int IV_LENGTH = 12;
     static const int AUTH_TAG_LENGTH = 16;
 
 public:

@@ -1,4 +1,5 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._crypto.message_encoder.PreKeyBundle;
 import com.app.main.root.app._server.RouteContext;
 import org.springframework.stereotype.Component;
 import java.sql.SQLException;
@@ -83,6 +84,15 @@ public class DirectService {
         String senderId = (String) context.message.get("senderId");
 
         if(chatId != null && chatId.startsWith("direct_")) {
+            try {
+                if(!serviceManager.getMessageService().hasChatEncryption(chatId)) {
+                    PreKeyBundle bundle = serviceManager.getMessageService().getChatPreKeyBundle(chatId);
+                    serviceManager.getMessageService().initChatEncryption(chatId, bundle);
+                }
+            } catch(Exception err) {
+                System.err.println("Direct chat encryption init failed: " + err.getMessage());
+            }
+            
             Set<String> targetSessions = new HashSet<>();
             targetSessions.add(context.sessionId);
             if(recipientId != null) {
@@ -141,10 +151,21 @@ public class DirectService {
 
     public Map<String, Object> getChatId(String currentUserId, String contactId) throws SQLException {
         String chatId = generateDirectChatId(currentUserId, contactId);
+
+        try {
+            if(!serviceManager.getMessageService().hasChatEncryption(chatId)) {
+                PreKeyBundle bundle = serviceManager.getMessageService().getChatPreKeyBundle(chatId);
+                serviceManager.getMessageService().initChatEncryption(chatId, bundle);
+            }
+        } catch(Exception err) {
+            System.err.println("Failed to initialize direct chat encryption: " + err.getMessage());
+        }
+
         Map<String, Object> res = new HashMap<>();
         res.put("chatId", chatId);
         res.put("fUserId", currentUserId);
         res.put("sUserId", contactId);
+        res.put("encryptionInit", true);
         return res;
     }
 }

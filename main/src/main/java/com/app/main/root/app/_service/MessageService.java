@@ -7,17 +7,20 @@ import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app.__controllers.UserController;
+import com.app.main.root.app._crypto.message_encoder.PreKeyBundle;
+import com.app.main.root.app._crypto.message_encoder.SecureMessageService;
 import com.app.main.root.app._data.MessageAnalyzer;
 import com.app.main.root.app._data.MessagePerspectiveDetector;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
+import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.sql.DataSource;
-
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 
 @Component
@@ -28,6 +31,7 @@ public class MessageService {
     private final MessageTracker messageTracker;
     private final MessageAnalyzer messageAnalyzer;
     private final MessagePerspectiveDetector perspectiveDetector;
+    @Autowired @Lazy private SecureMessageService secureMessageService;
 
     public MessageService(
         DataSourceService dataSourceService, 
@@ -67,10 +71,36 @@ public class MessageService {
             PreparedStatement stmt = conn.prepareStatement(query, keys)
         ) {
             String fType = type != null ? type : "text";
+            byte[] messageContent;
+            boolean isEncrypted = false;
+            String finalContent = content;
+
+            try {
+                String encryptionKey = "chat_" + chatId;
+                if(secureMessageService.hasActiveSession(encryptionKey)) {
+                    messageContent = secureMessageService.encryptMessage(encryptionKey, content);
+                    isEncrypted = true;
+                    finalContent = "[ENCRYPTED]";
+                } else {
+                    messageContent = content.getBytes();
+                    finalContent = content;
+                }
+            } catch(Exception err) {
+                System.err.println("Encryption failed, using plainText" + err.getMessage());
+                messageContent = content.getBytes();
+                finalContent = content;
+            }
+            if(isEncrypted) {
+                byte[] marker = "[ENCRYPTED]".getBytes();
+                byte[] combined = new byte[marker.length + messageContent.length];
+                System.arraycopy(marker, 0, combined, 0, marker.length);
+                System.arraycopy(messageContent, 0, combined, marker.length, messageContent.length);
+                messageContent = combined;
+            }
 
             stmt.setString(1, chatId);
             stmt.setString(2, senderId);
-            stmt.setString(3, content);
+            stmt.setBytes(3, messageContent);
             stmt.setString(4, fType);
             stmt.setString(5, username);
 
@@ -86,7 +116,7 @@ public class MessageService {
                         
                         messageTracker.track(
                             value, 
-                            content, 
+                            finalContent, 
                             senderId,
                             username, 
                             chatId, 
@@ -189,7 +219,19 @@ public class MessageService {
                 while(rs.next()) {
                     String chatId = rs.getString("chat_id");
                     String chatType = rs.getString("chat_type");
-                    String lastMessage = rs.getString("last_message");
+
+                    byte[] lastMessageBytes = rs.getBytes("last_message");
+                    String lastMessage;
+                    if(lastMessageBytes != null) {
+                        String messageString = new String(lastMessageBytes);
+                        if(messageString.startsWith("[ENCRYPTED]")) {
+                            lastMessage = "[Encrypted Message]";
+                        } else {
+                            lastMessage = messageString;
+                        }
+                    } else {
+                        lastMessage = "";
+                    }
                     String lastSender = rs.getString("last_sender");
                     Timestamp lastMessageTime = rs.getTimestamp("last_message_time");
 
@@ -411,7 +453,21 @@ public class MessageService {
             try(ResultSet rs = stmt.executeQuery()) {
                 if(rs.next()) {
                     Map<String, Object> lastMessage = new HashMap<>();
-                    lastMessage.put("content", rs.getString("content"));
+
+                    byte[] contentBytes = rs.getBytes("content");
+                    String content;
+                    if(contentBytes != null) {
+                        String contentString = new String(contentBytes);
+                        if(contentString.startsWith("[ENCRYPTED]")) {
+                            content = "[Encrypted]";
+                        } else {
+                            content = contentString;
+                        }
+                    } else {
+                        content = "";
+                    }
+                    lastMessage.put("content", content);
+
                     lastMessage.put("senderId", rs.getString("sender_id"));
                     lastMessage.put("timestamp", rs.getString("timestamp"));
                     return lastMessage;
@@ -433,7 +489,37 @@ public class MessageService {
         message.setId(rs.getInt("id"));
         message.setChatId(rs.getString("chat_id"));
         message.setSenderId(rs.getString("sender_id"));
-        message.setContent(rs.getString("content"));
+
+        byte[] contentBytes = rs.getBytes("content");
+        String content;
+        if(contentBytes != null) {
+            String contentString = new String(contentBytes, StandardCharsets.UTF_8);
+            if(contentString.startsWith("[ENCRYPTED]")) {
+                try {
+                    String chatId = rs.getString("chat_id");
+                    String encryptionKey = "chat_" + chatId;
+                    if(secureMessageService.hasActiveSession(encryptionKey)) {
+                        byte[] encryptedContent = Arrays.copyOfRange(
+                            contentBytes,
+                            "[ENCRYPTED]".getBytes().length,
+                            contentBytes.length
+                        );
+                        content = secureMessageService.decryptMessage(encryptionKey, encryptedContent);
+                    } else {
+                        content = "[Encrypted Message]";
+                    }
+                } catch(Exception err) {
+                    System.err.println(err.getMessage());
+                    content = "[Encrypted Message - failed]";
+                }
+            } else {
+                content = contentString;
+            }
+        } else {
+            content = "";
+        }
+        message.setContent(content);
+
         message.setMessageType(rs.getString("message_type"));
         message.setCreatedAt(rs.getTimestamp("created_at"));
         message.setUsername(rs.getString("username"));
@@ -533,5 +619,31 @@ public class MessageService {
             }
         }
         return chatId;
+    }
+
+    /*
+    **
+    ***
+    *** Encryption
+    ***
+    **
+    */
+    public boolean initChatEncryption(String chatId, PreKeyBundle preKeyBundle) {
+        try {
+            String encriptionKey = "chat_" + chatId;
+            return secureMessageService.startSession(encriptionKey, preKeyBundle);
+        } catch(Exception err) {
+            System.err.println("Failed to initialize chat encryption: " + err.getMessage());
+            return false;
+        }
+    }
+
+    public boolean hasChatEncryption(String chatId) {
+        String encryptionKey = "chat_" + chatId;
+        return secureMessageService.hasActiveSession(encryptionKey);
+    }
+
+    public PreKeyBundle getChatPreKeyBundle(String chatId) {
+        return secureMessageService.getPreKeyBundle();
     }
 }

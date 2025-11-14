@@ -24,7 +24,7 @@ if exist "%VS_PATH%\vcvars64.bat" (
 echo.
 echo Cleaning previous builds...
 del *.obj 2>nul
-del messageencoder.dll 2>nul
+del message_encoder.dll 2>nul
 
 echo.
 echo Compiling with CL.EXE...
@@ -52,7 +52,7 @@ cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I
 
 echo.
 echo Linking DLL with link.exe...
-link /nologo /DLL /OUT:messageencoder.dll message_encoder.obj message_encoder_jni.obj session_keys.obj pre_keys.obj key_derivation.obj identity_key.obj crypto_operations.obj aes_operations.obj base64_manager.obj /LIBPATH:"%OPENSSL_LIB%" libssl.lib libcrypto.lib ws2_32.lib gdi32.lib crypt32.lib advapi32.lib
+link /nologo /DLL /OUT:message_encoder.dll message_encoder.obj message_encoder_jni.obj session_keys.obj pre_keys.obj key_derivation.obj identity_key.obj crypto_operations.obj aes_operations.obj base64_manager.obj /LIBPATH:"%OPENSSL_LIB%" libssl.lib libcrypto.lib ws2_32.lib gdi32.lib crypt32.lib advapi32.lib
 
 if %errorlevel% neq 0 (
     echo ERROR: Linking failed
@@ -78,7 +78,7 @@ if exist "%OPENSSL_LIB%\..\bin\libssl-3-x64.dll" (
 
 echo.
 echo Final verification...
-if exist messageencoder.dll (
+if exist message_encoder.dll (
     echo BUILD SUCCESSFUL!
     echo.
     echo Created files:

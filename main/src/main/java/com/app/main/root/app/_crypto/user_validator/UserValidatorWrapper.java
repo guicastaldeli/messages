@@ -6,7 +6,7 @@ import java.nio.file.Paths;
 
 @Component
 public class UserValidatorWrapper {
-    private static final String DLL_PATH = "./src/main/java/com/app/main/root/app/_crypto/user_validator/build/";
+    private static final String DLL_PATH = "src/main/java/com/app/main/root/app/_crypto/user_validator/.build/";
     
     static {
         loadNativeLibraries();

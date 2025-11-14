@@ -20,6 +20,8 @@ private:
 public:
     MessageEncoder();
     ~MessageEncoder();
+    bool saveSessions();
+    bool loadSessions();
 
     std::vector<unsigned char> getIdentityPublicKey();
     PreKeyBundle getPreKeyBundle();

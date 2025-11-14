@@ -1,6 +1,8 @@
 #include "key_derivation.h"
 #include <openssl/hmac.h>
+#include <openssl/kdf.h>
 #include <algorithm>
+#include <stdexcept>
 
 std::vector<unsigned char> KeyDerivation::HKDF(
     const std::vector<unsigned char>& salt,
@@ -8,20 +10,28 @@ std::vector<unsigned char> KeyDerivation::HKDF(
     const std::vector<unsigned char>& info,
     size_t length
 ) {
-    std::vector<unsigned char> prk(EVP_MAX_MD_SIZE);
-    unsigned int prk_len = 0;
-    const unsigned char* saltData = salt.empty() ? nullptr : salt.data(); 
+    if(ikm.empty()) throw std::runtime_error("ikm cannot be empty!");
 
-    HMAC(
-        EVP_sha256(),
-        saltData, 
-        salt.size(),
-        ikm.data(),
-        ikm.size(),
-        prk.data(),
-        &prk_len
-    );
-    prk.resize(prk_len);
+    std::vector<unsigned char> prk(EVP_MAX_MD_SIZE);
+    unsigned int prkLen = 0;
+    
+    const unsigned char* saltData = salt.empty() ? nullptr : salt.data();
+    size_t saltLen = salt.empty() ? 0 : salt.size();
+
+    if(
+        !HMAC(
+            EVP_sha256(), 
+            saltData, 
+            saltLen,
+            ikm.data(), 
+            ikm.size(),
+            prk.data(), 
+            &prkLen
+        )
+    ) {
+        throw std::runtime_error("HKDF failed");
+    }
+    prk.resize(prkLen);
 
     std::vector<unsigned char> okm;
     std::vector<unsigned char> t;
@@ -36,15 +46,19 @@ std::vector<unsigned char> KeyDerivation::HKDF(
         std::vector<unsigned char> round(EVP_MAX_MD_SIZE);
         unsigned int round_len = 0;
 
-        HMAC(
-            EVP_sha256(),
-            prk.data(),
-            prk.size(),
-            input.data(),
-            input.size(),
-            round.data(),
-            &round_len
-        );
+        if(
+            !HMAC(
+                EVP_sha256(),
+                prk.data(), 
+                prk.size(),
+                input.data(), 
+                input.size(),
+                round.data(), 
+                &round_len
+            )
+        ) {
+            throw std::runtime_error("HKDF failed");
+        }
         round.resize(round_len);
 
         size_t bytes_to_take = std::min(bytes_remaining, static_cast<size_t>(round_len));
@@ -53,6 +67,7 @@ std::vector<unsigned char> KeyDerivation::HKDF(
         bytes_remaining -= bytes_to_take;
     }
 
+    if(okm.size() != length) throw std::runtime_error("HKDF output length mismatch");
     return okm;
 }
 
@@ -60,19 +75,23 @@ std::vector<unsigned char> KeyDerivation::KDF_RK(
     const std::vector<unsigned char>& rootKey,
     const std::vector<unsigned char>& dhOutput
 ) {
-    std::vector<unsigned char> salt(32, 0);
-    std::vector<unsigned char> info = {'X', '3', 'D', 'H'};
+    if(rootKey.size() != 32) throw std::runtime_error("Root key must be 32 bytes");
+    if(dhOutput.empty()) throw std::runtime_error("DH output cannot be empty");
+
+    std::vector<unsigned char> info = {
+        'X', '3', 'D', 'H', 
+        ' ', 'R', 'o', 'o', 't', ' ', 'K', 'e', 'y'
+    };
     return HKDF(rootKey, dhOutput, info, 64);
 }
 
 std::vector<unsigned char> KeyDerivation::KDF_CK(const std::vector<unsigned char>& chainKey) {
+    if(chainKey.size() != 32) throw std::runtime_error("chain key must be 32 bytes!");
+
     std::vector<unsigned char> salt;
-    std::vector<unsigned char> message_key_info = {
+    std::vector<unsigned char> messageKeyInfo = {
         'm', 'e', 's', 's', 'a', 'g', 'e', ' ', 'k', 'e', 'y'
     };
-    std::vector<unsigned char> chain_key_info = {
-        'c', 'h', 'a', 'i', 'n', ' ', 'k', 'e', 'y'
-    };
-    auto output = HKDF(chainKey, salt, chain_key_info, 64);
+    auto output = HKDF(chainKey, salt, messageKeyInfo, 64);
     return output;
 }

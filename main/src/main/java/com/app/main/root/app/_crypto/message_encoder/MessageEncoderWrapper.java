@@ -1,12 +1,13 @@
 package com.app.main.root.app._crypto.message_encoder;
 import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @Component
 public class MessageEncoderWrapper {
-    private static final String DLL_PATH = "./src/main/java/com/app/main/root/app/crypto/message_encoder/build/";
+    private static final String DLL_PATH = "src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/";
     
     static {
         loadNativeLibraries();
@@ -22,7 +23,7 @@ public class MessageEncoderWrapper {
             String[] libraries = {
                 "libcrypto-3-x64.dll",
                 "libssl-3-x64.dll", 
-                "messageencoder.dll"
+                "message_encoder.dll"
             };
             
             for (String lib : libraries) {
@@ -39,11 +40,6 @@ public class MessageEncoderWrapper {
     }
     
     private boolean init = false;
-    
-    public MessageEncoderWrapper() {
-        init();
-    }
-
     public native boolean initNative();
     public native void cleanupNative();
     public native byte[] getIdentityPublicKey();
@@ -58,6 +54,7 @@ public class MessageEncoderWrapper {
     public native boolean loadKeyMaterial(String filePath);
     public native void clearSession(String participantId);
 
+    @PostConstruct
     public synchronized boolean init() {
         if(!init) {
             boolean result = initNative();

@@ -44,9 +44,9 @@ extern "C" {
 #endif
 
 /*
-** Initialize Native Message Encoder
+** Init Native Message Encoder
 */
-JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_initNative(
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_initNative(
     JNIEnv* env, 
     jobject obj
 ) {
@@ -69,7 +69,7 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
 /*
 ** Cleanup Native Message Encoder
 */
-JNIEXPORT void JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_cleanupNative(
+JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_cleanupNative(
     JNIEnv* env, 
     jobject obj
 ) {
@@ -89,7 +89,7 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_c
 /*
 ** Get Identity Public Key
 */
-JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_getIdentityPublicKey(
+JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_getIdentityPublicKey(
     JNIEnv* env, 
     jobject obj
 ) {
@@ -113,7 +113,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWra
 /*
 ** Get PreKey Bundle
 */
-JNIEXPORT jobject JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_getPreKeyBundle(
+JNIEXPORT jobject JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_getPreKeyBundle(
     JNIEnv* env, 
     jobject obj
 ) {
@@ -125,7 +125,7 @@ JNIEXPORT jobject JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrappe
     try {
         auto bundle = messageEncoder->getPreKeyBundle();
         
-        jclass bundleClass = env->FindClass("com/app/main/root/app/crypto/PreKeyBundle");
+        jclass bundleClass = env->FindClass("com/app/main/root/app/_crypto/message_encoder/PreKeyBundle");
         if(bundleClass == nullptr) {
             std::cerr << "PreKeyBundle class not found" << std::endl;
             return nullptr;
@@ -174,7 +174,7 @@ JNIEXPORT jobject JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrappe
 /*
 ** Verify and Store PreKey Bundle
 */
-JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_verifyAndStorePreKeyBundle(
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_verifyAndStorePreKeyBundle(
     JNIEnv* env, 
     jobject obj,
     jobject bundleObj,
@@ -209,7 +209,6 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
         
         env->ReleaseStringUTFChars(recipientId, recipient_str);
         return result ? JNI_TRUE : JNI_FALSE;
-        
     } catch(const std::exception& e) {
         std::cerr << "Error verifying pre-key bundle: " << e.what() << std::endl;
         return JNI_FALSE;
@@ -222,7 +221,7 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
 /*
 ** Init Session
 */
-JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_initSession(
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_initSession(
     JNIEnv* env, 
     jobject obj,
     jstring recipientId,
@@ -257,7 +256,6 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
         
         env->ReleaseStringUTFChars(recipientId, recipient_str);
         return result ? JNI_TRUE : JNI_FALSE;
-        
     } catch(const std::exception& e) {
         std::cerr << "Error initializing session: " << e.what() << std::endl;
         return JNI_FALSE;
@@ -270,7 +268,7 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
 /*
 ** Encrypt Message
 */
-JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_encryptMessage(
+JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_encryptMessage(
     JNIEnv* env, 
     jobject obj,
     jstring recipientId, 
@@ -291,7 +289,6 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWra
         
         env->ReleaseStringUTFChars(recipientId, recipient_str);
         return vectorToJByteArray(env, ciphertext);
-        
     } catch(const std::exception& e) {
         std::cerr << "Error encrypting message: " << e.what() << std::endl;
         return nullptr;
@@ -304,7 +301,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWra
 /*
 ** Decrypt Message
 */
-JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_decryptMessage(
+JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_decryptMessage(
     JNIEnv* env, 
     jobject obj,
     jstring senderId,
@@ -325,7 +322,6 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWra
         
         env->ReleaseStringUTFChars(senderId, sender_str);
         return vectorToJByteArray(env, plaintext);
-        
     } catch(const std::exception& e) {
         std::cerr << "Error decrypting message: " << e.what() << std::endl;
         return nullptr;
@@ -338,7 +334,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWra
 /*
 ** Has Session
 */
-JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_hasSession(
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_hasSession(
     JNIEnv* env, 
     jobject obj,
     jstring participantId
@@ -353,10 +349,9 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
             return JNI_FALSE;
         }
         
-        bool has_session = messageEncoder->hasActiveSession(participant_str);
+        bool hasSession = messageEncoder->hasActiveSession(participant_str);
         env->ReleaseStringUTFChars(participantId, participant_str);
-        return has_session ? JNI_TRUE : JNI_FALSE;
-        
+        return hasSession ? JNI_TRUE : JNI_FALSE;
     } catch(const std::exception& e) {
         std::cerr << "Error checking session: " << e.what() << std::endl;
         return JNI_FALSE;
@@ -369,7 +364,7 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
 /*
 ** Perform Key Rotation
 */
-JNIEXPORT void JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_performKeyRotation(
+JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_performKeyRotation(
     JNIEnv* env, 
     jobject obj,
     jstring recipientId
@@ -386,7 +381,6 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_p
         
         messageEncoder->performKeyRotation(recipient_str);
         env->ReleaseStringUTFChars(recipientId, recipient_str);
-        
     } catch(const std::exception& e) {
         std::cerr << "Error performing key rotation: " << e.what() << std::endl;
     } catch(...) {
@@ -397,7 +391,7 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_p
 /*
 ** Save Key Material
 */
-JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_saveKeyMaterial(
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_saveKeyMaterial(
     JNIEnv* env, 
     jobject obj,
     jstring filePath
@@ -415,7 +409,6 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
         bool result = messageEncoder->saveKeyMaterial(file_path_str);
         env->ReleaseStringUTFChars(filePath, file_path_str);
         return result ? JNI_TRUE : JNI_FALSE;
-        
     } catch(const std::exception& e) {
         std::cerr << "Error saving key material: " << e.what() << std::endl;
         return JNI_FALSE;
@@ -428,7 +421,7 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
 /*
 ** Load Key Material
 */
-JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_loadKeyMaterial(
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_loadKeyMaterial(
     JNIEnv* env, 
     jobject obj,
     jstring filePath
@@ -446,7 +439,6 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
         bool result = messageEncoder->loadKeyMaterial(file_path_str);
         env->ReleaseStringUTFChars(filePath, file_path_str);
         return result ? JNI_TRUE : JNI_FALSE;
-        
     } catch(const std::exception& e) {
         std::cerr << "Error loading key material: " << e.what() << std::endl;
         return JNI_FALSE;
