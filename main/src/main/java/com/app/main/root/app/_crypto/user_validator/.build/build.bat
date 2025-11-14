@@ -42,9 +42,44 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+cl /nologo /c /O2 /EHsc /std:c++17 /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\email\email_validator.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile email_validator.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /std:c++17 /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\username\username_validator.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile username_validator.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /std:c++17 /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\password\password_validator.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile password_validator.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /std:c++17 /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\rate_limiter\rate_limiter.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile rate_limiter.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /std:c++17 /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\input_sanitizer\input_sanitizer.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile input_sanitizer.cpp
+    pause
+    exit /b 1
+)
+
 echo.
 echo Linking DLL with link.exe...
-link /nologo /DLL /OUT:user_validator.dll user_validator.obj user_validator_jni.obj /LIBPATH:"%OPENSSL_LIB%" libssl.lib libcrypto.lib ws2_32.lib gdi32.lib crypt32.lib advapi32.lib
+link /nologo /DLL /OUT:user_validator.dll user_validator.obj user_validator_jni.obj email_validator.obj username_validator.obj password_validator.obj rate_limiter.obj input_sanitizer.obj /LIBPATH:"%OPENSSL_LIB%" libssl.lib libcrypto.lib ws2_32.lib gdi32.lib crypt32.lib advapi32.lib
 
 if %errorlevel% neq 0 (
     echo ERROR: Linking failed

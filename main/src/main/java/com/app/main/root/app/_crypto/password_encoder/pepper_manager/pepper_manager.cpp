@@ -1,5 +1,5 @@
 #include "pepper_manager.h"
-#include "crypto_generator.h"
+#include "../utils/crypto_generator.h"
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
 #include <openssl/evp.h>

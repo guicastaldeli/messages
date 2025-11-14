@@ -1,6 +1,6 @@
 #include "username_validator.h"
 #include "reserved_username_list.h"
-#include "suspicious_pattern_list.h"
+#include "../input_sanitizer/suspicious_pattern_list.h"
 #include <algorithm>
 #include <cctype>
 

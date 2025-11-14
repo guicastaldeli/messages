@@ -1,11 +1,11 @@
 #ifndef USER_VALIDATOR_H
 #define USER_VALIDATOR_H
 
-#include "email_validator.h"
-#include "username_validator.h"
+#include "email/email_validator.h"
+#include "username/username_validator.h"
 #include "password/password_validator.h"
-#include "rate_limiter.h"
-#include "input_sanitizer.h"
+#include "rate_limiter/rate_limiter.h"
+#include "input_sanitizer/input_sanitizer.h"
 #include <string>
 
 class UserValidator {

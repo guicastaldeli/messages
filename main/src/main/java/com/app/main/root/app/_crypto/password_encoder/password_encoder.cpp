@@ -18,8 +18,8 @@ std::string PasswordEncoder::encode(const std::string& password) {
     std::stringstream ss;
     ss << "2$" << 1000 << "$";
 
-    auto saltB64 = Base64Manager::base64Encode(salt);
-    auto hashB64 = Base64Manager::base64Encode(hash);
+    auto saltB64 = Base64Manager::encode(salt);
+    auto hashB64 = Base64Manager::encode(hash);
 
     ss << saltB64 << "$" << hashB64;
     return ss.str();
@@ -53,8 +53,8 @@ bool PasswordEncoder::matches(
         std::string saltStr = encodedPassword.substr(secondDelim + 1, thirdDelim - secondDelim - 1);
         std::string storedHashStr = encodedPassword.substr(thirdDelim + 1);
 
-        std::vector<unsigned char> salt = Base64Manager::base64Decode(saltStr);
-        std::vector<unsigned char> storedHash = Base64Manager::base64Decode(storedHashStr);
+        std::vector<unsigned char> salt = Base64Manager::decode(saltStr);
+        std::vector<unsigned char> storedHash = Base64Manager::decode(storedHashStr);
         
         std::vector<unsigned char> peppered = pepperManager.applyPepper(password);
         std::vector<unsigned char> newHash = HashGenerator::generateSecureHash(peppered, salt);

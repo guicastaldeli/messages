@@ -42,9 +42,17 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\keys\session_keys.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\keys\pre_keys.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\keys\key_derivation.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\keys\identity_key.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\crypto_operations\crypto_operations.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\aes_operations\aes_operations.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\utils\base64_manager.cpp
+
 echo.
 echo Linking DLL with link.exe...
-link /nologo /DLL /OUT:messageencoder.dll message_encoder.obj message_encoder_jni.obj /LIBPATH:"%OPENSSL_LIB%" libssl.lib libcrypto.lib ws2_32.lib gdi32.lib crypt32.lib advapi32.lib
+link /nologo /DLL /OUT:messageencoder.dll message_encoder.obj message_encoder_jni.obj session_keys.obj pre_keys.obj key_derivation.obj identity_key.obj crypto_operations.obj aes_operations.obj base64_manager.obj /LIBPATH:"%OPENSSL_LIB%" libssl.lib libcrypto.lib ws2_32.lib gdi32.lib crypt32.lib advapi32.lib
 
 if %errorlevel% neq 0 (
     echo ERROR: Linking failed

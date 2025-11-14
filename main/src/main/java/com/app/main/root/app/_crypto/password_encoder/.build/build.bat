@@ -42,9 +42,51 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\pepper_manager\pepper_manager.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile pepper_manager.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\salt_generator\salt_generator.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile salt_generator.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\hash_generator\hash_generator.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile hash_generator.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\utils\base64_manager.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile base64_manager.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\utils\crypto_generator.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile crypto_generator.cpp
+    pause
+    exit /b 1
+)
+
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\password_validator\password_validator.cpp
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to compile password_validator.cpp
+    pause
+    exit /b 1
+)
+
 echo.
 echo Linking DLL with link.exe...
-link /nologo /DLL /OUT:passwordencoder.dll password_encoder.obj password_encoder_jni.obj /LIBPATH:"%OPENSSL_LIB%" libssl.lib libcrypto.lib ws2_32.lib gdi32.lib crypt32.lib advapi32.lib
+link /nologo /DLL /OUT:passwordencoder.dll password_encoder.obj password_encoder_jni.obj pepper_manager.obj salt_generator.obj hash_generator.obj base64_manager.obj crypto_generator.obj password_validator.obj /LIBPATH:"%OPENSSL_LIB%" libssl.lib libcrypto.lib ws2_32.lib gdi32.lib crypt32.lib advapi32.lib
 
 if %errorlevel% neq 0 (
     echo ERROR: Linking failed

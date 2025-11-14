@@ -5,10 +5,6 @@
 
 static MessageEncoder* messageEncoder = nullptr;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 std::vector<unsigned char> jbyteArrayToVector(JNIEnv* env, jbyteArray array) {
     if(array == nullptr) {
         return std::vector<unsigned char>();
@@ -42,6 +38,10 @@ jbyteArray vectorToJByteArray(JNIEnv* env, const std::vector<unsigned char>& vec
     }
     return result;
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
 ** Initialize Native Message Encoder
@@ -220,7 +220,7 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapp
 }
 
 /*
-** Initialize Session
+** Init Session
 */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_initSession(
     JNIEnv* env, 
@@ -336,7 +336,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWra
 }
 
 /*
-** Check if Session Exists
+** Has Session
 */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app_crypto_MessageEncoderWrapper_hasSession(
     JNIEnv* env, 

@@ -1,12 +1,12 @@
 #ifndef PASSWORD_ENCODER_H
 #define PASSWORD_ENCODER_H
 
-#include "pepper_manager.h"
-#include "salt_generator.h"
-#include "hash_generator.h"
-#include "password_validator.h"
-#include "base64_manager.h"
-#include "crypto_generator.h"
+#include "pepper_manager/pepper_manager.h"
+#include "salt_generator/salt_generator.h"
+#include "hash_generator/hash_generator.h"
+#include "password_validator/password_validator.h"
+#include "utils/base64_manager.h"
+#include "utils/crypto_generator.h"
 #include <string>
 
 class PasswordEncoder {

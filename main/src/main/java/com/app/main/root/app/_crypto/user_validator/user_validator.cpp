@@ -1,7 +1,6 @@
 #include "user_validator.h"
 
 UserValidator::UserValidator() {}
-
 UserValidator::~UserValidator() {}
 
 bool UserValidator::validateRegistration(
