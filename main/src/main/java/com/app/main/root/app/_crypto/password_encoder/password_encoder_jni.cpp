@@ -26,7 +26,7 @@ __declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto
     jlong nativePtr
 ) {
     try {
-        if (nativePtr != 0) {
+        if(nativePtr != 0) {
             PasswordEncoder* encoder = reinterpret_cast<PasswordEncoder*>(nativePtr);
             delete encoder;
         }
@@ -64,7 +64,7 @@ __declspec(dllexport) JNIEXPORT jstring JNICALL Java_com_app_main_root_app__1cry
         return NULL;
     } catch(...) {
         std::cerr << "Unknown error encoding password" << std::endl;
-        if (passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
+        if(passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
         return NULL;
     }
 }
@@ -88,7 +88,7 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
         passwordStr = env->GetStringUTFChars(password, NULL);
         encodedPasswordStr = env->GetStringUTFChars(encodedPassword, NULL);
         
-        if (!passwordStr || !encodedPasswordStr) {
+        if(!passwordStr || !encodedPasswordStr) {
             if (passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
             if (encodedPasswordStr) env->ReleaseStringUTFChars(encodedPassword, encodedPasswordStr);
             return JNI_FALSE;
