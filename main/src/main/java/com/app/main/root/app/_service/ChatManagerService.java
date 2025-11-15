@@ -1,5 +1,5 @@
 package com.app.main.root.app._service;
-import com.app.main.root.app._crypto.message_encoder.ClientChatDecryptionService;
+import com.app.main.root.app._crypto.message_encoder.ChatDecryptionService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.SQLException;
@@ -11,14 +11,14 @@ import java.util.*;
 @Component
 public class ChatManagerService {
     private final ServiceManager serviceManager;
-    private final ClientChatDecryptionService clientChatDecryptionService;
+    private final ChatDecryptionService chatDecryptionService;
 
     public ChatManagerService(
         @Lazy ServiceManager serviceManager,
-        @Lazy ClientChatDecryptionService clientChatDecryptionService
+        @Lazy ChatDecryptionService ChatDecryptionService
     ) {
         this.serviceManager = serviceManager;
-        this.clientChatDecryptionService = clientChatDecryptionService;
+        this.chatDecryptionService = ChatDecryptionService;
     }
 
     private List<Map<String, Object>> getUserDirectChats(String userId) throws SQLException {
@@ -32,7 +32,7 @@ public class ChatManagerService {
                 byte[] encryptedContent = (byte[]) lastMessage.get("contentBytes");
                 String content;
                 if (encryptedContent != null) {
-                    content = clientChatDecryptionService.decryptMessage(chatId, encryptedContent);
+                    content = chatDecryptionService.decryptMessage(chatId, encryptedContent);
                 } else {
                     content = "";
                 }
@@ -58,7 +58,7 @@ public class ChatManagerService {
                 byte[] encryptedContent = (byte[]) lastMessage.get("contentBytes");
                 String content;
                 if (encryptedContent != null) {
-                    content = clientChatDecryptionService.decryptMessage(chatId, encryptedContent);
+                    content = chatDecryptionService.decryptMessage(chatId, encryptedContent);
                 } else {
                     content = "";
                 }
@@ -67,6 +67,7 @@ public class ChatManagerService {
                 c.put("lastMessageTime", lastMessage.get("timestamp"));
                 c.put("lastMessageContent", content);
                 c.put("lastMessageSender", senderId);
+                System.out.println(content);
             }
             chats.add(c);
         }

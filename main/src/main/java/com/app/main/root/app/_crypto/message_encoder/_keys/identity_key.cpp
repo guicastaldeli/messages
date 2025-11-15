@@ -1,5 +1,5 @@
 #include "identity_key.h"
-#include "../crypto_operations/crypto_operations.h"
+#include "../_crypto_operations/crypto_operations.h"
 #include <stdexcept>
 
 IdentityKeyManager::IdentityKeyManager() : identityKey{nullptr, {}} {

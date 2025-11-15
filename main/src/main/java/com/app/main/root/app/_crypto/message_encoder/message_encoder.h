@@ -1,13 +1,13 @@
 #ifndef MESSAGE_ENCODER_H
 #define MESSAGE_ENCODER_H
 
-#include "keys/session_keys.h"
-#include "keys/identity_key.h"
-#include "keys/pre_keys.h"
-#include "crypto_operations/crypto_operations.h"
-#include "aes_operations/aes_operations.h"
-#include "keys/key_derivation.h"
-#include "utils/base64_manager.h"
+#include "_keys/session_keys.h"
+#include "_keys/identity_key.h"
+#include "_keys/pre_keys.h"
+#include "_crypto_operations/crypto_operations.h"
+#include "_aes_operations/aes_operations.h"
+#include "_keys/key_derivation.h"
+#include "_utils/base64_manager.h"
 #include <string>
 #include <vector>
 #include <mutex>

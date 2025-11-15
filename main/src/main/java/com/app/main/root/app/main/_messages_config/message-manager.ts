@@ -11,6 +11,8 @@ import { CacheServiceClient } from "@/app/_cache/cache-service-client";
 import { MessageElementRenderer } from "./message-element-renderer";
 import { ChunkRenderer } from "./chunk-renderer";
 import { ChatStateManager } from '../chat/chat-state-manager';
+import { SessionKeysManager } from '@/app/_crypto/message_encoder/client/session-keys-manager';
+import { ClientChatDecryptionService } from '@/app/_crypto/message_encoder/client/client-chat-decryption-service';
 
 export class MessageManager {
     private queueManager: QueueManager;
@@ -22,8 +24,9 @@ export class MessageManager {
     private messageElementRenderer: MessageElementRenderer;
     private chunkRenderer: ChunkRenderer;
     private chatStateManager = ChatStateManager.getIntance();
+    private sessionKeysManager: SessionKeysManager;
+    private clientChatDecryptionService: ClientChatDecryptionService;
     private apiClient: ApiClient;
-    public dashboard: any;
     
     private registeredMessageHandlers: RegisteredMessageHandlers;
     private currentHandler: MessageHandler | null = null;
@@ -31,7 +34,8 @@ export class MessageManager {
     private lastMessageId: string | null = null;
     private lastMessageIds: Map<string, string> = new Map();
     private lastSystemMessageKeys: Set<string> = new Set();
-
+    
+    public dashboard: any;
     public chatRegistry: ChatRegistry;
     public appEl: HTMLDivElement | null = null;
     private joinHandled: boolean = false;
@@ -65,6 +69,8 @@ export class MessageManager {
         this.cacheService = cacheService;
         this.messageElementRenderer = new MessageElementRenderer(this);
         this.chunkRenderer = new ChunkRenderer(this);
+        this.sessionKeysManager = new SessionKeysManager();
+        this.clientChatDecryptionService = new ClientChatDecryptionService(this.sessionKeysManager);
     }
 
     public async init(): Promise<void> {
@@ -73,6 +79,11 @@ export class MessageManager {
         this.messageElementRenderer.setApp(this.appEl!);
         this.setupMessageHandling();
         await this.socketClient.connect();
+        await this.initDecryption();
+    }
+
+    private async initDecryption(): Promise<void> {
+        await this.clientChatDecryptionService.init();
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
@@ -434,6 +445,24 @@ export class MessageManager {
     ** Handle Chat Message
     */
     private async handleChatMessage(data: any): Promise<void> {
+        if(this.clientChatDecryptionService.shouldDecrypt(
+            data.content,
+            data.contentBytes,
+            data.chatId
+        )) {
+            try {
+                const decryptedContent = await this.clientChatDecryptionService.decryptMessage(
+                    data.chatId,
+                    data.contentBytes
+                );
+                data.content = decryptedContent;
+                data.encrypted = true;
+            } catch(err) {
+                console.error('Failed to decrypt message', err);
+                data.content = '[Decryption Failed :(]';
+            }
+        }
+
         const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
         const isSystemMessage = messageType.includes('SYSTEM');
@@ -523,6 +552,25 @@ export class MessageManager {
             }
 
             if(response.messages && response.messages.length > 0) {
+                for(const message of response.messages) {
+                    if(this.clientChatDecryptionService.shouldDecrypt(
+                        message.content,
+                        message.contentBytes,
+                        message.chatId
+                    )) {
+                        try {
+                            message.content = await this.clientChatDecryptionService.decryptMessage(
+                                chatId,
+                                message.contentBytes
+                            );
+                            message.encrypted = true;
+                        } catch(err) {
+                            console.error('Failed to decrypt history!', err);
+                            message.content = '[Decryption Failed :(]';
+                        }
+                    }
+                }
+                
                 const startIndex = page * 20;
                 const endIndex = startIndex + Math.min(response.messages.length, 20) - 1;
 

@@ -149,17 +149,41 @@ JNIEXPORT jobject JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_M
         jfieldID preKeyIdField = env->GetFieldID(bundleClass, "preKeyId", "I");
         jfieldID preKeyField = env->GetFieldID(bundleClass, "preKey", "[B");
         
-        if(regIdField) env->SetIntField(bundleObj, regIdField, bundle.registrationId);
-        if(deviceIdField) env->SetIntField(bundleObj, deviceIdField, bundle.deviceId);
-        if(identityKeyField) env->SetObjectField(bundleObj, identityKeyField, 
-                                                vectorToJByteArray(env, bundle.identityKey));
-        if(signedPreKeyField) env->SetObjectField(bundleObj, signedPreKeyField, 
-                                                 vectorToJByteArray(env, bundle.signedPreKey));
-        if(signatureField) env->SetObjectField(bundleObj, signatureField, 
-                                              vectorToJByteArray(env, bundle.signature));
-        if(preKeyIdField) env->SetIntField(bundleObj, preKeyIdField, bundle.preKeyId);
-        if(preKeyField) env->SetObjectField(bundleObj, preKeyField, 
-                                           vectorToJByteArray(env, bundle.preKey));
+        if(regIdField) env->SetIntField(
+            bundleObj, 
+            regIdField, 
+            bundle.registrationId
+        );
+        if(deviceIdField) env->SetIntField(
+            bundleObj, 
+            deviceIdField, 
+            bundle.deviceId
+        );
+        if(identityKeyField) env->SetObjectField(
+            bundleObj, 
+            identityKeyField, 
+            vectorToJByteArray(env, bundle.identityKey)
+        );
+        if(signedPreKeyField) env->SetObjectField(
+            bundleObj, 
+            signedPreKeyField, 
+            vectorToJByteArray(env, bundle.signedPreKey)
+        );
+        if(signatureField) env->SetObjectField(
+            bundleObj, 
+            signatureField, 
+            vectorToJByteArray(env, bundle.signature)
+        );
+        if(preKeyIdField) env->SetIntField(
+            bundleObj, 
+            preKeyIdField, 
+            bundle.preKeyId
+        );
+        if(preKeyField) env->SetObjectField(
+            bundleObj, 
+            preKeyField, 
+            vectorToJByteArray(env, bundle.preKey)
+        );
         
         return bundleObj;
     } catch(const std::exception& e) {
