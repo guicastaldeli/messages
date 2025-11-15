@@ -34,7 +34,7 @@ export class ClientChatDecryptionService {
     private async decryptWithSession(session: SessionData, encryptedData: Uint8Array): Promise<string> {
         const key = await crypto.subtle.importKey(
             'raw',
-            session.sessionKey,
+            session.sessionKey!,
             { name: 'AES-GCM' },
             false,
             ['decrypt']

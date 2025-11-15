@@ -68,19 +68,20 @@ public class MessageTrackerController {
     * Chat Id 
     */
     @GetMapping("/messages/chatId/{chatId}")
-    public List<EncryptedMessageData> getMessagesByChatId(
+    public List<_Message> getMessagesByChatId(
         @PathVariable String chatId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int pageSize
     ) throws SQLException {
-        List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
-        return messages.stream()
+        //List<_Message> messages = 
+        return serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+        /*return messages.stream()
         .map(msg -> new EncryptedMessageData(
             msg,
             serviceManager
                     .getMessageService()
                     .hasChatEncryption(chatId)
-            )).collect(Collectors.toList());
+            )).collect(Collectors.toList());*/
     }
 
     @GetMapping("/messages/chatId/{chatId}/count")

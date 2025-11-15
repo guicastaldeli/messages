@@ -1,6 +1,8 @@
+import { SESSION_KEYS_DATA } from "./session-keys";
+
 export interface SessionData {
     chatId: string;
-    sessionKey: ArrayBuffer;
+    sessionKey: ArrayBuffer | null;
     algorithm: string;
     createdAt: number;
 }
@@ -8,11 +10,6 @@ export interface SessionData {
 export class SessionKeysManager {
     private sessions: Map<string, SessionData> = new Map();
     private sessionsLoaded: boolean = false;
-    private url: string;
-
-    constructor() {
-        this.url = "C:/Users/casta/OneDrive/Desktop/vscode/messages/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/_keys/session-keys.dat"
-    }
 
     /*
     ** Load Sessions
@@ -21,19 +18,14 @@ export class SessionKeysManager {
         if(this.sessionsLoaded) return;
 
         try {
-            console.log('Loading sessions from:', `${this.url}`);
-            const res = await fetch(this.url, {
-                method: 'GET',
-                headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                }
-            });
-            if(!res.ok) {
-                throw new Error(`Failed to load sessions file: ${res.status}`);
+            console.log('Loading sessions from file');
+            const binaryString = atob(SESSION_KEYS_DATA);
+            const bytes = new Uint8Array(binaryString.length);
+            for(let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
             }
 
-            const arrayBuffer = await res.arrayBuffer();
+            const arrayBuffer = bytes.buffer;
             await this.parseSessionKeysFile(arrayBuffer);
             this.sessionsLoaded = true;
         } catch(err) {
@@ -51,32 +43,69 @@ export class SessionKeysManager {
 
         while(offset < arrayBuffer.byteLength) {
             try {
-                if(offset + 4 > arrayBuffer.byteLength) break;
-                const chatIdLength  = dataView.getUint32(offset, true);
+                if(offset + 4 > arrayBuffer.byteLength) {
+                    console.log('Not enough bytes!', offset);
+                    break;
+                }
+
+                const sessionCount = dataView.getUint32(offset, true);
                 offset += 4;
 
-                const chatIdBytes = new Uint8Array(arrayBuffer, offset, chatIdLength);
-                const chatId = new TextDecoder().decode(chatIdBytes);
-                offset += chatIdLength;
+                for(let i = 0; i < sessionCount; i++) {
+                    if(offset + 4 > arrayBuffer.byteLength) break;
+                    const idLength = dataView.getUint32(offset, true);
+                    offset += 4;
 
-                const keyLength = dataView.getUint32(offset, true);
-                offset += 4;
+                    if(offset + idLength > arrayBuffer.byteLength) break;
+                    const idBytes = new Uint8Array(arrayBuffer, offset, idLength);
+                    const chatId = new TextDecoder().decode(idBytes);
+                    offset += idLength;
 
-                const sessionKey = arrayBuffer.slice(offset, offset + keyLength);
-                offset += keyLength;
+                    if(offset + 4 > arrayBuffer.byteLength) break;
+                    const dataLength = dataView.getUint32(offset, true);
+                    offset += 4;
+                    console.log('Session data length:', dataLength);
 
-                this.sessions.set(chatId, {
-                    chatId,
-                    sessionKey,
-                    algorithm: 'AES-GCM',
-                    createdAt: Date.now()
-                });
+                    if(offset + dataLength > arrayBuffer.byteLength) break;
+                    const sessionData = arrayBuffer.slice(offset, offset + dataLength);
+                    const rootKey = this.extractRootKey(sessionData, chatId);
+
+                    this.sessions.set(chatId, {
+                        chatId,
+                        sessionKey: rootKey,
+                        algorithm: 'AES-GCM',
+                        createdAt: Date.now()
+                    });
+                    console.log(`✅ Loaded session for: ${chatId}`);
+                    offset += dataLength;
+                }
             } catch(err) {
                 console.error('Failed parsing session entry:', err);
                 break;
             }
         }
         console.log(`Loaded ${this.sessions.size} sessions`);
+    }
+
+    /*
+    ** Extract Root Key
+    */
+    private extractRootKey(sessionData: ArrayBuffer, chatId: string): ArrayBuffer | null {
+        const dataView = new DataView(sessionData);
+        let offset = 0;
+
+        try {
+            if(offset + 4 > sessionData.byteLength) return null;
+            const rootKeySize = dataView.getUint32(offset, true);
+            offset += 4;
+
+            if(offset + rootKeySize > sessionData.byteLength) return null;
+            const rootKey = sessionData.slice(offset, offset + rootKeySize);
+            return rootKey;
+        } catch(err) {
+            console.log('Error extracting root key', err);
+            return null;
+        }
     }
 
     public getSession(chatId: string): SessionData | null {

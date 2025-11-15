@@ -7,22 +7,25 @@ import jakarta.annotation.PreDestroy;
 public class SecureMessageService {
     private final MessageEncoderWrapper messageEncoder;
     private static final String KEYS_FILE_PATH = "src/main/java/com/app/main/root/app/_crypto/message_encoder/_keys/session-keys.dat";
+    private boolean sessionsLoaded = false;
     
-    public SecureMessageService() {
-        this.messageEncoder = new MessageEncoderWrapper();
-        if(!messageEncoder.init()) {
-            throw new RuntimeException("Failed to initialize secure message service");
-        }
+    public SecureMessageService(MessageEncoderWrapper messageEncoder) {
+        this.messageEncoder = messageEncoder;
     }
     
     @PostConstruct
     public void init() {
         try {
-            if(!messageEncoder.loadKeyMaterial(KEYS_FILE_PATH)) {
-                System.out.println("No existing keys found, generating new keys");
+            synchronized(this) {
+                if(!sessionsLoaded) {
+                    boolean loaded = messageEncoder.loadSessionsNow();
+                    System.out.println("Sessions loaded: " + loaded);
+                    sessionsLoaded = true;
+                }
             }
         } catch(Exception err) {
-            System.err.println("Failed: " + err.getMessage());
+            System.err.println("Failed to load sessions: " + err.getMessage());
+            err.printStackTrace();
         }
     }
 
@@ -124,16 +127,5 @@ public class SecureMessageService {
 
     public PreKeyBundle getPreKeyBundle() {
         return messageEncoder.getPreKeyBundle();
-    }
-    
-    @Override
-    protected void finalize() throws Throwable {
-        try {
-            saveKeys(KEYS_FILE_PATH);
-            saveSessions();
-        } finally {
-            messageEncoder.cleanup();
-            super.finalize();
-        }
     }
 }
