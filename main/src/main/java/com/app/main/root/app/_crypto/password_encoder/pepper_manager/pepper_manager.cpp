@@ -7,27 +7,30 @@
 #include <iostream>
 #include <stdexcept>
 
-PepperManager::PepperManager() {
+PepperManager::PepperManager() : filePath("src/main/java/com/app/main/root/app/_crypto/password_encoder/pepper_manager/pepper.bin") {
     pepper.resize(PEPPER_LENGTH);
     loadOrGeneratePepper();
 }
-
+PepperManager::PepperManager(const std::string& path) : filePath(path) {
+    pepper.resize(PEPPER_LENGTH);
+    loadOrGeneratePepper();
+}
 PepperManager::~PepperManager() {
     std::fill(pepper.begin(), pepper.end(), 0);
 }
 
-void PepperManager::loadOrGeneratePepper(const std::string& fileName) {
-    std::ifstream file(fileName, std::ios::binary);
+void PepperManager::loadOrGeneratePepper() {
+    std::ifstream file(filePath, std::ios::binary);
     if(file && file.good()) {
         file.read(reinterpret_cast<char*>(pepper.data()), pepper.size());
         if(file.gcount() != PEPPER_LENGTH) {
             std::cerr << "Warning: Pepper file corrupted, generating new one" << std::endl;
-            generateNewPepper(fileName);
+            generateNewPepper(filePath);
         } else {
             std::cout << "Loading pepper from file" << std::endl;
         }
     } else {
-        generateNewPepper(fileName);
+        generateNewPepper(filePath);
     }
 }
 

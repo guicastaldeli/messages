@@ -8,12 +8,14 @@ class PepperManager {
 private:
     std::vector<unsigned char> pepper;
     static const int PEPPER_LENGTH = 32;
+    std::string filePath;
 
 public:
     PepperManager();
+    PepperManager(const std::string& path);
     ~PepperManager();
     
-    void loadOrGeneratePepper(const std::string& fileName = "pepper.bin");
+    void loadOrGeneratePepper();
     std::vector<unsigned char> getPepper() const;
     std::vector<unsigned char> applyPepper(const std::string& password) const;
     
