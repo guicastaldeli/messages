@@ -1,9 +1,13 @@
 package com.app.main.root.app._crypto.message_encoder;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+
 @Service
 public class SecureMessageService {
     private final MessageEncoderWrapper messageEncoder;
+    private static final String KEYS_FILE_PATH = "src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/sessions.dat";
     
     public SecureMessageService() {
         this.messageEncoder = new MessageEncoderWrapper();
@@ -12,27 +16,44 @@ public class SecureMessageService {
         }
     }
     
+    @PostConstruct
+    public void init() {
+        try {
+            if(!messageEncoder.loadKeyMaterial(KEYS_FILE_PATH)) {
+                System.out.println("No existing keys found, generating new keys");
+            }
+        } catch(Exception err) {
+            System.err.println("Failed: " + err.getMessage());
+        }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        try {
+            messageEncoder.saveKeyMaterial(KEYS_FILE_PATH);
+            messageEncoder.saveSessions();
+        } catch(Exception err) {
+            System.err.println("Failed **shutdown: " + err.getMessage());
+        }
+    }
     
     public boolean startSession(String recipientId, PreKeyBundle theirBundle) {
         if(!messageEncoder.verifyAndStorePreKeyBundle(theirBundle, recipientId)) {
             return false;
         }
 
-        return messageEncoder.initSession(recipientId, theirBundle);
+        boolean result = messageEncoder.initSession(recipientId, theirBundle);
+        if(result) messageEncoder.saveSessions();
+        return result;
     }
     
     public byte[] encryptMessage(String recipientId, String message) {
-        System.out.println("Encrypting message for: " + recipientId);
-        System.out.println("Original message length: " + message.length());
-        
         if(!messageEncoder.hasSession(recipientId)) {
             throw new IllegalStateException("No session with recipient: " + recipientId);
         }
         
         try {
             byte[] encrypted = messageEncoder.encryptMessage(recipientId, message);
-            System.out.println("Encryption successful, encrypted length: " + 
-                             (encrypted != null ? encrypted.length : "null"));
             return encrypted;
         } catch (Exception e) {
             System.err.println("Encryption failed for " + recipientId + ": " + e.getMessage());
@@ -41,8 +62,6 @@ public class SecureMessageService {
     }
     
     public String decryptMessage(String senderId, byte[] cipherText) {
-        System.out.println("Decrypting message from: " + senderId);
-        System.out.println("CipherText length: " + (cipherText != null ? cipherText.length : "null"));
         if(!messageEncoder.hasSession(senderId)) {
             System.err.println("No active session for: " + senderId);
             throw new IllegalStateException("No session with sender: " + senderId);
@@ -68,7 +87,6 @@ public class SecureMessageService {
         
         try {
             String decrypted = messageEncoder.decryptMessageToString(senderId, cipherText);
-            System.out.println("Decryption successful, decrypted length: " + decrypted.length());
             return decrypted;
         } catch (Exception e) {
             System.err.println("Decryption failed from " + senderId + ": " + e.getMessage());
@@ -96,11 +114,23 @@ public class SecureMessageService {
     }
     
     public boolean saveKeys(String filePath) {
-        return messageEncoder.saveKeyMaterial(filePath);
+        boolean keysResult = messageEncoder.saveKeyMaterial(filePath);
+        boolean sessionsResult = messageEncoder.saveSessions();
+        return keysResult && sessionsResult;
     }
     
     public boolean loadKeys(String filePath) {
-        return messageEncoder.loadKeyMaterial(filePath);
+        boolean keysResult = messageEncoder.loadKeyMaterial(filePath);
+        boolean sessionsResult = messageEncoder.loadSessions();
+        return keysResult && sessionsResult;
+    }
+
+    public boolean saveSessions() {
+        return messageEncoder.saveSessions();
+    }
+
+    public boolean loadSessions() {
+        return messageEncoder.loadSessions();
     }
 
     public PreKeyBundle getPreKeyBundle() {
@@ -109,7 +139,12 @@ public class SecureMessageService {
     
     @Override
     protected void finalize() throws Throwable {
-        messageEncoder.cleanup();
-        super.finalize();
+        try {
+            saveKeys(KEYS_FILE_PATH);
+            saveSessions();
+        } finally {
+            messageEncoder.cleanup();
+            super.finalize();
+        }
     }
 }

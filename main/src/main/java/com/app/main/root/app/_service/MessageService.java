@@ -76,7 +76,7 @@ public class MessageService {
             String finalContent = content;
 
             try {
-                String encryptionKey = "chat_" + chatId;
+                String encryptionKey = chatId;
                 if(secureMessageService.hasActiveSession(encryptionKey)) {
                     messageContent = secureMessageService.encryptMessage(encryptionKey, content);
                     isEncrypted = true;
@@ -140,6 +140,11 @@ public class MessageService {
     ** 
     */
     public List<_Message> getMessagesByChatId(String chatId, int page, int pageSize) throws SQLException {
+        String encriptionKey = chatId;
+        if(!secureMessageService.hasActiveSession(encriptionKey)) {
+            System.out.println("No active session");
+        }
+        
         String query = CommandQueryManager.GET_MESSAGES_BY_CHAT_ID.get();
         List<_Message> messages = new ArrayList<>();
 
@@ -497,7 +502,7 @@ public class MessageService {
             if(contentString.startsWith("[ENCRYPTED]")) {
                 try {
                     String chatId = rs.getString("chat_id");
-                    String encryptionKey = "chat_" + chatId;
+                    String encryptionKey = chatId;
                     if(secureMessageService.hasActiveSession(encryptionKey)) {
                         byte[] encryptedContent = Arrays.copyOfRange(
                             contentBytes,
@@ -630,7 +635,7 @@ public class MessageService {
     */
     public boolean initChatEncryption(String chatId, PreKeyBundle preKeyBundle) {
         try {
-            String encriptionKey = "chat_" + chatId;
+            String encriptionKey = chatId;
             return secureMessageService.startSession(encriptionKey, preKeyBundle);
         } catch(Exception err) {
             System.err.println("Failed to initialize chat encryption: " + err.getMessage());
@@ -639,7 +644,7 @@ public class MessageService {
     }
 
     public boolean hasChatEncryption(String chatId) {
-        String encryptionKey = "chat_" + chatId;
+        String encryptionKey = chatId;
         return secureMessageService.hasActiveSession(encryptionKey);
     }
 

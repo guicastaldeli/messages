@@ -12,6 +12,8 @@ struct SessionKeys {
     std::vector<unsigned char> chainKeyReceive;
     uint32_t messageCountSend;
     uint32_t messageCountReceive;
+    std::map<uint32_t, std::vector<unsigned char>> skippedMessageKeys;
+    std::map<uint32_t, std::vector<unsigned char>> decryptedMessageKeys;
     std::vector<unsigned char> serialize() const;
     static SessionKeys deserialize(const std::vector<unsigned char>& data);
 };

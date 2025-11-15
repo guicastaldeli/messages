@@ -448,6 +448,74 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
     }
 }
 
+/*
+** Save Sessions
+*/
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_saveSessions(
+    JNIEnv* env, 
+    jobject obj
+) {
+    if(messageEncoder == nullptr) {
+        std::cerr << "MessageEncoder not initialized" << std::endl;
+        return JNI_FALSE;
+    }
+    
+    try {
+        bool result = messageEncoder->saveSessions();
+        return result ? JNI_TRUE : JNI_FALSE;
+    } catch(const std::exception& e) {
+        std::cerr << "Error saving sessions: " << e.what() << std::endl;
+        return JNI_FALSE;
+    } catch(...) {
+        std::cerr << "Unknown error saving sessions" << std::endl;
+        return JNI_FALSE;
+    }
+}
+
+/*
+** Load Sessions
+*/
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_loadSessions(
+    JNIEnv* env, 
+    jobject obj
+) {
+    if(messageEncoder == nullptr) {
+        std::cerr << "MessageEncoder not initialized" << std::endl;
+        return JNI_FALSE;
+    }
+    
+    try {
+        bool result = messageEncoder->loadSessions();
+        return result ? JNI_TRUE : JNI_FALSE;
+    } catch(const std::exception& e) {
+        std::cerr << "Error loading sessions: " << e.what() << std::endl;
+        return JNI_FALSE;
+    } catch(...) {
+        std::cerr << "Unknown error loading sessions" << std::endl;
+        return JNI_FALSE;
+    }
+}
+
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_saveSessionsNow
+  (JNIEnv *env, jobject obj) {
+    try {
+        return messageEncoder->saveSessionsNow();
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to save sessions: " << e.what() << std::endl;
+        return JNI_FALSE;
+    }
+}
+
+JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_loadSessionsNow
+  (JNIEnv *env, jobject obj) {
+    try {
+        return messageEncoder->loadSessionsNow();
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to load sessions: " << e.what() << std::endl;
+        return JNI_FALSE;
+    }
+}
+
 #ifdef __cplusplus
 }
 #endif

@@ -52,6 +52,10 @@ public class MessageEncoderWrapper {
     public native boolean hasSession(String participantId);
     public native boolean saveKeyMaterial(String filePath);
     public native boolean loadKeyMaterial(String filePath);
+    public native boolean saveSessions();
+    public native boolean loadSessions();
+    public native boolean saveSessionsNow();
+    public native boolean loadSessionsNow();
     public native void clearSession(String participantId);
 
     @PostConstruct
@@ -60,6 +64,7 @@ public class MessageEncoderWrapper {
             boolean result = initNative();
             if(result) {
                 init = true;
+                loadSessions();
             } else {
                 System.err.println("MessageEncoder failed");
             }
@@ -70,6 +75,8 @@ public class MessageEncoderWrapper {
 
     public synchronized void cleanup() {
         if(init) {
+            saveSessions();
+            loadSessions();
             cleanupNative();
             init = false;
             System.out.println("MessageEncoderWrapper cleaned up");
@@ -80,7 +87,9 @@ public class MessageEncoderWrapper {
         if (!init) {
             throw new IllegalStateException("MessageEncoder not initialized");
         }
-        return encryptMessage(recipientId, message.getBytes());
+        byte[] result = encryptMessage(recipientId, message.getBytes());
+        saveSessionsNow();
+        return result;
     }
     
     public String decryptMessageToString(String senderId, byte[] ciphertext) {
@@ -88,7 +97,18 @@ public class MessageEncoderWrapper {
             throw new IllegalStateException("MessageEncoder not initialized");
         }
         byte[] plaintext = decryptMessage(senderId, ciphertext);
+        saveSessionsNow();
         return new String(plaintext);
+    }
+
+    public boolean saveSessionState() {
+        if(!init) return false;
+        return saveSessions();
+    }
+
+    public boolean loadSessionState() {
+        if(!init) return false;
+        return loadSessions();
     }
 
     @Override

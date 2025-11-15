@@ -63,6 +63,54 @@ std::vector<unsigned char> SessionKeys::serialize() const {
         reinterpret_cast<const unsigned char*>(&messageCountReceive),
         reinterpret_cast<const unsigned char*>(&messageCountReceive) + sizeof(messageCountReceive)
     );
+
+    uint32_t skippedKeysCount = skippedMessageKeys.size();
+    data.insert(
+        data.end(),
+        reinterpret_cast<const unsigned char*>(&skippedKeysCount),
+        reinterpret_cast<const unsigned char*>(&skippedKeysCount) + sizeof(skippedKeysCount)
+    );
+    for(const auto& pair : skippedMessageKeys) {
+        uint32_t keyId = pair.first;
+        data.insert(
+            data.end(),
+            reinterpret_cast<const unsigned char*>(&keyId),
+            reinterpret_cast<const unsigned char*>(&keyId) + sizeof(keyId)
+        );
+
+        uint32_t keySize = pair.second.size();
+        data.insert(
+            data.end(),
+            reinterpret_cast<const unsigned char*>(&keySize),
+            reinterpret_cast<const unsigned char*>(&keySize) + sizeof(keySize)
+        );
+        data.insert(data.end(), pair.second.begin(), pair.second.end());
+    }
+
+    uint32_t decryptedKeysCount = decryptedMessageKeys.size();
+    data.insert(
+        data.end(),
+        reinterpret_cast<const unsigned char*>(&decryptedKeysCount),
+        reinterpret_cast<const unsigned char*>(&decryptedKeysCount) + sizeof(decryptedKeysCount)
+    );
+
+    for(const auto& pair : decryptedMessageKeys) {
+        uint32_t keyId = pair.first;
+        data.insert(
+            data.end(),
+            reinterpret_cast<const unsigned char*>(&keyId),
+            reinterpret_cast<const unsigned char*>(&keyId) + sizeof(keyId)
+        );
+
+        uint32_t keySize = pair.second.size();
+        data.insert(
+            data.end(),
+            reinterpret_cast<const unsigned char*>(&keySize),
+            reinterpret_cast<const unsigned char*>(&keySize) + sizeof(keySize)
+        );
+        data.insert(data.end(), pair.second.begin(), pair.second.end());
+    }
+
     return data;
 }
 
@@ -130,7 +178,88 @@ SessionKeys SessionKeys::deserialize(const std::vector<unsigned char>& data) {
         data.begin() + offset + sizeof(session.messageCountReceive),
         reinterpret_cast<unsigned char*>(&session.messageCountReceive)
     );
-    //offset += sizeof(session.messageCountReceive); //test
+    
+    uint32_t skippedKeysCount;
+    if(offset + sizeof(skippedKeysCount) > data.size()) {
+        return session;
+    }
+    std::copy(
+        data.begin() + offset,
+        data.begin() + offset + sizeof(skippedKeysCount),
+        reinterpret_cast<unsigned char*>(&skippedKeysCount)
+    );
+    offset += sizeof(skippedKeysCount);
+    for(uint32_t i = 0; i < skippedKeysCount; i++) {
+        uint32_t keyId;
+        if(offset + sizeof(keyId) > data.size()) break;
+        std::copy(
+            data.begin() + offset,
+            data.begin() + offset + sizeof(keyId),
+            reinterpret_cast<unsigned char*>(&keyId)
+        );
+        offset += sizeof(keyId);
+
+        uint32_t keySize;
+        if(offset + sizeof(keySize) > data.size()) break;
+        std::copy(
+            data.begin() + offset,
+            data.begin() + offset + sizeof(keySize),
+            reinterpret_cast<unsigned char*>(&keySize)
+        );
+        offset += sizeof(keySize);
+
+        if(offset + keySize > data.size()) break;
+        std::vector<unsigned char> key(keySize);
+        std::copy(
+            data.begin() + offset,
+            data.begin() + offset + keySize,
+            key.begin()
+        );
+        offset += keySize;
+        session.skippedMessageKeys[keyId] = key;
+    }
+
+    uint32_t decryptedKeysCount = 0;
+    if(offset + sizeof(decryptedKeysCount) <= data.size()) {
+        std::copy(
+            data.begin() + offset,
+            data.begin() + offset + sizeof(decryptedKeysCount),
+            reinterpret_cast<unsigned char*>(&decryptedKeysCount)
+        );
+        offset += sizeof(decryptedKeysCount);
+
+        for(uint32_t i = 0; i < decryptedKeysCount; i++) {
+            if(offset + sizeof(uint32_t) > data.size()) break;
+            
+            uint32_t keyId;
+            std::copy(
+                data.begin() + offset,
+                data.begin() + offset + sizeof(keyId),
+                reinterpret_cast<unsigned char*>(&keyId)
+            );
+            offset += sizeof(keyId);
+            if(offset + sizeof(uint32_t) > data.size()) break;
+            
+            uint32_t keySize;
+            std::copy(
+                data.begin() + offset,
+                data.begin() + offset + sizeof(keySize),
+                reinterpret_cast<unsigned char*>(&keySize)
+            );
+            offset += sizeof(keySize);
+            if(offset + keySize > data.size()) break;
+            
+            std::vector<unsigned char> key(keySize);
+            std::copy(
+                data.begin() + offset,
+                data.begin() + offset + keySize,
+                key.begin()
+            );
+            offset += keySize;
+
+            session.decryptedMessageKeys[keyId] = key;
+        }
+    }
 
     return session;
 }
@@ -149,7 +278,7 @@ bool SessionManager::saveSessions() {
     try {
         std::ofstream file(storagePath, std::ios::binary);
         if(!file) {
-            std::cerr << "Failed to open session file for writing: " << storagePath << std::endl;
+            std::cerr << "Failed to open session file: " << storagePath << std::endl;
             return false;
         }
 
@@ -236,7 +365,7 @@ bool SessionManager::loadSessions() {
         }
 
         file.close();
-        std::cout << "Loaded" << sessions.size() << " sessions from " << storagePath << std::endl;
+        std::cout << "Loaded " << sessions.size() << " sessions from " << storagePath << std::endl;
         return true;
     } catch(const std::exception& err) {
         std::cerr << "Failed to load sessions: " << err.what() << std::endl;

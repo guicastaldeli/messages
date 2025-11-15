@@ -10,9 +10,11 @@
 #include "utils/base64_manager.h"
 #include <string>
 #include <vector>
+#include <mutex>
 
 class MessageEncoder {
 private:
+    std::mutex sessionMutex;
     IdentityKeyManager identityManager;
     PreKeyManager preKeyManager;
     SessionManager sessionManager;
@@ -22,6 +24,8 @@ public:
     ~MessageEncoder();
     bool saveSessions();
     bool loadSessions();
+    bool saveSessionsNow();
+    bool loadSessionsNow();
 
     std::vector<unsigned char> getIdentityPublicKey();
     PreKeyBundle getPreKeyBundle();

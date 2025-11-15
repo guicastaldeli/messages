@@ -53,18 +53,11 @@ std::vector<unsigned char> AESOperations::aesGcmEncrypt(
             }
         }
 
-        if(
-            !EVP_EncryptUpdate(
-                ctx, 
-                cipherText.data(), 
-                &len, 
-                plainText.data(), 
-                plainText.size()
-            )
-        ) {
+        if(!EVP_EncryptUpdate(ctx, cipherText.data(), &len, plainText.data(), plainText.size())) {
             throw std::runtime_error("failed to encrypt data");
         }
         cipherTextLen = len;
+        
         if(!EVP_EncryptFinal_ex(ctx, cipherText.data() + len, &len)) {
             throw std::runtime_error("failed to finalize encryption");
         }
@@ -72,21 +65,16 @@ std::vector<unsigned char> AESOperations::aesGcmEncrypt(
         cipherText.resize(cipherTextLen);
         
         std::vector<unsigned char> tag(AUTH_TAG_LENGTH);
-        if(
-            !EVP_CIPHER_CTX_ctrl(
-                ctx, 
-                EVP_CTRL_GCM_GET_TAG, 
-                tag.size(), 
-                tag.data()
-            )
-        ) {
+        if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, tag.size(), tag.data())) {
             throw std::runtime_error("failed to get authentication tag");
         }
-    
+        
         std::vector<unsigned char> result;
-        result.reserve(cipherText.size() + tag.size());
+        result.reserve(iv.size() + cipherText.size() + tag.size());
+        result.insert(result.end(), iv.begin(), iv.end());
         result.insert(result.end(), cipherText.begin(), cipherText.end());
         result.insert(result.end(), tag.begin(), tag.end());
+        
         EVP_CIPHER_CTX_free(ctx);
         return result;
     } catch(...) {
@@ -96,28 +84,26 @@ std::vector<unsigned char> AESOperations::aesGcmEncrypt(
 }
 
 std::vector<unsigned char> AESOperations::aesGcmDecrypt(
-    const std::vector<unsigned char>& cipherTextWithTag,
+    const std::vector<unsigned char>& encryptedData,
     const std::vector<unsigned char>& key,
-    const std::vector<unsigned char>& iv,
     const std::vector<unsigned char>& aad
 ) {
     if(key.size() != KEY_LENGTH) throw std::runtime_error("invalid key length: " + toString(key.size()));
-    if(iv.size() != IV_LENGTH) throw std::runtime_error("invalid iv length: " + toString(iv.size()));
-    if(cipherTextWithTag.size() < AUTH_TAG_LENGTH) {
-        throw std::runtime_error(
-            "ciphertext too short for tag! length: " + 
-            toString(cipherTextWithTag.size()
-        ));
+    if(encryptedData.size() < IV_LENGTH + AUTH_TAG_LENGTH) {
+        throw std::runtime_error("encrypted data too short");
     }
 
-    size_t cipherTextLen = cipherTextWithTag.size() - AUTH_TAG_LENGTH;
+    std::vector<unsigned char> iv(
+        encryptedData.begin(), 
+        encryptedData.begin() + IV_LENGTH
+    );
     std::vector<unsigned char> cipherText(
-        cipherTextWithTag.begin(), 
-        cipherTextWithTag.begin() + cipherTextLen
+        encryptedData.begin() + IV_LENGTH, 
+        encryptedData.end() - AUTH_TAG_LENGTH
     );
     std::vector<unsigned char> tag(
-        cipherTextWithTag.begin() + 
-        cipherTextLen, cipherTextWithTag.end()
+        encryptedData.end() - AUTH_TAG_LENGTH, 
+        encryptedData.end()
     );
 
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
@@ -142,6 +128,7 @@ std::vector<unsigned char> AESOperations::aesGcmDecrypt(
                 throw std::runtime_error("failed to process AAD");
             }
         }
+        
         if(!EVP_DecryptUpdate(ctx, plainText.data(), &len, cipherText.data(), cipherText.size())) {
             throw std::runtime_error("failed to decrypt data");
         }
@@ -151,18 +138,14 @@ std::vector<unsigned char> AESOperations::aesGcmDecrypt(
             throw std::runtime_error("failed to set authentication tag");
         }
     
-        int ret = EVP_DecryptFinal_ex(
-            ctx, 
-            plainText.data() + len, 
-            &len
-        );
+        int ret = EVP_DecryptFinal_ex(ctx, plainText.data() + len, &len);
         if(ret > 0) {
             plainTextLen += len;
             plainText.resize(plainTextLen);
             EVP_CIPHER_CTX_free(ctx);
             return plainText;
         } else {
-            throw std::runtime_error("Decryption failed. authentication tag mismatch");
+            throw std::runtime_error("Decryption failed: authentication tag mismatch");
         }
     } catch(...) {
         EVP_CIPHER_CTX_free(ctx);

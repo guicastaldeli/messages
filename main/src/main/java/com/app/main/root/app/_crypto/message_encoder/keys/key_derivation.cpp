@@ -12,6 +12,11 @@ std::vector<unsigned char> KeyDerivation::HKDF(
 ) {
     if(ikm.empty()) throw std::runtime_error("ikm cannot be empty!");
 
+    std::vector<unsigned char> actualSalt = salt;
+    if(actualSalt.empty()) {
+        actualSalt = std::vector<unsigned char>(32, 0);
+    }
+
     std::vector<unsigned char> prk(EVP_MAX_MD_SIZE);
     unsigned int prkLen = 0;
     
@@ -89,9 +94,12 @@ std::vector<unsigned char> KeyDerivation::KDF_CK(const std::vector<unsigned char
     if(chainKey.size() != 32) throw std::runtime_error("chain key must be 32 bytes!");
 
     std::vector<unsigned char> salt;
-    std::vector<unsigned char> messageKeyInfo = {
+    std::vector<unsigned char> ikm;
+    ikm = chainKey;
+    
+    std::vector<unsigned char> info = {
         'm', 'e', 's', 's', 'a', 'g', 'e', ' ', 'k', 'e', 'y'
     };
-    auto output = HKDF(chainKey, salt, messageKeyInfo, 64);
+    auto output = HKDF(salt, ikm, info, 64);
     return output;
 }
