@@ -1,6 +1,5 @@
 package com.app.main.root.app._crypto.message_encoder;
 import org.springframework.stereotype.Service;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
@@ -55,43 +54,33 @@ public class SecureMessageService {
         try {
             byte[] encrypted = messageEncoder.encryptMessage(recipientId, message);
             return encrypted;
-        } catch (Exception e) {
-            System.err.println("Encryption failed for " + recipientId + ": " + e.getMessage());
-            throw new RuntimeException("Encryption failed", e);
+        } catch (Exception err) {
+            System.err.println("Encryption failed for " + recipientId + ": " + err.getMessage());
+            throw new RuntimeException("Encryption failed", err);
         }
     }
     
-    public String decryptMessage(String senderId, byte[] cipherText) {
-        if(!messageEncoder.hasSession(senderId)) {
-            System.err.println("No active session for: " + senderId);
-            throw new IllegalStateException("No session with sender: " + senderId);
-        }
-        if(cipherText == null) {
-            System.err.println("CipherText is null for: " + senderId);
-            throw new IllegalArgumentException("CipherText is null");
-        }
-        if(cipherText.length == 0) {
-            System.err.println("CipherText is empty for: " + senderId);
-            throw new IllegalArgumentException("CipherText is empty");
-        }
-        if(cipherText.length < 16) {
-            System.err.println("CipherText too short for: " + senderId + ", length: " + cipherText.length);
-            throw new IllegalArgumentException("CipherText too short: " + cipherText.length);
-        }
-        if(!messageEncoder.hasSession(senderId)) {
-            throw new IllegalStateException("No session with sender: " + senderId);
+    public String decryptMessage(String chatId, byte[] cipherText) {        
+        if(!messageEncoder.hasSession(chatId)) {
+            System.err.println("No active session for: " + chatId);
+            throw new IllegalStateException("No session with sender: " + chatId);
         }
         if(cipherText == null || cipherText.length == 0) {
+            System.err.println("CipherText is null/empty for: " + chatId);
             throw new IllegalArgumentException("CipherText is null or empty");
+        }
+        if(cipherText.length < 16) {
+            System.err.println("CipherText too short for: " + chatId + ", length: " + cipherText.length);
+            throw new IllegalArgumentException("CipherText too short: " + cipherText.length);
         }
         
         try {
-            String decrypted = messageEncoder.decryptMessageToString(senderId, cipherText);
+            String decrypted = messageEncoder.decryptMessageToString(chatId, cipherText);
             return decrypted;
-        } catch (Exception e) {
-            System.err.println("Decryption failed from " + senderId + ": " + e.getMessage());
+        } catch (Exception err) {
+            System.err.println("Decryption failed from " + chatId + ": " + err.getMessage());
             System.err.println("CipherText hex: " + bytesToHex(cipherText));
-            throw new RuntimeException("Decryption failed", e);
+            throw new RuntimeException("Decryption failed", err);
         }
     }
 

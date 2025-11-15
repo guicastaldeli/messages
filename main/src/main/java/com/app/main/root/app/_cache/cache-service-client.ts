@@ -4,7 +4,6 @@ export interface CacheConfig {
     pageSize: number;
     maxPages: number;
     preloadPages: number;
-    maxCachedChats: number;
     cleanupThreshold: number;
 }
 
@@ -30,7 +29,6 @@ export class CacheServiceClient {
         pageSize: 20,
         maxPages: 100,
         preloadPages: 2,
-        maxCachedChats: 10,
         cleanupThreshold: 0.8
     }
 

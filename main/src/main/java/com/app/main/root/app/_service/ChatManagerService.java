@@ -1,4 +1,5 @@
 package com.app.main.root.app._service;
+import com.app.main.root.app._crypto.message_encoder.ClientChatDecryptionService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.SQLException;
@@ -8,11 +9,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
-public class ChatOrganizerService {
+public class ChatManagerService {
     private final ServiceManager serviceManager;
+    private final ClientChatDecryptionService clientChatDecryptionService;
 
-    public ChatOrganizerService(@Lazy ServiceManager serviceManager) {
+    public ChatManagerService(
+        @Lazy ServiceManager serviceManager,
+        @Lazy ClientChatDecryptionService clientChatDecryptionService
+    ) {
         this.serviceManager = serviceManager;
+        this.clientChatDecryptionService = clientChatDecryptionService;
     }
 
     private List<Map<String, Object>> getUserDirectChats(String userId) throws SQLException {
@@ -23,9 +29,18 @@ public class ChatOrganizerService {
             Map<String, Object> lastMessage = serviceManager.getMessageService().getLastMessagesByChatId(chatId);
             Map<String, Object> c = new HashMap<>(chat);
             if(lastMessage != null) {
+                byte[] encryptedContent = (byte[]) lastMessage.get("contentBytes");
+                String content;
+                if (encryptedContent != null) {
+                    content = clientChatDecryptionService.decryptMessage(chatId, encryptedContent);
+                } else {
+                    content = "";
+                }
+                String senderId = (String) lastMessage.get("senderId");
+
                 c.put("lastMessageTime", lastMessage.get("timestamp"));
-                c.put("lastMessageContent", lastMessage.get("content"));
-                c.put("lastMessageSender", lastMessage.get("senderId"));
+                c.put("lastMessageContent", content);
+                c.put("lastMessageSender", senderId);
             }
             chats.add(c);
         }
@@ -40,9 +55,18 @@ public class ChatOrganizerService {
             Map<String, Object> lastMessage = serviceManager.getMessageService().getLastMessagesByChatId(chatId);
             Map<String, Object> c = new HashMap<>(chat);
             if(lastMessage != null) {
+                byte[] encryptedContent = (byte[]) lastMessage.get("contentBytes");
+                String content;
+                if (encryptedContent != null) {
+                    content = clientChatDecryptionService.decryptMessage(chatId, encryptedContent);
+                } else {
+                    content = "";
+                }
+                String senderId = (String) lastMessage.get("senderId");
+
                 c.put("lastMessageTime", lastMessage.get("timestamp"));
-                c.put("lastMessageContent", lastMessage.get("content"));
-                c.put("lastMessageSender", lastMessage.get("senderId"));
+                c.put("lastMessageContent", content);
+                c.put("lastMessageSender", senderId);
             }
             chats.add(c);
         }

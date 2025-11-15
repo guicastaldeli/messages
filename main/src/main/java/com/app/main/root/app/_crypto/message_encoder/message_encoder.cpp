@@ -203,90 +203,79 @@ std::vector<unsigned char> MessageEncoder::decryptMessage(
     const std::vector<unsigned char>& cipherText
 ) {
     std::lock_guard<std::mutex> lock(sessionMutex);
-    
+
     if(!sessionManager.hasSession(senderId)) {
         throw std::runtime_error("No session found for sender: " + senderId);
     }
     SessionKeys& session = sessionManager.getSession(senderId);
-    
+
     if(cipherText.size() < sizeof(uint32_t)) {
         throw std::runtime_error("Ciphertext too short for counter");
     }
-    
+
     uint32_t messageCounter;
     std::copy(
-        cipherText.begin(), 
+        cipherText.begin(),
         cipherText.begin() + sizeof(messageCounter),
         reinterpret_cast<unsigned char*>(&messageCounter)
     );
     messageCounter = ntohl(messageCounter);
-    
+
     std::vector<unsigned char> encryptedData(
         cipherText.begin() + sizeof(messageCounter),
         cipherText.end()
     );
-    
+
     if(encryptedData.size() < AESOperations::IV_LENGTH + AESOperations::AUTH_TAG_LENGTH) {
         throw std::runtime_error("Encrypted data too short");
     }
-    
-    std::vector<unsigned char> messageKey;
-    if(messageCounter == session.messageCountReceive + 1) {
-        auto keys = KeyDerivation::KDF_CK(session.chainKeyReceive);
-        if(keys.size() < 64) {
-            throw std::runtime_error("Key derivation failed");
-        }
-        
-        messageKey = std::vector<unsigned char>(keys.begin(), keys.begin() + 32);
-        session.chainKeyReceive = std::vector<unsigned char>(keys.begin() + 32, keys.end());
-        session.messageCountReceive = messageCounter;
-    } else if(messageCounter > session.messageCountReceive + 1) {
-        std::vector<unsigned char> currentChainKey = session.chainKeyReceive;
-        
-        for(uint32_t i = session.messageCountReceive + 1; i <= messageCounter; i++) {
-            auto keys = KeyDerivation::KDF_CK(currentChainKey);
-            if(keys.size() < 64) {
-                throw std::runtime_error("Key derivation failed at step " + std::to_string(i));
-            }
-            
-            auto currentMessageKey = std::vector<unsigned char>(keys.begin(), keys.begin() + 32);
-            currentChainKey = std::vector<unsigned char>(keys.begin() + 32, keys.end());
-            if(i < messageCounter) {
-                session.skippedMessageKeys[i] = currentMessageKey;
-            } else {
-                messageKey = currentMessageKey;
-            }
-        }
-        
-        session.chainKeyReceive = currentChainKey;
-        session.messageCountReceive = messageCounter;
-    }else if(messageCounter <= session.messageCountReceive) {
-        auto decryptedIt = session.decryptedMessageKeys.find(messageCounter);
-        if(decryptedIt != session.decryptedMessageKeys.end()) messageKey = decryptedIt->second;
 
-        auto skippedIt = session.skippedMessageKeys.find(messageCounter);
-        if(skippedIt != session.skippedMessageKeys.end()) messageKey = skippedIt->second;
+    std::vector<unsigned char> messageKey;
+    auto decryptedIt = session.decryptedMessageKeys.find(messageCounter);
+    if(decryptedIt != session.decryptedMessageKeys.end()) {
+        messageKey = decryptedIt->second;
+    } else {
+        if(messageCounter == session.messageCountReceive + 1) {
+            auto keys = KeyDerivation::KDF_CK(session.chainKeyReceive);
+            if(keys.size() < 64) {
+                throw std::runtime_error("Key derivation failed");
+            }
+            messageKey = std::vector<unsigned char>(keys.begin(), keys.begin() + 32);
+            session.chainKeyReceive = std::vector<unsigned char>(keys.begin() + 32, keys.end());
+            session.messageCountReceive = messageCounter;
+        } else if(messageCounter > session.messageCountReceive + 1) {
+            std::vector<unsigned char> currentChainKey = session.chainKeyReceive;
+            for(uint32_t i = session.messageCountReceive + 1; i <= messageCounter; i++) {
+                auto keys = KeyDerivation::KDF_CK(currentChainKey);
+                if(keys.size() < 64) {
+                    throw std::runtime_error("Key derivation failed at step " + std::to_string(i));
+                }
+                auto currentMessageKey = std::vector<unsigned char>(keys.begin(), keys.begin() + 32);
+                currentChainKey = std::vector<unsigned char>(keys.begin() + 32, keys.end());
+                if(i < messageCounter) {
+                    session.skippedMessageKeys[i] = currentMessageKey;
+                } else {
+                    messageKey = currentMessageKey;
+                }
+            }
+            session.chainKeyReceive = currentChainKey;
+            session.messageCountReceive = messageCounter;
+        } else if(messageCounter <= session.messageCountReceive) {
+            auto skippedIt = session.skippedMessageKeys.find(messageCounter);
+            if(skippedIt != session.skippedMessageKeys.end()) {
+                messageKey = skippedIt->second;
+            } else {
+                throw std::runtime_error("Duplicate message or missing key for counter: " + std::to_string(messageCounter));
+            }
+        }
+        session.decryptedMessageKeys[messageCounter] = messageKey;
     }
-    
+
     auto decrypted = AESOperations::aesGcmDecrypt(encryptedData, messageKey, {});
     if(decrypted.empty()) throw std::runtime_error("Decryption returned empty data");
-    session.decryptedMessageKeys[messageCounter] = messageKey;
 
-    const size_t MAX_DECRYPTED_KEYS = 100;
-    if(session.decryptedMessageKeys.size() > MAX_DECRYPTED_KEYS) {
-        auto it = session.decryptedMessageKeys.begin();
-        while(session.decryptedMessageKeys.size() > MAX_DECRYPTED_KEYS / 2) {
-            it = session.decryptedMessageKeys.erase(it);
-        }
-    }
-    const size_t MAX_SKIPPED_KEYS = 50;
-    if(session.skippedMessageKeys.size() > MAX_SKIPPED_KEYS) {
-        auto it = session.skippedMessageKeys.begin();
-        while(session.skippedMessageKeys.size() > MAX_SKIPPED_KEYS / 2) {
-            it = session.skippedMessageKeys.erase(it);
-        }
-    }
-    
+    std::cout << "Successfully decrypted message from " << senderId << " with counter " << messageCounter << std::endl;
+
     sessionManager.saveSessions();
     return decrypted;
 }

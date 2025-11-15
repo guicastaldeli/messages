@@ -16,7 +16,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,31 +70,25 @@ public class MessageService {
             PreparedStatement stmt = conn.prepareStatement(query, keys)
         ) {
             String fType = type != null ? type : "text";
-            byte[] messageContent;
-            boolean isEncrypted = false;
+            byte[] messageContent = content != null ? content.getBytes() : new byte[0];
             String finalContent = content;
 
             try {
                 String encryptionKey = chatId;
                 if(secureMessageService.hasActiveSession(encryptionKey)) {
-                    messageContent = secureMessageService.encryptMessage(encryptionKey, content);
-                    isEncrypted = true;
-                    finalContent = "[ENCRYPTED]";
+                    byte[] encryptedBytes = secureMessageService.encryptMessage(encryptionKey, content);
+                    if(encryptedBytes != null && encryptedBytes.length > 0) {
+                        messageContent = encryptedBytes;
+                        finalContent = content;
+                    }
                 } else {
-                    messageContent = content.getBytes();
+                    messageContent = content.getBytes(StandardCharsets.UTF_8);
                     finalContent = content;
                 }
             } catch(Exception err) {
-                System.err.println("Encryption failed, using plainText" + err.getMessage());
-                messageContent = content.getBytes();
+                System.err.println("Encryption failed, using plainText: " + err.getMessage());
+                messageContent = content.getBytes(StandardCharsets.UTF_8);
                 finalContent = content;
-            }
-            if(isEncrypted) {
-                byte[] marker = "[ENCRYPTED]".getBytes();
-                byte[] combined = new byte[marker.length + messageContent.length];
-                System.arraycopy(marker, 0, combined, 0, marker.length);
-                System.arraycopy(messageContent, 0, combined, marker.length, messageContent.length);
-                messageContent = combined;
             }
 
             stmt.setString(1, chatId);
@@ -448,31 +441,32 @@ public class MessageService {
     /*
     * Get Last Message By Chat Id 
     */
+    private boolean isBytesEncrypted(byte[] bytes) {
+        if(bytes == null || bytes.length < 10) return false;
+        
+        int nonPrintableCount = 0;
+        for(int i = 0; i < Math.min(bytes.length, 20); i++) {
+            byte b = bytes[i];
+            if((b < 32 && b != 9 && b != 10 && b != 13) || b == 127) {
+                nonPrintableCount++;
+            }
+        }
+        return nonPrintableCount > 4;
+    }
+
     public Map<String, Object> getLastMessagesByChatId(String chatId) throws SQLException {
         String query = CommandQueryManager.GET_LAST_MESSAGE_BY_CHAT_ID.get();
-        try(
+        try (
             Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
         ) {
             stmt.setString(1, chatId);
-            try(ResultSet rs = stmt.executeQuery()) {
-                if(rs.next()) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
                     Map<String, Object> lastMessage = new HashMap<>();
-
                     byte[] contentBytes = rs.getBytes("content");
-                    String content;
-                    if(contentBytes != null) {
-                        String contentString = new String(contentBytes);
-                        if(contentString.startsWith("[ENCRYPTED]")) {
-                            content = "[Encrypted]";
-                        } else {
-                            content = contentString;
-                        }
-                    } else {
-                        content = "";
-                    }
-                    lastMessage.put("content", content);
-
+                    lastMessage.put("contentBytes", contentBytes);
+                    lastMessage.put("content", "[Encrypted]");
                     lastMessage.put("senderId", rs.getString("sender_id"));
                     lastMessage.put("timestamp", rs.getString("timestamp"));
                     return lastMessage;
@@ -496,35 +490,9 @@ public class MessageService {
         message.setSenderId(rs.getString("sender_id"));
 
         byte[] contentBytes = rs.getBytes("content");
-        String content;
-        if(contentBytes != null) {
-            String contentString = new String(contentBytes, StandardCharsets.UTF_8);
-            if(contentString.startsWith("[ENCRYPTED]")) {
-                try {
-                    String chatId = rs.getString("chat_id");
-                    String encryptionKey = chatId;
-                    if(secureMessageService.hasActiveSession(encryptionKey)) {
-                        byte[] encryptedContent = Arrays.copyOfRange(
-                            contentBytes,
-                            "[ENCRYPTED]".getBytes().length,
-                            contentBytes.length
-                        );
-                        content = secureMessageService.decryptMessage(encryptionKey, encryptedContent);
-                    } else {
-                        content = "[Encrypted Message]";
-                    }
-                } catch(Exception err) {
-                    System.err.println(err.getMessage());
-                    content = "[Encrypted Message - failed]";
-                }
-            } else {
-                content = contentString;
-            }
-        } else {
-            content = "";
-        }
-        message.setContent(content);
-
+        message.setContentBytes(contentBytes);
+        message.setContent("[Encrypted]");
+        
         message.setMessageType(rs.getString("message_type"));
         message.setCreatedAt(rs.getTimestamp("created_at"));
         message.setUsername(rs.getString("username"));

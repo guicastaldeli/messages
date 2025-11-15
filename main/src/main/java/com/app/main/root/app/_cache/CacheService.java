@@ -22,9 +22,6 @@ public class CacheService {
     @Value("${app.cache.maxPagesPerChat:20}")
     private int maxPagesPerChat;
 
-    @Value("${app.cache.maxCachedChats:100}")
-    private int maxCachedChats;
-
     @Value("${app.cache.evictionTimeMinutes:60}")
     private int evictionTimeMinutes;
 
@@ -178,11 +175,8 @@ public class CacheService {
     }
 
     private void enforceSizeLimits() {
-        if(cache.size() <= maxCachedChats) return;
         List<Map.Entry<String, ChatCache>> sortedEntries = new ArrayList<>(cache.entrySet());
         sortedEntries.sort(Comparator.comparingLong(entry -> entry.getValue().lastAccessTime));
-        int entriesToRemove = cache.size() - maxCachedChats;
-        for(int i = 0; i < entriesToRemove; i++) cache.remove(sortedEntries.get(i).getKey());
     }
 
     @PreDestroy

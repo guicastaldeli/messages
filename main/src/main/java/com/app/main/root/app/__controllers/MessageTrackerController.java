@@ -1,12 +1,14 @@
 package com.app.main.root.app.__controllers;
 import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app.main._messages_config.MessageLog;
+import com.app.main.root.app._data.EncryptedMessageData;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 import java.sql.SQLException;
+import java.util.stream.Collectors;
 import java.util.*;
 
 @RestController
@@ -66,12 +68,19 @@ public class MessageTrackerController {
     * Chat Id 
     */
     @GetMapping("/messages/chatId/{chatId}")
-    public List<_Message> getMessagesByChatId(
+    public List<EncryptedMessageData> getMessagesByChatId(
         @PathVariable String chatId,
         @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "100") int pageSize
+        @RequestParam(defaultValue = "20") int pageSize
     ) throws SQLException {
-        return serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+        List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+        return messages.stream()
+        .map(msg -> new EncryptedMessageData(
+            msg,
+            serviceManager
+                    .getMessageService()
+                    .hasChatEncryption(chatId)
+            )).collect(Collectors.toList());
     }
 
     @GetMapping("/messages/chatId/{chatId}/count")

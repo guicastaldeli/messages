@@ -178,6 +178,7 @@ SessionKeys SessionKeys::deserialize(const std::vector<unsigned char>& data) {
         data.begin() + offset + sizeof(session.messageCountReceive),
         reinterpret_cast<unsigned char*>(&session.messageCountReceive)
     );
+    offset += sizeof(session.messageCountReceive);
     
     uint32_t skippedKeysCount;
     if(offset + sizeof(skippedKeysCount) > data.size()) {

@@ -17,14 +17,14 @@ public class ServiceManager {
     private final ContactService contactService;
     private final GroupService groupService;
     private final EmailService emailService;
-    private final ChatOrganizerService chatOrganizerService;
+    private final ChatManagerService chatManagerService;
 
     public ServiceManager(
         DbService dbService,
         @Lazy MessageService messageService,
         @Lazy SystemMessageService systemMessageService,
         @Lazy MessagePerspectiveService messagePerspectiveService,
-        @Lazy ChatOrganizerService chatOrganizerService,
+        @Lazy ChatManagerService chatManagerService,
         UserService userService,
         @Lazy DirectService directService,
         ContactService contactService,
@@ -35,7 +35,7 @@ public class ServiceManager {
         this.messageService = messageService;
         this.systemMessageService = systemMessageService;
         this.messagePerspectiveService = messagePerspectiveService;
-        this.chatOrganizerService = chatOrganizerService;
+        this.chatManagerService = chatManagerService;
         this.userService = userService;
         this.contactService = contactService;
         this.directService = directService;
@@ -72,10 +72,10 @@ public class ServiceManager {
     }
 
     /*
-    * Chat Organizer Service 
+    * Chat Manager Service 
     */
-    public ChatOrganizerService gerChatOrganizerService() {
-        return chatOrganizerService;
+    public ChatManagerService getChatManagerService() {
+        return chatManagerService;
     }
 
     /*

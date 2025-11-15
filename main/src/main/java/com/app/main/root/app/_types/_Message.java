@@ -6,6 +6,7 @@ public class _Message {
     private String chatId;
     private String senderId;
     private String content;
+    private byte[] contentBytes;
     private String messageType;
     private Timestamp createdAt;
     private String username;
@@ -49,6 +50,12 @@ public class _Message {
     }
     public String getContent() {
         return content;
+    }
+    public void setContentBytes(byte[] content) {
+        this.contentBytes = content;
+    }
+    public byte[] getContentBytes() {
+        return contentBytes;
     }
 
     /*
