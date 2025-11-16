@@ -7,8 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "server": "tsx ./app/init.ts",
-    "node": "nodemon --exec tsx ./app/init.ts",
-    "build:sessions": "node ./app/_crypto/message_encoder/client/build-session-keys.js --watch"
+    "node": "nodemon --exec tsx ./app/init.ts"
   },
   "dependencies": {
     "@stomp/stompjs": "^7.2.0",

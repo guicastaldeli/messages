@@ -42,13 +42,13 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\_keys\session_keys.cpp
-cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\_keys\pre_keys.cpp
-cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\_keys\key_derivation.cpp
-cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\_keys\identity_key.cpp
-cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\_crypto_operations\crypto_operations.cpp
-cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\_aes_operations\aes_operations.cpp
-cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\_utils\base64_manager.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\keys\session_keys.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\keys\pre_keys.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\keys\key_derivation.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\keys\identity_key.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\crypto_operations\crypto_operations.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\aes_operations\aes_operations.cpp
+cl /nologo /c /O2 /EHsc /I"%JAVA_HOME%\include" /I"%JAVA_HOME%\include\win32" /I"%OPENSSL_INCLUDE%" ..\utils\base64_manager.cpp
 
 echo.
 echo Linking DLL with link.exe...

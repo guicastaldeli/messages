@@ -3,11 +3,16 @@ import com.app.main.root.app._server.MessageRouter;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.EnvConfig;
 import com.app.main.root.app.EventTracker;
+import com.app.main.root.app._crypto.message_encoder.SecureMessageService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.ConnectionTracker;
+import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app._server.ConnectionInfo;
 import com.app.main.root.app.main._messages_config.MessageTracker;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import java.time.format.DateTimeFormatter;
@@ -24,6 +29,7 @@ public class EventList {
     private final MessageRouter messageRouter;
     private final MessageAnalyzer messageAnalyzer;
     private final SimpMessagingTemplate messagingTemplate;
+    @Autowired @Lazy private SecureMessageService secureMessageService;
 
     public EventList(
         ServiceManager serviceManager,
@@ -337,6 +343,80 @@ public class EventList {
                 return Collections.emptyMap();
             },
             "/queue/messages",
+            false
+        ));
+        /* Get Decrypted Messages */
+        configs.put("get-decrypted-messages", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String chatId = (String) data.get("chatId");
+                    int page = (Integer) data.getOrDefault("page", 0);
+                    int pageSize = (Integer) data.getOrDefault("pageSize", 20);
+                    
+                    if (chatId == null || chatId.trim().isEmpty()) {
+                        throw new IllegalArgumentException("Chat ID is required");
+                    }
+
+                    List<_Message> encryptedMessages = serviceManager.getMessageService()
+                        .getMessagesByChatId(chatId, page, pageSize);
+                    List<Map<String, Object>> decryptedMessages = new ArrayList<>();
+                    for (_Message message : encryptedMessages) {
+                        Map<String, Object> decryptedMessage = new HashMap<>();
+                        decryptedMessage.put("id", message.getId());
+                        decryptedMessage.put("chatId", message.getChatId());
+                        decryptedMessage.put("senderId", message.getSenderId());
+                        decryptedMessage.put("username", message.getUsername());
+                        decryptedMessage.put("messageType", message.getMessageType());
+                        decryptedMessage.put("createdAt", message.getCreatedAt());
+                        decryptedMessage.put("system", false);
+                        
+                        String content;
+                        if ("[ENCRYPTED]".equals(message.getContent())) {
+                            try {
+                                content = secureMessageService
+                                    .decryptMessage(chatId, message.getContentBytes());
+                            } catch (Exception e) {
+                                content = "[Decryption Failed]";
+                            }
+                        } else {
+                            content = message.getContent();
+                        }
+                        decryptedMessage.put("content", content);
+                        
+                        decryptedMessages.add(decryptedMessage);
+                    }
+                    
+                    int totalCount = serviceManager.getMessageService().getMessageCountByChatId(chatId);
+                    int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("messages", decryptedMessages);
+                    res.put("currentPage", page);
+                    res.put("pageSize", pageSize);
+                    res.put("totalMessages", totalCount);
+                    res.put("totalPages", totalPages);
+                    res.put("hasMore", page < totalPages - 1);
+                    res.put("status", "success");
+
+                    eventTracker.track(
+                        "get-decrypted-messages",
+                        Map.of("chatId", chatId, "messageCount", decryptedMessages.size(), "page", page),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        serviceManager.getUserService().getUserIdBySession(sessionId)
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    err.printStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "LOAD_DECRYPTED_MESSAGES_FAILED");
+                    errRes.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/decrypted-messages-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/decrypted-messages-scss",
             false
         ));
         configs.put("direct", new EventConfig(
@@ -816,7 +896,6 @@ public class EventList {
             "/queue/group-info-scss",
             false
         ));
-
         return configs;
     }
 }

@@ -4,24 +4,7 @@ import { config } from 'dotenv';
 const nextConfig: NextConfig = {
   trailingSlash: false,
   reactStrictMode: true,
-  devIndicators: false,
-  fastRefresh: false,
-  
-  webpack: (config) => {
-    config.watchOptions = {
-      ...config.watchOptions,
-      ignored: [
-        '**/node_modules',
-        '**/.git',
-        '**/session-keys.ts',
-        '**/_keys/**',
-        'session-keys.ts',
-        '**/_crypto/**/session-keys.ts'
-      ]
-    };
-    
-    return config;
-  }
+  devIndicators: false
 };
 
 const envFile = process.env.NODE_ENV === 'production'

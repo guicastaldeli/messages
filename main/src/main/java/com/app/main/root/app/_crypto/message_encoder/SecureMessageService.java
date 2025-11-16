@@ -6,7 +6,7 @@ import jakarta.annotation.PreDestroy;
 @Service
 public class SecureMessageService {
     private final MessageEncoderWrapper messageEncoder;
-    private static final String KEYS_FILE_PATH = "src/main/java/com/app/main/root/app/_crypto/message_encoder/_keys/session-keys.dat";
+    private static final String KEYS_FILE_PATH = "src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat";
     private boolean sessionsLoaded = false;
     
     public SecureMessageService(MessageEncoderWrapper messageEncoder) {

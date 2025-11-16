@@ -266,7 +266,7 @@ SessionKeys SessionKeys::deserialize(const std::vector<unsigned char>& data) {
 }
 
 SessionManager::SessionManager() : 
-    storagePath("src/main/java/com/app/main/root/app/_crypto/message_encoder/_keys/session-keys.dat") 
+    storagePath("src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat") 
 {
     loadSessions();
 }
