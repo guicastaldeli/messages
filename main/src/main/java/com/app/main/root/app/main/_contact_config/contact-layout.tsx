@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ContactServiceClient } from './contact-service-client';
 import { ContactLayoutProps } from './contact-interface';
 
 export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) => {

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Component, createRef } from 'react';
 import { MessageManager } from '../../_messages_config/message-manager';
 import { GroupManager } from './group-manager';
+import { GroupMembersInterface } from './layout/group-members-interface';
 
 export interface Props {
     messageManager: MessageManager;
@@ -29,6 +30,7 @@ interface State {
         groupName: string;
     }
     messagesLoaded: boolean;
+    showMembersInterface: boolean;
 }
 
 export class GroupLayout extends Component<Props, State> {
@@ -56,7 +58,8 @@ export class GroupLayout extends Component<Props, State> {
                 hideGroup: false,
                 groupName: ''
             },
-            messagesLoaded: false
+            messagesLoaded: false,
+            showMembersInterface: false
         }
     }
 
@@ -261,9 +264,18 @@ export class GroupLayout extends Component<Props, State> {
         }
     }
 
+    /* Members Interface */
+    handleShowMembersInterface = async () => {
+        this.setState({ showMembersInterface: true });
+    }
+
+    handleCloseMembersInterface = async () => {
+        this.setState({ showMembersInterface: false });
+    }
+
     /* Render */
     render() {
-        const { isLoading, error } = this.state;
+        const { isLoading, error, showMembersInterface } = this.state;
         const { 
             showCreationForm,
             showJoinForm, 
@@ -322,6 +334,12 @@ export class GroupLayout extends Component<Props, State> {
                         <div className="header">
                             <div id="group-name">{groupName}</div>
                             <button
+                                onClick={this.handleShowMembersInterface}
+                                id='members-button'
+                            >
+                                Members
+                            </button>
+                            <button
                                 onClick={this.handleGenerateInviteLink}
                                 id='invite-button'
                             >
@@ -348,6 +366,16 @@ export class GroupLayout extends Component<Props, State> {
                             </button>
                         </div>
                     </div>
+                )}
+
+                {showMembersInterface && (
+                    <GroupMembersInterface
+                        groupId={this.groupManager.currentGroupId}
+                        groupName={groupName}
+                        groupManager={this.groupManager}
+                        messageManager={this.messageManager}
+                        onClose={this.handleCloseMembersInterface}
+                    />
                 )}
             </>
         );

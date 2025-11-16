@@ -56,6 +56,17 @@ public class MessagePerspectiveDetector {
                 Boolean.TRUE.equals(data.get("isAboutCurrentUser"));
     }
 
+    public boolean isInviterCurrentUser(Map<String, Object> data, String targetSessionId) {
+        try {
+            String inviterUserId = (String) data.get("inviterUserId");
+            String currentUserId = serviceManager.getUserService().getUserIdBySession(targetSessionId);
+            return currentUserId != null && currentUserId.equals(inviterUserId);
+        } catch(Exception err) {
+            err.printStackTrace();
+            return false;
+        }
+    }
+
     /*
     * Display Username 
     */

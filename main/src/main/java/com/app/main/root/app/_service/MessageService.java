@@ -513,7 +513,7 @@ public class MessageService {
         
         String content;
         if (isEncryptedData(contentBytes)) {
-            content = "[ENCRYPTED]";
+            content = "[ENCRYPTED]" + new String(contentBytes, StandardCharsets.UTF_8);;
         } else {
             content = new String(contentBytes, StandardCharsets.UTF_8);
         }

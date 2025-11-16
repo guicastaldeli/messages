@@ -641,6 +641,151 @@ export class GroupManager {
     }
 
     /*
+    **
+    *** Get Group Members
+    **
+    */
+    public async getGroupMembers(groupId: string): Promise<any[]> {
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/group-members-scss';
+            const errDestination = '/queue/group-members-err';
+
+            /* Success */
+            const handleSucss = (data: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.off(errDestination, handleErr);
+                res(data.members || []);
+            }
+
+            /* Error */
+            const handleErr = (error: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(error.message));
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(errDestination, handleErr);
+
+                await this.socketClient.sendToDestination(
+                    '/app/get-group-members',
+                    { groupId },
+                    sucssDestination
+                );
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
+        });
+    }
+
+    /*
+    **
+    *** Add User to Group
+    **
+    */
+    public async addUserToGroup(groupId: string, contactId: string): Promise<any[]> {
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/add-user-group-scss';
+            const errDestination = '/queue/add-user-group-err';
+
+            /* Success */
+            const handleSucss = (data: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.off(errDestination, handleErr);
+                res(data);
+            }
+
+            /* Error */
+            const handleErr = (error: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(error.message));
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(errDestination, handleErr);
+                const contact = await this.getContactDetails(contactId);
+
+                const data = {
+                    groupId: groupId,
+                    userId: contactId,
+                    username: contact.username
+                }
+
+                await this.socketClient.sendToDestination(
+                    '/app/add-user-group',
+                    data,
+                    sucssDestination
+                );
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
+        });
+    }
+
+    /*
+    **
+    *** Remove User to Group
+    **
+    */
+    public async removeUserFromGroup(
+        groupId: string, 
+        userId: string, 
+        username: string
+    ): Promise<any[]> {
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/remove-user-group-scss';
+            const errDestination = '/queue/remove-user-group-err';
+
+            /* Success */
+            const handleSucss = (data: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.off(errDestination, handleErr);
+                res(data);
+            }
+
+            /* Error */
+            const handleErr = (error: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(error.message));
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(errDestination, handleErr);
+
+                const data = {
+                    groupId: groupId,
+                    userId: userId,
+                    username: username
+                }
+
+                await this.socketClient.sendToDestination(
+                    '/app/remove-user-group',
+                    data,
+                    sucssDestination
+                );
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
+        });
+    }
+
+    private async getContactDetails(id: string): Promise<any> {
+        const contacts = await this.dashboard?.contactService?.getContacts();
+        return contacts?.find((c: any) => c.id === id);
+    }
+
+    /*
     ** Group Actions
     */
     public onCreateGroup = () => {

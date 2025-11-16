@@ -372,7 +372,7 @@ public class EventList {
                         decryptedMessage.put("system", false);
                         
                         String content;
-                        if ("[ENCRYPTED]".equals(message.getContent())) {
+                        if (message.getContent().startsWith("[ENCRYPTED]")) {
                             try {
                                 content = secureMessageService
                                     .decryptMessage(chatId, message.getContentBytes());
@@ -474,6 +474,37 @@ public class EventList {
                 return Collections.emptyMap();
             },
             "",
+            false
+        ));
+        configs.put("get-direct-chat-id", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String contactId = (String) data.get("contactId");
+
+                    Map<String, Object> res = serviceManager.getDirectService()
+                        .getChatId(currentUserId, contactId);
+                        
+                    eventTracker.track(
+                        "get-direct-chat-id",
+                        res,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        currentUserId
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    err.getStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "CHAT_ID_GENERATION_FAILED");
+                    errRes.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/direct-chat-id-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/direct-chat-id-scss",
             false
         ));
         configs.put("group", new EventConfig(
@@ -725,6 +756,178 @@ public class EventList {
             "/user/queue/exit-group-scss",
             false
         ));
+        /* Add User Group */
+        configs.put("add-user-group", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    long time = System.currentTimeMillis();
+                    Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
+                    String userId = (String) data.get("userId");
+                    String username = (String) data.get("username");
+                    String groupId = (String) data.get("groupId");
+
+                    String inviterUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String inviterUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
+
+                    Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
+                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    
+                    if(groupId == null) throw new Exception("Group Id is required!");
+                    if(userId == null) throw new Exception("User Id is required!");
+                    if(username == null || username.trim().isEmpty()) throw new Exception("Username is required!");
+
+                    boolean success = serviceManager.getGroupService().addUserToGroup(groupId, userId, username);
+                    if(!success) throw new Exception("Failed to add user to group :(");
+                    serviceManager.getGroupService().addUserToGroupMapping(userId, groupId, sessionId);
+
+                    eventTracker.track(
+                        "add-user-group",
+                        data,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        inviterUserId
+                    );
+
+                    /* Event Response */
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("id", groupId);
+                    res.put("name", groupInfo.get("name"));
+                    res.put("userId", userId);
+                    res.put("joined", true);
+                    res.put("timestamp", time);
+                    res.put("members", groupInfo.get("members"));
+                    res.put("sessionId", sessionId);
+                    res.put("addedBy", inviterUsername);
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "add-user-group-scss", res);
+
+                    /* System Message */
+                    for(_User member : groupMembers) {
+                        String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
+                        if(memberSessionId != null) {
+                            Map<String, Object> systemMessageData = new HashMap<>();
+                            data.put("userId", userId);
+                            data.put("username", username);
+                            data.put("inviterUserId", inviterUserId);
+                            data.put("inviterUsername", inviterUsername);
+                            data.put("targetSessionid", memberSessionId);
+                            data.put("isAboutCurrentUser", memberSessionId.equals(sessionId));
+
+                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
+                                "USER_ADDED_GROUP", 
+                                systemMessageData, 
+                                sessionId, 
+                                memberSessionId,
+                                groupId
+                            );
+                            systemMessage.put("groupId", groupId);
+                            systemMessage.put("chatId", groupId);
+                            systemMessage.put("chatType", "GROUP");
+                            systemMessage.put("addedBy", inviterUsername);
+                            
+                            String destination = "/user/queue/messages/group/" + groupId;
+                            socketMethods.send(sessionId, destination, systemMessage);
+                            messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
+                        }
+                    }
+                    return Collections.emptyMap();
+                } catch(Exception err) {
+                    err.printStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "ADD_FAILED");
+                    errRes.put("message", err.getMessage());
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "add-user-group-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/user/queue/add-user-group-scss",
+            false
+        ));
+        /* Remove User Group */
+        configs.put("remove-user-group", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    long time = System.currentTimeMillis();
+                    Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
+                    String userId = (String) data.get("userId");
+                    String username = (String) data.get("username");
+                    String groupId = (String) data.get("groupId");
+
+                    String inviterUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String inviterUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
+
+                    Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
+                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    
+                    if(groupId == null) throw new Exception("Group Id is required!");
+                    if(userId == null) throw new Exception("User Id is required!");
+                    if(username == null || username.trim().isEmpty()) throw new Exception("Username is required!");
+
+                    boolean success = serviceManager.getGroupService().removeUserFromGroup(groupId, userId);
+                    if(!success) throw new Exception("Failed to remove user of group :(");
+                    serviceManager.getGroupService().removeUserFromGroupMapping(userId, groupId);
+
+                    eventTracker.track(
+                        "remove-user-group",
+                        data,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        inviterUserId
+                    );
+
+                    /* Event Response */
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("id", groupId);
+                    res.put("name", groupInfo.get("name"));
+                    res.put("userId", userId);
+                    res.put("joined", true);
+                    res.put("timestamp", time);
+                    res.put("members", groupInfo.get("members"));
+                    res.put("sessionId", sessionId);
+                    res.put("removedBy", inviterUsername);
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "remove-user-group-scss", res);
+
+                    /* System Message */
+                    for(_User member : groupMembers) {
+                        String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
+                        if(memberSessionId != null) {
+                            Map<String, Object> systemMessageData = new HashMap<>();
+                            data.put("userId", userId);
+                            data.put("username", username);
+                            data.put("inviterUserId", inviterUserId);
+                            data.put("inviterUsername", inviterUsername);
+                            data.put("targetSessionid", memberSessionId);
+                            data.put("isAboutCurrentUser", memberSessionId.equals(sessionId));
+
+                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
+                                "USER_REMOVED_GROUP", 
+                                systemMessageData, 
+                                sessionId, 
+                                memberSessionId,
+                                groupId
+                            );
+                            systemMessage.put("groupId", groupId);
+                            systemMessage.put("chatId", groupId);
+                            systemMessage.put("chatType", "GROUP");
+                            systemMessage.put("removedBy", inviterUsername);
+                            
+                            String destination = "/user/queue/messages/group/" + groupId;
+                            socketMethods.send(sessionId, destination, systemMessage);
+                            messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
+                        }
+                    }
+                    return Collections.emptyMap();
+                } catch(Exception err) {
+                    err.printStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "REMOVE_FAILED");
+                    errRes.put("message", err.getMessage());
+                    serviceManager.getUserService().sendMessageToUser(sessionId, "remove-user-group-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/user/queue/remove-user-group-scss",
+            false
+        ));
         /* Get User Groups */
         configs.put("get-user-chats", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
@@ -764,37 +967,6 @@ public class EventList {
                 }
             },
             "/queue/user-chats-scss",
-            false
-        ));
-        configs.put("get-direct-chat-id", new EventConfig(
-            (sessionId, payload, headerAccessor) -> {
-                try {
-                    Map<String, Object> data = (Map<String, Object>) payload;
-                    String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
-                    String contactId = (String) data.get("contactId");
-
-                    Map<String, Object> res = serviceManager.getDirectService()
-                        .getChatId(currentUserId, contactId);
-                        
-                    eventTracker.track(
-                        "get-direct-chat-id",
-                        res,
-                        EventDirection.RECEIVED,
-                        sessionId,
-                        currentUserId
-                    );
-
-                    return res;
-                } catch(Exception err) {
-                    err.getStackTrace();
-                    Map<String, Object> errRes = new HashMap<>();
-                    errRes.put("error", "CHAT_ID_GENERATION_FAILED");
-                    errRes.put("message", err.getMessage());
-                    socketMethods.send(sessionId, "/queue/direct-chat-id-err", errRes);
-                    return Collections.emptyMap();
-                }
-            },
-            "/queue/direct-chat-id-scss",
             false
         ));
         /* Generate Group Link */
@@ -896,6 +1068,41 @@ public class EventList {
             "/queue/group-info-scss",
             false
         ));
+        /* Get Group Members */
+        configs.put("get-group-members", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String groupId = (String) data.get("groupId");
+
+                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    List<Map<String, Object>> members = new ArrayList<>();
+
+                    for(_User member : groupMembers) {
+                        Map<String, Object> memberInfo = new HashMap<>();
+                        memberInfo.put("id", member.getId());
+                        memberInfo.put("username", member.getUsername());
+                        members.add(memberInfo);
+                    }
+
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("members", members);
+                    res.put("count", members.size());
+                    res.put("groupId", groupId);
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "LOAD_GROUP_MEMBERS_FAILED");
+                    errRes.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/group-members-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/group-members-scss",
+            false
+        ));   
+
         return configs;
     }
 }

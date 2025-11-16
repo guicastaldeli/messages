@@ -29,7 +29,7 @@ interface State {
 export class Dashboard extends Component<Props, State> {
     private groupContainerRef: React.RefObject<HTMLDivElement | null>;
     private apiClient: ApiClient;
-    private contactService: ContactServiceClient | null = null;
+    public contactService: ContactServiceClient | null = null;
 
     private socketId!: string;
     private userId!: string;

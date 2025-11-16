@@ -135,14 +135,24 @@ public class SystemMessageService {
     ) {
         String username = (String) data.get("username");
         String groupName = (String) data.get("groupName");
+        String inviterUsername = (String) data.get("inviterUsername");
+        boolean isInviterCurrentUser = messagePerspectiveDetector.isInviterCurrentUser(data, targetSessionId);
+
         String content = template;
         boolean isAboutCurrentUser = messagePerspectiveDetector.isAboutCurrentUser(data, targetSessionId);
+
         String finalUsername = username != null ? username : "Unknown";
+        String finalInviterUsername = inviterUsername != null ? inviterUsername : "Unknown";
 
         if(isAboutCurrentUser) {
             content = content.replace("{username}", "You");
         } else {
             content = content.replace("{username}", finalUsername);
+        }
+        if(isInviterCurrentUser) {
+            content = content.replace("{inviterUsername}", "You");
+        } else {
+            content = content.replace("{inviterUsername}", finalInviterUsername);
         }
 
         if(groupName != null) content = content.replace("{group}", groupName);
