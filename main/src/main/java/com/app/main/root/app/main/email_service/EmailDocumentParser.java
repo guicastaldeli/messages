@@ -8,10 +8,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathException;
 import javax.xml.xpath.XPathFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+
 import org.w3c.dom.*;
 import java.util.concurrent.*;
 import java.util.*;
@@ -46,24 +43,25 @@ public class EmailDocumentParser {
     }
 
     private Document load(String name) throws Exception {
-        Resource resource = new ClassPathResource("./" + name + ".xml");
+        String resourcePath = "com/app/main/root/app/main/email_service/" + name + ".xml";
+        Resource resource = new ClassPathResource(resourcePath);
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         return builder.parse(resource.getInputStream());
     }
 
     private String getDocument(Document doc, Map<String, Object> context) throws XPathException {
-        String el = doc.getDocumentElement().getNodeName();
+        String rootElementName = doc.getDocumentElement().getNodeName();
 
         String subject = renderTextContent(
-            (String) xPath.evaluate("./" + el + "/content/subject" , doc, XPathConstants.STRING),
+            (String) xPath.evaluate("/" + rootElementName + "/content/subject/text()", doc, XPathConstants.STRING),
             context
         );
         String preheader = renderTextContent(
-            (String) xPath.evaluate("/welcome-email/content/preheader", doc, XPathConstants.STRING),
+            (String) xPath.evaluate("/" + rootElementName + "/content/preheader/text()", doc, XPathConstants.STRING),
             context
         );
-        Node layoutNode = (Node) xPath.evaluate("/" + el + "/content/layout", doc, XPathConstants.NODE);
+        Node layoutNode = (Node) xPath.evaluate("/" + rootElementName + "/content/layout", doc, XPathConstants.NODE);
         String body = layoutNode != null ? renderElement((Element) layoutNode, context) : "";
 
         return String.format(

@@ -1,8 +1,12 @@
+import { ClientChatDecryptionService } from "@/app/_crypto/message_encoder/client/client-chat-decryption-service";
+
 export class MessageServiceClient {
     private baseUrl: string | undefined;
+    private clientChatDecryptionService: ClientChatDecryptionService;    
 
-    constructor(url: string | undefined) {
+    constructor(url: string | undefined, clientChatDecryptionService: ClientChatDecryptionService) {
         this.baseUrl = url;
+        this.clientChatDecryptionService = clientChatDecryptionService;
     }
 
     /*
@@ -57,28 +61,61 @@ export class MessageServiceClient {
                 `${this.baseUrl}/api/message-tracker/messages/chatId/${id}?page=${page}&pageSize=${pageSize}`
             );
             if(!res.ok) throw new Error('Failed to fetch messages by chat id!');
-    
+
             let data = await res.json();
             let messages = Array.isArray(data) ? data : (data.messages || []);
-            messages = messages.map((message: any) => ({
-                ...message
-            }));
-            if(Array.isArray(data)) {
-                data = messages;
-            } else {
-                data.messages = messages;
-            }
+            
+            messages = await Promise.all(
+                messages.map(async (message: any) => {
+                    if (this.clientChatDecryptionService.shouldDecrypt(
+                        message.content,
+                        message.contentBytes,
+                        id
+                    )) {
+                        try {
+                            const decryptedContent = await this.clientChatDecryptionService.decryptMessage(
+                                id,
+                                message.contentBytes
+                            );
+                            
+                            return {
+                                ...message,
+                                content: decryptedContent,
+                                isDecrypted: true,
+                                originalContent: message.content
+                            };
+                        } catch (decryptError) {
+                            console.error('Failed to decrypt message:', decryptError);
+                            return {
+                                ...message,
+                                content: '[Decryption Failed]',
+                                isDecrypted: false,
+                                decryptionError: true
+                            };
+                        }
+                    } else {
+                        return {
+                            ...message,
+                            isDecrypted: false
+                        };
+                    }
+                })
+            );
+
             if(Array.isArray(data)) {
                 return {
-                    messages: data,
+                    messages: messages,
                     currentPage: page,
                     pageSize: pageSize,
-                    totalMessages: data.length,
-                    totalPages: Math.ceil(data.length / pageSize),
-                    hasMore: data.length >= pageSize
+                    totalMessages: messages.length,
+                    totalPages: Math.ceil(messages.length / pageSize),
+                    hasMore: messages.length >= pageSize
                 }
             } else {
-                return data;
+                return {
+                    ...data,
+                    messages: messages
+                };
             }
         } catch(err) {
             console.error(err);

@@ -56,7 +56,9 @@ export class MessageManager {
     constructor(
         socketClient: SocketClientConnect, 
         apiClient: ApiClient, 
-        cacheService: CacheServiceClient
+        cacheService: CacheServiceClient,
+        sessionKeysManager: SessionKeysManager,
+        clientChatDecryptionService: ClientChatDecryptionService
     ) {
         this.socketClient = socketClient;
         this.apiClient = apiClient;
@@ -69,8 +71,8 @@ export class MessageManager {
         this.cacheService = cacheService;
         this.messageElementRenderer = new MessageElementRenderer(this);
         this.chunkRenderer = new ChunkRenderer(this);
-        this.sessionKeysManager = new SessionKeysManager();
-        this.clientChatDecryptionService = new ClientChatDecryptionService(this.sessionKeysManager);
+        this.sessionKeysManager = sessionKeysManager;
+        this.clientChatDecryptionService = clientChatDecryptionService
     }
 
     public async init(): Promise<void> {

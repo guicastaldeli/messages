@@ -3,6 +3,8 @@ import { MessageServiceClient } from "./message-service-client";
 import { SessionServiceClient } from "./session-service-client";
 import { AuthServiceClient } from "./auth-service-client";
 import { UserServiceClient } from "./user-service-client";
+import { ClientChatDecryptionService } from "@/app/_crypto/message_encoder/client/client-chat-decryption-service";
+import { SessionKeysManager } from "@/app/_crypto/message_encoder/client/session-keys-manager";
 
 export class ApiClient {
     private baseUrl: string | undefined;
@@ -13,11 +15,14 @@ export class ApiClient {
     private authService: AuthServiceClient;
     private userService: UserServiceClient;
 
-    constructor() {
+    constructor(
+        sessionKeysManager: SessionKeysManager,
+        clientChatDecryptionService: ClientChatDecryptionService, 
+    ) {
         this.getUrl();
         this.timeStream = new TimeStreamClient(this.baseUrl);
         this.sessionSerive = new SessionServiceClient(this.baseUrl);
-        this.messageService = new MessageServiceClient(this.baseUrl);
+        this.messageService = new MessageServiceClient(this.baseUrl, clientChatDecryptionService);
         this.authService = new AuthServiceClient(this.baseUrl);
         this.userService = new UserServiceClient(this.baseUrl);
     }

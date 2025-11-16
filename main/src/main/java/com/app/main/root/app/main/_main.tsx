@@ -11,6 +11,8 @@ import { SessionProvider, SessionType, SessionContext } from './_session/session
 import { ChatManager } from './chat/chat-manager';
 import { Item } from './chat/chat-manager';
 import { ActiveChat } from './chat/chat-manager';
+import { ClientChatDecryptionService } from '../_crypto/message_encoder/client/client-chat-decryption-service';
+import { SessionKeysManager } from '../_crypto/message_encoder/client/session-keys-manager';
 
 interface State {
     chatManager: ChatManager | null;
@@ -28,6 +30,8 @@ export class Main extends Component<any, State> {
     private cachePreloader: CachePreloaderService;
     private chatManager!: ChatManager;
     private messageManager!: MessageManager;
+    private sessionKeysManager: SessionKeysManager;
+    private clientChatDecryptionService: ClientChatDecryptionService;
 
     private appContainerRef = React.createRef<HTMLDivElement>();
     private dashboardInstance: Dashboard | null = null;
@@ -35,12 +39,19 @@ export class Main extends Component<any, State> {
     constructor(props: any) {
         super(props);
         this.socketClientConnect = SocketClientConnect.getInstance();
-        this.apiClient = new ApiClient();
+        this.sessionKeysManager = new SessionKeysManager();
+        this.clientChatDecryptionService = new ClientChatDecryptionService(this.sessionKeysManager);
+        this.apiClient = new ApiClient(
+            this.sessionKeysManager,
+            this.clientChatDecryptionService 
+        );
         this.cacheService = CacheServiceClient.getInstance();
         this.messageManager = new MessageManager(
             this.socketClientConnect, 
             this.apiClient, 
-            this.cacheService
+            this.cacheService,
+            this.sessionKeysManager,
+            this.clientChatDecryptionService
         );
         this.cachePreloader = new CachePreloaderService(this.apiClient, this.cacheService);
         this.cacheService.setApiClient(this.apiClient);

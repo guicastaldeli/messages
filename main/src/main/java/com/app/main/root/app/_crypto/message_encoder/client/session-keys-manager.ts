@@ -2,7 +2,7 @@ import { SESSION_KEYS_DATA } from "./session-keys";
 
 export interface SessionData {
     chatId: string;
-    sessionKey: ArrayBuffer | null;
+    sessionKey: ArrayBuffer;
     algorithm: string;
     createdAt: number;
 }
@@ -64,7 +64,6 @@ export class SessionKeysManager {
                     if(offset + 4 > arrayBuffer.byteLength) break;
                     const dataLength = dataView.getUint32(offset, true);
                     offset += 4;
-                    console.log('Session data length:', dataLength);
 
                     if(offset + dataLength > arrayBuffer.byteLength) break;
                     const sessionData = arrayBuffer.slice(offset, offset + dataLength);
@@ -72,11 +71,11 @@ export class SessionKeysManager {
 
                     this.sessions.set(chatId, {
                         chatId,
-                        sessionKey: rootKey,
+                        sessionKey: rootKey!,
                         algorithm: 'AES-GCM',
                         createdAt: Date.now()
                     });
-                    console.log(`✅ Loaded session for: ${chatId}`);
+                    console.log(`Loaded session for: ${chatId}`);
                     offset += dataLength;
                 }
             } catch(err) {

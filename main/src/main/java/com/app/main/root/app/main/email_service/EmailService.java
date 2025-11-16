@@ -21,10 +21,10 @@ public class EmailService {
     @Value("${email.smtp.port:587}")
     private String smtpPort;
 
-    @Value("${email.username:user-email@gmail.com}")
+    @Value("${email.username}")
     private String emailUsername;
 
-    @Value("${email.password:user-password}")
+    @Value("${email.password}")
     private String emailPassword;
 
     @Value("${web.url:{webUrlSrc}}")
@@ -47,6 +47,7 @@ public class EmailService {
             sendEmail(toEmail, body);
         } catch(Exception err) {
             System.err.println("Welcome Email err." + err.getMessage());
+            err.printStackTrace();
         }
     }
 

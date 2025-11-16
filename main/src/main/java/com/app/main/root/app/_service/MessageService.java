@@ -70,8 +70,9 @@ public class MessageService {
             PreparedStatement stmt = conn.prepareStatement(query, keys)
         ) {
             String fType = type != null ? type : "text";
-            byte[] messageContent = content != null ? content.getBytes() : new byte[0];
-            String finalContent = content;
+            byte[] messageContent;
+            String finalContent;
+            boolean isEncrypted = false;
 
             try {
                 String encryptionKey = chatId;
@@ -79,11 +80,16 @@ public class MessageService {
                     byte[] encryptedBytes = secureMessageService.encryptMessage(encryptionKey, content);
                     if(encryptedBytes != null && encryptedBytes.length > 0) {
                         messageContent = encryptedBytes;
-                        finalContent = content;
+                        finalContent = "[ENCRYPTED]";
+                        isEncrypted = true;
+                        System.out.println("Message encrypted successfully: " + encryptedBytes.length);
+                    } else {
+                        throw new Exception("Encryption returned null or empty");
                     }
                 } else {
                     messageContent = content.getBytes(StandardCharsets.UTF_8);
                     finalContent = content;
+                    System.out.println("No encryption session, storing as plain text");
                 }
             } catch(Exception err) {
                 System.err.println("Encryption failed, using plainText: " + err.getMessage());
@@ -109,7 +115,7 @@ public class MessageService {
                         
                         messageTracker.track(
                             value, 
-                            finalContent, 
+                            isEncrypted ? "[ENCRYPTED]" : finalContent, 
                             senderId,
                             username, 
                             chatId, 
@@ -119,7 +125,6 @@ public class MessageService {
 
                         return messageId;
                     }
-
                 }
             }
 
@@ -441,19 +446,6 @@ public class MessageService {
     /*
     * Get Last Message By Chat Id 
     */
-    private boolean isBytesEncrypted(byte[] bytes) {
-        if(bytes == null || bytes.length < 10) return false;
-        
-        int nonPrintableCount = 0;
-        for(int i = 0; i < Math.min(bytes.length, 20); i++) {
-            byte b = bytes[i];
-            if((b < 32 && b != 9 && b != 10 && b != 13) || b == 127) {
-                nonPrintableCount++;
-            }
-        }
-        return nonPrintableCount > 4;
-    }
-
     public Map<String, Object> getLastMessagesByChatId(String chatId) throws SQLException {
         String query = CommandQueryManager.GET_LAST_MESSAGE_BY_CHAT_ID.get();
         try (
@@ -476,6 +468,33 @@ public class MessageService {
         return null;
     }
 
+    private boolean isEncryptedData(byte[] bytes) {
+        if (bytes == null || bytes.length < 32) return false;
+        if (bytes.length >= 32) return true;
+        
+        int nonPrintableCount = 0;
+        for (int i = 0; i < Math.min(bytes.length, 50); i++) {
+            byte b = bytes[i];
+            if ((b < 32 && b != 9 && b != 10 && b != 13) || b > 126) {
+                nonPrintableCount++;
+            }
+        }
+        return (nonPrintableCount / (double) Math.min(bytes.length, 50)) > 0.7;
+    }
+
+    private boolean isBytesEncrypted(byte[] bytes) {
+        if(bytes == null || bytes.length < 10) return false;
+        
+        int nonPrintableCount = 0;
+        for(int i = 0; i < Math.min(bytes.length, 20); i++) {
+            byte b = bytes[i];
+            if((b < 32 && b != 9 && b != 10 && b != 13) || b == 127) {
+                nonPrintableCount++;
+            }
+        }
+        return nonPrintableCount > 4;
+    }
+
     /*
     **
     ***
@@ -491,7 +510,14 @@ public class MessageService {
 
         byte[] contentBytes = rs.getBytes("content");
         message.setContentBytes(contentBytes);
-        message.setContent("[Encrypted]");
+        
+        String content;
+        if (isEncryptedData(contentBytes)) {
+            content = "[ENCRYPTED]";
+        } else {
+            content = new String(contentBytes, StandardCharsets.UTF_8);
+        }
+        message.setContent(content);
         
         message.setMessageType(rs.getString("message_type"));
         message.setCreatedAt(rs.getTimestamp("created_at"));
