@@ -251,7 +251,15 @@ public class GroupService {
             stmt.setString(1, groupId);
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {
-                    members.add(mapUserFromResultSet(rs));
+                    _User user = mapUserFromResultSet(rs);
+                    try {
+                        String username = serviceManager.getUserService().getUsernameByUserId(user.getId());
+                        user.setUsername(username != null ? username : "Unknown");
+                    } catch(Exception err) {
+                        err.printStackTrace();
+                        user.setUsername("Unknown **");
+                    }
+                    members.add(user);
                 }
             }
         }

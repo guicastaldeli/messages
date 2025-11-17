@@ -325,10 +325,10 @@ public enum CommandQueryManager {
     * ~~~ SYSTEM MESSAGE SERVICE ~~~ 
     */
     SAVE_SYSTEM_MESSAGE(
-        "INSERT INTO system_messages (group_id, content, message_type) VALUES (?, ?, ?)"
+        "INSERT INTO system_messages (chat_id, content, message_type) VALUES (?, ?, ?)"
     ),
     GET_SYSTEM_MESSAGES_BY_GROUP(
-        "SELECT * FROM system_messages WHERE group_id = ? ORDER BY created_at ASC"
+        "SELECT * FROM system_messages WHERE chat_id = ? ORDER BY created_at DESC"
     );
 
     /* Main */

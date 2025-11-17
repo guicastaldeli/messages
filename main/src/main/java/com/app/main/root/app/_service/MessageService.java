@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -320,16 +321,25 @@ public class MessageService {
     */
     public Map<String, Object> getMessagesPage(String chatId, int page, int pageSize) throws SQLException {
         List<_Message> messages = getMessagesByChatId(chatId, page, pageSize);
-        int totalCount = getMessageCountByChatId(chatId);
+        List<_Message> systemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
+        System.out.println(systemMessages);
+
+        List<_Message> allMessages = new ArrayList<>();
+        allMessages.addAll(messages);
+        allMessages.addAll(systemMessages);
+        allMessages.sort(Comparator.comparing(_Message::getCreatedAt));
+
+        int totalCount = getMessageCountByChatId(chatId) + systemMessages.size();
         int totalPages = (int) Math.ceil((double) totalCount / pageSize);
 
         Map<String, Object> res = new HashMap<>();
-        res.put("messages", messages);
+        res.put("messages", allMessages);
         res.put("currentPage", page);
         res.put("pageSize", pageSize);
         res.put("totalMessages", totalCount);
         res.put("totalPages", totalPages);
         res.put("hasMore", page < totalPages - 1);
+        res.put("systemMessagescount", systemMessages.size());
         return res;
     }
 

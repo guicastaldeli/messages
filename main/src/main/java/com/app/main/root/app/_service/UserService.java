@@ -70,23 +70,29 @@ public class UserService {
     }
 
     public _User getUserById(String id) throws SQLException {
-        String query = CommandQueryManager.GET_USER_BY_ID.get();
+    String query = CommandQueryManager.GET_USER_BY_ID.get();
+    
+    System.out.println("=== DEBUG: getUserById() ===");
+    System.out.println("Querying user with ID: " + id);
 
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query)
-        ) {
-            stmt.setString(1, id);
+    try(
+        Connection conn = getConnection();
+        PreparedStatement stmt = conn.prepareStatement(query)
+    ) {
+        stmt.setString(1, id);
 
-            try(ResultSet rs = stmt.executeQuery()) {
-                if(rs.next()) {
-                    return mapUserFromResultSet(rs);
-                }
+        try(ResultSet rs = stmt.executeQuery()) {
+            if(rs.next()) {
+                _User user = mapUserFromResultSet(rs);
+                System.out.println("User found: " + user.getUsername());
+                return user;
+            } else {
+                System.out.println("ERROR: No user found with ID: " + id);
+                return null;
             }
         }
-
-        return null;
     }
+}
 
     public _User getUserByUsername(String username) throws SQLException {
         String query = CommandQueryManager.GET_USER_BY_USERNAME.get();
@@ -194,7 +200,10 @@ public class UserService {
     /* Username by User Id */
     public String getUsernameByUserId(String userId) throws SQLException {
         _User user = getUserById(userId);
-        return user != null ? user.getUsername() : null;
+        if(user == null) System.out.println("Err user" + userId);
+        String username = user.getUsername();
+        if(username == null) System.out.println("Err username" + username);
+        return username;
     }
 
     /* Link */

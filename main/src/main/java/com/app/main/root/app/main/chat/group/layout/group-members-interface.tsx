@@ -116,14 +116,14 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                             members.map(member => (
                                 <div key={member.id} className="member-item">
                                     <div className="member-info">
-                                        <span className={`username ${member.username}`}>
-                                            {member.username}
+                                        <span className="username">
+                                            {member.username || member.id}
                                         </span>
                                     </div>
                                     <div className="member-actions">
                                         <button 
                                             className="btn-remove-member"
-                                            onClick={() => handleRemoveUser(member.id, member.username)}
+                                            onClick={() => handleRemoveUser(member.id, member.username || member.id)}
                                         >
                                             Remove
                                         </button>
@@ -151,7 +151,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                     <option value="">Select a contact...</option>
                                     {availableContacts.map(contact => (
                                         <option key={contact.id} value={contact.id}>
-                                            {contact.username}
+                                            {contact.username || contact.id}
                                         </option>
                                     ))}
                                 </select>

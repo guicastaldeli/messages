@@ -43,7 +43,6 @@ export class MessageElementRenderer {
             return timeA - timeB;
         });
 
-        console.log(sortedMessages)
         for(const data of sortedMessages) await this.renderElement(data);
         this.restoreScrollPos(container);
     }

@@ -46,7 +46,7 @@ export class MessageServiceClient {
     /*
     * Chat Id
     */
-   public async getMessagesByChatId(id: string, page: number = 0): Promise<{
+    public async getMessagesByChatId(id: string, page: number = 0): Promise<{
         messages: any[];
         currentPage: number;
         pageSize: number;
@@ -54,40 +54,92 @@ export class MessageServiceClient {
         totalPages: number;
         hasMore: boolean
     }> {
-        return new Promise(async (res, rej) => {
-            const successDestination = '/queue/decrypted-messages-scss';
-            const errorDestination = '/queue/decrypted-messages-err';
+        const pageSize: number = 20;
 
-            const handleSucss = (data: any) => {
-                this.socketClient.offDestination(successDestination, handleSucss);
-                this.socketClient.offDestination(errorDestination, handleErr);
-                res(data);
+        try {
+            const res = await fetch(
+                `${this.baseUrl}/api/message-tracker/messages/chatId/${id}?page=${page}&pageSize=${pageSize}`
+            );
+            if(!res.ok) throw new Error('Failed to fetch messages by chat id!');
+
+            let data = await res.json();
+            let messages = Array.isArray(data) ? data : (data.messages || []);
+            const decryptedMessages = [];
+            for (const message of messages) {
+                try {
+                    const decryptedMessage = await this.decryptMessage(id, message);
+                    decryptedMessages.push(decryptedMessage);
+                } catch(err) {
+                    if(!message.system) console.error('Failed to decrypt message:', err);
+                    decryptedMessages.push(message);
+                }
+            }
+            messages = decryptedMessages.map(
+                (message: any) => (
+                { ...message }
+            ));
+            if(Array.isArray(data)) {
+                data = messages;
+            } else {
+                data.messages = messages;
+            }
+
+            if(Array.isArray(data)) {
+                return {
+                    messages: data,
+                    currentPage: page,
+                    pageSize: pageSize,
+                    totalMessages: data.length,
+                    totalPages: Math.ceil(data.length / pageSize),
+                    hasMore: data.length >= pageSize
+                }
+            } else {
+                return data;
+            }
+        } catch(err) {
+            console.error(err);
+            throw new Error('Failed to fetch messages by chat Id');
+        }
+    }
+
+    public async decryptMessage(id: string, data: any): Promise<any> {
+        return new Promise(async (res, rej) => {
+            const succssDestination = '/queue/decrypted-messages-scss';
+            const errDestination = '/queue/decrypted-messages-err';
+
+            const handlesuccss = (response: any) => {
+                this.socketClient.offDestination(succssDestination, handlesuccss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                if (response.messages && response.messages.length > 0) {
+                    res(response.messages[0]);
+                } else {
+                    rej(new Error('No decrypted messages returned'));
+                }
             };
 
             const handleErr = (error: any) => {
-                this.socketClient.offDestination(successDestination, handleSucss);
-                this.socketClient.offDestination(errorDestination, handleErr);
-                rej(new Error(error.message || 'Failed to fetch decrypted messages'));
+                this.socketClient.offDestination(succssDestination, handlesuccss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(error.message || 'Failed to decrypt message'));
             };
 
             try {
-                this.socketClient.onDestination(successDestination, handleSucss);
-                this.socketClient.onDestination(errorDestination, handleErr);
-                const payload = {
-                    chatId: id,
-                    page: page,
-                    pageSize: 20
+                this.socketClient.onDestination(succssDestination, handlesuccss);
+                this.socketClient.onDestination(errDestination, handleErr);
+                
+                const payload = { 
+                    messages: [data],
+                    chatId: String(data.chatId || id)
                 };
 
                 await this.socketClient.sendToDestination(
                     '/app/get-decrypted-messages',
                     payload,
-                    successDestination
+                    succssDestination
                 );
-
             } catch (err) {
-                this.socketClient.offDestination(successDestination, handleSucss);
-                this.socketClient.offDestination(errorDestination, handleErr);
+                this.socketClient.offDestination(succssDestination, handlesuccss);
+                this.socketClient.offDestination(errDestination, handleErr);
                 rej(err);
             }
         });

@@ -6,11 +6,9 @@ import com.app.main.root.app.EventTracker;
 import com.app.main.root.app._crypto.message_encoder.SecureMessageService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.ConnectionTracker;
-import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app._server.ConnectionInfo;
 import com.app.main.root.app.main._messages_config.MessageTracker;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -350,63 +348,36 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
+                    List<Map<String, Object>> encryptedMessages = (List<Map<String, Object>>) data.get("messages");
                     String chatId = (String) data.get("chatId");
-                    int page = (Integer) data.getOrDefault("page", 0);
-                    int pageSize = (Integer) data.getOrDefault("pageSize", 20);
-                    
-                    if (chatId == null || chatId.trim().isEmpty()) {
-                        throw new IllegalArgumentException("Chat ID is required");
-                    }
-
-                    List<_Message> encryptedMessages = serviceManager.getMessageService()
-                        .getMessagesByChatId(chatId, page, pageSize);
                     List<Map<String, Object>> decryptedMessages = new ArrayList<>();
-                    for (_Message message : encryptedMessages) {
-                        Map<String, Object> decryptedMessage = new HashMap<>();
-                        decryptedMessage.put("id", message.getId());
-                        decryptedMessage.put("chatId", message.getChatId());
-                        decryptedMessage.put("senderId", message.getSenderId());
-                        decryptedMessage.put("username", message.getUsername());
-                        decryptedMessage.put("messageType", message.getMessageType());
-                        decryptedMessage.put("createdAt", message.getCreatedAt());
-                        decryptedMessage.put("system", false);
+                    
+                    for (Map<String, Object> encryptedMessage : encryptedMessages) {
+                        Map<String, Object> decryptedMessage = new HashMap<>(encryptedMessage);
                         
-                        String content;
-                        if (message.getContent().startsWith("[ENCRYPTED]")) {
-                            try {
-                                content = secureMessageService
-                                    .decryptMessage(chatId, message.getContentBytes());
-                            } catch (Exception e) {
-                                content = "[Decryption Failed]";
+                        if (encryptedMessage.containsKey("contentBytes")) {
+                            Object contentBytesObj = encryptedMessage.get("contentBytes");
+                            byte[] contentBytes;
+                            
+                            if (contentBytesObj instanceof String) {
+                                String base64Content = (String) contentBytesObj;
+                                contentBytes = Base64.getDecoder().decode(base64Content);
+                            } else if (contentBytesObj instanceof byte[]) {
+                                contentBytes = (byte[]) contentBytesObj;
+                            } else {
+                                throw new IllegalArgumentException("err");
                             }
-                        } else {
-                            content = message.getContent();
+                            
+                            String decryptedContent = secureMessageService.decryptMessage(chatId, contentBytes);
+                            decryptedMessage.put("content", decryptedContent);
                         }
-                        decryptedMessage.put("content", content);
                         
                         decryptedMessages.add(decryptedMessage);
                     }
                     
-                    int totalCount = serviceManager.getMessageService().getMessageCountByChatId(chatId);
-                    int totalPages = (int) Math.ceil((double) totalCount / pageSize);
-                    Map<String, Object> res = new HashMap<>();
-                    res.put("messages", decryptedMessages);
-                    res.put("currentPage", page);
-                    res.put("pageSize", pageSize);
-                    res.put("totalMessages", totalCount);
-                    res.put("totalPages", totalPages);
-                    res.put("hasMore", page < totalPages - 1);
-                    res.put("status", "success");
-
-                    eventTracker.track(
-                        "get-decrypted-messages",
-                        Map.of("chatId", chatId, "messageCount", decryptedMessages.size(), "page", page),
-                        EventDirection.RECEIVED,
-                        sessionId,
-                        serviceManager.getUserService().getUserIdBySession(sessionId)
-                    );
-
-                    return res;
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("messages", decryptedMessages);
+                    return response;
                 } catch(Exception err) {
                     err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
@@ -805,12 +776,12 @@ public class EventList {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
                             Map<String, Object> systemMessageData = new HashMap<>();
-                            data.put("userId", userId);
-                            data.put("username", username);
-                            data.put("inviterUserId", inviterUserId);
-                            data.put("inviterUsername", inviterUsername);
-                            data.put("targetSessionid", memberSessionId);
-                            data.put("isAboutCurrentUser", memberSessionId.equals(sessionId));
+                            systemMessageData.put("userId", userId);
+                            systemMessageData.put("username", username);
+                            systemMessageData.put("inviterUserId", inviterUserId);
+                            systemMessageData.put("inviterUsername", inviterUsername);
+                            systemMessageData.put("targetSessionid", memberSessionId);
+                            systemMessageData.put("isAboutCurrentUser", memberSessionId.equals(sessionId));
 
                             Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
                                 "USER_ADDED_GROUP", 
@@ -1083,8 +1054,9 @@ public class EventList {
                         memberInfo.put("id", member.getId());
                         memberInfo.put("username", member.getUsername());
                         members.add(memberInfo);
+                        System.out.println(memberInfo);
                     }
-
+                    System.out.println(members);
                     Map<String, Object> res = new HashMap<>();
                     res.put("members", members);
                     res.put("count", members.size());
