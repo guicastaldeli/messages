@@ -9,23 +9,28 @@ export interface CacheConfig {
 
 export interface CacheData {
     messages: Map<string, any>;
+    files: Map<string, any>;
     messageOrder: string[];
+    fileOrder: string[];
     loadedPages: Set<number>;
+    loadedFilePages: Set<number>;
     totalMessagesCount: number;
+    totalFilesCount: number;
     lastAccessTime: number;
     hasMore: boolean;
+    hasMoreFiles: boolean;
     isFullyLoaded: boolean;
     lastUpdated: number;
 }
 
 export class CacheServiceClient {
-    private static instance: CacheServiceClient;
-    private apiClient!: ApiClient;
-    private cache: Map<string, CacheData> = new Map();
-    private accessQueue: string[] = [];
-    private pendingRequests: Map<string, Promise<any>> = new Map();
-    private evictionListeners: ((chatId: string) => void)[] = [];
-    private config: CacheConfig = {
+    public static instance: CacheServiceClient;
+    public apiClient!: ApiClient;
+    public cache: Map<string, CacheData> = new Map();
+    public accessQueue: string[] = [];
+    public pendingRequests: Map<string, Promise<any>> = new Map();
+    public evictionListeners: ((chatId: string) => void)[] = [];
+    public config: CacheConfig = {
         pageSize: 20,
         maxPages: 100,
         preloadPages: 2,
@@ -81,7 +86,7 @@ export class CacheServiceClient {
     /*
     ** Preload Data
     */
-    private async preloadChatData(chatId: string): Promise<void> {
+    public async preloadChatData(chatId: string): Promise<void> {
         try {
             const messageService = await this.apiClient.getMessageService();
 
@@ -128,7 +133,7 @@ export class CacheServiceClient {
     /*
     ** Fetch and Cache
     */
-    private async fetchAndCachePage(chatId: string, page: number): Promise<any[]> {
+    public async fetchAndCachePage(chatId: string, page: number): Promise<any[]> {
         try {
             const messageService = await this.apiClient.getMessageService();
             const pageData = await messageService.getMessagesByChatId(chatId, page);
@@ -270,7 +275,7 @@ export class CacheServiceClient {
     /*
     ** Is Page Loaded
     */
-    private isPageLoaded(chatId: string, page: number): boolean {
+    public isPageLoaded(chatId: string, page: number): boolean {
         const data = this.cache.get(chatId);
         return !!data && data.loadedPages.has(page);
     }
@@ -278,7 +283,7 @@ export class CacheServiceClient {
     /*
     ** Get Cached Page
     */
-    private getCachedPage(chatId: string, page: number): any[] {
+    public getCachedPage(chatId: string, page: number): any[] {
         const data = this.cache.get(chatId)!;
         const startIdx = page * this.config.pageSize;
         const endIdx = Math.min(startIdx + this.config.pageSize, data.messageOrder.length);
@@ -292,7 +297,7 @@ export class CacheServiceClient {
         return result;
     }
 
-    private selectChat(chatId: string): void {
+    public selectChat(chatId: string): void {
         this.accessQueue = this.accessQueue.filter(id => id !== chatId);
         this.accessQueue.push(chatId);
     }

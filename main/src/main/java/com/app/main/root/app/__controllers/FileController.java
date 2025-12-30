@@ -150,7 +150,7 @@ public class FileController {
     @GetMapping("/list")
     public ResponseEntity<?> listFiles(
         @RequestParam String userId,
-        @RequestParam(defaultValue = "root") String parentchatId,
+        @RequestParam(defaultValue = "root") String chatId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "5") int pageSize
     ) {
@@ -165,7 +165,7 @@ public class FileController {
             Map<String, Object> res = serviceManager.getFileService()
                 .listFiles(
                     userId, 
-                    parentchatId, 
+                    chatId, 
                     page, 
                     pageSize
                 );
