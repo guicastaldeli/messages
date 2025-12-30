@@ -2,6 +2,7 @@ package com.app.main.root.app._service;
 import com.app.main.root.app._data.MessagePerspectiveResult;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
+import com.app.main.root.app._cache.CacheService;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app.main._messages_config.MessageLog;
@@ -31,6 +32,7 @@ public class MessageService {
     private final MessageTracker messageTracker;
     private final MessageAnalyzer messageAnalyzer;
     private final MessagePerspectiveDetector perspectiveDetector;
+    private final CacheService cacheService;
     @Autowired @Lazy private SecureMessageService secureMessageService;
 
     public MessageService(
@@ -39,7 +41,8 @@ public class MessageService {
         MessageTracker messageTracker,
         MessageAnalyzer messageAnalyzer,
         MessagePerspectiveDetector messagePerspectiveDetector, 
-        UserController userController
+        UserController userController,
+        CacheService cacheService
     ) {
         this.dataSourceService = dataSourceService;
         this.serviceManager = serviceManager;
@@ -47,6 +50,7 @@ public class MessageService {
         this.messageAnalyzer = messageAnalyzer;
         this.perspectiveDetector = messagePerspectiveDetector;
         this.userController = userController;
+        this.cacheService = cacheService;
     }
 
     private Connection getConnection() throws SQLException {
@@ -124,6 +128,7 @@ public class MessageService {
                             direction
                         );
 
+                        cacheService.getChatCache().invalidateMessageCache(chatId);
                         return messageId;
                     }
                 }
@@ -139,6 +144,12 @@ public class MessageService {
     ** 
     */
     public List<_Message> getMessagesByChatId(String chatId, int page, int pageSize) throws SQLException {
+        List<_Message> cachedMessages = cacheService.getChatCache().getCachedMessages(chatId, page);
+        if(cachedMessages != null) {
+            System.out.println("Returning cached messages for chat " + chatId + " page " + page);
+            return cachedMessages;
+        }
+
         String encriptionKey = chatId;
         if(!secureMessageService.hasActiveSession(encriptionKey)) {
             System.out.println("No active session");
@@ -163,6 +174,7 @@ public class MessageService {
             }
         }
 
+        cacheService.getChatCache().cacheMessages(chatId, page, messages);
         return messages;
     }
 
@@ -322,7 +334,6 @@ public class MessageService {
     public Map<String, Object> getMessagesPage(String chatId, int page, int pageSize) throws SQLException {
         List<_Message> messages = getMessagesByChatId(chatId, page, pageSize);
         List<_Message> systemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
-        System.out.println(systemMessages);
 
         List<_Message> allMessages = new ArrayList<>();
         allMessages.addAll(messages);

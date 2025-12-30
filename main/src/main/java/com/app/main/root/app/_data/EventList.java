@@ -910,7 +910,7 @@ public class EventList {
                     }
 
                     List<Map<String, Object>> userChats = serviceManager
-                        .getChatManagerService()
+                        .getChatService()
                         .getChats(userId);
                         
                     Map<String, Object> res = new HashMap<>();

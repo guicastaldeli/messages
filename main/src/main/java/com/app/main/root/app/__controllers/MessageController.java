@@ -10,12 +10,12 @@ import java.sql.SQLException;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/message-tracker")
-public class MessageTrackerController {
+@RequestMapping("/api/message")
+public class MessageController {
     private final MessageTracker messageTracker;
     private final ServiceManager serviceManager;
 
-    public MessageTrackerController(
+    public MessageController(
         MessageTracker messageTracker,
         @Lazy ServiceManager serviceManager
     ) {

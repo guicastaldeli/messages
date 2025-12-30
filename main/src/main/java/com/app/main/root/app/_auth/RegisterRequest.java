@@ -5,6 +5,7 @@ public class RegisterRequest {
     private String username;
     private String password;
     private String sessionId;
+    private boolean rememberUser;
 
     /* Email */
     public void setEmail(String email) {
@@ -36,6 +37,14 @@ public class RegisterRequest {
     }
     public String getSessionId() {
         return sessionId;
+    }
+
+    /* Remember User */
+    public boolean isRememberUser() {
+        return rememberUser;
+    }
+    public void setRememberUser(boolean rememberUser) {
+        this.rememberUser = rememberUser;
     }
 }
  

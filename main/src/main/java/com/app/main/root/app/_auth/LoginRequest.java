@@ -4,6 +4,7 @@ public class LoginRequest {
     private String email;
     private String password;
     private String sessionId;
+    private boolean rememberUser;
 
     /* Email */
     public void setEmail(String email) {
@@ -27,5 +28,13 @@ public class LoginRequest {
     }
     public String getSessionId() {
         return sessionId;
+    }
+
+    /* Remember User */
+    public boolean isRememberUser() {
+        return rememberUser;
+    }
+    public void setRememberUser(boolean rememberUser) {
+        this.rememberUser = rememberUser;
     }
 }

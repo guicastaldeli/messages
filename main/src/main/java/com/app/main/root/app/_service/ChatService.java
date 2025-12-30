@@ -1,5 +1,7 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._crypto.message_encoder.ChatDecryptionService;
+import com.app.main.root.app._types._Message;
+
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.SQLException;
@@ -9,14 +11,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
-public class ChatManagerService {
+public class ChatService {
     private final ServiceManager serviceManager;
     private final ChatDecryptionService chatDecryptionService;
 
-    public ChatManagerService(
-        @Lazy ServiceManager serviceManager,
-        @Lazy ChatDecryptionService ChatDecryptionService
-    ) {
+    public ChatService(@Lazy ServiceManager serviceManager, @Lazy ChatDecryptionService ChatDecryptionService) {
         this.serviceManager = serviceManager;
         this.chatDecryptionService = ChatDecryptionService;
     }
@@ -102,6 +101,24 @@ public class ChatManagerService {
         });
 
         return allChats;
+    }
+
+    public Map<String, Object> getChatData(String userId, String chatId, int page, int pageSize) throws SQLException {
+        Map<String, Object> chatData = new HashMap<>();
+        
+        List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+        chatData.put("messages", messages);
+        
+        Map<String, Object> filesResult = serviceManager.getFileService().listFiles(userId, chatId, page, pageSize);
+        chatData.put("files", filesResult.get("files"));
+        chatData.put("filesPagination", filesResult.get("pagination"));
+        
+        chatData.put("chatId", chatId);
+        chatData.put("userId", userId);
+        chatData.put("page", page);
+        chatData.put("pageSize", pageSize);
+        
+        return chatData;
     }
 
     /*

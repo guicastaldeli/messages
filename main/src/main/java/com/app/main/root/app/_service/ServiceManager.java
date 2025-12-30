@@ -1,5 +1,6 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.DbService;
+import com.app.main.root.app._auth.TokenService;
 import com.app.main.root.app.main.email_service.EmailService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -17,30 +18,42 @@ public class ServiceManager {
     private final ContactService contactService;
     private final GroupService groupService;
     private final EmailService emailService;
-    private final ChatManagerService chatManagerService;
+    private final ChatService chatService;
+    private final SessionService sessionService;
+    private final TokenService tokenService;
+    private final CookieService cookieService;
+    private final FileService fileService;
 
     public ServiceManager(
         DbService dbService,
         @Lazy MessageService messageService,
         @Lazy SystemMessageService systemMessageService,
         @Lazy MessagePerspectiveService messagePerspectiveService,
-        @Lazy ChatManagerService chatManagerService,
+        @Lazy ChatService chatService,
         UserService userService,
         @Lazy DirectService directService,
         ContactService contactService,
         @Lazy GroupService groupService,
-        @Lazy EmailService emailService
+        @Lazy EmailService emailService,
+        @Lazy SessionService sessionService,
+        @Lazy TokenService tokenService,
+        @Lazy CookieService cookieService,
+        @Lazy FileService fileService
     ) {
         this.dbService = dbService;
         this.messageService = messageService;
         this.systemMessageService = systemMessageService;
         this.messagePerspectiveService = messagePerspectiveService;
-        this.chatManagerService = chatManagerService;
+        this.chatService = chatService;
         this.userService = userService;
         this.contactService = contactService;
         this.directService = directService;
         this.groupService = groupService;
         this.emailService = emailService;
+        this.sessionService = sessionService;
+        this.tokenService = tokenService;
+        this.cookieService = cookieService;
+        this.fileService = fileService;
     }
 
     /*
@@ -74,8 +87,8 @@ public class ServiceManager {
     /*
     * Chat Manager Service 
     */
-    public ChatManagerService getChatManagerService() {
-        return chatManagerService;
+    public ChatService getChatService() {
+        return chatService;
     }
 
     /*
@@ -111,5 +124,33 @@ public class ServiceManager {
     */
     public EmailService getEmailService() {
         return emailService;
+    }
+
+    /**
+     * Session Service
+     */
+    public SessionService getSessionService() {
+        return sessionService;
+    }
+
+    /**
+     * Token Service
+     */
+    public TokenService getTokenService() {
+        return tokenService;
+    }
+
+    /**
+     * Cookie Service
+     */
+    public CookieService getCookieService() {
+        return cookieService;
+    }
+
+    /**
+     * File Service
+     */
+    public FileService getFileService() {
+        return fileService;
     }
 }

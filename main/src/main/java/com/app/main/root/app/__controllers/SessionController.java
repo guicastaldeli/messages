@@ -1,5 +1,6 @@
 package com.app.main.root.app.__controllers;
 import com.app.main.root.app._service.SessionService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
@@ -74,5 +75,30 @@ public class SessionController {
             "username", sessionData.getUsername(),
             "lastActivity", sessionData.getLastActivity()
         );
+    }
+
+    @GetMapping("/id/{sessionId}")
+    public ResponseEntity<Map<String, Object>> getSessionById(@PathVariable String sessionId) {
+        try {
+            SessionService.SessionData sessionData = service.getSessionBySessionId(sessionId);
+            if(sessionData == null) {
+                return ResponseEntity.status(404).body(Map.of("error", "Session not found"));
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "sessionId", sessionData.getSessionId(),
+                "userId", sessionData.getUserId(),
+                "username", sessionData.getUsername(),
+                "email", sessionData.getEmail(),
+                "currentSession", sessionData.getCurrentSession().getValue(),
+                "rememberUser", sessionData.isRememberUser(),
+                "createdAt", sessionData.getCreatedAt(),
+                "expiresAt", sessionData.getExpiresAt(),
+                "lastActivity", sessionData.getLastActivity()
+            ));
+        } catch(Exception err) {
+            System.err.println("Error getting session by ID: " + err.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
+        }
     }
 }

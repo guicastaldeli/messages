@@ -329,6 +329,162 @@ public enum CommandQueryManager {
     ),
     GET_SYSTEM_MESSAGES_BY_GROUP(
         "SELECT * FROM system_messages WHERE chat_id = ? ORDER BY created_at DESC"
+    ),
+
+    /*
+    * ~~~ FILES METADATA ~~~ 
+    */
+    UPLOAD_FILE(
+        """
+            INSERT INTO files_metadata(
+                file_id,
+                user_id,
+                original_filename,
+                file_size,
+                mime_type,
+                file_type,
+                database_name,
+                chat_id,
+                uploaded_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+    ),
+    DOWNLOAD_FILE(
+        """
+            SELECT 
+                mime_type,
+                file_type,
+                database_name
+            FROM
+                files_metadata
+            WHERE
+                file_id = ? AND
+                user_id = ? AND
+                is_deleted = FALSE             
+        """
+    ),
+    GET_ALL_FILES(
+        """
+            SELECT
+                file_id, 
+                original_filename, 
+                file_size, 
+                mime_type,
+                file_type,
+                chat_id,
+                uploaded_at,
+                last_modified
+            FROM
+                files_metadata
+            WHERE
+                user_id = ? AND
+                chat_id = ? AND
+                is_deleted = FALSE
+            ORDER BY
+                last_modified DESC
+            LIMIT ? OFFSET ?     
+        """
+    ),
+    GET_FILE_SIZE(
+        "SELECT SUM(file_size) as total FROM files_metadata WHERE user_id = ? AND is_deleted = FALSE"
+    ),
+    GET_TOTAL_FILES(
+        "SELECT COUNT(*) FROM files_metadata WHERE user_id = ? AND is_deleted = FALSE"
+    ),
+    GET_TOTAL_FILES_FOLDER(
+        "SELECT COUNT(*) from files_metadata WHERE user_id = ? AND chat_id = ? AND is_deleted = FALSE"
+    ),
+    DELETE_FILE(
+        """
+           UPDATE files_metadata
+           SET is_deleted = TRUE
+           WHERE file_id = ? AND user_id = ?
+        """
+    ),
+    GET_FILE_DATABASE(
+        "SELECT 1 FROM files_metadata WHERE file_id = ? AND user_id = ?"
+    ),
+    GET_TYPE_FILES(
+        """
+            SELECT file_type, SUM(file_size) as type_size, COUNT(*) as type_count
+            FROM files_metadata WHERE user_id = ? AND is_deleted = FALSE
+            GROUP BY file_type     
+        """
+    ),
+    GET_DB_NAME_FILES(
+        "SELECT database_name FROM files_metadata WHERE file_id = ? AND user_id = ?"
+    ),
+    GET_FILE_INFO(
+        """
+            SELECT
+                file_id,
+                original_filename,
+                file_size,
+                mime_type,
+                file_type,
+                chat_id,
+                database_name,
+                uploaded_at,
+                last_modified
+            FROM files_metadata
+            WHERE file_id = ? AND user_id = ? AND is_deleted = FALSE     
+        """
+    ),
+
+    /*
+    * ~~~ IMAGE DATA ~~~ 
+    */
+    ADD_IMAGE(
+        "INSERT INTO image_data(file_id, content) VALUES (?, ?)"
+    ),
+    GET_IMAGE(
+        "SELECT content FROM image_data WHERE file_id = ?"
+    ),
+
+    /*
+    * ~~~ VIDEO DATA ~~~ 
+    */
+    ADD_VIDEO(
+        "INSERT INTO video_data(file_id, content) VALUES (?, ?)"
+    ),
+    GET_VIDEO(
+        "SELECT content FROM video_data WHERE file_id = ?"
+    ),
+
+    /*
+    * ~~~ AUDIO DATA ~~~ 
+    */
+    ADD_AUDIO(
+        "INSERT INTO audio_data(file_id, content) VALUES (?, ?)"
+    ),
+    GET_AUDIO(
+        "SELECT content FROM audio_data WHERE file_id = ?"
+    ),
+
+    /*
+    * ~~~ DOCUMENT DATA ~~~ 
+    */
+    ADD_DOCUMENT(
+        "INSERT INTO document_data(file_id, content) VALUES (?, ?)"
+    ),
+    GET_DOCUMENT(
+        "SELECT content FROM document_data WHERE file_id = ?"
+    ),
+
+    /*
+    * ~~~ KEY SERVICE ~~~ 
+    */
+    STORE_KEY(
+        "INSERT INTO file_encryption_keys (file_id, file_id_hash, user_id, encrypted_key) VALUES (?, ?, ?, ?)"
+    ),
+    RETRIEVE_KEY(
+        "SELECT encrypted_key FROM file_encryption_keys WHERE file_id = ? AND user_id = ?"
+    ),
+    DELETE_KEY(
+        "DELETE FROM file_encryption_keys WHERE file_id = ? AND user_id = ?"
+    ),
+    KEY_EXISTS(
+        "SELECT COUNT(*) as count FROM file_encryption_keys WHERE file_id = ? AND user_id = ?"
     );
 
     /* Main */

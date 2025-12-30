@@ -1,18 +1,22 @@
 package com.app.main.root.app._cache;
 import com.app.main.root.app._types._Message;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.*;
 
 public class ChatCache {
-    public final List<_Message> messages = new ArrayList<>();
-    public final Set<Integer> loadedPages = new HashSet<>();
-    public int totalMessageCount;
-    public long lastAccessTime = System.currentTimeMillis();
-    public boolean hasMore = true;
-    public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private Map<String, ChatCache> chatCacheMap = new ConcurrentHashMap<>();
+    public final Map<String, List<_Message>> cachedPages = new ConcurrentHashMap<>();
+    public final Set<Integer> loadedPages = ConcurrentHashMap.newKeySet();
 
-    public ChatCache(int totalMessageCount) {
-        this.totalMessageCount = totalMessageCount;
+    public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    public long lastAccessTime;
+    public int totalMessages;
+
+    public ChatCache(int totalMessages, Map<String, ChatCache> chatCacheMap) {
+        this.chatCacheMap = chatCacheMap;
+        this.totalMessages = totalMessages;
+        this.lastAccessTime = System.currentTimeMillis();
     }
 
     public ReentrantReadWriteLock.ReadLock readLock() {
@@ -21,5 +25,35 @@ public class ChatCache {
 
     public ReentrantReadWriteLock.WriteLock writeLock() {
         return lock.writeLock();
+    }
+
+    public List<_Message> getCachedMessages(String chatId, int page) {
+        ChatCache cache = chatCacheMap.get(chatId);
+        if(cache == null) return null;
+
+        cache.readLock().lock();
+        try {
+            String pageKey = "page_" + page;
+            return cache.cachedPages.get(pageKey);
+        } finally {
+            cache.readLock().unlock();
+        }
+    }
+
+    public void cacheMessages(String chatId, int page, List<_Message> messages) {
+        ChatCache cache = chatCacheMap.computeIfAbsent(chatId, k -> new ChatCache(0, chatCacheMap));
+        cache.writeLock().lock();
+
+        try {
+            String pageKey = "page_" + page;
+            cache.cachedPages.put(pageKey, messages);
+            cache.lastAccessTime = System.currentTimeMillis();
+        } finally {
+            cache.writeLock().unlock();
+        }
+    }
+
+    public void invalidateMessageCache(String chatId) {
+        chatCacheMap.remove(chatId);
     }
 }
