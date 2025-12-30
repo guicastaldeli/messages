@@ -205,7 +205,7 @@ export class MessageServiceClient {
     /**
      * Recent Chats
      */
-    public async getRecentChats(
+    public async getRecentMessages(
         userId: string,
         page: number = 0,
         pageSize: number = 20

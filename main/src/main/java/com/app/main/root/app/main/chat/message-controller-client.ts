@@ -61,7 +61,7 @@ export class MessageControllerClient {
             data.loadedPages.size === totalPossiblePages;
     }
 
-    public getCachedMessagesPage(data: any, chatId: string, page: number): any[] {
+    public getMessagesPage(data: any, chatId: string, page: number): any[] {
         const startIdx = page * this.chatService.getCacheServiceClient().config.pageSize;
         const endIdx = Math.min(
             startIdx + this.chatService.getCacheServiceClient().config.pageSize, 
@@ -151,6 +151,40 @@ export class MessageControllerClient {
             const timeB = b.timestamp || b.createdAt || 0;
             return timeA - timeB;
         });
+    }
+
+    /**
+     * Init Cache
+     */
+    public async initCache(userId: string): Promise<void> {
+        try {
+            const recentChats = await this.messageService.getRecentMessages(userId, 0, 50);
+            const chats = recentChats.chats || [];
+            const preloadPromises = chats.map((chat: any) =>
+                this.preloadData(chat.id || chat.chatId)
+            );
+            await Promise.all(preloadPromises);
+        } catch(err) {
+            console.log('Cache initialization failed: ', err);
+            throw err;
+        }
+    }
+
+    /**
+     * Preload Data
+     */
+    public async preloadData(chatId: string): Promise<void> {
+        try {
+            const [countData, pageData] = await Promise.all([
+                this.messageService.getMessageCountByChatId(chatId),
+                this.messageService.getMessagesByChatId(chatId, 0)
+            ]);
+
+            this.chatService.getCacheServiceClient().init(chatId, countData);
+            this.getMessagesPage(pageData.messages, chatId, 0);
+        } catch(err) {
+            console.error(`Preload for ${chatId} failed`, err);
+        }
     }
 
     /**

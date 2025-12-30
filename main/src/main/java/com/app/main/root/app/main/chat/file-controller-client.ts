@@ -20,7 +20,7 @@ export class FileControllerClient {
         this.fileService = new FileServiceClient(this.apiClient.getUrl(), socketClientConnect);
     }
 
-    public getCachedFilesPage(data: any, chatId: string, page: number): any[] {
+    public getFilesPage(data: any, chatId: string, page: number): any[] {
         const startIdx = page * this.chatService.getCacheServiceClient().config.pageSize;
         const endIdx = Math.min(
             startIdx + this.chatService.getCacheServiceClient().config.pageSize, 
@@ -48,9 +48,45 @@ export class FileControllerClient {
     }
 
     /**
+     * Init Cache
+     */
+    public async initCache(userId: string): Promise<void> {
+        try {
+            const recentChats = await this.fileService.getRecentFiles(userId, 0, 50);
+            const chats = recentChats.chats || [];
+            const preloadPromises = chats.map((chat: any) =>
+                this.chatService
+                    .getCacheServiceClient()
+                    .preloadChatData(chat.id || chat.chatId)
+            );
+            await Promise.all(preloadPromises);
+        } catch(err) {
+            console.log('Cache initialization failed: ', err);
+            throw err;
+        }
+    }
+
+    /**
+     * Preload Data
+     */
+    public async preloadData(chatId: string): Promise<void> {
+        try {
+            const [countData, pageData] = await Promise.all([
+                this.fileService.getFilesCountByChatId(chatId),
+                this.fileService.getFilesByChatId(chatId, 0)
+            ]);
+
+            this.chatService.getCacheServiceClient().init(chatId, countData);
+            this.getFilesPage(pageData.messages, chatId, 0);
+        } catch(err) {
+            console.error(`Preload for ${chatId} failed`, err);
+        }
+    }
+
+    /**
      * Get File Service Client
      */
-    public getFileService(): FileServiceClient {
+    public async getFileService(): Promise<FileServiceClient> {
         return this.fileService;
     }
 }

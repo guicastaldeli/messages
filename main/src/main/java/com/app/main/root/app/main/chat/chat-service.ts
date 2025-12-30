@@ -2,12 +2,14 @@ import { CacheServiceClient } from "../../_cache/cache-service-client";
 import { ApiClient } from "../_api-client/api-client";
 import { SocketClientConnect } from "../socket-client-connect";
 import { MessageControllerClient } from "./message-controller-client";
+import { FileControllerClient } from "./file-controller-client";
 
 export class ChatService {
     private socketClientConnect: SocketClientConnect;
     private apiClient: ApiClient;
     private cacheServiceClient: CacheServiceClient;
     private messageControllerClient: MessageControllerClient;
+    private fileControllerClient: FileControllerClient;
 
     constructor(
         socketClientConnect: SocketClientConnect,
@@ -22,29 +24,37 @@ export class ChatService {
             this.apiClient,
             this
         );
+        this.fileControllerClient = new FileControllerClient(
+            this.socketClientConnect,
+            this.apiClient,
+            this
+        );
     }
 
     public async fetchAndCacheData(
         chatId: string,
         userId: string,
         page: number
-    ): Promise<{ messages: any[], files: any[] }> {
+    ): Promise<{ 
+        messages: any[], 
+        files: any[] 
+    }> {
         try {
             const messageService = await this.messageControllerClient.getMessageService();
             const fileService = await this.fileControllerClient.getFileService();
 
-            const msgData = messageService.getChatData(userId, chatId, page);
-            const fileData = fileService.getChatData(userId, chatId, page);
+            const msgData = await messageService.getChatData(userId, chatId, page);
+            const fileData = await fileService.getChatData(userId, chatId, page);
 
             this.addChatDataPage(
                 chatId,
-                msgData,
-                fileData,
+                msgData.messages,
+                fileData.files,
                 page
             );
             return {
-                messages: msgData || [],
-                files: fileData || [] 
+                messages: msgData.messages || [],
+                files: fileData.files || [] 
             }
         } catch(err) {
             console.error(`Failed to fetch chat data for ${chatId} page ${page}:`, err);
@@ -183,34 +193,10 @@ export class ChatService {
      */
     public getCachedData(chatId: string, page: number): { messages: any[], files: any[] } {
         const data = this.cacheServiceClient.cache.get(chatId)!;
-        
-        /* Messages */
-        const msgStartIdx = page * this.cacheServiceClient.config.pageSize;
-        const msgEndIdx = Math.min(
-            msgStartIdx + this.cacheServiceClient.config.pageSize, 
-            data.messageOrder.length
-        );
-        const messages: any[] = [];
+        if(!data) throw new Error('no data!');
 
-        for(let i  = msgStartIdx; i < msgEndIdx; i++) {
-            const messageId = data.messageOrder[i];
-            const message = data.messages.get(messageId);
-            if(message) messages.push(message);
-        }
-
-        /* File */
-        const fileStartIdx = page * this.cacheServiceClient.config.pageSize;
-        const fileEndIdx = Math.min(
-            fileStartIdx + this.cacheServiceClient.config.pageSize, 
-            data.fileOrder.length
-        );
-        const files: any[] = [];
-        
-        for(let i = fileStartIdx; i < fileEndIdx; i++) {
-            const fileId = data.fileOrder[i];
-            const file = data.files.get(fileId);
-            if(file) files.push(file);
-        }
+        const messages = this.messageControllerClient.getMessagesPage(data, chatId, page);
+        const files = this.fileControllerClient.getFilesPage(data, chatId, page);
 
         return { messages, files }
     }
@@ -220,5 +206,19 @@ export class ChatService {
      */
     public getCacheServiceClient(): CacheServiceClient {
         return this.cacheServiceClient;
+    }
+
+    /**
+     * Get Message Controller
+     */
+    public getMessageController(): MessageControllerClient {
+        return this.messageControllerClient;
+    }
+
+    /**
+     * Get File Controller
+     */
+    public getFileController(): FileControllerClient {
+        return this.fileControllerClient;
     }
 }

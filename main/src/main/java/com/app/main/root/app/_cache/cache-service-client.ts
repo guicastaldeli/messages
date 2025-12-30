@@ -1,4 +1,5 @@
 import { ApiClient } from "../main/_api-client/api-client";
+import { ChatService } from "../main/chat/chat-service";
 
 export interface CacheConfig {
     pageSize: number;
@@ -26,6 +27,8 @@ export interface CacheData {
 export class CacheServiceClient {
     public static instance: CacheServiceClient;
     public apiClient!: ApiClient;
+    public chatService!: ChatService;
+
     public cache: Map<string, CacheData> = new Map();
     public accessQueue: string[] = [];
     public pendingRequests: Map<string, Promise<any>> = new Map();
@@ -37,23 +40,40 @@ export class CacheServiceClient {
         cleanupThreshold: 0.8
     }
 
-    public static getInstance(): CacheServiceClient {
-        if(!CacheServiceClient.instance) {
-            CacheServiceClient.instance = new CacheServiceClient();
+    public static getInstance(
+        apiClient: ApiClient,
+        chatService: ChatService
+    ): CacheServiceClient {
+        if (!CacheServiceClient.instance) {
+            const instance = new CacheServiceClient();
+            instance.apiClient = apiClient;
+            instance.chatService = chatService;
+            CacheServiceClient.instance = instance;
         }
+
         return CacheServiceClient.instance;
     }
 
-    public init(chatId: string, totalMessagesCount: number = 0): void {
+
+    public init(
+        chatId: string, 
+        totalMessagesCount: number = 0,
+        totalFilesCount: number = 0
+    ): void {
         const time = Date.now();
-        if(!this.cache.has(chatId)) {
+        if (!this.cache.has(chatId)) {
             this.cache.set(chatId, {
                 messages: new Map(),
+                files: new Map(),
                 messageOrder: [],
+                fileOrder: [],
                 loadedPages: new Set(),
+                loadedFilePages: new Set(),
                 totalMessagesCount,
+                totalFilesCount,
                 lastAccessTime: time,
                 hasMore: totalMessagesCount > this.config.pageSize,
+                hasMoreFiles: totalFilesCount > this.config.pageSize,
                 isFullyLoaded: false,
                 lastUpdated: time
             });
@@ -61,291 +81,25 @@ export class CacheServiceClient {
         this.selectChat(chatId);
     }
 
+    public initCache(userId: string): void {
+        this.chatService.getMessageController().initCache(userId);
+        this.chatService.getFileController().initCache(userId);
+    }
+
     public setApiClient(apiClient: ApiClient): void {
         this.apiClient = apiClient;
-    }
-
-    /*
-    ** Init Cache
-    */
-    public async initCache(userId: string): Promise<void> {
-        try {
-            const messageService = await this.apiClient.getMessageService();
-            const recentChats = await messageService.getRecentChats(userId, 0, 50);
-            const chats = recentChats.chats || [];
-            const preloadPromises = chats.map((chat: any) =>
-                this.preloadChatData(chat.id || chat.chatId)
-            );
-            await Promise.all(preloadPromises);
-        } catch(err) {
-            console.log('Cache initialization failed: ', err);
-            throw err;
-        }
-    }
-
-    /*
-    ** Preload Data
-    */
-    public async preloadChatData(chatId: string): Promise<void> {
-        try {
-            const messageService = await this.apiClient.getMessageService();
-
-            const [countData, pageData] = await Promise.all([
-                messageService.getMessageCountByChatId(chatId),
-                messageService.getMessagesByChatId(chatId, 0)
-            ]);
-
-            this.init(chatId, countData);
-            this.addMessagesPage(chatId, pageData.messages, 0);
-        } catch(err) {
-            console.error(`Preload for ${chatId} failed`, err);
-        }
-    }
-
-    /*
-    ** Get Messages
-    */
-    public async getMessages(
-        chatId: string,
-        page: number = 0,
-        forceRefresh: boolean = false
-    ): Promise<any[]> {
-        this.selectChat(chatId);
-        const cacheKey = `${chatId}_${page}`;
-
-        if(!forceRefresh && this.isPageLoaded(chatId, page)) {
-            return this.getCachedPage(chatId, page);
-        }
-        if(this.pendingRequests.has(cacheKey)) {
-            return this.pendingRequests.get(cacheKey);
-        }
-
-        const requestPromise = this.fetchAndCachePage(chatId, page);
-        this.pendingRequests.set(cacheKey, requestPromise);
-        try {
-            const messages = await requestPromise;
-            return messages;
-        } finally {
-            this.pendingRequests.delete(cacheKey);
-        }
-    }
-
-    /*
-    ** Fetch and Cache
-    */
-    public async fetchAndCachePage(chatId: string, page: number): Promise<any[]> {
-        try {
-            const messageService = await this.apiClient.getMessageService();
-            const pageData = await messageService.getMessagesByChatId(chatId, page);
-            this.addMessagesPage(chatId, pageData.messages, page);
-            return pageData.messages;
-        } catch(err) {
-            console.error(`Failed to fetch page ${page} for the chat ${chatId}:`, err);
-            throw err;
-        }
-    }
-
-    /*
-    ** Add Messages Page
-    */
-    public addMessagesPage(
-        chatId: string, 
-        messages: any[], 
-        page: number = 0
-    ): void {
-        if(!this.cache.has(chatId)) {
-            this.init(
-                chatId, 
-                messages.length + 
-                (page * this.config.pageSize)
-            );
-        }
-        
-        const data = this.cache.get(chatId)!;
-        const sortedMessages = messages.sort((a, b) => {
-            const timeA = a.timestamp || a.createdAt || 0;
-            const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
-        });
-        const startIndex = page * this.config.pageSize;
-
-        sortedMessages.forEach((m, i) => {
-            const id = m.id || m.messageId;
-            if(!data.messages.has(id)) {
-                data.messages.set(id, m);
-                const insertIndex = startIndex + i;
-            
-                if (insertIndex >= data.messageOrder.length) {
-                    while (data.messageOrder.length < insertIndex) {
-                        data.messageOrder.push('');
-                    }
-                    data.messageOrder.push(id);
-                } else {
-                    data.messageOrder[insertIndex] = id;
-                }
-            }
-        });
-
-        const time = Date.now();
-        data.messageOrder = data.messageOrder.filter(id => id && id !== '');
-        data.loadedPages.add(page);
-        data.lastAccessTime = time;
-        data.lastUpdated = time;
-        
-        const receivedFullPage = messages.length === this.config.pageSize;
-        data.hasMore = receivedFullPage;
-        data.totalMessagesCount = Math.max(data.totalMessagesCount, data.messageOrder.length);
-        data.isFullyLoaded = !data.hasMore;
-    }
-
-    /*
-    ** Add Message
-    */
-    public addMessage(
-        chatId: string, 
-        messages: any | any[],
-        page: number = 0
-    ): void {
-        if(!this.cache.has(chatId)) {
-            this.init(chatId, 0);
-        }
-
-        const data = this.cache.get(chatId)!;
-        const messageArray = Array.isArray(messages) ? messages : [messages];
-        messageArray.forEach((m: any) => {
-            const id = m.id || m.messageId;
-            if(!data.messages.has(id)) {
-                data.messages.set(id, m);
-                data.messageOrder.push(id);
-            }
-        });
-
-        const time = Date.now();
-        data.messageOrder = data.messageOrder.filter(id => id && data.messages.has(id));
-        data.loadedPages.add(page);
-        data.lastAccessTime = time;
-        data.lastUpdated = time;
-        const totalMessagesKnown = data.messageOrder.length;
-        const estimatedTotal = Math.max(data.totalMessagesCount, totalMessagesKnown);
-        const totalPossiblePages = Math.ceil(estimatedTotal / this.config.pageSize);
-        const currentPagesLoaded = data.loadedPages.size;
-        
-        data.hasMore =
-            currentPagesLoaded < totalPossiblePages || 
-            (messages.length === this.config.pageSize);
-        
-        data.isFullyLoaded = 
-            !data.hasMore && 
-            data.loadedPages.size === totalPossiblePages;
-    }
-
-    /*
-    ** Messages in Range
-    */
-    public getMessagesInRange(
-        chatId: string, 
-        start: number, 
-        end: number
-    ): any[] {
-        const data = this.cache.get(chatId);
-        if(!data) return [];
-
-        const result: any[] = [];
-        const endIndex = Math.min(end, data.messageOrder.length - 1);
-        for(let i = start; i <= endIndex; i++) {
-            const id = data.messageOrder[i];
-            const message = data.messages.get(id);
-            if(message) result.push({ ...message, virtualIndex: i });
-        }
-        return result.sort((a, b) => {
-            const timeA = a.timestamp || a.createdAt || 0;
-            const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
-        });
-    }
-
-    /*
-    ** Get Total Messages
-    */
-    public getTotalMessages(chatId: string): number {
-        const data = this.cache.get(chatId);
-        return data ? data.totalMessagesCount : 0;
-    }
-
-    /*
-    ** Is Page Loaded
-    */
-    public isPageLoaded(chatId: string, page: number): boolean {
-        const data = this.cache.get(chatId);
-        return !!data && data.loadedPages.has(page);
-    }
-
-    /*
-    ** Get Cached Page
-    */
-    public getCachedPage(chatId: string, page: number): any[] {
-        const data = this.cache.get(chatId)!;
-        const startIdx = page * this.config.pageSize;
-        const endIdx = Math.min(startIdx + this.config.pageSize, data.messageOrder.length);
-        
-        const result: any[] = [];
-        for(let i = startIdx; i < endIdx; i++) {
-            const messageId = data.messageOrder[i];
-            const message = data.messages.get(messageId);
-            if(message) result.push(message);
-        }
-        return result;
     }
 
     public selectChat(chatId: string): void {
         this.accessQueue = this.accessQueue.filter(id => id !== chatId);
         this.accessQueue.push(chatId);
+
+        const cache = this.cache.get(chatId);
+        if(cache) cache.lastAccessTime = Date.now();
     }
 
     public isChatCached(id: string): boolean {
         return this.cache.has(id);
-    }
-
-    public hasMoreMessages(chatId: string): boolean {
-        const data = this.cache.get(chatId);
-        if(!data) return false;
-        if(data.isFullyLoaded) return false;
-        if(data.hasMore) return true;
-
-        const estimatedTotalMessages = Math.max(
-            data.totalMessagesCount, 
-            data.messageOrder.length
-        );
-        const loadedCount = data.messageOrder.length;
-        return loadedCount < estimatedTotalMessages;
-    }
-
-    public getMessagesWithScroll(
-        chatId: string,
-        scrollPosition: number,
-        containerHeight: number,
-        currentMessages: any[]
-    ): Promise<{
-        messages: any[],
-        hasMore: boolean
-    }> {
-        this.selectChat(chatId);
-        const approxMessageHeight = 80;
-        const bufferMessages = 20;
-
-        const startIdx = Math.max(0, Math.floor(scrollPosition / approxMessageHeight) - bufferMessages);
-        const endIdx = Math.min(
-            this.getTotalMessages(chatId) - 1,
-            startIdx + 
-            Math.ceil(containerHeight / approxMessageHeight) + 
-            bufferMessages
-        );
-
-        const visibleMessages = this.getMessagesInRange(chatId, startIdx, endIdx);
-        return Promise.resolve({
-            messages: visibleMessages,
-            hasMore: this.hasMoreMessages(chatId)
-        });
     }
 
     public getCacheData(chatId: string): CacheData | undefined {
