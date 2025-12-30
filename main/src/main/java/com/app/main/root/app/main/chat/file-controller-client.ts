@@ -1,7 +1,7 @@
 import { ChatService } from "./chat-service"; 
 import { ApiClient } from "../_api-client/api-client";
 import { SocketClientConnect } from "../socket-client-connect";
-import { FileServiceClient } from "../_api-client/file-service-client"
+import { FileServiceClient } from "../_api-client/file-service-client";
 
 export class FileControllerClient {
     private chatService: ChatService;
