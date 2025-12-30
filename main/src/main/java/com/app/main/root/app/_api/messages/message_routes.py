@@ -4,7 +4,7 @@ from messages.message_service import MessageService
 class MessageRoutes:        
     def __init__(self, service: MessageService):
         self.service = service
-        self.router = APIRouter(prefix="/api/message-tracker")
+        self.router = APIRouter(prefix="/api/message")
         self.setupRoutes()
 
     def setupRoutes(self):
@@ -18,9 +18,7 @@ class MessageRoutes:
             except Exception as err:
                 raise HTTPException(status_code=err, detail=f"Failed to load messages: {str(err)}")
             
-        ##
         ## Messages
-        ##
         @self.router.get("/get-messages")
         async def getMessages():
             try:
@@ -31,9 +29,7 @@ class MessageRoutes:
             except Exception as err:
                 raise HTTPException(status_code=err, detail=f"Failed to load messages")
 
-        ##
         ## Chat Id
-        ##
         @self.router.get("/messages/chatId/{chatId}")
         async def getMessagesByChatId(
             chatId: str,
@@ -64,9 +60,7 @@ class MessageRoutes:
                     detail=f"Failed to load message count for chat {chatId}: {str(err)}"
                 )
 
-        ##
         ## Recent Messages
-        ##
         @self.router.get("/messages/recent/{userId}")
         async def getRecentChats(
             userId: str = Path(..., description="User ID"),
@@ -97,9 +91,7 @@ class MessageRoutes:
                     detail=f"Failed to load recent message count for {userId}: {str(err)}"
                 )
             
-        ##
         ## User
-        ##
         @self.router.get("/messages/userId/{userId}")
         async def getMessagesByUserId(userId: str = Path(..., description="User ID")):
             try:
@@ -113,9 +105,7 @@ class MessageRoutes:
                     detail=f"Failed to load messages for user {userId}"
                 )
 
-        ##
         ## Count
-        ##
         @self.router.get("/count")
         async def getMessageCount():
             try:
@@ -126,9 +116,7 @@ class MessageRoutes:
             except Exception as err:
                 raise HTTPException(status_code=err, detail=f"Failed to get message count")
 
-        ##
         ## Stats
-        ##
         @self.router.get("/stats")
         async def getMessageStats():
             try:
@@ -139,9 +127,7 @@ class MessageRoutes:
             except Exception as err:
                 raise HTTPException(status_code=err, detail=f"Failed to get message stats")
 
-        ##
         ## Clear
-        ## 
         @self.router.delete("/clear")
         async def clearMessages():
             try:

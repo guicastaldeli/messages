@@ -13,10 +13,10 @@ class FileRoutes:
         
     def setupRoutes(self):
         ## Upload File
-        @self.router.post("/upload/{userId}/{parentFolderId}")
+        @self.router.post("/upload/{userId}/{chatId}")
         async def uploadFile(
             userId: str,
-            parentFolderId: str = "root",
+            chatId: str = "root",
             file: UploadFile = File(...)
         ):
             try:
@@ -30,7 +30,7 @@ class FileRoutes:
                     filePath=tempPath,
                     userId=userId,
                     originalFileName=file.filename,
-                    parentFolderId=parentFolderId,
+                    chatId=chatId,
                 )
                 return {
                     "success": True,
@@ -40,10 +40,10 @@ class FileRoutes:
             except Exception as err:
                 raise HTTPException(status_code=500, detail=f"Upload failed: {str(err)}")
         
-        @self.router.post("/upload-multiple/{userId}/{parentFolderId}")
+        @self.router.post("/upload-multiple/{userId}/{chatId}")
         async def uploadMultipleFiles(
             userId: str,
-            parentFolderId: str = "root",
+            chatId: str = "root",
             files: List[UploadFile] = File(...)
         ):
             try:
@@ -61,7 +61,7 @@ class FileRoutes:
                             filePath=tempPath,
                             userId=userId,
                             originalFileName=file.filename,
-                            parentFolderId=parentFolderId
+                            chatId=chatId
                         )
                         res.append({
                             "fileName": file.filename,
@@ -134,13 +134,13 @@ class FileRoutes:
         @self.router.get("/list")
         async def listFiles(
             userId: str = Query(...),
-            parentFolderId: str = Query("root"),
+            chatId: str = Query("root"),
             page: int = Query(0, ge=0)
         ):
             try:
                 res = await self.fileService.listFiles(
                     userId=userId,
-                    parentFolderId=parentFolderId,
+                    chatId=chatId,
                     page=page
                 )
                 return res
@@ -197,10 +197,10 @@ class FileRoutes:
         @self.router.get("/count")
         async def countFiles(
             userId: str = Query(...),
-            folderId: str = Query("root")
+            chatId: str = Query("root")
         ):
             try:
-                res = await self.fileService.countFiles(userId, folderId)
+                res = await self.fileService.countFiles(userId, chatId)
                 return res
             except Exception as err:
                 raise HTTPException(status_code=500, detail=f"Failed to count files: {str(err)}")
@@ -209,10 +209,10 @@ class FileRoutes:
         @self.router.get("/count-pages")
         async def countPages(
             userId: str = Query(...),
-            folderId: str = Query("root")
+            chatId: str = Query("root")
         ):
             try:
-                res = await self.fileService.countPages(userId, folderId)
+                res = await self.fileService.countPages(userId, chatId)
                 return res
             except Exception as err:
                 raise HTTPException(status_code=500, detail=f"Failed to count pages: {str(err)}")
@@ -221,11 +221,11 @@ class FileRoutes:
         @self.router.get("/cache-key")
         async def getCacheKey(
             userId: str = Query(...),
-            folderId: str = Query("root"),
+            chatId: str = Query("root"),
             page: int = Query(0, ge=0)
         ):
             try:
-                res = await self.fileService.getCacheKey(userId, folderId, page)
+                res = await self.fileService.getCacheKey(userId, chatId, page)
                 return res
             except Exception as err:
                 raise HTTPException(status_code=500, detail=f"Failed to generate cache key: {str(err)}")

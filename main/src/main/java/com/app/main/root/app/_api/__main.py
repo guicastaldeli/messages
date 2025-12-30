@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from time_stream import TimeStream
+from chat.chat_service import ChatService
+from chat.chat_routes import ChatRoutes
 from messages.message_service import MessageService
 from messages.message_routes import MessageRoutes
 from connection.connection_service import ConnectionService
@@ -51,6 +53,11 @@ class Main:
         self.sessionService = SessionService(SESSION_API_URL)
         self.sessionRoutes = SessionRoutes(self.sessionService)
         self.app.include_router(self.sessionRoutes.router)
+        
+        ## Chat
+        self.chatService = ChatService(DB_API_URL)
+        self.chatRoutes = ChatRoutes(self.chatService)
+        self.app.include_router(self.chatRoutes.router)
         
         ## Message
         self.messageService = MessageService(DB_API_URL)

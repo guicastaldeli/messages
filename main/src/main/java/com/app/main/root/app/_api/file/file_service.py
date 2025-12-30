@@ -38,7 +38,7 @@ class FileService:
         filePath: str,
         userId: str,
         originalFileName: str,
-        parentFolderId: str = "root"
+        chatId: str = "root"
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -50,7 +50,7 @@ class FileService:
                 }
                 
                 res = await client.post(
-                    f"{self.url}/api/files/upload/{userId}/{parentFolderId}",
+                    f"{self.url}/api/files/upload/{userId}/{chatId}",
                     files=files
                 )
                 if(os.path.exists(filePath)):
@@ -117,14 +117,14 @@ class FileService:
     async def listFiles(
         self,
         userId: str,
-        parentFolderId: str = "root",
+        chatId: str = "root",
         page: int = 0
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
                 params = {
                     'userId': userId,
-                    'parentFolderId': parentFolderId,
+                    'chatId': chatId,
                     'page': page,
                     'pageSize': 5
                 }
@@ -209,12 +209,12 @@ class FileService:
             raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
         
     ## Count Files
-    async def countFiles(self, userId: str, folderId: str = "root") -> Dict[str, Any]:
+    async def countFiles(self, userId: str, chatId: str = "root") -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
                 params = {
                     'userId': userId,
-                    'folderId': folderId
+                    'chatId': chatId
                 }
                 
                 res = await client.get(f"{self.url}/api/files/count", params=params)
@@ -232,13 +232,13 @@ class FileService:
     async def countPages(
         self, 
         userId: str, 
-        folderId: str = "root"
+        chatId: str = "root"
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
                 params = {
                     'userId': userId,
-                    'folderId': folderId,
+                    'chatId': chatId,
                     'pageSize': 5
                 }
                 
@@ -257,14 +257,14 @@ class FileService:
     async def getCacheKey(
         self, 
         userId: str, 
-        folderId: str = "root", 
+        chatId: str = "root", 
         page: int = 0
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
                 params = {
                     'userId': userId,
-                    'folderId': folderId,
+                    'chatId': chatId,
                     'page': page
                 }
                 
