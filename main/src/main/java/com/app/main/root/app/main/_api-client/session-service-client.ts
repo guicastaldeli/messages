@@ -23,7 +23,7 @@ export class SessionServiceClient {
     /*
     ** Get Session
     */
-    public async getSession(userId: string): Promise<any> {
+    public async getSession(userId: string): Promise<any> {//
         const res = await fetch(`${this.baseUrl}/api/session/${userId}`);
         if(!res.ok) throw new Error('Failed to get session');
         return res.json();
