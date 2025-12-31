@@ -54,7 +54,6 @@ export class CacheServiceClient {
         return CacheServiceClient.instance;
     }
 
-
     public init(
         chatId: string, 
         totalMessagesCount: number = 0,

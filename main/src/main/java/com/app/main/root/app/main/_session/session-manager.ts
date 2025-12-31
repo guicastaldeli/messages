@@ -261,32 +261,20 @@ export class SessionManager {
             
             console.log('USER_INFO cookie:', userCookie);
             
-            try {
-                const parsedData = JSON.parse(userCookie);
-                return {
-                    sessionId: parsedData.sessionId || '',
-                    userId: parsedData.userId || '',
-                    username: parsedData.username || '',
-                    email: parsedData.email || ''
-                };
-            } catch (jsonError) {
-                console.log('JSON parse failed, trying old format:', jsonError);
-                
-                let value = userCookie.trim();
-                if(value.startsWith('"') && value.endsWith('"')) {
-                    value = value.slice(1, -1);
-                }
-            
-                if(value.includes(':')) {
-                    const parts = value.split(':');
-                    if (parts.length >= 4) {
-                        return {
-                            sessionId: parts[0] || '', 
-                            userId: parts[1] || '',
-                            username: parts[2] || '',
-                            email: parts[3] || ''
-                        };
-                    }
+            let value = userCookie.trim();
+            if(value.startsWith('"') && value.endsWith('"')) {
+                value = value.slice(1, -1);
+            }
+        
+            if(value.includes(':')) {
+                const parts = value.split(':');
+                if (parts.length >= 4) {
+                    return {
+                        sessionId: parts[0] || '', 
+                        userId: parts[1] || '',
+                        username: parts[2] || '',
+                        email: parts[3] || ''
+                    };
                 }
             }
             

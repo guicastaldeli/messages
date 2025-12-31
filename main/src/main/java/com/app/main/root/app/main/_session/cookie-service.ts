@@ -14,10 +14,8 @@ export class CookieService {
             days = 7,
             path = '/',
             domain = '',
-            secure =
-                process.env.NODE_ENV === 'production' ||
-                process.env.NODE_ENV === 'development',
-            sameSite = 'Strict'
+            secure = false,
+            sameSite = 'Lax'
         } = options;
         const expires = new Date(
             Date.now() + (days * 24 * 60 * 60 * 1000)

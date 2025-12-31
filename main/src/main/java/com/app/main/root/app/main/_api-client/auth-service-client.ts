@@ -59,6 +59,11 @@ export class AuthServiceClient {
             credentials: 'include'
         });
 
+        console.log('=== Login Response Headers ===');
+    console.log('Status:', res.status);
+    console.log('Set-Cookie header:', res.headers.get('set-cookie'));
+    console.log('All headers:', Array.from(res.headers.entries()));
+
         const data = await res.json();
         if(!res.ok) throw new Error(data.detail || data.message || 'Login failed!');
         if(data.userId && data.username) {

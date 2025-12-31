@@ -42,29 +42,3 @@ class UserRoutes:
                 return await self.userService.getUserByUsername(username)
             except HTTPException:
                 return { "exists": False, "user": None }
-            
-        ##
-        ## Register**
-        ##
-        @self.router.post("/api/auth/register")
-        async def registerUser(data: Dict[Any, Any]):
-            emailCheck = await self.userService.getUserByEmail(data.get("email", ""))
-            if(emailCheck.get("exists", False)):
-                raise HTTPException(status_code=400, detail="User with this email already exists!")
-            
-            usernameCheck = await self.userService.getUserByUsername(data.get("username", ""))
-            if(usernameCheck.get("exists", False)):
-                raise HTTPException(status_code=400, detail="Username already taken!")
-            
-            return await self.userService.registerUser(data)
-        
-        ##
-        ## Login**
-        ##
-        @self.router.post("/api/auth/login")
-        async def loginUser(data: Dict[Any, Any]):
-            emailCheck = await self.userService.getUserByEmail(data.get("email", ""))
-            if(not emailCheck.get("exists", False)):
-                raise HTTPException(status_code=400, detail="User not found")
-            
-            return await self.userService.loginUser(data)

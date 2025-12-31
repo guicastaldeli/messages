@@ -66,21 +66,34 @@ export class Main extends Component<any, State> {
     }
 
     async componentDidMount(): Promise<void> {
-        await this.connect();
-        this.chatManager = new ChatManager(
-            this.chatService,
-            this.socketClientConnect,
-            this.chatController,
-            this.apiClientController,
-            this.dashboardInstance,
-            this.appContainerRef.current,
-            this.state.username!,
-            this.setState.bind(this)
-        );
-        this.chatManager.mount();
-        this.chatController.setChatManager(this.chatManager);
-        const cacheService = await this.chatService.getCacheServiceClient();
-        if(this.state.userId) await cacheService.initCache(this.state.userId);
+         try {
+            await this.connect();
+            const rememberUser = CookieService.getValue(SessionManager.REMEMBER_USER) === 'true';
+            console.log('Remember user from cookie:', rememberUser);
+
+            this.chatManager = new ChatManager(
+                this.chatService,
+                this.socketClientConnect,
+                this.chatController,
+                this.apiClientController,
+                this.dashboardInstance,
+                this.appContainerRef.current,
+                this.state.username!,
+                this.setState.bind(this)
+            );
+            this.chatManager.mount();
+            this.chatController.setChatManager(this.chatManager);
+            const cacheService = await this.chatService.getCacheServiceClient();
+            if(this.state.userId) await cacheService.initCache(this.state.userId);
+            
+            this.setState({ 
+                isLoading: false,
+                rememberUser: rememberUser
+            });
+        } catch(err) {
+            console.error('Error in componentDidMount:', err);
+            this.setState({ isLoading: false });
+        }
     }
 
     componentWillUnmount(): void {
@@ -106,8 +119,6 @@ export class Main extends Component<any, State> {
 
     private setDashboardRef = (instance: Dashboard | null): void => {
         this.dashboardInstance = instance;
-        if(instance && this.chatController) this.chatController.dashboard = instance;
-        if(this.chatManager && instance) this.chatManager.setDashboard(instance);
     }
 
     //Join
