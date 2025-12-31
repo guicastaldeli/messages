@@ -20,7 +20,7 @@ export interface Item {
     fileSize: number;
     mimeType: string;
     fileType: FileType;
-    parentFolderId: string;
+    chatId: string;
     uploadedAt: string;
     lastModified: string;
     isDeleted?: boolean; 
@@ -37,7 +37,7 @@ export interface Response {
 interface Props {
     chatService: ChatService;
     userId: string;
-    parentFolderId?: string;
+    chatId?: string;
     onFileSelect?: (file: Item) => void;
     onFileDelete?: (fileId: string) => void;
     onRefresh?: () => void;
@@ -67,7 +67,7 @@ export function mapToItem(file: any): Item {
         fileSize: file.file_size,
         mimeType: file.mime_type,
         fileType: file.file_type,
-        parentFolderId: file.parent_folder_id,
+        chatId: file.chat_id,
         uploadedAt: file.uploaded_at,
         lastModified: file.last_modified,
         isDeleted: file.is_deleted
@@ -118,7 +118,7 @@ export class FileItem extends Component<Props, State> {
     }
 
     async componentDidUpdate(prevProps: Props): Promise<void> {
-        if(prevProps.parentFolderId !== this.props.parentFolderId ||
+        if(prevProps.chatId !== this.props.chatId ||
             prevProps.userId !== this.props.userId
         ) {
             await this.resetAndLoad();
@@ -239,7 +239,7 @@ export class FileItem extends Component<Props, State> {
             const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.listFiles(
                 this.props.userId,
-                this.props.parentFolderId || 'root'
+                this.props.chatId || 'root'
             );
             
             const page = 0;
@@ -267,7 +267,7 @@ export class FileItem extends Component<Props, State> {
             const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.listFiles(
                 this.props.userId,
-                this.props.parentFolderId || 'root',
+                this.props.chatId || 'root',
                 nextPage
             );
             

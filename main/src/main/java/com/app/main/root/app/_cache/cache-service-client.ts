@@ -81,7 +81,7 @@ export class CacheServiceClient {
         this.selectChat(chatId);
     }
 
-    public initCache(userId: string): void {
+    public async initCache(userId: string): Promise<void> {
         this.chatService.getMessageController().initCache(userId);
         this.chatService.getFileController().initCache(userId);
     }

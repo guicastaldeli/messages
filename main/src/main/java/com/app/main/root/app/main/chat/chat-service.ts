@@ -204,7 +204,7 @@ export class ChatService {
     /**
      * Get Cache Service
      */
-    public getCacheServiceClient(): CacheServiceClient {
+    public async getCacheServiceClient(): Promise<CacheServiceClient> {
         return this.cacheServiceClient;
     }
 

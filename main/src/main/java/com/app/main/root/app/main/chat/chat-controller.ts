@@ -11,6 +11,7 @@ import { MessageElementRenderer } from "./messages/message-element-renderer";
 import { ChunkRenderer } from "./chunk-renderer";
 import { ChatStateManager } from '../chat/chat-state-manager';
 import { ChatService } from './chat-service';
+import { Item } from './file/file-item';
 
 export class ChatController {
     private queueManager: QueueManager;
@@ -486,6 +487,81 @@ export class ChatController {
             data.username,
             data.isSystem
         );
+    }
+
+    /**
+     * Send File Message
+     */
+    public async sendFileMessage(file: Item): Promise<boolean> {
+        const time = Date.now();
+        const currentChat = this.chatRegistry.getCurrentChat();
+        const chatId = currentChat?.id || currentChat?.chatId;
+        if(!chatId) {
+            console.error('No chat id found');
+            return false;
+        }
+
+        const tempMessageId = `file_msg_${time}_${Math.random().toString(36).substr(2, 9)}`;
+        const isGroupChat = chatId.startsWith('group_');
+
+        const data = {
+            senderId: this.userId,
+            senderSessionId: this.socketId,
+            username: this.username,
+            content: `Shared file: ${file.originalFileName}`,
+            messageId: tempMessageId,
+            chatId: chatId,
+            timestamp: time,
+            chatType: isGroupChat ? 'GROUP' : 'DIRECT',
+            type: 'file',
+            fileData: file,
+            isTemp: true
+        };
+
+        const analysis = this.messageAnalyzer.analyzeMessage(data);
+        const metaType = 'file';
+
+        const analyzedData = {
+            ...analysis.context,
+            _metadata: {
+                type: metaType,
+                timestamp: time,
+                routing: 'STANDARD',
+                priority: analysis.priority,
+                senderSessionId: this.socketId,
+            },
+            _perspective: {
+                senderSessionId: this.socketId,
+                direction: analysis.direction,
+                messageType: 'FILE_MESSAGE',
+                isCurrentUser: analysis.direction,
+                isDirect: analysis.context.isDirect,
+                isGroup: analysis.context.isGroup,
+                isSystem: analysis.context.isSystem
+            },
+            fileData: file
+        };
+
+        const res = await this.queueManager.sendWithRouting(
+            analyzedData,
+            metaType,
+            {
+                priority: analysis.priority,
+                metadata: analysis.metadata
+            }
+        );
+        if(res) {
+            this.chatService.getMessageController().addMessage(chatId, analyzedData);
+            this.chatManager.setLastMessage(
+                chatId,
+                this.userId,
+                tempMessageId,
+                `Shared file: ${file.originalFileName}`,
+                this.username,
+                false
+            );
+        }
+        return res;
     }
 
     /**

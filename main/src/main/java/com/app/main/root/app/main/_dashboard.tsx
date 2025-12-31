@@ -9,6 +9,7 @@ import { ApiClientController } from "./_api-client/api-client-controller";
 import { GroupLayout } from "./chat/type/group/group-layout";
 import { ContactServiceClient } from "./_contact_config/contact-service-client";
 import { ContactLayout } from "./_contact_config/contact-layout";
+import { SessionManager } from "./_session/session-manager";
 
 interface Props {
     chatController: ChatController;
@@ -18,6 +19,7 @@ interface Props {
     activeChat: any;
     apiClientController: ApiClientController;
     onChatListUpdate?: (chatList: any[]) => void;
+    onLogout?: () => Promise<void>;
 }
 
 interface State {
@@ -26,6 +28,7 @@ interface State {
     chatList: any[];
     activeChat: any;
     contactService: ContactServiceClient | null;
+    isLoading: boolean;
 }
 
 export class Dashboard extends Component<Props, State> {
@@ -43,7 +46,8 @@ export class Dashboard extends Component<Props, State> {
             groups: [],
             chatList: props.chatList || [],
             activeChat: props.activeChat || null,
-            contactService: null
+            contactService: null,
+            isLoading: true,
         }
         this.groupContainerRef = React.createRef();
         this.apiClientController = props.apiClientController;
@@ -231,6 +235,15 @@ export class Dashboard extends Component<Props, State> {
     }
 
     render() {
+        const sessionData = SessionManager.getUserInfo();
+        const userId = sessionData?.userId;
+        if (!userId) {
+            return <div>Loading user data...</div>;
+        }
+        if(this.state.isLoading) {
+            return <div>Loading dashboard...</div>;
+        }
+
         const { chatList, activeChat } = this.props;
         const { chatController, chatManager } = this.props
 

@@ -2,11 +2,15 @@ import React, { Component } from "react";
 import { SessionManager } from "../../_session/session-manager";
 import { ChatService } from "../chat-service";
 import { CacheServiceClient } from "@/app/_cache/cache-service-client";
+import { ChatController } from "../chat-controller";
+import { Item } from "./file-item";
 
 interface Props {
     chatService: ChatService;
+    chatController: ChatController;
     onUploadSuccess?: (res: any) => void;
     onUploadError?: (err: Error) => void;
+    onFileSharedInChat?: (data: any) => void;
 }
 
 interface State {
@@ -54,6 +58,22 @@ export class FileUploader extends Component<Props, State> {
             );
             if(res.success) {
                 console.log('FILE UPLOADED!');
+                const fileItem: Item = {
+                    fileId: res.fileId,
+                    originalFileName: file.name,
+                    fileSize: file.size,
+                    mimeType: file.type,
+                    chatId: res.chatId,
+                    fileType: this.getFileType(file.type),
+                    uploadedAt: new Date().toISOString(),
+                    lastModified: new Date().toISOString()
+                };
+                if(this.props.chatController) {
+                    await this.props.chatController.sendFileMessage(fileItem);
+                }
+                if(this.props.onFileSharedInChat) {
+                    this.props.onFileSharedInChat(fileItem);
+                }
                 if(this.props.onUploadSuccess) {
                     this.props.onUploadSuccess(res);
                 }
@@ -72,6 +92,13 @@ export class FileUploader extends Component<Props, State> {
                 this.props.onUploadError(err as Error);
             }
         }
+    }
+
+    private getFileType(mimeType: string): 'image' | 'video' | 'document' | 'other' {
+        if(mimeType.startsWith('image/')) return 'image';
+        if(mimeType.startsWith('video/')) return 'video';
+        if(mimeType.startsWith('application/') || mimeType.startsWith('text/')) return 'document';
+        return 'other';
     }
 
     private triggerFileInput = (): void => {
