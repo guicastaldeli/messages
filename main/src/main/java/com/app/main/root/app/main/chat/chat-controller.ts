@@ -126,54 +126,17 @@ export class ChatController {
         this.username = username;
     }
 
-    /* SWITCH LATER */
-    public handleJoin(
-        sessionId: string, 
-        userId: string, 
-        username: string
-    ): Promise<'dashboard'> {
-        return new Promise(async (res, rej) => {
-            if (!this.appEl || this.joinHandled) {
-                return rej('err');
-            }
-
-            this.joinHandled = true;
-
-            const data = {
-                sessionId: sessionId,
-                userId: userId,
-                username: username
-            };
-
-            try {
-                const success = await this.socketClient.sendToDestination(
-                    '/app/new-user',
-                    data,
-                    '/topic/user'
-                );
-                if (!success) {
-                    this.joinHandled = false;
-                    return rej(new Error('Failed to send join request!'));
-                }
-                res('dashboard');
-            } catch (err) {
-                this.joinHandled = false;
-                rej(err);
-            }
-        });
-    }
-
-    public async renderAllCachedMessages(userId: string, chatId: string): Promise<void> {
-        const cacheData = await this.chatService.getCachedData(userId, chatId);
+    public async renderAllCachedMessages(chatId: string): Promise<void> {
+        const cacheData = await this.chatService.getCachedData(chatId);
         if(!cacheData) return;
 
-        const allCachedMessages = Array.from(cacheData.messages.values())
+        const allCachedMessages = 
+            Array.from(cacheData.messages.values() as any[])
             .sort((a, b) => {
                 const timeA = a.timestamp || a.createdAt || 0;
                 const timeB = b.timestamp || b.createdAt || 0;
                 return timeA - timeB;
             });
-
         
         for(const message of allCachedMessages) {
             await this.messageElementRenderer.renderElement(message);
@@ -252,7 +215,7 @@ export class ChatController {
 
         const cacheData = cacheService.getCacheData(chatId);
         if(cacheData && cacheData.messages.size > 0) {
-            await this.renderAllCachedMessages(this.userId, chatId);
+            await this.renderAllCachedMessages(chatId);
             await this.chunkRenderer.setupScrollHandler(this.userId);
             
             const container = await this.getContainer();
@@ -343,15 +306,11 @@ export class ChatController {
      * Send Message Method
      */
     private async sendMessage(content: any): Promise<boolean> {
-        console.log("SEND MESSAGE TST")
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
         const chatId = currentChat?.id || currentChat?.chatId;
-        if(!chatId) {
-            console.error('No chatId found');
-            return false;
-        }
-        if(!this.socketId) return false;
+        if(!chatId) throw new Error('No chat id!');
+        if(!this.socketId) throw new Error('No socket id!');
 
         const isGroupChat = chatId.startsWith('group_');
         const isDirectChat = chatId.startsWith('direct_');

@@ -63,17 +63,31 @@ export class MessageControllerClient {
     }
 
     public async getMessagesPage(data: any, chatId: string, page: number): Promise<any[]> {
+        let messagesArray: any[];
+        let messageOrder: string[];
+        
+        if (Array.isArray(data)) {
+            messagesArray = data;
+            messageOrder = data.map(msg => msg.id || msg.messageId);
+        } else if (data && data.messageOrder && Array.isArray(data.messageOrder)) {
+            messagesArray = Array.from(data.messages?.values() || []);
+            messageOrder = data.messageOrder;
+        } else {
+            console.warn(`Invalid data format in getMessagesPage - chat: ${chatId}, page: ${page}`, data);
+            return [];
+        }
+
         const cacheService = await this.chatService.getCacheServiceClient();
         const startIdx = page * cacheService.config.pageSize;
         const endIdx = Math.min(
             startIdx + cacheService.config.pageSize, 
-            data.messageOrder.length
+            messageOrder.length
         );
+        
         const messages: any[] = [];
-
-        for(let i  = startIdx; i < endIdx; i++) {
-            const messageId = data.messageOrder[i];
-            const message = data.messages.get(messageId);
+        for(let i = startIdx; i < endIdx; i++) {
+            const messageId = messageOrder[i];
+            const message = messagesArray.find(msg => (msg.id || msg.messageId) === messageId);
             if(message) messages.push(message);
         }
 
@@ -188,8 +202,32 @@ export class MessageControllerClient {
             ]);
 
             const cacheService = await this.chatService.getCacheServiceClient();
-            cacheService.init(chatId, countData);
-            this.getMessagesPage(pageData.messages, chatId, 0);
+            if(!cacheService.cache.has(chatId)) {
+                cacheService.init(chatId, countData);
+            }
+            
+            const cacheData = cacheService.cache.get(chatId)!;
+            cacheData.messages.clear();
+            cacheData.messageOrder = [];
+            
+            pageData.messages.forEach((msg: any) => {
+                const id = msg.id || msg.messageId;
+                if (id) {
+                    cacheData.messages.set(id, msg);
+                    cacheData.messageOrder.push(id);
+                }
+            });
+            
+            cacheData.loadedPages.add(0);
+            cacheData.totalMessagesCount = countData;
+            cacheData.lastAccessTime = Date.now();
+            cacheData.hasMore = pageData.hasMore || false;
+            cacheData.isFullyLoaded = !cacheData.hasMore;
+            cacheData.lastUpdated = Date.now();
+            
+            console.log(`Preloaded ${pageData.messages.length} messages for chat ${chatId}`);
+            
+            await this.getMessagesPage(cacheData, chatId, 0);
         } catch(err) {
             console.error(`Preload for ${chatId} failed`, err);
         }

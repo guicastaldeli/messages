@@ -315,7 +315,7 @@ bool SessionManager::saveSessions() {
         }
 
         file.close();
-        std::cout << "Saved " << sessions.size() << " sessions to " << storagePath << std::endl;
+        //std::cout << "Saved " << sessions.size() << " sessions to " << storagePath << std::endl;
         return true;
     } catch(const std::exception& err) {
         std::cerr << "Failed to save sessions: " << err.what() << std::endl;

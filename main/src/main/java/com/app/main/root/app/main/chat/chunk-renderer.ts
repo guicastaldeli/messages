@@ -36,8 +36,7 @@ export class ChunkRenderer {
             const distanceFromTop = scrollTop;
             const loadThreshold = 300;
 
-            if(
-                distanceFromTop < loadThreshold &&
+            if(distanceFromTop < loadThreshold &&
                 !this.chatController.isLoadingHistory &&
                 !this.isPreloading &&
                 this.currentLoadingPage === -1
@@ -64,7 +63,7 @@ export class ChunkRenderer {
 
         const messageController = this.chatService.getMessageController();
         const fileController = await this.chatService.getFileController();
-        const cacheData = await this.chatService.getCachedData(chatId, userId);
+        const cacheData = await this.chatService.getCachedData(chatId);
         let nextPage = this.chatController.currentPage + 1;
 
         if(!cacheData || 
@@ -86,7 +85,7 @@ export class ChunkRenderer {
 
         try {
             const cacheService = await this.chatService.getCacheServiceClient();
-            const cacheData = await this.chatService.getCachedData(userId, chatId);
+            const cacheData = await this.chatService.getCachedData(chatId);
             const data = cacheService.cache.get(chatId)!;
             if(cacheData && data.loadedPages.has(nextPage)) {
                 const messageService = await this.chatService.getMessageController().getMessageService();
@@ -113,7 +112,7 @@ export class ChunkRenderer {
      */
     public async loadCachedPages(userId: string, chatId: string): Promise<void> {
         const cacheService = await this.chatService.getCacheServiceClient();
-        const cacheData = this.chatService.getCachedData(userId, chatId);
+        const cacheData = this.chatService.getCachedData(chatId);
         const data = cacheService.cache.get(chatId)!;
         if(!cacheData || !data) return;
 

@@ -1,11 +1,11 @@
 import { SocketClientConnect } from "../../socket-client-connect";
 
 export class MessageServiceClient {
-    private baseUrl: string | undefined;
+    private url: string | undefined;
     private socketClient: SocketClientConnect;
 
     constructor(url: string | undefined, socketClient: SocketClientConnect) {
-        this.baseUrl = url;
+        this.url = url;
         this.socketClient = socketClient;
     }
 
@@ -30,41 +30,69 @@ export class MessageServiceClient {
     }> {
         try {
             const res = await fetch(
-                `${this.baseUrl}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
+                `${this.url}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
             );
-            if(!res.ok) {
+
+            if (!res.ok) {
                 const errorText = await res.text();
                 console.error(`API Error (${res.status}):`, errorText);
                 throw new Error(`Failed to fetch chat data! Status: ${res.status}`);
             }
-            
+
             const resData = await res.json();
-            if(resData.success === false) {
+
+            if (resData.success === false) {
                 throw new Error(resData.error || 'Failed to fetch chat data');
             }
-            if(resData.data) {
-                return resData.data;
-            } else if(resData.messages !== undefined) {
-                return resData;
-            } else {
-                console.warn('Unexpected response structure:', resData);
-                return {
-                    messages: [],
-                    pagination: {
-                        page,
-                        pageSize,
-                        totalMessages: 0,
-                        totalPages: 0,
-                        hasMore: false,
-                        fromCache: false
+
+            if (resData.data) {
+                const data = resData.data;
+
+                if (Array.isArray(data.messages)) {
+                    const decryptedMessages = [];
+
+                    for (const message of data.messages) {
+                        try {
+                            const decryptedMessage = await this.decryptMessage(chatId, message);
+                            decryptedMessages.push(decryptedMessage);
+                        } catch (err) {
+                            if (!message.system) {
+                                console.error('Failed to decrypt message:', err);
+                            }
+                            decryptedMessages.push(message);
+                        }
                     }
-                };
+
+                    data.messages = decryptedMessages.map(
+                        (message: any) => ({ ...message })
+                    );
+                }
+
+                return data;
             }
-        } catch(err) {
+
+            if (resData.messages !== undefined) {
+                return resData;
+            }
+
+            console.warn('Unexpected response structure:', resData);
+            return {
+                messages: [],
+                pagination: {
+                    page,
+                    pageSize,
+                    totalMessages: 0,
+                    totalPages: 0,
+                    hasMore: false,
+                    fromCache: false
+                }
+            };
+        } catch (err) {
             console.error(`Failed to fetch chat data for ${chatId}:`, err);
             throw err;
         }
     }
+
 
     /**
      * Save
@@ -80,7 +108,7 @@ export class MessageServiceClient {
             direction: string;
         }
     ): Promise<any> {
-        const res = await fetch(`${this.baseUrl}/api/message/messages`, {
+        const res = await fetch(`${this.url}/api/message/messages`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -95,7 +123,7 @@ export class MessageServiceClient {
      * Tracked Messages
      */
     public async getTrackedMessages(): Promise<any[]> {
-        const res = await fetch(`${this.baseUrl}/api/message/get-messages`);
+        const res = await fetch(`${this.url}/api/message/get-messages`);
         if(!res.ok) throw new Error('Failed to fetch tracked messages!');
         return res.json();
     }
@@ -115,7 +143,7 @@ export class MessageServiceClient {
 
         try {
             const res = await fetch(
-                `${this.baseUrl}/api/message/messages/chatId/${id}?page=${page}&pageSize=${pageSize}`
+                `${this.url}/api/message/messages/chatId/${id}?page=${page}&pageSize=${pageSize}`
             );
             if(!res.ok) throw new Error('Failed to fetch messages by chat id!');
 
@@ -207,7 +235,7 @@ export class MessageServiceClient {
      */
     public async getMessageCountByChatId(chatId: string): Promise<number> {
         const res = await fetch(
-            `${this.baseUrl}/api/message/messages/chatId/${chatId}/count`
+            `${this.url}/api/message/messages/chatId/${chatId}/count`
         );
         if(!res.ok) throw new Error('Failed to fetch messages count');
         
@@ -232,7 +260,7 @@ export class MessageServiceClient {
     }> {
         try {
             const url = await fetch(
-                `${this.baseUrl}/api/message/messages/recent/${userId}?page=${page}&pageSize=${pageSize}`
+                `${this.url}/api/message/messages/recent/${userId}?page=${page}&pageSize=${pageSize}`
             );
             if(!url.ok) throw new Error('Failed to fetch recent chats');
             
@@ -257,7 +285,7 @@ export class MessageServiceClient {
      */
     public async getRecentChatsCount(userId: string): Promise<number> {
         try {
-            const res = await fetch(`${this.baseUrl}/api/message/messages/recent/${userId}/count`);
+            const res = await fetch(`${this.url}/api/message/messages/recent/${userId}/count`);
             if(!res.ok) throw new Error('Failed to fetch recent chats count');
 
             const data = await res.json();
@@ -272,7 +300,7 @@ export class MessageServiceClient {
      * Get Message By User Id
      */
     public async getMessagesByUserId(userId: string): Promise<any[]> {
-        const res = await fetch(`${this.baseUrl}/api/message/messages/userId/${userId}`);
+        const res = await fetch(`${this.url}/api/message/messages/userId/${userId}`);
         if(!res.ok) throw new Error('Failed to fetch user messages!');
         return res.json();
     }
@@ -281,7 +309,7 @@ export class MessageServiceClient {
      * Stats
      */
     public async getMessagesStats(): Promise<any[]> {
-        const res = await fetch(`${this.baseUrl}/api/message/stats`);
+        const res = await fetch(`${this.url}/api/message/stats`);
         if(!res.ok) throw new Error('Failed to fetch user messages!');
         return res.json();
     }

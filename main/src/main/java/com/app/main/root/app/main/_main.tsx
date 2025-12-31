@@ -100,6 +100,12 @@ export class Main extends Component<any, State> {
             this.chatController.setChatManager(this.chatManager);
             if(userInfo?.userId) {
                 try {
+                    this.chatController.getUserData(
+                        userInfo.sessionId,
+                        userInfo.userId,
+                        userInfo.username
+                    );
+
                     const data = {
                         sessionId: userInfo.sessionId,
                         userId: userInfo.userId,

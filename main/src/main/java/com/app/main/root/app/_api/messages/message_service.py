@@ -26,7 +26,7 @@ class MessageService:
         )
         
     async def getRecentChatsCount(self, userId: str) -> dict:
-        return await self._request("get", f"/api/messages/recent/{userId}/count")
+        return await self._request("get", f"/api/message/messages/recent/{userId}/count")
     
     ## Chat Id
     async def getMessagesByChatId(

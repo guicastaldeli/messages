@@ -71,9 +71,6 @@ public class UserService {
 
     public _User getUserById(String id) throws SQLException {
     String query = CommandQueryManager.GET_USER_BY_ID.get();
-    
-    System.out.println("=== DEBUG: getUserById() ===");
-    System.out.println("Querying user with ID: " + id);
 
     try(
         Connection conn = getConnection();

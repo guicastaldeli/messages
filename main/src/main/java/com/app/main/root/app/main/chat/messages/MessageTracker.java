@@ -58,7 +58,7 @@ public class MessageTracker {
                 }
             }
     
-            logMessageToConsole(messageLog);
+            //logMessageToConsole(messageLog);
         } catch(Exception err) {
             throw new RuntimeException("Failed to save message to db!", err);
         }

@@ -75,7 +75,7 @@ export class ChatService {
         const cacheKey = `${chatId}_${userId}_${page}`;
 
         if(!forceRefresh && this.isDataLoaded(chatId, page)) {
-            const cachedData = await this.getCachedData(userId, chatId, page);
+            const cachedData = await this.getCachedData(chatId);
             return { ...cachedData, fromCache: true }
         }
         if(this.cacheServiceClient.pendingRequests.has(cacheKey)) {
@@ -187,21 +187,20 @@ export class ChatService {
     /**
      * Get Cached Data
      */
-    public async getCachedData(
-        userId: string, 
-        chatId: string, 
-        page: number = 0
-    ): Promise<{
-        messages: any[], 
-        files: any[]
-    }>{
-        const data = this.cacheServiceClient.cache.get(chatId)!;
-        if(!data) throw new Error('no data!');
-
-        const messages = await this.messageControllerClient.getMessagesPage(data, chatId, page);
-        const files = await this.fileControllerClient.getFilesPage(data, chatId, page);
-
-        return { messages, files }
+    public async getCachedData(chatId: string): Promise<any> {
+        try {
+            const cacheService = await this.getCacheServiceClient();
+            const cacheData = cacheService.cache.get(chatId);
+            if(!cacheData) {
+                console.warn(`No cache data found for chat ${chatId}. Available chats:`, Array.from(cacheService.cache.keys()));
+                return null;
+            }
+            
+            return cacheData;
+        } catch (error) {
+            console.error(`Error getting cached data for ${chatId}:`, error);
+            return null;
+        }
     }
 
     /**
