@@ -11,6 +11,7 @@ import java.util.List;
 public class ConnectionInfo {
     public String socketId;
     public String sessionId;
+    public String userId;
     public String username;
     public String account;
     public String ipAddress;
@@ -51,6 +52,7 @@ public class ConnectionInfo {
         connectionInfo.account = "Unknown";
         connectionInfo.ipAddress = ipAddress;
         connectionInfo.userAgent = userAgent;
+        connectionInfo.userId = null;
         connectionInfo.parseUserAgent(userAgent);
         connectionInfo.connectedAt = LocalDateTime.now();
         connectionInfo.isConnected = true;
@@ -122,8 +124,10 @@ public class ConnectionInfo {
     /*
     * ***Log
     */
-    @Override
+    //@Override
     public String toString() {
+        return "";
+        /*
         return String.format(
             """
                 ConnectionInfo{
@@ -156,5 +160,6 @@ public class ConnectionInfo {
             isConnected,
             getFormattedDuration()
         );
+        */
     }
 }

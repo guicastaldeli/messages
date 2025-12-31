@@ -76,10 +76,11 @@ public class ConnectionTrackerController {
     */
     @PutMapping("/connections/{socketId}/username/{username}")
     public ConnectionInfo updateUsername(
-        @PathVariable String socketId, 
+        @PathVariable String socketId,
+        @PathVariable String userId,
         @PathVariable String username
     ) {
-        connectionTracker.updateUsername(socketId, username);
+        connectionTracker.updateUsername(socketId, userId, username);
         ConnectionInfo conn = connectionTracker.getConnection(socketId);
         if(conn == null) throw new RuntimeException("Connection not found!");
         return conn;

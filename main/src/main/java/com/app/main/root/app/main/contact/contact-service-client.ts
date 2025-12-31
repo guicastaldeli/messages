@@ -24,8 +24,8 @@ export class ContactServiceClient {
     */
     public async sendContactRequest(username: string): Promise<void> {
         const responseDestination = '/queue/contact-request-scss';
-        const errDestination = '/queue/contact-request-err';
         const requestDestination = '/app/send-contact-request';
+        const errDestination = '/queue/contact-request-err';
 
         return new Promise((res, rej) => {
             this.socketClient.onDestination(responseDestination, (response: any) => {
@@ -51,6 +51,7 @@ export class ContactServiceClient {
                     this.socketClient.offDestination(errDestination);
                     rej(err);
                 });
+            console.log(requestDestination, { username }, responseDestination)
         });
     }
 

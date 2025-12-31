@@ -83,6 +83,7 @@ public class EventList {
                 String username = (String) data.get("username");
                 String userId = (String) data.get("userId");
 
+                System.out.print("USERID " + userId + " username" + username);
                 eventTracker.track(
                     "new-user",
                     username,
@@ -90,7 +91,7 @@ public class EventList {
                     sessionId,
                     username
                 );
-                connectionTracker.updateUsername(sessionId, username);
+                connectionTracker.updateUsername(sessionId, userId, username);
 
                 try {
                     serviceManager.getUserService().addUser(userId, username, sessionId);
@@ -975,10 +976,11 @@ public class EventList {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
                     String groupId = (String) data.get("groupId");
-                    String userId = (String) data.get("userId");
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    System.out.println(serviceManager.getUserService().getUserIdBySession(sessionId));
                     boolean isMember = serviceManager.getGroupService().isUserGroupMember(groupId, userId);
                     if(!isMember) {
-                        throw new Exception("User: " + userId + "is not a member!");
+                        throw new Exception("User: " + userId + " is not a member!");
                     }
                     if(groupId == null || groupId.trim().isEmpty()) {
                         throw new IllegalArgumentException("Group Id is required");

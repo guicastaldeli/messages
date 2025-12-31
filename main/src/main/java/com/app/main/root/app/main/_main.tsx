@@ -100,6 +100,16 @@ export class Main extends Component<any, State> {
             this.chatController.setChatManager(this.chatManager);
             if(userInfo?.userId) {
                 try {
+                    const data = {
+                        sessionId: userInfo.sessionId,
+                        userId: userInfo.userId,
+                        username: userInfo.username
+                    };
+                    await this.socketClientConnect.sendToDestination(
+                        '/app/new-user',
+                        data,
+                        '/topic/user'
+                    );
                     const loader = this.chatManager.getLoader();
                     if(loader) await loader.loadChatItems(userInfo.userId);
                 } catch (err) {
@@ -234,43 +244,55 @@ export class Main extends Component<any, State> {
                 console.log('Requested email:', email);
                 */
                 if (isSessionValid && userInfo && userInfo.email === email) {
-                    console.log('Valid session exists for this user, skipping login API');
-                    this.setState({ 
-                        username: userInfo.username,
-                        userId: userInfo.userId
-                    }, async () => {
-                        try {
-                            const cacheService = await this.chatService.getCacheServiceClient();
-                            await cacheService.initCache(userInfo.userId);
-                            await this.cachePreloader.startPreloading(userInfo.userId);
+                console.log('Valid session exists for this user, skipping login API');
+                this.setState({ 
+                    username: userInfo.username,
+                    userId: userInfo.userId,
+                    sessionId: userInfo.sessionId
+                }, async () => {
+                    try {
+                        const data = {
+                            sessionId: userInfo.sessionId,
+                            userId: userInfo.userId,
+                            username: userInfo.username
+                        };
+                        await this.socketClientConnect.sendToDestination(
+                            '/app/new-user',
+                            data,
+                            '/topic/user'
+                        );
+                        
+                        const cacheService = await this.chatService.getCacheServiceClient();
+                        await cacheService.initCache(userInfo.userId);
+                        await this.cachePreloader.startPreloading(userInfo.userId);
 
-                            await this.loadData();
-                            if (this.dashboardInstance) {
-                                await this.dashboardInstance.getUserData(
-                                    userInfo.sessionId,
-                                    userInfo.userId,
-                                    userInfo.username
-                                );
-                            }
-
-                            const authService = await this.apiClientController.getAuthService();
-                            const validation = await authService.validateSession();
-                            
-                            if(validation && validation.valid) {
-                                console.log('Session validated with server');
-                                sessionContext.setSession('MAIN_DASHBOARD');
-                            } else {
-                                console.log('Session invalid on server, forcing new login');
-                                SessionManager.clearSession();
-                                this.forceNewLogin(sessionContext, email, password, isCreateAccount, username);
-                            }
-                        } catch(err: any) {
-                            console.error('Error in existing session flow:', err);
-                            alert('Session error: ' + err.message);
+                        await this.loadData();
+                        if (this.dashboardInstance) {
+                            await this.dashboardInstance.getUserData(
+                                userInfo.sessionId,
+                                userInfo.userId,
+                                userInfo.username
+                            );
                         }
-                    });
-                    return;
-                }
+
+                        const authService = await this.apiClientController.getAuthService();
+                        const validation = await authService.validateSession();
+                        
+                        if(validation && validation.valid) {
+                            console.log('Session validated with server');
+                            sessionContext.setSession('MAIN_DASHBOARD');
+                        } else {
+                            console.log('Session invalid on server, forcing new login');
+                            SessionManager.clearSession();
+                            this.forceNewLogin(sessionContext, email, password, isCreateAccount, username);
+                        }
+                    } catch(err: any) {
+                        console.error('Error in existing session flow:', err);
+                        alert('Session error: ' + err.message);
+                    }
+                });
+                return;
+            }
 
                 await this.forceNewLogin(sessionContext, email, password, isCreateAccount, username);
             } catch (err: any) {
@@ -334,9 +356,22 @@ export class Main extends Component<any, State> {
                     
                     this.setState({ 
                         username: authData.username,
-                        userId: authData.userId
+                        userId: authData.userId,
+                        sessionId: authData.sessionId
                     }, async () => {
                         try {
+                            const data = {
+                                sessionId: authData.sessionId,
+                                userId: authData.userId,
+                                username: authData.username
+                            };
+                            
+                            await this.socketClientConnect.sendToDestination(
+                                '/app/new-user',
+                                data,
+                                '/topic/user'
+                            );
+                            
                             const cacheService = await this.chatService.getCacheServiceClient();
                             await cacheService.initCache(authData.userId);
                             await this.cachePreloader.startPreloading(authData.userId);
@@ -355,19 +390,13 @@ export class Main extends Component<any, State> {
                             console.log('Successfully logged in and switched to dashboard');
                         } catch (err: any) {
                             console.error('Error in post-login setup:', err);
-                            alert('Login successful but setup failed: ' + err.message);
+                            alert('Login successful but setup failed: ' + err.getMessage());
                         }
                     });
                 } else {
                     console.error('Invalid auth data:', authData);
                     throw new Error('Invalid response from server - missing user data');
                 }
-
-                console.log('=== Checking cookies after login ===');
-                console.log('All cookies:', document.cookie);
-                console.log('SESSION_ID:', CookieService.getValue(SessionManager.SESSION_ID_KEY));
-                console.log('USER_INFO:', CookieService.getValue(SessionManager.USER_INFO_KEY));
-                console.log('REMEMBER_USER:', CookieService.getValue(SessionManager.REMEMBER_USER));
             } catch (err: any) {
                 console.error('Authentication API error:', err);
                 alert(`Authentication failed: ${err.message}`);

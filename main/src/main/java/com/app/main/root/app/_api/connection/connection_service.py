@@ -40,8 +40,8 @@ class ConnectionService:
     ##
     ## Update Username
     ##
-    async def updateUsername(self, socketId: str, username: str) -> dict:
-        return await self._request("put", f"/api/connection-tracker/connections/{socketId}/username/{username}")
+    async def updateUsername(self, socketId: str, userId: str, username: str) -> dict:
+        return await self._request("put", f"/api/connection-tracker/connections/{socketId}/userId/{userId}/username/{username}")
     
     ##
     ## Count

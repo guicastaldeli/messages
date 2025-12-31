@@ -56,8 +56,8 @@ class ConnectionRoutes:
         ## Update Username
         ##
         @self.router.get("/{socketId}/username")
-        async def updateUsername(id: str, username: str) -> dict:
-            conn = await self.connectionService.updateUsername(id, username)
+        async def updateUsername(id: str, userId: str, username: str) -> dict:
+            conn = await self.connectionService.updateUsername(id, userId, username)
             if(not conn):
                 raise HTTPException(status_code=400, detail="Connection not found!")
             return conn

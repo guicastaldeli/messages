@@ -45,7 +45,6 @@ public class ConnectionTracker {
         );
         connectionInfo.isConnected = true;
         connections.put(socketId, connectionInfo);
-        serviceManager.getUserService().linkUserSession(socketId, socketId);
         
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);
@@ -75,11 +74,11 @@ public class ConnectionTracker {
     /*
     * Update Username 
     */
-    public void updateUsername(String socketId, String username) {
+    public void updateUsername(String socketId, String userId, String username) {
         ConnectionInfo connectionInfo = connections.get(socketId);
         if(connectionInfo != null) {
-            String userId = socketId;
             connectionInfo.username = username;
+            connectionInfo.userId = userId;
             
             serviceManager.getUserService().linkUserSession(userId, socketId);
             serviceManager.getGroupService().updateGroupSessionsUser(userId, socketId);

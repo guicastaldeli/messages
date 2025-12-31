@@ -173,6 +173,7 @@ public class AuthController {
                 System.out.println("Created new session: " + sessionId);
             }
 
+            serviceManager.getUserService().linkUserSession(userId, sessionId);
             serviceManager.getCookieService().setAuthCookies(
                 response, 
                 sessionId, 
@@ -286,10 +287,11 @@ public class AuthController {
                     );
             }
 
+            serviceManager.getUserService().linkUserSession(sessionData.getUserId(), sessionId);
             String clientIp = connectionTracker.getClientIpAddress(request);
             String userAgent = request.getHeader("User-Agent");
             connectionTracker.trackConnection(sessionId, clientIp, userAgent);
-            connectionTracker.updateUsername(sessionId, sessionData.getUsername());
+            connectionTracker.updateUsername(sessionId, sessionData.getUserId(), sessionData.getUsername());
 
             serviceManager.getSessionService().refreshSession(
                 sessionId, 
