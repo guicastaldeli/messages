@@ -23,16 +23,17 @@ export class MessageControllerClient {
     /**
      * Add Message
      */
-    public addMessage(
+    public async addMessage(
         chatId: string, 
         messages: any | any[],
         page: number = 0
-    ): void {
-        if(!this.chatService.getCacheServiceClient().cache.has(chatId)) {
-            this.chatService.getCacheServiceClient().init(chatId, 0);
+    ): Promise<void> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        if(!cacheService.cache.has(chatId)) {
+            cacheService.init(chatId, 0);
         }
 
-        const data = this.chatService.getCacheServiceClient().cache.get(chatId)!;
+        const data = cacheService.cache.get(chatId)!;
         const messageArray = Array.isArray(messages) ? messages : [messages];
         messageArray.forEach((m: any) => {
             const id = m.id || m.messageId;
@@ -49,22 +50,23 @@ export class MessageControllerClient {
         data.lastUpdated = time;
         const totalMessagesKnown = data.messageOrder.length;
         const estimatedTotal = Math.max(data.totalMessagesCount, totalMessagesKnown);
-        const totalPossiblePages = Math.ceil(estimatedTotal / this.chatService.getCacheServiceClient().config.pageSize);
+        const totalPossiblePages = Math.ceil(estimatedTotal / cacheService.config.pageSize);
         const currentPagesLoaded = data.loadedPages.size;
         
         data.hasMore =
             currentPagesLoaded < totalPossiblePages || 
-            (messages.length === this.chatService.getCacheServiceClient().config.pageSize);
+            (messages.length === cacheService.config.pageSize);
         
         data.isFullyLoaded = 
             !data.hasMore && 
             data.loadedPages.size === totalPossiblePages;
     }
 
-    public getMessagesPage(data: any, chatId: string, page: number): any[] {
-        const startIdx = page * this.chatService.getCacheServiceClient().config.pageSize;
+    public async getMessagesPage(data: any, chatId: string, page: number): Promise<any[]> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const startIdx = page * cacheService.config.pageSize;
         const endIdx = Math.min(
-            startIdx + this.chatService.getCacheServiceClient().config.pageSize, 
+            startIdx + cacheService.config.pageSize, 
             data.messageOrder.length
         );
         const messages: any[] = [];
@@ -78,8 +80,9 @@ export class MessageControllerClient {
         return messages;
     }
 
-    public hasMoreMessages(chatId: string): boolean {
-        const data = this.chatService.getCacheServiceClient().cache.get(chatId);
+    public async hasMoreMessages(chatId: string): Promise<boolean> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const data = cacheService.cache.get(chatId);
         if(!data) return false;
         if(data.isFullyLoaded) return false;
         if(data.hasMore) return true;
@@ -92,7 +95,7 @@ export class MessageControllerClient {
         return loadedCount < estimatedTotalMessages;
     }
 
-    public getMessagesWithScroll(
+    public async getMessagesWithScroll(
         chatId: string,
         scrollPosition: number,
         containerHeight: number,
@@ -101,42 +104,46 @@ export class MessageControllerClient {
         messages: any[],
         hasMore: boolean
     }> {
-        this.chatService.getCacheServiceClient().selectChat(chatId);
+        const cacheService = await this.chatService.getCacheServiceClient();
+        cacheService.selectChat(chatId);
         const approxMessageHeight = 80;
         const bufferMessages = 20;
 
         const startIdx = Math.max(0, Math.floor(scrollPosition / approxMessageHeight) - bufferMessages);
         const endIdx = Math.min(
-            this.getTotalMessages(chatId) - 1,
+            await this.getTotalMessages(chatId) - 1,
             startIdx + 
             Math.ceil(containerHeight / approxMessageHeight) + 
             bufferMessages
         );
 
-        const visibleMessages = this.getMessagesInRange(chatId, startIdx, endIdx);
+        const visibleMessages = await this.getMessagesInRange(chatId, startIdx, endIdx);
+        const hasMoreMessages = await this.hasMoreMessages(chatId);
         return Promise.resolve({
             messages: visibleMessages,
-            hasMore: this.hasMoreMessages(chatId)
+            hasMore: hasMoreMessages
         });
     }
 
     /**
      * Get Total Messages
      */
-    public getTotalMessages(chatId: string): number {
-        const data = this.chatService.getCacheServiceClient().cache.get(chatId);
+    public async getTotalMessages(chatId: string): Promise<number> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const data = cacheService.cache.get(chatId);
         return data ? data.totalMessagesCount : 0;
     }
 
     /**
      * Messages in Range
      */
-    public getMessagesInRange(
+    public async getMessagesInRange(
         chatId: string, 
         start: number, 
         end: number
-    ): any[] {
-        const data = this.chatService.getCacheServiceClient().cache.get(chatId);
+    ): Promise<any[]> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const data = cacheService.cache.get(chatId);
         if(!data) return [];
 
         const result: any[] = [];
@@ -180,7 +187,8 @@ export class MessageControllerClient {
                 this.messageService.getMessagesByChatId(chatId, 0)
             ]);
 
-            this.chatService.getCacheServiceClient().init(chatId, countData);
+            const cacheService = await this.chatService.getCacheServiceClient();
+            cacheService.init(chatId, countData);
             this.getMessagesPage(pageData.messages, chatId, 0);
         } catch(err) {
             console.error(`Preload for ${chatId} failed`, err);

@@ -6,8 +6,8 @@ import { ChatManager } from "./chat/chat-manager";
 import { ChatService } from "./chat/chat-service";
 import { chatState } from "./chat/chat-state-service";
 import { GroupLayout } from "./chat/type/group/group-layout";
-import { ContactServiceClient } from "./_contact_config/contact-service-client";
-import { ContactLayout } from "./_contact_config/contact-layout";
+import { ContactServiceClient } from "./contact/contact-service-client";
+import { ContactLayout } from "./contact/contact-layout";
 import { SessionManager } from "./_session/session-manager";
 
 interface Props {
@@ -48,8 +48,10 @@ export class Dashboard extends Component<Props, State> {
         this.groupContainerRef = React.createRef();
     }
 
-    public async getUserData(userId: string): Promise<void> {
+    public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
         this.setState({ userId });
+        this.props.chatManager.getUserData(sessionId, userId, username);
+        console.log(sessionId, userId,'username:', username)
     }
 
     async componentDidMount(): Promise<void> {
@@ -75,6 +77,7 @@ export class Dashboard extends Component<Props, State> {
         }
 
         if(!this.groupContainerRef.current || !this.props.chatManager) return;
+        this.props.chatManager.setDashboard(this);
         this.props.chatManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
@@ -269,13 +272,15 @@ export class Dashboard extends Component<Props, State> {
                                         <div id="actions-bar">
                                             <button 
                                                 id="action-create-group"
-                                                onClick={() => this.props.chatManager.getGroupManager().onCreateGroup()}
+                                                onClick={() => chatManager?.getGroupManager()?.onCreateGroup()}
+                                                disabled={!chatManager}
                                             >
                                                 Group++++
                                             </button>
                                             <button 
                                                 id="action-join-group"
-                                                onClick={() => this.props.chatManager.getGroupManager().onJoinGroup()}
+                                                onClick={() => chatManager?.getGroupManager()?.onJoinGroup()}
+                                                disabled={!chatManager}
                                             >
                                                 Join :))
                                             </button>

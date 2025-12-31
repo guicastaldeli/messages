@@ -32,6 +32,7 @@ interface State {
 
 export class ChatManager {
     private apiClientController: ApiClientController;
+    private socketClient: SocketClientConnect;
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
@@ -54,10 +55,11 @@ export class ChatManager {
         apiClientController: ApiClientController,
         dashboard: Dashboard | null,
         appEl: HTMLDivElement | null = null,
-        username: string,
+        username: string | undefined,
         setState: React.Component<any, State>['setState']
     ) {
         this.chatService = chatService;
+        this.socketClient = socketClient;
         this.apiClientController = apiClientController;
         this.loader = new Loader(
             socketClient, 
@@ -76,7 +78,7 @@ export class ChatManager {
             apiClientController,
             dashboard, 
             appEl, 
-            username
+            username!
         );
         this.setState = setState;
     }
@@ -85,6 +87,14 @@ export class ChatManager {
         this.userId = userId;
         await this.directManager.getUserData(sessionId, userId);
         await this.groupManager.getUserData(sessionId, userId, username);
+    }
+
+    public initLoader(): void {
+        this.loader = new Loader(
+            this.socketClient,
+            this.chatService,
+            this
+        );
     }
 
     public mount(): void {

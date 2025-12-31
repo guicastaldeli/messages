@@ -12,6 +12,7 @@ import { ChunkRenderer } from "./chunk-renderer";
 import { ChatStateManager } from '../chat/chat-state-manager';
 import { ChatService } from './chat-service';
 import { Item } from './file/file-item';
+import { SessionManager } from '../_session/session-manager';
 
 export class ChatController {
     private queueManager: QueueManager;
@@ -162,8 +163,8 @@ export class ChatController {
         });
     }
 
-    public async renderAllCachedMessages(chatId: string): Promise<void> {
-        const cacheData = this.chatService.getCacheServiceClient().getCacheData(chatId);
+    public async renderAllCachedMessages(userId: string, chatId: string): Promise<void> {
+        const cacheData = await this.chatService.getCachedData(userId, chatId);
         if(!cacheData) return;
 
         const allCachedMessages = Array.from(cacheData.messages.values())
@@ -243,13 +244,15 @@ export class ChatController {
             }
             this.scrollHandler = null;
         }
-        if(!this.chatService.getCacheServiceClient().isChatCached(chatId)) {
-            this.chatService.getCacheServiceClient().init(chatId, 0);
+
+        const cacheService = await this.chatService.getCacheServiceClient(); 
+        if(!cacheService.isChatCached(chatId)) {
+            cacheService.init(chatId);
         }
 
-        const cacheData = this.chatService.getCacheServiceClient().getCacheData(chatId);
+        const cacheData = cacheService.getCacheData(chatId);
         if(cacheData && cacheData.messages.size > 0) {
-            await this.renderAllCachedMessages(chatId);
+            await this.renderAllCachedMessages(this.userId, chatId);
             await this.chunkRenderer.setupScrollHandler(this.userId);
             
             const container = await this.getContainer();
@@ -259,8 +262,18 @@ export class ChatController {
                 }, 100);
             }
         } else {
-            this.loadHistory(chatId, this.userId, 0);
-            await this.chunkRenderer.setupScrollHandler(this.userId);
+            const userIdToUse = this.userId || this.chatManager?.userId;
+            if (userIdToUse) {
+                this.loadHistory(chatId, userIdToUse);
+                await this.chunkRenderer.setupScrollHandler(userIdToUse);
+            } else {
+                console.error('Cannot load history: userId is undefined');
+                const sessionData = SessionManager?.getUserInfo?.();
+                if(sessionData?.userId) {
+                    this.loadHistory(chatId, sessionData.userId);
+                    await this.chunkRenderer.setupScrollHandler(sessionData.userId);
+                }
+            }
         }
     }
 
@@ -330,6 +343,7 @@ export class ChatController {
      * Send Message Method
      */
     private async sendMessage(content: any): Promise<boolean> {
+        console.log("SEND MESSAGE TST")
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
         const chatId = currentChat?.id || currentChat?.chatId;
@@ -412,7 +426,7 @@ export class ChatController {
                     timestamp: time,
                     isTemp: false
                 }
-                this.chatService.getMessageController().addMessage(chatId, messageToCache);
+                await this.chatService.getMessageController().addMessage(chatId, messageToCache);
             } catch(err) {
                 console.error('Failed to save message :(', err);
                 const messageToCache = {
@@ -424,7 +438,7 @@ export class ChatController {
                     timestamp: time,
                     isTemp: true
                 }
-                this.chatService.getMessageController().addMessage(chatId, messageToCache);
+                await this.chatService.getMessageController().addMessage(chatId, messageToCache);
             }
             if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
             this.chatManager.setLastMessage(
@@ -551,7 +565,7 @@ export class ChatController {
             }
         );
         if(res) {
-            this.chatService.getMessageController().addMessage(chatId, analyzedData);
+            await this.chatService.getMessageController().addMessage(chatId, analyzedData);
             this.chatManager.setLastMessage(
                 chatId,
                 this.userId,
@@ -613,11 +627,13 @@ export class ChatController {
         userId: string,
         page: number = 0
     ): Promise<void> {
+        console.log("LOAD HISTORY!!!")
         if(this.isLoadingHistory) return;
         this.isLoadingHistory = true;
 
         try {
             const chatData = await this.getChatData(chatId, userId, page);
+            console.log(chatData.messages)
             if(chatData.messages && chatData.messages.length > 0) {
                 const sortedMessages = chatData.messages.sort((a, b) => {
                     const tA = a.timestamp || a.createdAt || 0;

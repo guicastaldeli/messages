@@ -103,20 +103,39 @@ public class ChatService {
         return allChats;
     }
 
-    public Map<String, Object> getChatData(String userId, String chatId, int page, int pageSize) throws SQLException {
+    /**
+     * Get Chat Data
+     */
+    public Map<String, Object> getChatData(
+        String userId, 
+        String chatId, 
+        int page, 
+        int pageSize
+    ) throws SQLException {
         Map<String, Object> chatData = new HashMap<>();
         
-        List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
-        chatData.put("messages", messages);
-        
-        Map<String, Object> filesResult = serviceManager.getFileService().listFiles(userId, chatId, page, pageSize);
-        chatData.put("files", filesResult.get("files"));
-        chatData.put("filesPagination", filesResult.get("pagination"));
-        
-        chatData.put("chatId", chatId);
-        chatData.put("userId", userId);
-        chatData.put("page", page);
-        chatData.put("pageSize", pageSize);
+        try {
+            List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+            chatData.put("messages", messages != null ? messages : new ArrayList<>());
+            
+            Map<String, Object> filesResult = serviceManager.getFileService().listFiles(userId, chatId, page, pageSize);
+            chatData.put("files", filesResult != null && filesResult.get("files") != null ? 
+                filesResult.get("files") : new ArrayList<>());
+            
+            Map<String, Object> pagination = new HashMap<>();
+            pagination.put("page", page);
+            pagination.put("pageSize", pageSize);
+            pagination.put("hasMore", messages != null && messages.size() == pageSize);
+            chatData.put("pagination", pagination);
+        } catch (Exception e) {
+            chatData.put("messages", new ArrayList<>());
+            chatData.put("files", new ArrayList<>());
+            chatData.put("pagination", Map.of(
+                "page", page,
+                "pageSize", pageSize,
+                "hasMore", false
+            ));
+        }
         
         return chatData;
     }

@@ -38,7 +38,7 @@ class FileService:
         filePath: str,
         userId: str,
         originalFileName: str,
-        chatId: str = "root"
+        chatId: str
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -117,7 +117,7 @@ class FileService:
     async def listFiles(
         self,
         userId: str,
-        chatId: str = "root",
+        chatId: str,
         page: int = 0
     ) -> Dict[str, Any]:
         try:
@@ -172,44 +172,8 @@ class FileService:
         except httpx.RequestError as err:
             raise HTTPException(status_code=503, detail=f"Service unavailable")
         
-    ## Search Files
-    async def searchFiles(
-        self,
-        userId: str,
-        query: str,
-        fileType: Optional[str] = None,
-        page: int = 0
-    ) -> Dict[str, Any]:
-        try:
-            async with httpx.AsyncClient() as client:
-                params = {
-                    'userId': userId,
-                    'query': query,
-                    'fileType': fileType,
-                    'page': page,
-                    'pageSize': 5
-                }
-                params = {
-                    k: v for k, v in params.items()
-                    if v is not None
-                }
-                
-                res = await client.get(
-                    f"{self.url}/api/files/search",
-                    params=params
-                )
-                if(res.status_code == 200):
-                    return res.json()
-                else:
-                    raise HTTPException(
-                        status_code=res.status_code,
-                        detail=res.text
-                    )
-        except httpx.RequestError as err:
-            raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
-        
     ## Count Files
-    async def countFiles(self, userId: str, chatId: str = "root") -> Dict[str, Any]:
+    async def countFiles(self, userId: str, chatId: str) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
                 params = {
@@ -232,7 +196,7 @@ class FileService:
     async def countPages(
         self, 
         userId: str, 
-        chatId: str = "root"
+        chatId: str
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
@@ -257,7 +221,7 @@ class FileService:
     async def getCacheKey(
         self, 
         userId: str, 
-        chatId: str = "root", 
+        chatId: str, 
         page: int = 0
     ) -> Dict[str, Any]:
         try:
@@ -269,6 +233,47 @@ class FileService:
                 }
                 
                 res = await client.get(f"{self.url}/api/files/cache-key", params=params)
+                if(res.status_code == 200):
+                    return res.json()
+                else:
+                    raise HTTPException(
+                        status_code=res.status_code,
+                        detail=res.text
+                    )
+        except httpx.RequestError as err:
+            raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
+        
+    ## Get Recent Files
+    async def getRecentFiles(
+        self,
+        userId: str,
+        page: int = 0,
+        pageSize: int = 20
+    ) -> Dict[str, Any]:
+        try:
+            async with httpx.AsyncClient() as client:
+                params = {
+                    'userId': userId,
+                    'page': page,
+                    'pageSize': pageSize
+                }
+                
+                res = await client.get(f"{self.url}/api/files/recent/{userId}", params=params)
+                if(res.status_code == 200):
+                    return res.json()
+                else:
+                    raise HTTPException(
+                        status_code=res.status_code,
+                        detail=res.text
+                    )
+        except httpx.RequestError as err:
+            raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
+
+    ## Get Recent Files Count
+    async def getRecentFilesCount(self, userId: str) -> Dict[str, Any]:
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.get(f"{self.url}/api/files/recent/{userId}/count")
                 if(res.status_code == 200):
                     return res.json()
                 else:

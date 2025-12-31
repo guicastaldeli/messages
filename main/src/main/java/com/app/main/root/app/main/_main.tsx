@@ -20,6 +20,7 @@ interface State {
     activeChat: ActiveChat | null;
     currentSession: SessionType;
     userId: string | null;
+    sessionId: string | null;
     username: string | null;
     isLoading: boolean;
     rememberUser: boolean;
@@ -59,6 +60,7 @@ export class Main extends Component<any, State> {
             activeChat: null,
             currentSession: 'LOGIN',
             userId: null,
+            sessionId: null,
             username: null,
             isLoading: true,
             rememberUser: rememberUserCookie
@@ -67,7 +69,18 @@ export class Main extends Component<any, State> {
 
     async componentDidMount(): Promise<void> {
          try {
+            const userInfo = SessionManager.getUserInfo();
+            console.log('Loaded user info from cookies:', userInfo);
+        
+            if(userInfo) {
+                this.setState({
+                    userId: userInfo.userId,
+                    sessionId: userInfo.sessionId,
+                    username: userInfo.username
+                });
+            }
             await this.connect();
+            
             const rememberUser = CookieService.getValue(SessionManager.REMEMBER_USER) === 'true';
             console.log('Remember user from cookie:', rememberUser);
 
@@ -78,11 +91,22 @@ export class Main extends Component<any, State> {
                 this.apiClientController,
                 this.dashboardInstance,
                 this.appContainerRef.current,
-                this.state.username!,
+                userInfo?.username,
                 this.setState.bind(this)
             );
+
+            this.chatManager.initLoader();
             this.chatManager.mount();
             this.chatController.setChatManager(this.chatManager);
+            if(userInfo?.userId) {
+                try {
+                    const loader = this.chatManager.getLoader();
+                    if(loader) await loader.loadChatItems(userInfo.userId);
+                } catch (err) {
+                    console.error('Failed to load chat items:', err);
+                }
+            }
+            
             const cacheService = await this.chatService.getCacheServiceClient();
             if(this.state.userId) await cacheService.initCache(this.state.userId);
             
@@ -119,6 +143,17 @@ export class Main extends Component<any, State> {
 
     private setDashboardRef = (instance: Dashboard | null): void => {
         this.dashboardInstance = instance;
+        if(instance && this.state.userId && this.state.username) {
+            this.socketClientConnect.getSocketId().then((sessionId) => {
+                if(sessionId) {
+                    instance.getUserData(
+                        sessionId,
+                        this.state.userId!,
+                        this.state.username!
+                    );
+                }
+            });
+        }
     }
 
     //Join
@@ -191,12 +226,13 @@ export class Main extends Component<any, State> {
                 const isSessionValid = SessionManager.isSessionValid();
                 const userInfo = SessionManager.getUserInfo();
                 
+                /*
                 console.log('=== Session Check Before Login ===');
                 console.log('Existing session ID:', existingSessionId);
                 console.log('Is session valid?', isSessionValid);
                 console.log('User info from cookies:', userInfo);
                 console.log('Requested email:', email);
-
+                */
                 if (isSessionValid && userInfo && userInfo.email === email) {
                     console.log('Valid session exists for this user, skipping login API');
                     this.setState({ 
@@ -209,6 +245,13 @@ export class Main extends Component<any, State> {
                             await this.cachePreloader.startPreloading(userInfo.userId);
 
                             await this.loadData();
+                            if (this.dashboardInstance) {
+                                await this.dashboardInstance.getUserData(
+                                    userInfo.sessionId,
+                                    userInfo.userId,
+                                    userInfo.username
+                                );
+                            }
 
                             const authService = await this.apiClientController.getAuthService();
                             const validation = await authService.validateSession();
@@ -301,7 +344,11 @@ export class Main extends Component<any, State> {
                             await this.loadData();
                             
                             if (this.dashboardInstance) {
-                                await this.dashboardInstance.getUserData(authData.userId);
+                                await this.dashboardInstance.getUserData(
+                                    authData.sessionId,
+                                    authData.userId,
+                                    authData.username
+                                );
                             }
                             
                             sessionContext.setSession('MAIN_DASHBOARD');
@@ -428,15 +475,21 @@ export class Main extends Component<any, State> {
                                         </div>
                                     )}
                                     {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
-                                        <Dashboard 
-                                            ref={this.setDashboardRef}
-                                            chatController={this.chatController}
-                                            chatManager={this.state.chatManager!}
-                                            chatService={this.chatService}
-                                            chatList={chatList}
-                                            activeChat={activeChat}
-                                            onLogout={() => this.handleLogout(sessionContext)}
-                                        />
+                                        <>
+                                            {!this.chatManager ? (
+                                                <div>Initializing chat manager...</div>
+                                            ) : (
+                                                <Dashboard 
+                                                    ref={this.setDashboardRef}
+                                                    chatController={this.chatController}
+                                                    chatManager={this.chatManager}
+                                                    chatService={this.chatService}
+                                                    chatList={chatList}
+                                                    activeChat={activeChat}
+                                                    onLogout={() => this.handleLogout(sessionContext)}
+                                                />
+                                            )}
+                                        </>
                                     )}
                                 </>
                             );

@@ -231,7 +231,7 @@ export class FileServiceClient {
     /**
      * Count Files
      */
-    public async countFiles(userId: string, chatId: string = "root"): Promise<any> {
+    public async countFiles(userId: string, chatId: string): Promise<any> {
         try {
             const params = new URLSearchParams({ userId, chatId });
             const res = await fetch(`${this.url}/api/files/count?${params}`, {
@@ -253,7 +253,7 @@ export class FileServiceClient {
     /**
      * Count Pages
      */
-    public async countPages(userId: string, chatId: string = "root"): Promise<any> {
+    public async countPages(userId: string, chatId: string): Promise<any> {
         try {
             const params = new URLSearchParams({ 
                 userId, 
@@ -288,7 +288,7 @@ export class FileServiceClient {
      */
     public async getCacheKey(
         userId: string, 
-        chatId: string = "root", 
+        chatId: string, 
         page: number
     ): Promise<any> {
         try {

@@ -664,15 +664,41 @@ public class EventList {
         configs.put("exit-group", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 try {
+                    System.out.println("DEBUG - Exit Group Request received:");
+                    System.out.println("  Session ID: " + sessionId);
+                    System.out.println("  Payload: " + payload);
+                    
                     long time = System.currentTimeMillis();
                     Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
-                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    
+                    String userId = (String) data.get("userId");
+                    if(userId == null || userId.trim().isEmpty()) {
+                        userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                        System.out.println("  WARNING: Using userId from session lookup: " + userId);
+                    }
+                    
                     String username = (String) data.get("username");
                     String groupId = (String) data.get("groupId");
                     String groupName = (String) data.get("groupName");
 
+                    if(userId == null) {
+                        throw new Exception("User ID is required!");
+                    }
+                    if(groupId == null) {
+                        throw new Exception("Group ID is required!");
+                    }
+
+                    boolean isMember = serviceManager.getGroupService().isUserGroupMember(groupId, userId);
+                    if(!isMember) {
+                        System.out.println("User is not a member of the group, but proceeding...");
+                    }
+                    
                     boolean success = serviceManager.getGroupService().removeUserFromGroup(groupId, userId);
-                    if(!success) throw new Exception("Failed to exit group");
+                    if(!success) {
+                        System.out.println("removeUserFromGroup returned false");
+                        throw new Exception("Failed to exit group");
+                    }
+
                     serviceManager.getGroupService().removeUserFromGroupMapping(userId, groupId);
                     List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
                     
@@ -684,13 +710,12 @@ public class EventList {
                         username
                     );
 
-                    
                     /* Event Response */
                     Map<String, Object> res = new HashMap<>();
                     res.put("id", groupId);
                     res.put("name", groupName);
                     res.put("userId", userId);
-                    res.put("joined", true);
+                    res.put("joined", false);
                     res.put("timestamp", time);
                     res.put("sessionId", sessionId);
                     serviceManager.getUserService().sendMessageToUser(sessionId, "exit-group-scss", res);
@@ -717,6 +742,7 @@ public class EventList {
                     }
                     return Collections.emptyMap();
                 } catch(Exception err) {
+                    System.out.println("ERROR in exit-group: " + err.getMessage());
                     err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
                     errRes.put("error", "EXIT_FAILED");
@@ -949,17 +975,18 @@ public class EventList {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
                     String groupId = (String) data.get("groupId");
-                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String userId = (String) data.get("userId");
                     boolean isMember = serviceManager.getGroupService().isUserGroupMember(groupId, userId);
-                    if(!isMember) throw new Exception("User: " + userId + "is not a member!");
-
+                    if(!isMember) {
+                        throw new Exception("User: " + userId + "is not a member!");
+                    }
                     if(groupId == null || groupId.trim().isEmpty()) {
                         throw new IllegalArgumentException("Group Id is required");
                     }
                     if(userId == null || userId.trim().isEmpty()) {
                         throw new IllegalArgumentException("User Id is required");
                     }
-                    if (!isMember) {
+                    if(!isMember) {
                         throw new SecurityException("User: " + userId + ", is not a member of group: " + groupId);
                     }
 

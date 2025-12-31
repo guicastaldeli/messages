@@ -3,6 +3,7 @@ import com.app.main.root.app._data.MessagePerspectiveResult;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._cache.CacheService;
+import com.app.main.root.app._cache.ChatCache;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app.main.chat.messages.MessageLog;
@@ -128,7 +129,10 @@ public class MessageService {
                             direction
                         );
 
-                        cacheService.getChatCache().invalidateMessageCache(chatId);
+                        ChatCache chatCache = cacheService.getChatCache();
+                        if(chatCache != null) {
+                            chatCache.invalidateMessageCache(chatId);
+                        }
                         return messageId;
                     }
                 }
@@ -144,10 +148,13 @@ public class MessageService {
     ** 
     */
     public List<_Message> getMessagesByChatId(String chatId, int page, int pageSize) throws SQLException {
-        List<_Message> cachedMessages = cacheService.getChatCache().getCachedMessages(chatId, page);
-        if(cachedMessages != null) {
-            System.out.println("Returning cached messages for chat " + chatId + " page " + page);
-            return cachedMessages;
+        ChatCache chatCache = cacheService.getChatCache();
+        if(chatCache != null) {
+            List<_Message> cachedMessages = cacheService.getChatCache().getCachedMessages(chatId, page);
+            if(cachedMessages != null) {
+                System.out.println("Returning cached messages for chat " + chatId + " page " + page);
+                return cachedMessages;
+            }
         }
 
         String encriptionKey = chatId;
@@ -174,7 +181,7 @@ public class MessageService {
             }
         }
 
-        cacheService.getChatCache().cacheMessages(chatId, page, messages);
+        if(chatCache != null) cacheService.getChatCache().cacheMessages(chatId, page, messages);
         return messages;
     }
 

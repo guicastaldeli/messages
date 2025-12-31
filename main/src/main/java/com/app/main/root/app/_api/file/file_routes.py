@@ -16,7 +16,7 @@ class FileRoutes:
         @self.router.post("/upload/{userId}/{chatId}")
         async def uploadFile(
             userId: str,
-            chatId: str = "root",
+            chatId: str,
             file: UploadFile = File(...)
         ):
             try:
@@ -43,7 +43,7 @@ class FileRoutes:
         @self.router.post("/upload-multiple/{userId}/{chatId}")
         async def uploadMultipleFiles(
             userId: str,
-            chatId: str = "root",
+            chatId: str,
             files: List[UploadFile] = File(...)
         ):
             try:
@@ -229,3 +229,33 @@ class FileRoutes:
                 return res
             except Exception as err:
                 raise HTTPException(status_code=500, detail=f"Failed to generate cache key: {str(err)}")
+        
+        ## Get Recent Files
+        @self.router.get("/recent/{userId}")
+        async def getRecentFiles(
+            userId: str,
+            page: int = Query(0),
+            pageSize: int = Query(20)
+        ):
+            try:
+                result = await self.fileService.getRecentFiles(userId)
+                return {
+                    "success": True,
+                    "chats": result.get("files", []),
+                    "total": len(result.get("files", [])),
+                    "hasMore": len(result.get("files", [])) == pageSize
+                }
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        ## Get Recent Files Count
+        @self.router.get("/recent/{userId}/count")
+        async def getRecentFilesCount(userId: str):
+            try:
+                result = await self.fileService.getRecentFilesCount(userId)
+                return {
+                    "success": True,
+                    "count": result.get("total", 0)
+                }
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))

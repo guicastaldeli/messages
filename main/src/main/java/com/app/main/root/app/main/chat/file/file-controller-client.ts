@@ -20,10 +20,11 @@ export class FileControllerClient {
         this.fileService = new FileServiceClient(this.apiClientController.getUrl());
     }
 
-    public getFilesPage(data: any, chatId: string, page: number): any[] {
-        const startIdx = page * this.chatService.getCacheServiceClient().config.pageSize;
+    public async getFilesPage(data: any, chatId: string, page: number): Promise<any[]> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const startIdx = page * cacheService.config.pageSize;
         const endIdx = Math.min(
-            startIdx + this.chatService.getCacheServiceClient().config.pageSize, 
+            startIdx + cacheService.config.pageSize, 
             data.fileOrder.length
         );
         const files: any[] = [];
@@ -36,14 +37,16 @@ export class FileControllerClient {
         return files;
     }
 
-    public hasMoreFiles(chatId: string): boolean {
-        const data = this.chatService.getCacheServiceClient().cache.get(chatId);
+    public async hasMoreFiles(chatId: string): Promise<boolean> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const data = cacheService.cache.get(chatId);
         if(!data) return false;
         return data.hasMoreFiles;
     }
 
-    public getTotalFiles(chatId: string): number {
-        const data = this.chatService.getCacheServiceClient().cache.get(chatId);
+    public async getTotalFiles(chatId: string): Promise<number> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const data = cacheService.cache.get(chatId);
         return data ? data.totalFilesCount : 0;
     }
 
@@ -74,7 +77,8 @@ export class FileControllerClient {
                 this.fileService.getFilesByChatId(chatId, 0)
             ]);
 
-            this.chatService.getCacheServiceClient().init(chatId, countData);
+            const cacheService = await this.chatService.getCacheServiceClient();
+            cacheService.init(chatId, countData);
             this.getFilesPage(pageData.messages, chatId, 0);
         } catch(err) {
             console.error(`Preload for ${chatId} failed`, err);

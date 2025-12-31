@@ -33,7 +33,7 @@ export class GroupManager {
     private layoutRef = React.createRef<GroupLayout>();
     public username: string;
     private socketId: string | null = null;
-    private userId: string | null = null;
+    public userId: string | null = null;
     
     public root: Root | null = null;
     public container!: HTMLElement;
@@ -72,20 +72,21 @@ export class GroupManager {
         this.dashboard = dashboard;
         this.appEl = appEl;
         this.username = username;
-        this.inviteCodeManager = new InviteCodeManager(socketClient);
+        this.inviteCodeManager = new InviteCodeManager(socketClient, this);
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
+        console.log("SESSIONID", sessionId, "USERID", userId);
         this.socketId = sessionId;
         this.userId = userId;
         this.username = username;
     }
     
-    /*
-    **
-    *** Group Creation
-    **
-    */
+    /**
+     * 
+     * Group Creation
+     * 
+     */
     private async handleGroupCreationScss(data: Data): Promise<void> {
         const time = new Date().toISOString();
         const name = this.currentGroupName;
@@ -119,15 +120,15 @@ export class GroupManager {
             groupId: data.id
         }
 
-        //Chat Event
+        /* Chat Event */
         const chatEvent = new CustomEvent('chat-item-added', { detail: chatItem });
         window.dispatchEvent(chatEvent);
 
-        //Creation Complete Event
+        /* Creation Complete Event */
         const creationEvent = new CustomEvent('group-creation-complete', { detail: eventData }); 
         window.dispatchEvent(creationEvent);
 
-        //Activation Event
+        /* Activation Event */
         const chatActivationEvent = new CustomEvent('group-activated', { detail: eventData });
         window.dispatchEvent(chatActivationEvent);
 
@@ -206,20 +207,17 @@ export class GroupManager {
         await this.socketClient.eventDiscovery.refreshEvents();
         this.currentGroupName = groupName;
         chatState.setType('GROUP');
-        const sessionId = this.socketId;
-        const userId = this.userId;
-        console.log(userId)
 
         const data = {
-            sessionId: sessionId,
+            sessionId: this.socketId,
             creator: this.username,
-            creatorId: userId,
+            creatorId: this.userId,
             groupName: this.currentGroupName.trim()
         }
 
         return new Promise(async (res, rej) => {
-            const sucssDestination = `/user/${sessionId}/queue/group-creation-scss`;
-            const errDestination = `/user/${sessionId}/queue/group-creation-err`;
+            const sucssDestination = `/user/${this.socketId}/queue/group-creation-scss`;
+            const errDestination = `/user/${this.socketId}/queue/group-creation-err`;
             this.creationRes = res;
             this.creationRej = rej;
 
@@ -278,11 +276,11 @@ export class GroupManager {
         });
     }
 
-    /*
-    **
-    *** Join Group
-    **
-    */
+    /**
+     * 
+     * Join Group
+     * 
+     */
     private async handleGroupJoinScss(data: Data): Promise<void> {
         this.currentGroupName = data.name;
         const name = this.currentGroupName;
@@ -320,15 +318,15 @@ export class GroupManager {
             lastMessageTime: time
         }
 
-        //Chat Event
+        /* Chat Event */
         const chatEvent = new CustomEvent('chat-item-added', { detail: chatItem });
         window.dispatchEvent(chatEvent);
 
-        //Activated Event
+        /* Activated Event */
         const chatActivationEvent = new CustomEvent('chat-activated', { detail: data }); 
         window.dispatchEvent(chatActivationEvent);
 
-        //Join Complete
+        /* Join Complete */
         const joinEvent = new CustomEvent('group-join-complete', { detail: data });
         window.dispatchEvent(joinEvent);
 
@@ -429,7 +427,7 @@ export class GroupManager {
     /* Join Method */
     public async join(inviteCode: string, id?: string): Promise<any> {
         return new Promise(async (res, rej) => {
-            const client = this.userId;
+            const client = this.socketId;
             const sucssDestination = `/user/${client}/queue/join-group-scss`;
             const errDestination = `/user/${client}/queue/join-group-err`;
             this.joinRes = res;
@@ -485,11 +483,11 @@ export class GroupManager {
         });
     }
 
-    /*
-    **
-    *** Exit Group
-    **
-    */
+    /**
+     * 
+     * Exit Group
+     * 
+     */
     private async handleGroupExitScss(data: any): Promise<void> {
         const exitedGroupId = data.id;
         if(this.currentGroupId === exitedGroupId) {
@@ -532,13 +530,10 @@ export class GroupManager {
     /* Exit Method */
     public async exitGroup(groupId?: string): Promise<any> {
         const targetGroupId = groupId || this.currentGroupId;
-        console.log('groupId', groupId)
-        console.log('currentGroupId', this.currentGroupId)
         if(!targetGroupId) throw new Error('NO group selected to exit!');
 
         return new Promise(async (res, rej) => {
             const client = this.socketId;
-            console.log('EXITR GROUP CLIENT: ', client)
             if(!client) {
                 rej(new Error('No socket connection'));
                 return;
@@ -582,8 +577,9 @@ export class GroupManager {
                     groupId: targetGroupId,
                     groupName: this.currentGroupName
                 }
+                console.log(data)
+                console.log('CLIENT', client)
 
-                console.log('EXITR GROUP CLIENT: ', client)
                 await this.socketClient.sendToDestination(
                     '/app/exit-group',
                     data
@@ -600,51 +596,11 @@ export class GroupManager {
         });
     }
 
-    /*
-    ** Group Info 
-    */
-    public async info(code: string): Promise<any> {
-        return new Promise(async (res, rej) => {
-            const sucssDestination = '/queue/group-info-scss';
-            const errDestination = '/queue/group-info-err';
-
-            /* Success */
-            const handleSucss = (data: any) => {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
-                res(data);
-            }
-
-            /* Error */
-            const handleErr = (error: any) => {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
-                rej(new Error(error.message));
-            }
-
-            try {
-                await this.socketClient.onDestination(sucssDestination, handleSucss);
-                await this.socketClient.onDestination(errDestination, handleErr);
-                const data = { inviteCode: code }
-
-                await this.socketClient.sendToDestination(
-                    '/app/get-group-info',
-                    data,
-                    sucssDestination
-                );
-            } catch(err) {
-                this.socketClient.offDestination(sucssDestination, handleSucss);
-                this.socketClient.offDestination(errDestination, handleErr);
-                rej(err);
-            }
-        });
-    }
-
-    /*
-    **
-    *** Get Group Members
-    **
-    */
+    /**
+     * 
+     * Get Group Members
+     * 
+     */
     public async getGroupMembers(groupId: string): Promise<any[]> {
         return new Promise(async (res, rej) => {
             const sucssDestination = '/queue/group-members-scss';
@@ -681,11 +637,11 @@ export class GroupManager {
         });
     }
 
-    /*
-    **
-    *** Add User to Group
-    **
-    */
+    /**
+     * 
+     * Add User to Group
+     * 
+     */
     public async addUserToGroup(groupId: string, contactId: string): Promise<any[]> {
         return new Promise(async (res, rej) => {
             const sucssDestination = '/queue/add-user-group-scss';
@@ -729,11 +685,11 @@ export class GroupManager {
         });
     }
 
-    /*
-    **
-    *** Remove User to Group
-    **
-    */
+    /**
+     * 
+     * Remove User to Group
+     * 
+     */
     public async removeUserFromGroup(
         groupId: string, 
         userId: string, 
@@ -780,14 +736,49 @@ export class GroupManager {
         });
     }
 
-    private async getContactDetails(id: string): Promise<any> {
-        const contacts = await this.dashboard?.contactService?.getContacts();
-        return contacts?.find((c: any) => c.id === id);
+    /**
+     * Group Info
+     */
+    public async info(code: string): Promise<any> {
+        return new Promise(async (res, rej) => {
+            const sucssDestination = '/queue/group-info-scss';
+            const errDestination = '/queue/group-info-err';
+
+            /* Success */
+            const handleSucss = (data: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                res(data);
+            }
+
+            /* Error */
+            const handleErr = (error: any) => {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(new Error(error.message));
+            }
+
+            try {
+                await this.socketClient.onDestination(sucssDestination, handleSucss);
+                await this.socketClient.onDestination(errDestination, handleErr);
+                const data = { inviteCode: code }
+
+                await this.socketClient.sendToDestination(
+                    '/app/get-group-info',
+                    data,
+                    sucssDestination
+                );
+            } catch(err) {
+                this.socketClient.offDestination(sucssDestination, handleSucss);
+                this.socketClient.offDestination(errDestination, handleErr);
+                rej(err);
+            }
+        });
     }
 
-    /*
-    ** Group Actions
-    */
+    /**
+     * Group Actions
+     */
     public onCreateGroup = () => {
         this.showCreationMenu();
     }
@@ -796,9 +787,17 @@ export class GroupManager {
         this.showJoinMenu();
     }
 
-    /*
-    ** Get Invite Code Manager
-    */
+    /**
+     * Get Contact Details
+     */
+    private async getContactDetails(id: string): Promise<any> {
+        const contacts = await this.dashboard?.contactService?.getContacts();
+        return contacts?.find((c: any) => c.id === id);
+    }
+
+    /**
+     * Get Invite Code Manager
+     */
     public getInviteCodeManager(): InviteCodeManager {
         return this.inviteCodeManager;
     }

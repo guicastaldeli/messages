@@ -150,7 +150,7 @@ public class FileController {
     @GetMapping("/list")
     public ResponseEntity<?> listFiles(
         @RequestParam String userId,
-        @RequestParam(defaultValue = "root") String chatId,
+        @RequestParam String chatId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "5") int pageSize
     ) {
@@ -209,7 +209,7 @@ public class FileController {
     @GetMapping("/count")
     public ResponseEntity<?> countFiles(
         @RequestParam String userId,
-        @RequestParam(defaultValue = "root") String chatId
+        @RequestParam String chatId
     ) {
         try {
             int totalFiles = serviceManager.getFileService().countTotalFiles(userId, chatId);
@@ -232,7 +232,7 @@ public class FileController {
     @GetMapping("/count-pages")
     public ResponseEntity<?> countPages(
         @RequestParam String userId,
-        @RequestParam(defaultValue = "root") String chatId,
+        @RequestParam String chatId,
         @RequestParam(defaultValue = "5") int pageSize
     ) {
         try {
@@ -261,7 +261,7 @@ public class FileController {
     @GetMapping("/cache-key")
     public ResponseEntity<?> getCacheKey(
         @RequestParam String userId,
-        @RequestParam(defaultValue = "root") String chatId,
+        @RequestParam String chatId,
         @RequestParam(defaultValue = "0") int page
     ) {
         try {
@@ -272,6 +272,62 @@ public class FileController {
                 "userId", userId,
                 "chatId", chatId,
                 "page", page
+            ));
+        } catch(Exception err) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", err.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get Recent Files
+     */
+    @GetMapping("/recent/{userId}")
+    public ResponseEntity<?> getRecentFiles(
+        @PathVariable String userId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int pageSize
+    ) {
+        try {
+            if(userId == null || userId.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "User Id is required!"
+                ));
+            }
+
+            Map<String, Object> res = serviceManager.getFileService()
+                .listFiles(userId, "root", page, pageSize);
+            
+            List<Map<String, Object>> files = (List<Map<String, Object>>) res.get("files");
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "chats", files != null ? files : new ArrayList<>(),
+                "total", files != null ? files.size() : 0,
+                "hasMore", files != null && files.size() == pageSize
+            ));
+        } catch(Exception err) {
+            err.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", err.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get Files Count
+     */
+    @GetMapping("/recent/{userId}/count")
+    public ResponseEntity<?> getRecentFilesCount(@PathVariable String userId) {
+        try {
+            int totalFiles = serviceManager.getFileService().countTotalFiles(userId, "root");
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "count", totalFiles
             ));
         } catch(Exception err) {
             return ResponseEntity.status(500).body(Map.of(

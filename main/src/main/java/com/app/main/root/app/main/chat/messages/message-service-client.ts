@@ -32,20 +32,34 @@ export class MessageServiceClient {
             const res = await fetch(
                 `${this.baseUrl}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
             );
-            if(!res.ok) throw new Error('Failed to fetch chat data!');
+            if(!res.ok) {
+                const errorText = await res.text();
+                console.error(`API Error (${res.status}):`, errorText);
+                throw new Error(`Failed to fetch chat data! Status: ${res.status}`);
+            }
             
-            const data = await res.json();
-            return data.data || {
-                messages: [],
-                pagination: {
-                    page,
-                    pageSize,
-                    totalMessages: 0,
-                    totalPages: 0,
-                    hasMore: false,
-                    fromCache: false
-                }
-            };
+            const resData = await res.json();
+            if(resData.success === false) {
+                throw new Error(resData.error || 'Failed to fetch chat data');
+            }
+            if(resData.data) {
+                return resData.data;
+            } else if(resData.messages !== undefined) {
+                return resData;
+            } else {
+                console.warn('Unexpected response structure:', resData);
+                return {
+                    messages: [],
+                    pagination: {
+                        page,
+                        pageSize,
+                        totalMessages: 0,
+                        totalPages: 0,
+                        hasMore: false,
+                        fromCache: false
+                    }
+                };
+            }
         } catch(err) {
             console.error(`Failed to fetch chat data for ${chatId}:`, err);
             throw err;

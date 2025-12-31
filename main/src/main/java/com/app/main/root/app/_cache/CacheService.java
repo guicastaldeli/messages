@@ -28,6 +28,8 @@ public class CacheService {
 
     @PostConstruct
     public void init() {
+        this.chatCache = new ChatCache(0, chatCacheMap);
+        this.fileCache = new FileCache(0, fileCacheMap);
         cleanupExecutor.scheduleAtFixedRate(this::cleanupExpiredEntries, 1, 1, TimeUnit.MINUTES);
     }
 

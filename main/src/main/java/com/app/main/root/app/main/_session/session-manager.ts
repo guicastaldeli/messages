@@ -46,7 +46,7 @@ export class SessionManager {
                 const userInfo = this.getUserInfo();
                 if(userInfo && userInfo.sessionId) {
                     sessionId = userInfo.sessionId;
-                    console.log('Got sessionId from USER_INFO:', sessionId);
+                    //console.log('Got sessionId from USER_INFO:', sessionId);
                 }
             }
             const userInfo = this.getUserInfo();
@@ -259,7 +259,7 @@ export class SessionManager {
             const userCookie = CookieService.getValue(this.USER_INFO_KEY);
             if(!userCookie) return null;
             
-            console.log('USER_INFO cookie:', userCookie);
+            //console.log('USER_INFO cookie:', userCookie);
             
             let value = userCookie.trim();
             if(value.startsWith('"') && value.endsWith('"')) {

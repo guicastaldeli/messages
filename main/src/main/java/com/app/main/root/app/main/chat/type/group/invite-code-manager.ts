@@ -1,10 +1,13 @@
 import { SocketClientConnect } from "@/app/main/socket-client-connect";
+import { GroupManager } from "./group-manager";
 
 export class InviteCodeManager {
     private socketClient: SocketClientConnect;
+    private groupManager: GroupManager
 
-    constructor(socketClient: SocketClientConnect) {
+    constructor(socketClient: SocketClientConnect, groupManager: GroupManager) {
         this.socketClient = socketClient;
+        this.groupManager = groupManager;
     }
 
     /*
@@ -98,7 +101,7 @@ export class InviteCodeManager {
         try {
             await this.socketClient.onDestination(sucssDest, sucssHandler);
             await this.socketClient.onDestination(errorDest, errHandler);
-            const userId = await this.socketClient.getSocketId();
+            const userId = this.groupManager.userId;
             const reqData = {
                 userId: userId,
                 groupId: id 

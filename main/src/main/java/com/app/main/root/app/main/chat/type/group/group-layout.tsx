@@ -361,7 +361,7 @@ export class GroupLayout extends Component<Props, State> {
                         <div className="messages"></div>
                         <div className="typebox">
                             <input type="text" id="message-input" />
-                            <button id="send-message">
+                            <button id="send-message" onClick={() => console.log('t7fdyug')}>
                                 Send
                             </button>
                         </div>

@@ -28,24 +28,34 @@ public class ChatController {
         @RequestParam(defaultValue = "20") int pageSize
     ) {
         try {
-            Map<String, Object> data = serviceManager.getChatService()
-                .getChatData(
-                    userId,
-                    chatId,
-                    page,
-                    pageSize
-                );
-
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "chatId", chatId,
-                "data", data
-            ));
+            Map<String, Object> data = serviceManager.getChatService().getChatData(
+                userId, 
+                chatId, 
+                page, 
+                pageSize
+            );
+            if(data == null) {
+                data = new HashMap<>();
+            }
+            if(data.get("messages") == null) {
+                data.put("messages", new ArrayList<>());
+            }
+            if(data.get("files") == null) {
+                data.put("files", new ArrayList<>());
+            }
+                
+            Map<String, Object> response = new HashMap<>();
+            response.put("chatId", chatId);
+            response.put("data", data);
+            response.put("success", true);
+                
+            return ResponseEntity.ok(response);
         } catch(Exception err) {
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", err.getMessage()
-            ));
+            Map<String, Object> errRes = new HashMap<>();
+            errRes.put("chatId", chatId);
+            errRes.put("error", err.getMessage());
+            errRes.put("success", false);
+            return ResponseEntity.status(500).body(errRes);
         }
     }
 

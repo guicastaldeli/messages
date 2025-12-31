@@ -39,22 +39,24 @@ export class CookieService {
     public static getValue(name: string): string | null {
         if(typeof document === 'undefined') return null;
 
+        /*
         console.log('=== CookieService.getValue DEBUG ===');
         console.log('Looking for cookie:', name);
         console.log('All cookies string:', document.cookie);
+        */
         
         const cookies = document.cookie.split(';');
-        console.log('Split cookies:', cookies);
+        //console.log('Split cookies:', cookies);
         
         for(let cookie of cookies) {
             const [cookieName, cookieVal] = cookie.trim().split('=');
-            console.log('Checking:', cookieName, 'value:', cookieVal);
+            //console.log('Checking:', cookieName, 'value:', cookieVal);
             if(cookieName === name) {
-                console.log('Found cookie:', name, 'value:', cookieVal);
+                //console.log('Found cookie:', name, 'value:', cookieVal);
                 return decodeURIComponent(cookieVal);
             }
         }
-        console.log('Cookie not found:', name);
+        //console.log('Cookie not found:', name);
         return null;
     }
 

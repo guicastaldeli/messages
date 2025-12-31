@@ -95,14 +95,16 @@ export class CachePreloaderService {
     ** Preload Chat
     */
     private async preloadChat(chatId: string): Promise<void> {
-        if(this.chatService.getCacheServiceClient().isChatCached(chatId)) return;
+        const cacheService = await this.chatService.getCacheServiceClient();
+        if(cacheService.isChatCached(chatId)) return;
+
         try {
-            const service = await this.chatService.getMessageController().getMessageService();
-            const res = await service.getMessagesByChatId(chatId, 0);
+            const messageService = await this.chatService.getMessageController().getMessageService();
+            const res = await messageService.getMessagesByChatId(chatId, 0);
             const messages = res.messages || [];
             if(messages.length >= 0) {
-                this.chatService.getCacheServiceClient().init(chatId, messages.length);
-                this.chatService.getMessageController().getMessagesPage(messages, chatId, 0);
+                cacheService.init(chatId, messages.length);
+                await this.chatService.getMessageController().getMessagesPage(messages, chatId, 0);
                 console.log(`Preloaded ${messages.length} messages for ${chatId}`);
             }
         } catch(err) {

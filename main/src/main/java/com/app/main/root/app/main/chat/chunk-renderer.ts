@@ -62,12 +62,14 @@ export class ChunkRenderer {
             return;
         }
 
-        const cacheData = this.chatService.getCachedData(chatId, userId);
+        const messageController = this.chatService.getMessageController();
+        const fileController = await this.chatService.getFileController();
+        const cacheData = await this.chatService.getCachedData(chatId, userId);
         let nextPage = this.chatController.currentPage + 1;
 
         if(!cacheData || 
-            (this.chatService.getMessageController().hasMoreMessages(chatId)) ||
-            (this.chatService.getFileController().hasMoreFiles(chatId))
+            (await messageController.hasMoreMessages(chatId)) ||
+            (await this.chatService.getFileController().hasMoreFiles(chatId))
         ) return;
         this.currentLoadingPage = nextPage;
         await this.chatController.loadHistory(chatId, userId, nextPage);
@@ -83,8 +85,9 @@ export class ChunkRenderer {
         this.currentLoadingPage = nextPage;
 
         try {
-            const cacheData = this.chatService.getCachedData(userId, chatId);
-            const data = this.chatService.getCacheServiceClient().cache.get(chatId)!;
+            const cacheService = await this.chatService.getCacheServiceClient();
+            const cacheData = await this.chatService.getCachedData(userId, chatId);
+            const data = cacheService.cache.get(chatId)!;
             if(cacheData && data.loadedPages.has(nextPage)) {
                 const messageService = await this.chatService.getMessageController().getMessageService();
                 const response = await messageService.getMessagesByChatId(chatId, nextPage);
@@ -109,8 +112,9 @@ export class ChunkRenderer {
      * Load Cached Pages
      */
     public async loadCachedPages(userId: string, chatId: string): Promise<void> {
+        const cacheService = await this.chatService.getCacheServiceClient();
         const cacheData = this.chatService.getCachedData(userId, chatId);
-        const data = this.chatService.getCacheServiceClient().cache.get(chatId)!;
+        const data = cacheService.cache.get(chatId)!;
         if(!cacheData || !data) return;
 
         const loadedPages = Array.from(data.loadedPages).sort((a, b) => a - b);
@@ -118,7 +122,7 @@ export class ChunkRenderer {
             const startIndex = page * 20;
             const endIndex = startIndex + 19;
             const messages = 
-                this.chatService
+                await this.chatService
                     .getMessageController()
                     .getMessagesInRange(
                         chatId, 
