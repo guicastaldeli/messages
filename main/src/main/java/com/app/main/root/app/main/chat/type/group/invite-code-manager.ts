@@ -1,4 +1,4 @@
-import { SocketClientConnect } from "../../socket-client-connect";
+import { SocketClientConnect } from "@/app/main/socket-client-connect";
 
 export class InviteCodeManager {
     private socketClient: SocketClientConnect;

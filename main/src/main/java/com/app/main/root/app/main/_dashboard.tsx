@@ -6,7 +6,7 @@ import { ChatManager } from "./chat/chat-manager";
 import { ChatService } from "./chat/chat-service";
 import { chatState } from "./chat/chat-state-service";
 import { ApiClientController } from "./_api-client/api-client-controller";
-import { GroupLayout } from "./chat/group/group-layout";
+import { GroupLayout } from "./chat/type/group/group-layout";
 import { ContactServiceClient } from "./_contact_config/contact-service-client";
 import { ContactLayout } from "./_contact_config/contact-layout";
 

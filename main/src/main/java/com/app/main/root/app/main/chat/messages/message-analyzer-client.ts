@@ -1,3 +1,5 @@
+import { MessagePerspectiveManager } from "./message-perspective-manager";
+
 export interface Context {
     sessionId: string;
     userId: string;
@@ -42,9 +44,6 @@ interface ValidationResult {
     errors: string[];
     warnings: string[];
 }
-
-import { DirectManager } from "../chat/direct/direct-manager";
-import { MessagePerspectiveManager } from "./message-perspective-manager";
 
 export class MessageAnalyzerClient {
     private socketId: string | null = null;

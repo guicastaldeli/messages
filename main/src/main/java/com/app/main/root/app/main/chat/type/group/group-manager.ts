@@ -1,14 +1,14 @@
 import React, { use } from "react";
 import { createRoot, Root } from "react-dom/client";
-import { SocketClientConnect } from "../../socket-client-connect";
-import { ChatController } from "../../chat/chat-controller";
+import { SocketClientConnect } from "@/app/main/socket-client-connect";
+import { ChatController } from "../../chat-controller";
 import { InviteCodeManager } from "./invite-code-manager";
-import { ApiClientController } from "../../_api-client/api-client";
+import { ApiClientController } from "@/app/main/_api-client/api-client-controller";
 import { GroupLayout } from "./group-layout";
-import { chatState } from "../../chat/chat-state-service";
-import { Dashboard } from "../../_dashboard";
+import { chatState } from "../../chat-state-service";
+import { Dashboard } from "@/app/main/_dashboard";
 import { JoinGroupLayout } from "./join-group-form-layout";
-import { ChatManager } from "../chat-manager";
+import { ChatManager } from "../../chat-manager";
 
 interface Data {
     id: string;

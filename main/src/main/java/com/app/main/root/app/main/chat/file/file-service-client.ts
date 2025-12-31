@@ -6,25 +6,68 @@ export class FileServiceClient {
     }
 
     /**
+     * Get Chat Data
+     */
+    public async getChatData(
+        userId: string,
+        chatId: string,
+        page: number = 0,
+        pageSize: number = 20
+    ): Promise<{
+        files: any[];
+        pagination: {
+            page: number;
+            pageSize: number;
+            totalFiles: number;
+            totalPages: number;
+            hasMore: boolean;
+            fromCache: boolean;
+        }
+    }> {
+        try {
+            const res = await fetch(
+                `${this.url}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
+            );
+            if(!res.ok) throw new Error('Failed to fetch chat data!');
+            
+            const data = await res.json();
+            return data.data || {
+                files: [],
+                pagination: {
+                    page,
+                    pageSize,
+                    totalFiles: 0,
+                    totalPages: 0,
+                    hasMore: false,
+                    fromCache: false
+                }
+            };
+        } catch(err) {
+            console.error(`Failed to fetch chat data for ${chatId}:`, err);
+            throw err;
+        }
+    }
+
+    /**
      * Upload File
      */
     public async uploadFile(
         file: File, 
         userId: string, 
-        parentFolderId: string = "root"
+        chatId: string
     ): Promise<any> {
-        try {
-            const formData = new FormData();
+        const formData = new FormData();
             formData.append('file', file);
+            formData.append('userId', userId);
+            formData.append('chatId', chatId);
 
-            const res = await fetch(`${this.url}/api/files/upload/${userId}/${parentFolderId}`, {
+        try {
+            const res = await fetch(`${this.url}/api/chat/${chatId}/upload`, {
                 method: 'POST',
-                body: formData,
-                credentials: 'include'
+                body: formData
             });
-            if(!res.ok) {
-                throw new Error(`Upload failed!: ${res.statusText}`);
-            }
+            
+            if(!res.ok) throw new Error('Upload failed');
             return await res.json();
         } catch(err) {
             console.error('Upload error:', err);
@@ -117,13 +160,13 @@ export class FileServiceClient {
      */
     public async listFiles(
         userId: string, 
-        parentFolderId: string,
+        chatId: string,
         page: number = 0
     ): Promise<any> {
         try {
             const params = new URLSearchParams({ 
                 userId, 
-                parentFolderId,
+                chatId,
                 page: page.toString() 
             });
 
@@ -188,9 +231,9 @@ export class FileServiceClient {
     /**
      * Count Files
      */
-    public async countFiles(userId: string, folderId: string = "root"): Promise<any> {
+    public async countFiles(userId: string, chatId: string = "root"): Promise<any> {
         try {
-            const params = new URLSearchParams({ userId, folderId });
+            const params = new URLSearchParams({ userId, chatId });
             const res = await fetch(`${this.url}/api/files/count?${params}`, {
                 method: 'GET',
                 headers: {
@@ -210,11 +253,11 @@ export class FileServiceClient {
     /**
      * Count Pages
      */
-    public async countPages(userId: string, folderId: string = "root"): Promise<any> {
+    public async countPages(userId: string, chatId: string = "root"): Promise<any> {
         try {
             const params = new URLSearchParams({ 
                 userId, 
-                folderId
+                chatId
             });
             const res = await fetch(`${this.url}/api/files/count-pages?${params}`, {
                 method: 'GET',
@@ -245,13 +288,13 @@ export class FileServiceClient {
      */
     public async getCacheKey(
         userId: string, 
-        folderId: string = "root", 
+        chatId: string = "root", 
         page: number
     ): Promise<any> {
         try {
             const params = new URLSearchParams({ 
                 userId, 
-                folderId, 
+                chatId, 
                 page: page.toString() 
             });
 
@@ -267,6 +310,143 @@ export class FileServiceClient {
             return await res.json();
         } catch (err) {
             console.error(err);
+            throw err;
+        }
+    }
+
+    /**
+     * Get Recent Files
+     */
+    public async getRecentFiles(
+        userId: string,
+        page: number = 0,
+        pageSize: number = 20
+    ): Promise<{
+        chats: any[];
+        currentPage: number;
+        pageSize: number;
+        totalChats: number;
+        totalPages: number;
+        hasMore: boolean;
+    }> {
+        try {
+            const res = await fetch(
+                `${this.url}/api/files/recent/${userId}?page=${page}&pageSize=${pageSize}`
+            );
+            if(!res.ok) throw new Error('Failed to fetch recent files');
+            
+            const data = await res.json();
+            return {
+                chats: data.chats || data || [],
+                currentPage: page,
+                pageSize: pageSize,
+                totalChats: data.total || data.chats?.length || 0,
+                totalPages: Math.ceil((data.total || data.chats?.length || 0) / pageSize),
+                hasMore: data.hasMore !== false
+            };
+        } catch(err) {
+            console.error('Failed to fetch recent files:', err);
+            throw err;
+        }
+    }
+
+    /**
+     * Get Files By Chat Id
+     */
+    public async getFilesByChatId(
+        chatId: string, 
+        page: number = 0
+    ): Promise<{
+        messages: any[];
+        currentPage: number;
+        pageSize: number;
+        totalFiles: number;
+        totalPages: number;
+        hasMore: boolean;
+    }> {
+        const pageSize: number = 20;
+
+        try {
+            const res = await fetch(
+                `${this.url}/api/files/chat/${chatId}?page=${page}&pageSize=${pageSize}`
+            );
+            if(!res.ok) throw new Error('Failed to fetch files by chat id');
+
+            const data = await res.json();
+            const files = Array.isArray(data) ? data : (data.files || []);
+            
+            return {
+                messages: files,
+                currentPage: page,
+                pageSize: pageSize,
+                totalFiles: data.total || files.length,
+                totalPages: Math.ceil((data.total || files.length) / pageSize),
+                hasMore: data.hasMore !== false
+            };
+        } catch(err) {
+            console.error('Failed to fetch files by chat id:', err);
+            throw err;
+        }
+    }
+
+    /**
+     * Get Count By Chat Id
+     */
+    public async getFilesCountByChatId(chatId: string): Promise<number> {
+        try {
+            const res = await fetch(
+                `${this.url}/api/files/chat/${chatId}/count`
+            );
+            if(!res.ok) throw new Error('Failed to fetch files count');
+            
+            const data = await res.json();
+            return typeof data === 'number' ? data : (data.count || data.total || 0);
+        } catch(err) {
+            console.error('Failed to fetch files count:', err);
+            throw err;
+        }
+    }
+
+    /**
+     * Get Recent Files Count
+     */
+    public async getRecentFilesCount(userId: string): Promise<number> {
+        try {
+            const res = await fetch(`${this.url}/api/files/recent/${userId}/count`);
+            if(!res.ok) throw new Error('Failed to fetch recent files count');
+
+            const data = await res.json();
+            return data.count || 0;
+        } catch(err) {
+            console.error('Failed to fetch recent files count:', err);
+            throw err;
+        }
+    }
+
+    /**
+     * Get Files By User Id
+     */
+    public async getFilesByUserId(userId: string): Promise<any[]> {
+        try {
+            const res = await fetch(`${this.url}/api/files/user/${userId}`);
+            if(!res.ok) throw new Error('Failed to fetch user files');
+            return await res.json();
+        } catch(err) {
+            console.error('Failed to fetch user files:', err);
+            throw err;
+        }
+    }
+
+    /**
+     * Get File Stats
+     */
+    public async getFileStats(): Promise<any[]> {
+        try {
+            const res = await fetch(`${this.url}/api/files/stats`);
+            if(!res.ok) throw new Error('Failed to fetch file stats');
+            return await res.json();
+        } catch(err) {
+            console.error('Failed to fetch file stats:', err);
             throw err;
         }
     }

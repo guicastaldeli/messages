@@ -1,7 +1,7 @@
 import '../../__styles/styles.scss';
 import React, { useState } from 'react';
 import { Component, createRef } from 'react';
-import { ChatController } from '../../chat/chat-controller';
+import { ChatController } from '../../chat-controller';
 import { GroupManager } from './group-manager';
 import { GroupMembersInterface } from './layout/group-members-interface';
 

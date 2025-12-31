@@ -12,7 +12,7 @@ export class MessageServiceClient {
     /**
      * Get Chat Data
      */
-     public async getChatData(
+    public async getChatData(
         userId: string,
         chatId: string,
         page: number = 0,
@@ -23,7 +23,6 @@ export class MessageServiceClient {
             page: number;
             pageSize: number;
             totalMessages: number;
-            totalFiles: number;
             totalPages: number;
             hasMore: boolean;
             fromCache: boolean;

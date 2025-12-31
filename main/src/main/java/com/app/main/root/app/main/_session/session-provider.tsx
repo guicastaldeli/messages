@@ -24,7 +24,7 @@ export interface ContextType {
 interface Props {
     children: React.ReactNode;
     initialSession?: SessionType;
-    ApiClientController: ApiClientController;
+    apiClientController: ApiClientController;
 }
 
 interface State {
@@ -46,7 +46,7 @@ export class SessionProvider extends Component<Props, State> {
 
     constructor(props: Props) {
         super(props);
-        this.apiClientController = props.ApiClientController;
+        this.apiClientController = props.apiClientController;
         this.sessionTypes = {} as any;
         
         this.state = {

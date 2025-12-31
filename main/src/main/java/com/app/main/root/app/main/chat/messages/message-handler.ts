@@ -1,4 +1,4 @@
-import { ChatType } from "../chat/chat-registry";
+import { ChatType } from "../chat-registry";
 
 /*
 ** Handler

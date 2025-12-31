@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-import { ApiClientController } from "../_api-client/api-client-controller";
 import { Preview } from "./preview";
+import { ChatService } from "../chat-service";
 
 type FileType =
     'image' |
@@ -35,7 +35,7 @@ export interface Response {
 }
 
 interface Props {
-    apiClientController: ApiClientController;
+    chatService: ChatService;
     userId: string;
     parentFolderId?: string;
     onFileSelect?: (file: Item) => void;
@@ -75,7 +75,7 @@ export function mapToItem(file: any): Item {
 }
 
 export class FileItem extends Component<Props, State> {
-    private apiClientController: ApiClientController;
+    private chatService: ChatService;
     private observer: IntersectionObserver | null = null;
     private sentinelRef = React.createRef<HTMLDivElement>();
     private containerRef = React.createRef<HTMLDivElement>();
@@ -100,7 +100,7 @@ export class FileItem extends Component<Props, State> {
             previewLoading: false,
             previewError: null
         }
-        this.apiClientController = this.props.apiClientController;
+        this.chatService = this.props.chatService;
         
         this.handleFileSelect = this.handleFileSelect.bind(this);
         this.handleFileDelete = this.handleFileDelete.bind(this);
@@ -163,7 +163,7 @@ export class FileItem extends Component<Props, State> {
      */
     private async handleDownloadFile(file: Item): Promise<void> {
         try {
-            const fileService = await this.apiClientController.getFileService();
+            const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.downloadFile(this.props.userId, file.fileId);
             
             if(res.success && res.data) {
@@ -236,7 +236,7 @@ export class FileItem extends Component<Props, State> {
         this.setState({ isLoading: true, error: null });
 
         try {
-            const fileService = await this.apiClientController.getFileService();
+            const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.listFiles(
                 this.props.userId,
                 this.props.parentFolderId || 'root'
@@ -264,7 +264,7 @@ export class FileItem extends Component<Props, State> {
         console.log('Loading more files, nextPage:', nextPage);
 
         try {
-            const fileService = await this.apiClientController.getFileService();
+            const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.listFiles(
                 this.props.userId,
                 this.props.parentFolderId || 'root',
@@ -403,7 +403,7 @@ export class FileItem extends Component<Props, State> {
         if(!confirm('Delete??')) return;
 
         try {
-            const fileService = await this.apiClientController.getFileService();
+            const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.deleteFile(fileId, this.props.userId);
             if(res.success) {
                 const updatedFiles = this.state.files.filter(f => f.fileId !== fileId);
@@ -495,7 +495,7 @@ export class FileItem extends Component<Props, State> {
         });
 
         try {
-            const fileService = await this.apiClientController.getFileService();
+            const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.downloadFile(this.props.userId, file.fileId);
             
             if(res.success && res.data) {
@@ -796,7 +796,7 @@ export class FileItem extends Component<Props, State> {
                         onClose={this.closePreview}
                         onDownload={async (file) => {
                             try {
-                                const fileService = await this.apiClientController.getFileService();
+                                const fileService = await this.chatService.getFileController().getFileService();
                                 await fileService.downloadFile(this.props.userId, file.fileId);
                             } catch (err) {
                                 console.error('Error downloading file:', err);

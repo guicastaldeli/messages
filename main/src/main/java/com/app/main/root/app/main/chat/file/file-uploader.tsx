@@ -1,10 +1,10 @@
 import React, { Component } from "react";
-import { SessionManager } from "../_session/session-manager";
-import { ApiClientController } from "../_api-client/api-client-controller";
+import { SessionManager } from "../../_session/session-manager";
+import { ChatService } from "../chat-service";
 import { CacheServiceClient } from "@/app/_cache/cache-service-client";
 
 interface Props {
-    apiClientController: ApiClientController;
+    chatService: ChatService;
     onUploadSuccess?: (res: any) => void;
     onUploadError?: (err: Error) => void;
 }
@@ -46,7 +46,7 @@ export class FileUploader extends Component<Props, State> {
                 return;
             }
 
-            const fileService = await this.props.apiClientController.getFileService();
+            const fileService = await this.props.chatService.getFileController().getFileService();
             const res = await fileService.uploadFile(
                 file,
                 sessionData.userId,
@@ -54,8 +54,6 @@ export class FileUploader extends Component<Props, State> {
             );
             if(res.success) {
                 console.log('FILE UPLOADED!');
-                const cacheService = CacheServiceClient.getInstance();
-                await cacheService.invalidateFolderCache(sessionData.userId, "root");
                 if(this.props.onUploadSuccess) {
                     this.props.onUploadSuccess(res);
                 }

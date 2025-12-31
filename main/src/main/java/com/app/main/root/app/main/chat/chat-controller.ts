@@ -6,7 +6,7 @@ import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
 import { ChatManager } from "../chat/chat-manager";
 import { ApiClientController } from "../_api-client/api-client-controller";
 import { MessageHandler, RegisteredMessageHandlers } from "./messages/message-handler";
-import { MessageComponentGetter } from "./messages/_message-component";
+import { MessageComponentGetter } from "./messages/message-item";
 import { MessageElementRenderer } from "./messages/message-element-renderer";
 import { ChunkRenderer } from "./chunk-renderer";
 import { ChatStateManager } from '../chat/chat-state-manager';
