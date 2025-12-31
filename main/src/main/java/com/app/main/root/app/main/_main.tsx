@@ -301,7 +301,7 @@ export class Main extends Component<any, State> {
                             await this.loadData();
                             
                             if (this.dashboardInstance) {
-                                await this.dashboardInstance.getUserData(authData.sessionId, authData.userId);
+                                await this.dashboardInstance.getUserData(authData.userId);
                             }
                             
                             sessionContext.setSession('MAIN_DASHBOARD');
@@ -435,7 +435,6 @@ export class Main extends Component<any, State> {
                                             chatService={this.chatService}
                                             chatList={chatList}
                                             activeChat={activeChat}
-                                            apiClientController={this.apiClientController}
                                             onLogout={() => this.handleLogout(sessionContext)}
                                         />
                                     )}

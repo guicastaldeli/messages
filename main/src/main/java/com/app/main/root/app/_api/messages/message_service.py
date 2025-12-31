@@ -7,11 +7,11 @@ class MessageService:
         
     ## Save 
     async def saveMessages(self, data: dict) -> dict:
-        return await self._request("post", "/api/message-tracker/messages", json=data)
+        return await self._request("post", "/api/message/messages", json=data)
     
     ## Messages
     async def getMessages(self) -> list:
-        return await self._request("get", "/api/message-tracker/get-messages")
+        return await self._request("get", "/api/message/get-messages")
     
     ## Recent
     async def getRecentChats(
@@ -22,7 +22,7 @@ class MessageService:
     ) -> list:
         return await self._request(
             "get", 
-            f"/api/message-tracker/messages/recent/{userId}?page={page}&pageSize={pageSize}"
+            f"/api/message/messages/recent/{userId}?page={page}&pageSize={pageSize}"
         )
         
     async def getRecentChatsCount(self, userId: str) -> dict:
@@ -37,28 +37,28 @@ class MessageService:
     ) -> dict:
         return await self._request(
             "get", 
-            f"/api/message-tracker/messages/chatId/{chatId}?page={page}&pageSize={pageSize}"
+            f"/api/message/messages/chatId/{chatId}?page={page}&pageSize={pageSize}"
         )
 
     ## User
     async def getMessagesByUserId(self, userId: str) -> list:
-        return await self._request("get", f"/api/message-tracker/messages/userId/{userId}")
+        return await self._request("get", f"/api/message/messages/userId/{userId}")
 
     ## Count
     async def getMessageCount(self) -> int:
-        return await self._request("get", "/api/message-tracker/count")
+        return await self._request("get", "/api/message/count")
 
     ## Count By Chat Id
     async def getMessagesCountByChatId(self, chatId: str) -> dict:
-        return await self._request("get", f"/api/message-tracker/messages/chatId/{chatId}/count")
+        return await self._request("get", f"/api/message/messages/chatId/{chatId}/count")
     
     ## Stats
     async def getMessageStats(self) -> list:
-        return await self._request("get", "/api/message-tracker/stats")
+        return await self._request("get", "/api/message/stats")
 
     ## Clear
     async def clearMessages(self) -> list:
-        return await self._request("delete", "/api/message-tracker/clear")
+        return await self._request("delete", "/api/message/clear")
     
     async def _request(self, method: str, path: str, json=None):
         async with httpx.AsyncClient() as client:

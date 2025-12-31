@@ -5,7 +5,6 @@ import { SessionContext, SessionType } from "./_session/session-provider";
 import { ChatManager } from "./chat/chat-manager";
 import { ChatService } from "./chat/chat-service";
 import { chatState } from "./chat/chat-state-service";
-import { ApiClientController } from "./_api-client/api-client-controller";
 import { GroupLayout } from "./chat/type/group/group-layout";
 import { ContactServiceClient } from "./_contact_config/contact-service-client";
 import { ContactLayout } from "./_contact_config/contact-layout";
@@ -17,12 +16,12 @@ interface Props {
     chatService: ChatService;
     chatList: any[];
     activeChat: any;
-    apiClientController: ApiClientController;
     onChatListUpdate?: (chatList: any[]) => void;
     onLogout?: () => Promise<void>;
 }
 
 interface State {
+    userId: string | null;
     currentSession: SessionType;
     groups: any[];
     chatList: any[];
@@ -33,15 +32,12 @@ interface State {
 
 export class Dashboard extends Component<Props, State> {
     private groupContainerRef: React.RefObject<HTMLDivElement | null>;
-    private apiClientController: ApiClientController;
     public contactService: ContactServiceClient | null = null;
-
-    private socketId!: string;
-    private userId!: string;
 
     constructor(props: Props) {
         super(props);
         this.state = {
+            userId: null,
             currentSession: 'MAIN_DASHBOARD',
             groups: [],
             chatList: props.chatList || [],
@@ -50,16 +46,34 @@ export class Dashboard extends Component<Props, State> {
             isLoading: true,
         }
         this.groupContainerRef = React.createRef();
-        this.apiClientController = props.apiClientController;
     }
 
-    public async getUserData(sessionId: string, userId: string): Promise<void> {
-        this.socketId = sessionId;
-        this.userId = userId;
+    public async getUserData(userId: string): Promise<void> {
+        this.setState({ userId });
     }
 
     async componentDidMount(): Promise<void> {
         this.setSession('MAIN_DASHBOARD');
+
+        const sessionData = SessionManager.getUserInfo();
+        const userId = sessionData?.userId;
+        if(userId) {
+            this.setState({ userId });
+            try {
+                const messageService = 
+                    await this.props.chatService
+                        .getMessageController()
+                        .getMessageService();
+                const chatList = await messageService.getMessagesByUserId(this.state.userId!);
+                this.setState({ chatList, isLoading: false });
+            } catch(err) {
+                console.error('Error loading chat list', err);
+                this.setState({ isLoading: false });
+            }
+        } else {
+            this.setState({ isLoading: false });
+        }
+
         if(!this.groupContainerRef.current || !this.props.chatManager) return;
         this.props.chatManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
@@ -72,17 +86,6 @@ export class Dashboard extends Component<Props, State> {
             username: this.props.chatController.username
         });
         this.contactService.setupEventListeners();
-
-        try {
-            const messageService = 
-                await this.props.chatService
-                    .getMessageController()
-                    .getMessageService();
-            const chatList = await messageService.getMessagesByUserId(this.userId);
-            this.setState({ chatList });
-        } catch(err) {
-            console.error('Error loading chat list', err);
-        }
     }
 
     componentWillUnmount(): void {
@@ -90,27 +93,25 @@ export class Dashboard extends Component<Props, State> {
     }
 
     componentDidUpdate(prevProps: Props): void {
-    if(
-        this.props.chatList && 
-        this.props.chatManager !== prevProps.chatManager &&
-        this.groupContainerRef.current 
-    ) {
-        this.props.chatManager.setContainer(this.groupContainerRef.current);
-    }
+        if(this.props.chatList && 
+            this.props.chatManager !== prevProps.chatManager &&
+            this.groupContainerRef.current 
+        ) {
+            this.props.chatManager.setContainer(this.groupContainerRef.current);
+        }
 
-    // Combine state updates
-    let stateUpdates: Partial<State> = {};
-    if(prevProps.chatList !== this.props.chatList) {
-        stateUpdates.chatList = this.props.chatList || [];
+        let stateUpdates: Partial<State> = {};
+        if(prevProps.chatList !== this.props.chatList) {
+            stateUpdates.chatList = this.props.chatList || [];
+        }
+        if(prevProps.activeChat !== this.props.activeChat) {
+            stateUpdates.activeChat = this.props.activeChat || null;
+        }
+        
+        if(Object.keys(stateUpdates).length > 0) {
+            this.setState(stateUpdates as Pick<State, keyof State>);
+        }
     }
-    if(prevProps.activeChat !== this.props.activeChat) {
-        stateUpdates.activeChat = this.props.activeChat || null;
-    }
-    
-    if(Object.keys(stateUpdates).length > 0) {
-        this.setState(stateUpdates as Pick<State, keyof State>);
-    }
-}
 
     private setSession = (session: SessionType): void => {
         this.setState({ currentSession: session });
@@ -204,9 +205,9 @@ export class Dashboard extends Component<Props, State> {
         });
     }
 
-    /*
-    ** State Related
-    */
+    /**
+     * State Related
+     */
     public onStateChange?: (
         state: {
             showCreationForm: boolean;
@@ -235,13 +236,14 @@ export class Dashboard extends Component<Props, State> {
     }
 
     render() {
-        const sessionData = SessionManager.getUserInfo();
-        const userId = sessionData?.userId;
-        if (!userId) {
-            return <div>Loading user data...</div>;
-        }
         if(this.state.isLoading) {
             return <div>Loading dashboard...</div>;
+        }
+
+        const sessionData = SessionManager.getUserInfo();
+        const userId = sessionData?.userId;
+        if(!userId) {
+            return <div>Loading user data...</div>;
         }
 
         const { chatList, activeChat } = this.props;
