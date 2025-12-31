@@ -1,9 +1,10 @@
 package com.app.main.root.app.__controllers;
-import com.app.main.root.app.main._messages_config.MessageTracker;
-import com.app.main.root.app.main._messages_config.MessageLog;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
+import com.app.main.root.app.main.chat.messages.MessageLog;
+import com.app.main.root.app.main.chat.messages.MessageTracker;
+
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 import java.sql.SQLException;

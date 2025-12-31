@@ -1,13 +1,13 @@
 import React from "react";
 import { chatState } from "../chat/chat-state-service";
 import { SocketClientConnect } from "../socket-client-connect";
-import { MessageManager } from "../_messages_config/message-manager";
-import { ApiClient } from "../_api-client/api-client";
+import { ChatController } from "../chat/chat-controller";
+import { ChatService } from "./chat-service";
+import { ApiClientController } from "../_api-client/api-client-controller";
 import { Dashboard } from "../_dashboard";
 import { Loader } from "./loader";
-import { DirectManager } from "./direct/direct-manager";
-import { GroupManager } from "./group/group-manager";
-import { CacheServiceClient } from "@/app/_cache/cache-service-client";
+import { DirectManager } from "./type/direct/direct-manager";
+import { GroupManager } from "./type/group/group-manager";
 
 export interface Item {
     id: string;
@@ -31,7 +31,7 @@ interface State {
 }
 
 export class ChatManager {
-    private apiClient: ApiClient;
+    private apiClientController: ApiClientController;
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
@@ -43,37 +43,37 @@ export class ChatManager {
     private isUpdating = false;
 
     private loader: Loader;
-    private cacheService: CacheServiceClient
+    private chatService: ChatService;
     private directManager: DirectManager;
     private groupManager: GroupManager;
 
     constructor(
-        cacheService: CacheServiceClient,
+        chatService: ChatService,
         socketClient: SocketClientConnect,
-        messageManager: MessageManager,
-        apiClient: ApiClient,
+        chatController: ChatController,
+        apiClientController: ApiClientController,
         dashboard: Dashboard | null,
         appEl: HTMLDivElement | null = null,
         username: string,
         setState: React.Component<any, State>['setState']
     ) {
-        this.cacheService = cacheService;
-        this.apiClient = apiClient;
+        this.chatService = chatService;
+        this.apiClientController = apiClientController;
         this.loader = new Loader(
             socketClient, 
-            apiClient, 
+            chatService, 
             this
         );
         this.directManager = new DirectManager(
             socketClient,
-            messageManager,
-            apiClient
+            chatController,
+            chatService
         );
         this.groupManager = new GroupManager(
             this,
             socketClient, 
-            messageManager, 
-            apiClient,
+            chatController, 
+            apiClientController,
             dashboard, 
             appEl, 
             username
@@ -364,7 +364,7 @@ export class ChatManager {
         isSystem: boolean
     } | null> {
         try {
-            const service = await this.apiClient.getMessageService();
+            const service = await this.chatService.getMessageController().getMessageService();
             const res = await service.getMessagesByChatId(id, 0);
             const messages = res.messages || [];
             if(messages && messages.length > 0) {

@@ -1,20 +1,22 @@
 import "./__styles/styles.scss";
 import React, { Component } from "react";
-import { MessageManager } from "./_messages_config/message-manager";
+import { ChatController } from "./chat/chat-controller";
 import { SessionContext, SessionType } from "./_session/session-provider";
 import { ChatManager } from "./chat/chat-manager";
+import { ChatService } from "./chat/chat-service";
 import { chatState } from "./chat/chat-state-service";
-import { ApiClient } from "./_api-client/api-client";
+import { ApiClientController } from "./_api-client/api-client-controller";
 import { GroupLayout } from "./chat/group/group-layout";
 import { ContactServiceClient } from "./_contact_config/contact-service-client";
 import { ContactLayout } from "./_contact_config/contact-layout";
 
 interface Props {
-    messageManager: MessageManager;
+    chatController: ChatController;
     chatManager: ChatManager;
+    chatService: ChatService;
     chatList: any[];
     activeChat: any;
-    apiClient: ApiClient;
+    apiClientController: ApiClientController;
     onChatListUpdate?: (chatList: any[]) => void;
 }
 
@@ -28,7 +30,7 @@ interface State {
 
 export class Dashboard extends Component<Props, State> {
     private groupContainerRef: React.RefObject<HTMLDivElement | null>;
-    private apiClient: ApiClient;
+    private apiClientController: ApiClientController;
     public contactService: ContactServiceClient | null = null;
 
     private socketId!: string;
@@ -44,7 +46,7 @@ export class Dashboard extends Component<Props, State> {
             contactService: null
         }
         this.groupContainerRef = React.createRef();
-        this.apiClient = props.apiClient;
+        this.apiClientController = props.apiClientController;
     }
 
     public async getUserData(sessionId: string, userId: string): Promise<void> {
@@ -60,15 +62,18 @@ export class Dashboard extends Component<Props, State> {
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
 
         this.contactService = new ContactServiceClient({
-            socketClient: this.props.messageManager.socketClient,
-            messageManager: this.props.messageManager,
-            userId: this.props.messageManager.userId,
-            username: this.props.messageManager.username
+            socketClient: this.props.chatController.socketClient,
+            chatController: this.props.chatController,
+            userId: this.props.chatController.userId,
+            username: this.props.chatController.username
         });
         this.contactService.setupEventListeners();
 
         try {
-            const messageService = await this.apiClient.getMessageService()
+            const messageService = 
+                await this.props.chatService
+                    .getMessageController()
+                    .getMessageService();
             const chatList = await messageService.getMessagesByUserId(this.userId);
             this.setState({ chatList });
         } catch(err) {
@@ -120,7 +125,7 @@ export class Dashboard extends Component<Props, State> {
                 hideGroup: false,
                 groupName: chat.name
             });
-            await this.props.messageManager.setCurrentChat(
+            await this.props.chatController.setCurrentChat(
                 chatId,
                 chatType,
                 chat.members || []
@@ -227,7 +232,7 @@ export class Dashboard extends Component<Props, State> {
 
     render() {
         const { chatList, activeChat } = this.props;
-        const { messageManager, chatManager } = this.props
+        const { chatController, chatManager } = this.props
 
         return (
             <SessionContext.Consumer>
@@ -299,7 +304,7 @@ export class Dashboard extends Component<Props, State> {
 
                             {activeChat && (
                                 <GroupLayout
-                                    messageManager={messageManager}
+                                    chatController={chatController}
                                     groupManager={chatManager.getGroupManager()}
                                     groupId={activeChat.id}
                                     groupName={activeChat.name}

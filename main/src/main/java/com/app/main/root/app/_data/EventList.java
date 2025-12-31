@@ -7,8 +7,9 @@ import com.app.main.root.app._crypto.message_encoder.SecureMessageService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.ConnectionTracker;
 import com.app.main.root.app._types._User;
+import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app._server.ConnectionInfo;
-import com.app.main.root.app.main._messages_config.MessageTracker;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;

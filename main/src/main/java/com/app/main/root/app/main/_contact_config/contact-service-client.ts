@@ -1,19 +1,19 @@
 import React from 'react';
 import { SocketClientConnect } from '../socket-client-connect';
-import { MessageManager } from '../_messages_config/message-manager';
+import { ChatController } from '../chat/chat-controller';
 import { Contact, ContactLayoutProps, ContactRequest, ContactServiceClientProps } from './contact-interface';
 import { ContactLayout } from './contact-layout';
 
 export class ContactServiceClient {
     private socketClient: SocketClientConnect;
-    private messageManager: MessageManager;
+    private chatController: ChatController;
     private userId: string;
     private username: string;
     private contactLayout: React.FC<ContactLayoutProps> | null = null;
 
     constructor(props: ContactServiceClientProps) {
         this.socketClient = props.socketClient;
-        this.messageManager = props.messageManager;
+        this.chatController = props.chatController;
         this.userId = props.userId;
         this.username = props.username;
         this.contactLayout = null;

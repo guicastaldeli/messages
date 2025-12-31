@@ -3,10 +3,12 @@ import { SessionServiceClient } from "./session-service-client";
 import { AuthServiceClient } from "./auth-service-client";
 import { UserServiceClient } from "./user-service-client";
 import { SocketClientConnect } from "../socket-client-connect";
+import { SessionConfig } from "../_session/session-config";
 
-export class ApiClient {
+export class ApiClientController {
     private baseUrl: string | undefined;
     private socketClient!: SocketClientConnect;
+    private sessionConfig: SessionConfig;
 
     private timeStream: TimeStreamClient;
     private sessionSerive: SessionServiceClient;
@@ -19,12 +21,21 @@ export class ApiClient {
         this.sessionSerive = new SessionServiceClient(this.baseUrl);
         this.authService = new AuthServiceClient(this.baseUrl);
         this.userService = new UserServiceClient(this.baseUrl);
+        this.sessionConfig = new SessionConfig(this);
+        this.sessionConfig.setupSessionRefresh();
     }
 
     public getUrl(): string {
         this.baseUrl = process.env.NEXT_PUBLIC_API_URL;
         if(!this.baseUrl) throw new Error('URL err');
         return this.baseUrl;
+    }
+
+    /**
+     * Session Config
+     */
+    public async getSessionConfig(): Promise<SessionConfig> {
+        return this.sessionConfig;
     }
 
     /*

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, Component } from 'react';
 import { DirectManager } from './direct-manager';
-import { MessageManager } from '../../_messages_config/message-manager';
+import { ChatController } from '../../chat-controller';
 
 interface Props {
-    messageManager: MessageManager;
+    chatController: ChatController;
     directManager: DirectManager;
     onBack?: () => void;
 }

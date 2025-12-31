@@ -1,10 +1,10 @@
 import './__styles/styles.scss';
 import React from 'react';
 import { Component } from 'react';
-import { ApiClient } from './_api-client/api-client';
+import { ApiClientController } from './_api-client/api-client-controller';
 import { SocketClientConnect } from './socket-client-connect';
-import { MessageManager } from './_messages_config/message-manager';
-import { CacheServiceClient } from '../_cache/cache-service-client';
+import { ChatController } from './chat/chat-controller';
+import { ChatService } from './chat/chat-service';
 import { CachePreloaderService } from '../_cache/cache-preloader-service';
 import { Dashboard } from './_dashboard';
 import { SessionProvider, SessionType, SessionContext } from './_session/session-provider';
@@ -23,11 +23,11 @@ interface State {
 
 export class Main extends Component<any, State> {
     private socketClientConnect: SocketClientConnect;
-    private apiClient: ApiClient;
-    private cacheService: CacheServiceClient;
+    private apiClientController: ApiClientController;
+    private chatService: ChatService;
     private cachePreloader: CachePreloaderService;
     private chatManager!: ChatManager;
-    private messageManager!: MessageManager;
+    private chatController!: ChatController;
 
     private appContainerRef = React.createRef<HTMLDivElement>();
     private dashboardInstance: Dashboard | null = null;
@@ -35,15 +35,14 @@ export class Main extends Component<any, State> {
     constructor(props: any) {
         super(props);
         this.socketClientConnect = SocketClientConnect.getInstance();
-        this.apiClient = new ApiClient(this.socketClientConnect);
-        this.cacheService = CacheServiceClient.getInstance();
-        this.messageManager = new MessageManager(
+        this.apiClientController = new ApiClientController(this.socketClientConnect);
+        this.chatService = new ChatService(this.socketClientConnect, this.apiClientController);
+        this.chatController = new ChatController(
             this.socketClientConnect, 
-            this.apiClient, 
-            this.cacheService
+            this.apiClientController, 
+            this.chatService
         );
-        this.cachePreloader = new CachePreloaderService(this.apiClient, this.cacheService);
-        this.cacheService.setApiClient(this.apiClient);
+        this.cachePreloader = new CachePreloaderService(this.apiClientController, this.chatService);
         this.state = { 
             chatManager: null,
             chatList: [],
@@ -57,18 +56,18 @@ export class Main extends Component<any, State> {
     async componentDidMount(): Promise<void> {
         await this.connect();
         this.chatManager = new ChatManager(
-            this.cacheService,
+            this.chatService,
             this.socketClientConnect,
-            this.messageManager,
-            this.apiClient,
+            this.chatController,
+            this.apiClientController,
             this.dashboardInstance,
             this.appContainerRef.current,
             this.state.username!,
             this.setState.bind(this)
         );
         this.chatManager.mount();
-        this.messageManager.setChatManager(this.chatManager);
-        if(this.state.userId) await this.cacheService.initCache(this.state.userId);
+        this.chatController.setChatManager(this.chatManager);
+        if(this.state.userId) await this.chatService.getCacheServiceClient().initCache(this.state.userId);
         this.loadData();
     }
 
@@ -79,7 +78,7 @@ export class Main extends Component<any, State> {
 
     private loadData = async(): Promise<void> => {
         try {
-            const messageService = await this.apiClient.getMessageService();
+            const messageService = await this.chatService.getMessageController().getMessageService();
             const trackedMessages = await messageService.getMessagesByUserId(this.state.userId!);
             this.setState({ chatList: trackedMessages });
         } catch(err) {
@@ -90,12 +89,12 @@ export class Main extends Component<any, State> {
     private async connect(): Promise<void> {
         if(!this.socketClientConnect) return;
         await this.socketClientConnect.connect();
-        await this.messageManager.init();
+        await this.chatController.init();
     }
 
     private setDashboardRef = (instance: Dashboard | null): void => {
         this.dashboardInstance = instance;
-        if(instance && this.messageManager) this.messageManager.dashboard = instance;
+        if(instance && this.chatController) this.chatController.dashboard = instance;
         if(this.chatManager && instance) this.chatManager.setDashboard(instance);
     }
 
@@ -136,7 +135,7 @@ export class Main extends Component<any, State> {
                     return;
                 }
                 try {
-                    const userService = await this.apiClient.getUserService();
+                    const userService = await this.apiClientController.getUserService();
                     const usernameExists = await userService.checkUsernameExists(username);
                     if (usernameExists) {
                         alert('Username already taken');
@@ -146,7 +145,7 @@ export class Main extends Component<any, State> {
                     console.error('Error checking username:', err);
                 }
                 try {
-                    const userService = await this.apiClient.getUserService();
+                    const userService = await this.apiClientController.getUserService();
                     const emailExists = await userService.checkUserExists(email);
                     if (emailExists) {
                         alert('Email already registered');
@@ -174,7 +173,7 @@ export class Main extends Component<any, State> {
             let result;
 
             try {
-                const authService = await this.apiClient.getAuthService();
+                const authService = await this.apiClientController.getAuthService();
                 if (isCreateAccount) {
                     result = await authService.registerUser({
                         email: email,
@@ -202,9 +201,9 @@ export class Main extends Component<any, State> {
                         userId: authData.userId
                     }, async () => {
                         try {
-                            await this.messageManager.getUserData(authData.sessionId, authData.userId, authData.username);
-                            await this.messageManager.handleJoin(authData.sessionId, authData.userId, authData.username);
-                            await this.cacheService.initCache(authData.userId);
+                            await this.chatController.getUserData(authData.sessionId, authData.userId, authData.username);
+                            await this.chatController.handleJoin(authData.sessionId, authData.userId, authData.username);
+                            await this.chatService.getMessageController().initCache(authData.userId);
                             await this.cachePreloader.startPreloading(authData.userId);
                             await this.dashboardInstance?.getUserData(authData.sessionId, authData.userId);
                             await this.chatManager.getUserData(authData.sessionId, authData.userId, authData.username);
@@ -237,7 +236,7 @@ export class Main extends Component<any, State> {
         return (
             <div className='app' ref={this.appContainerRef}>
                 <SessionProvider 
-                    apiClient={this.apiClient} 
+                    apiClientController={this.apiClientController} 
                     initialSession='LOGIN'
                 >
                     <SessionContext.Consumer>
@@ -305,11 +304,12 @@ export class Main extends Component<any, State> {
                                     {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                         <Dashboard 
                                             ref={this.setDashboardRef}
-                                            messageManager={this.messageManager}
+                                            chatController={this.chatController}
                                             chatManager={this.state.chatManager!}
+                                            chatService={this.chatService}
                                             chatList={chatList}
                                             activeChat={activeChat}
-                                            apiClient={this.apiClient}
+                                            apiClientController={this.apiClientController}
                                         />
                                     )}
                                 </>

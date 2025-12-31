@@ -1,4 +1,4 @@
-import { ApiClient } from "../main/_api-client/api-client";
+import { ApiClientController } from "../main/_api-client/api-client-controller";
 import { ChatService } from "../main/chat/chat-service";
 
 export interface CacheConfig {
@@ -26,7 +26,7 @@ export interface CacheData {
 
 export class CacheServiceClient {
     public static instance: CacheServiceClient;
-    public apiClient!: ApiClient;
+    public apiClientController!: ApiClientController;
     public chatService!: ChatService;
 
     public cache: Map<string, CacheData> = new Map();
@@ -41,12 +41,12 @@ export class CacheServiceClient {
     }
 
     public static getInstance(
-        apiClient: ApiClient,
-        chatService: ChatService
+        chatService: ChatService,
+        apiClientController: ApiClientController
     ): CacheServiceClient {
         if (!CacheServiceClient.instance) {
             const instance = new CacheServiceClient();
-            instance.apiClient = apiClient;
+            instance.apiClientController = apiClientController;
             instance.chatService = chatService;
             CacheServiceClient.instance = instance;
         }
@@ -86,8 +86,8 @@ export class CacheServiceClient {
         this.chatService.getFileController().initCache(userId);
     }
 
-    public setApiClient(apiClient: ApiClient): void {
-        this.apiClient = apiClient;
+    public setApiClientController(apiClientController: ApiClientController): void {
+        this.apiClientController = apiClientController;
     }
 
     public selectChat(chatId: string): void {

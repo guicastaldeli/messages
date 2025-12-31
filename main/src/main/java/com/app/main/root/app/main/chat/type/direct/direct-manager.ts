@@ -1,16 +1,16 @@
 import React from "react";
-import { SocketClientConnect } from "../../socket-client-connect";
-import { MessageManager } from "../../_messages_config/message-manager";
-import { ApiClient } from "../../_api-client/api-client";
-import { chatState } from "../../chat/chat-state-service";
+import { SocketClientConnect } from "../../../socket-client-connect";
+import { ChatController } from "../../chat-controller";
+import { chatState } from "../../chat-state-service";
 import { DirectLayout } from "./direct-layout";
 import { createRoot, Root } from "react-dom/client";
-import { ChatStateManager } from "../chat-state-manager";
+import { ChatStateManager } from "../../chat-state-manager";
+import { ChatService } from "../../chat-service";
 
 export class DirectManager {
     private socketClient: SocketClientConnect;
-    private messageManager: MessageManager;
-    private apiClient: ApiClient;
+    private chatController: ChatController;
+    private chatService: ChatService;
     private chatStateManager = ChatStateManager.getIntance();
 
     public currentChatId: string = '';
@@ -24,12 +24,12 @@ export class DirectManager {
 
     constructor(
         socketClient: SocketClientConnect,
-        messageManager: MessageManager,
-        apiClient: ApiClient
+        chatController: ChatController,
+        chatService: ChatService
     ) {
         this.socketClient = socketClient;
-        this.messageManager = messageManager;
-        this.apiClient = apiClient;
+        this.chatController = chatController;
+        this.chatService = chatService;
         this.setupEventListeners();
     }
 
@@ -63,7 +63,7 @@ export class DirectManager {
         window.dispatchEvent(openEvent);
 
         chatState.setType('DIRECT');
-        await this.messageManager.setCurrentChat(
+        await this.chatController.setCurrentChat(
             chatId,
             'DIRECT',
             [this.userId, contactId]
@@ -79,7 +79,7 @@ export class DirectManager {
         window.dispatchEvent(chatEvent);
 
         const content = React.createElement(DirectLayout, {
-            messageManager: this.messageManager,
+            chatController: this.chatController,
             directManager: this
         });
         
@@ -92,8 +92,8 @@ export class DirectManager {
     */
     public async lastMessage(id: string): Promise<string> {
         try {
-            const service = await this.apiClient.getMessageService();
-            const res = await service.getMessagesByChatId(id);
+            const messageService = await this.chatService.getMessageController().getMessageService();
+            const res = await messageService.getMessagesByChatId(id);
             const messages = res.messages || [];
             if(messages && messages.length > 0) {
                 const lastMessage = messages[messages.length - 1]

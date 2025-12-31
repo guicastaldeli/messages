@@ -10,7 +10,7 @@ interface GroupMembersInterfaceProps {
     groupId: string;
     groupName: string;
     groupManager: GroupManager;
-    messageManager: any;
+    chatController: any;
     onClose: () => void;
 }
 
@@ -18,7 +18,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
     groupId,
     groupName,
     groupManager,
-    messageManager,
+    chatController,
     onClose
 }) => {
     const [members, setMembers] = useState<GroupMember[]>([]);

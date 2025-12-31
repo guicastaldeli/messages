@@ -1,12 +1,13 @@
 package com.app.main.root.app._service;
-import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._data.MessagePerspectiveDetector;
 import com.app.main.root.app._data.MessagePerspectiveResult;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._types._Message;
-import com.app.main.root.app.main._messages_config.MessageLog;
+import com.app.main.root.app.main.chat.messages.MessageLog;
+import com.app.main.root.app.main.chat.messages.MessageTracker;
+
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.Statement;

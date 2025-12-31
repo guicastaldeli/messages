@@ -1,16 +1,16 @@
-import { ApiClient } from "../main/_api-client/api-client";
-import { CacheServiceClient } from "./cache-service-client";
+import { ApiClientController } from "../main/_api-client/api-client-controller";
+import { ChatService } from "../main/chat/chat-service";
 
 export class CachePreloaderService {
-    private apiClient: ApiClient;
-    private cacheService: CacheServiceClient;
+    private apiClientController: ApiClientController;
+    private chatService: ChatService;
     private isPreloading: boolean = false;
     private preloadedChats = new Set<string>();
     private preloadQueue: string[] = [];
 
-    constructor(apiClient: ApiClient, cacheService: CacheServiceClient) {
-        this.apiClient = apiClient;
-        this.cacheService = cacheService;
+    constructor(ApiClientController: ApiClientController, chatService: ChatService) {
+        this.apiClientController = ApiClientController;
+        this.chatService = chatService;
         this.setupEventListeners();
     }
 
@@ -49,8 +49,8 @@ export class CachePreloaderService {
     */
     private async preloadRecentChats(userId: string): Promise<void> {
         try {
-            const service = await this.apiClient.getMessageService();
-            const data = await service.getRecentChats(userId, 0, 20);
+            const service = await this.chatService.getMessageController().getMessageService();
+            const data = await service.getRecentMessages(userId, 0, 20);
             const chats = data.chats || [];
             for(const chat of chats) this.schedulePreload(chat);
         } catch(err) {
@@ -95,14 +95,14 @@ export class CachePreloaderService {
     ** Preload Chat
     */
     private async preloadChat(chatId: string): Promise<void> {
-        if(this.cacheService.isChatCached(chatId)) return;
+        if(this.chatService.getCacheServiceClient().isChatCached(chatId)) return;
         try {
-            const service = await this.apiClient.getMessageService();
+            const service = await this.chatService.getMessageController().getMessageService();
             const res = await service.getMessagesByChatId(chatId, 0);
             const messages = res.messages || [];
             if(messages.length >= 0) {
-                this.cacheService.init(chatId, messages.length);
-                this.cacheService.addMessagesPage(chatId, messages, 0);
+                this.chatService.getCacheServiceClient().init(chatId, messages.length);
+                this.chatService.getMessageController().getMessagesPage(messages, chatId, 0);
                 console.log(`Preloaded ${messages.length} messages for ${chatId}`);
             }
         } catch(err) {

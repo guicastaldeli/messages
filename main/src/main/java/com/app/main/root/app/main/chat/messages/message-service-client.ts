@@ -1,4 +1,4 @@
-import { SocketClientConnect } from "../socket-client-connect";
+import { SocketClientConnect } from "../../socket-client-connect";
 
 export class MessageServiceClient {
     private baseUrl: string | undefined;

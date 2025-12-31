@@ -2,11 +2,12 @@ package com.app.main.root.app._server;
 import com.app.main.root.app._data.ConfigSocketEvents;
 import com.app.main.root.EnvConfig;
 import com.app.main.root.app.EventTracker;
-import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._service.SessionService;
 import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app._utils.ColorConverter;
+import com.app.main.root.app.main.chat.messages.MessageTracker;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Lazy;

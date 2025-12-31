@@ -1,12 +1,12 @@
 import '../../__styles/styles.scss';
 import React, { useState } from 'react';
 import { Component, createRef } from 'react';
-import { MessageManager } from '../../_messages_config/message-manager';
+import { ChatController } from '../../chat/chat-controller';
 import { GroupManager } from './group-manager';
 import { GroupMembersInterface } from './layout/group-members-interface';
 
 export interface Props {
-    messageManager: MessageManager;
+    chatController: ChatController;
     groupManager: GroupManager;
     onSuccess?: (data: any) => void;
     onError?: (error: any) => void;
@@ -34,7 +34,7 @@ interface State {
 }
 
 export class GroupLayout extends Component<Props, State> {
-    private messageManager: MessageManager;
+    private chatController: ChatController;
     private groupManager: GroupManager;
 
     private timeout: number = 15000;
@@ -42,7 +42,7 @@ export class GroupLayout extends Component<Props, State> {
 
     constructor(props: Props) {
         super(props);
-        this.messageManager = this.props.messageManager;
+        this.chatController = this.props.chatController;
         this.groupManager = this.props.groupManager;
 
         this.state = {
@@ -373,7 +373,7 @@ export class GroupLayout extends Component<Props, State> {
                         groupId={this.groupManager.currentGroupId}
                         groupName={groupName}
                         groupManager={this.groupManager}
-                        messageManager={this.messageManager}
+                        chatController={this.chatController}
                         onClose={this.handleCloseMembersInterface}
                     />
                 )}

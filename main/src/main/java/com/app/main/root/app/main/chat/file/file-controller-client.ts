@@ -1,23 +1,23 @@
-import { ChatService } from "./chat-service"; 
-import { ApiClient } from "../_api-client/api-client";
-import { SocketClientConnect } from "../socket-client-connect";
-import { FileServiceClient } from "../_api-client/file-service-client";
+import { ChatService } from "../chat-service"; 
+import { ApiClientController } from "../../_api-client/api-client-controller";
+import { SocketClientConnect } from "../../socket-client-connect";
+import { FileServiceClient } from "./file-service-client";
 
 export class FileControllerClient {
     private chatService: ChatService;
     private socketClientConnect: SocketClientConnect;
-    private apiClient: ApiClient;
+    private apiClientController: ApiClientController;
     private fileService: FileServiceClient;
     
     constructor(
         socketClientConnect: SocketClientConnect,
-        apiClient: ApiClient,
+        apiClientController: ApiClientController,
         chatService: ChatService
     ) {
         this.socketClientConnect = socketClientConnect;
-        this.apiClient = apiClient;
+        this.apiClientController = apiClientController;
         this.chatService = chatService;
-        this.fileService = new FileServiceClient(this.apiClient.getUrl(), socketClientConnect);
+        this.fileService = new FileServiceClient(this.apiClientController.getUrl());
     }
 
     public getFilesPage(data: any, chatId: string, page: number): any[] {
@@ -54,10 +54,8 @@ export class FileControllerClient {
         try {
             const recentChats = await this.fileService.getRecentFiles(userId, 0, 50);
             const chats = recentChats.chats || [];
-            const preloadPromises = chats.map((chat: any) =>
-                this.chatService
-                    .getCacheServiceClient()
-                    .preloadChatData(chat.id || chat.chatId)
+            const preloadPromises = chats.map(async (chat: any) =>
+                this.preloadData(chat.id || chat.chatId)
             );
             await Promise.all(preloadPromises);
         } catch(err) {

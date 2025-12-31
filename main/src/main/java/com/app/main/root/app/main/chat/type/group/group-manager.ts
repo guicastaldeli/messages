@@ -1,9 +1,9 @@
 import React, { use } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { SocketClientConnect } from "../../socket-client-connect";
-import { MessageManager } from "../../_messages_config/message-manager";
+import { ChatController } from "../../chat/chat-controller";
 import { InviteCodeManager } from "./invite-code-manager";
-import { ApiClient } from "../../_api-client/api-client";
+import { ApiClientController } from "../../_api-client/api-client";
 import { GroupLayout } from "./group-layout";
 import { chatState } from "../../chat/chat-state-service";
 import { Dashboard } from "../../_dashboard";
@@ -24,8 +24,8 @@ interface Data {
 export class GroupManager {
     private chatManager: ChatManager;
     public socketClient: SocketClientConnect;
-    private messageManager: MessageManager;
-    private apiClient: ApiClient;
+    private chatController: ChatController;
+    private apiClientController: ApiClientController;
     public dashboard: Dashboard | null;
     private inviteCodeManager: InviteCodeManager;
 
@@ -59,16 +59,16 @@ export class GroupManager {
     constructor(
         chatManager: ChatManager,
         socketClient: SocketClientConnect,
-        messageManager: MessageManager,
-        apiClient: ApiClient,
+        chatController: ChatController,
+        apiClientController: ApiClientController,
         dashboard: Dashboard | null,
         appEl: HTMLDivElement | null = null, 
         username: string
     ) {
         this.chatManager = chatManager;
         this.socketClient = socketClient;
-        this.messageManager = messageManager;
-        this.apiClient = apiClient;
+        this.chatController = chatController;
+        this.apiClientController = apiClientController;
         this.dashboard = dashboard;
         this.appEl = appEl;
         this.username = username;
@@ -94,7 +94,7 @@ export class GroupManager {
 
         const lastMessage = await this.chatManager.lastMessage(this.currentGroupId);
         chatState.setType('GROUP');
-        await this.messageManager.setCurrentChat(
+        await this.chatController.setCurrentChat(
             this.currentGroupId,
             'GROUP',
             data.members || [this.socketId]
@@ -145,7 +145,7 @@ export class GroupManager {
 
         const content = React.createElement(GroupLayout, {
             ref: this.layoutRef,
-            messageManager: this.messageManager,
+            chatController: this.chatController,
             groupManager: this,
             onSuccess: onCreateSuccess,
             onError: onCreateError,
@@ -291,7 +291,7 @@ export class GroupManager {
 
         const lastMessage = await this.chatManager.lastMessage(this.currentGroupId);
         chatState.setType('GROUP');
-        await this.messageManager.setCurrentChat(
+        await this.chatController.setCurrentChat(
             data.id, 
             'GROUP', 
             data.members || [this.userId]
@@ -345,7 +345,7 @@ export class GroupManager {
         this.onJoinError = onJoinError;
 
         const content = React.createElement(JoinGroupLayout, {
-            messageManager: this.messageManager,
+            chatController: this.chatController,
             groupManager: this,
             onSuccess: onJoinSuccess,
             onError: onJoinError,
@@ -399,7 +399,7 @@ export class GroupManager {
         }
 
         const content = React.createElement(GroupLayout, {
-            messageManager: this.messageManager,
+            chatController: this.chatController,
             groupManager: this,
             mode: 'join'
         });
@@ -416,7 +416,7 @@ export class GroupManager {
             hideGroup: false,
             groupName: data.name
         });
-        this.messageManager.setCurrentChat(
+        this.chatController.setCurrentChat(
             data.id,
             'GROUP',
             data.members || [this.userId]

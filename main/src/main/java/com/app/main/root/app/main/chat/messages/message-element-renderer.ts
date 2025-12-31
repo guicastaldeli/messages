@@ -1,16 +1,16 @@
 import ReactDOM from 'react-dom/client';
 import { UserColorGenerator } from "@/app/_utils/UserColorGenerator";
-import { MessageManager } from "./message-manager";
+import { ChatController } from "./chat-controller";
 import { Analysis } from './message-analyzer-client';
 
 export class MessageElementRenderer {
-    private messageManager: MessageManager;
+    private messageManager: ChatController;
     private app!: HTMLElement;
 
     private lastScrollTop: number = 0;
     private lastScrollHeight: number = 0;
 
-    constructor(messageManager: MessageManager) {
+    constructor(messageManager: ChatController) {
         this.messageManager = messageManager;
     }
 

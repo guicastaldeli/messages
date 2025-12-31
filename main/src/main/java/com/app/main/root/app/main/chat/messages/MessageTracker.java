@@ -1,7 +1,8 @@
-package com.app.main.root.app.main._messages_config;
+package com.app.main.root.app.main.chat.messages;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
-import com.app.main.root.app.main._messages_config.MessageLog.*;
+import com.app.main.root.app.main.chat.messages.MessageLog.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;

@@ -1,32 +1,28 @@
 import { CacheServiceClient } from "../../_cache/cache-service-client";
-import { ApiClient } from "../_api-client/api-client";
+import { ApiClientController } from "../_api-client/api-client-controller";
 import { SocketClientConnect } from "../socket-client-connect";
-import { MessageControllerClient } from "./message-controller-client";
-import { FileControllerClient } from "./file-controller-client";
+import { MessageControllerClient } from "./messages/message-controller-client";
+import { FileControllerClient } from "./file/file-controller-client";
 
 export class ChatService {
     private socketClientConnect: SocketClientConnect;
-    private apiClient: ApiClient;
+    private apiClientController: ApiClientController;
     private cacheServiceClient: CacheServiceClient;
     private messageControllerClient: MessageControllerClient;
     private fileControllerClient: FileControllerClient;
 
-    constructor(
-        socketClientConnect: SocketClientConnect,
-        apiClient: ApiClient,
-        cacheServiceClient: CacheServiceClient
-    ) {
+    constructor(socketClientConnect: SocketClientConnect, apiClientController: ApiClientController) {
         this.socketClientConnect = socketClientConnect;
-        this.apiClient = apiClient;
-        this.cacheServiceClient = cacheServiceClient;
+        this.apiClientController = apiClientController;
+        this.cacheServiceClient = CacheServiceClient.getInstance(this, apiClientController);
         this.messageControllerClient = new MessageControllerClient(
             this.socketClientConnect,
-            this.apiClient,
+            this.apiClientController,
             this
         );
         this.fileControllerClient = new FileControllerClient(
             this.socketClientConnect,
-            this.apiClient,
+            this.apiClientController,
             this
         );
     }
@@ -79,7 +75,7 @@ export class ChatService {
         const cacheKey = `${chatId}_${userId}_${page}`;
 
         if(!forceRefresh && this.isDataLoaded(chatId, page)) {
-            const cachedData = this.getCachedData(chatId, page);
+            const cachedData = this.getCachedData(userId, chatId, page);
             return { ...cachedData, fromCache: true }
         }
         if(this.cacheServiceClient.pendingRequests.has(cacheKey)) {
@@ -191,7 +187,11 @@ export class ChatService {
     /**
      * Get Cached Data
      */
-    public getCachedData(chatId: string, page: number): { messages: any[], files: any[] } {
+    public getCachedData(
+        userId: string, 
+        chatId: string, 
+        page: number = 0
+    ): { messages: any[], files: any[] } {
         const data = this.cacheServiceClient.cache.get(chatId)!;
         if(!data) throw new Error('no data!');
 

@@ -1,21 +1,21 @@
 import { SocketClientConnect } from "../socket-client-connect";
-import { ApiClient } from "../_api-client/api-client";
+import { ChatService } from "./chat-service";
 import { ChatManager } from "./chat-manager";
 import { ChatStateManager } from "./chat-state-manager";
 
 export class Loader {
     private socketClient: SocketClientConnect;
-    private apiClient: ApiClient;
+    private chatService: ChatService;
     private chatManager: ChatManager;
     private chatStateManager = ChatStateManager.getIntance();
 
     constructor(
         socketClient: SocketClientConnect,
-        apiClient: ApiClient,
+        chatService: ChatService,
         chatManager: ChatManager
     ) {
         this.socketClient = socketClient;
-        this.apiClient = apiClient;
+        this.chatService = chatService;
         this.chatManager = chatManager;
     }
 
@@ -115,7 +115,7 @@ export class Loader {
 
     private async chatHasMessages(id: string): Promise<boolean> {
         try {
-            const service = await this.apiClient.getMessageService();
+            const service = await this.chatService.getMessageController().getMessageService();
             const res = await service.getMessagesByChatId(id);
             return res.messages && res.messages.length > 0;
         } catch(err) {

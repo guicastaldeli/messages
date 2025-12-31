@@ -1,5 +1,5 @@
 import { SocketClientConnect } from '../socket-client-connect';
-import { MessageManager } from '../_messages_config/message-manager';
+import { ChatController } from '../chat/chat-controller';
 import { ContactServiceClient } from './contact-service-client';
 
 export interface Contact {
@@ -19,7 +19,7 @@ export interface ContactRequest {
 
 export interface ContactServiceClientProps {
     socketClient: SocketClientConnect;
-    messageManager: MessageManager;
+    chatController: ChatController;
     userId: string;
     username: string;
 }

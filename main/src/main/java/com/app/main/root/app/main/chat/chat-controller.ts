@@ -1,28 +1,28 @@
 import ReactDOM from 'react-dom/client';
 import { SocketClientConnect } from "../socket-client-connect";
 import { QueueManager } from "./queue-manager";
-import { MessageAnalyzerClient } from "./message-analyzer-client";
+import { MessageAnalyzerClient } from "./messages/message-analyzer-client";
 import { ChatRegistry, ChatType, Context } from "../chat/chat-registry";
 import { ChatManager } from "../chat/chat-manager";
-import { ApiClient } from "../_api-client/api-client";
-import { MessageHandler, RegisteredMessageHandlers } from "./message-handler";
-import { MessageComponentGetter } from "./_message-component";
-import { CacheServiceClient } from "@/app/_cache/cache-service-client";
-import { MessageElementRenderer } from "./message-element-renderer";
+import { ApiClientController } from "../_api-client/api-client-controller";
+import { MessageHandler, RegisteredMessageHandlers } from "./messages/message-handler";
+import { MessageComponentGetter } from "./messages/_message-component";
+import { MessageElementRenderer } from "./messages/message-element-renderer";
 import { ChunkRenderer } from "./chunk-renderer";
 import { ChatStateManager } from '../chat/chat-state-manager';
+import { ChatService } from './chat-service';
 
-export class MessageManager {
+export class ChatController {
     private queueManager: QueueManager;
     public socketClient: SocketClientConnect;
     private chatManager!: ChatManager;
-    public cacheService: CacheServiceClient;
+    public chatService: ChatService;
     private messageAnalyzer: MessageAnalyzerClient;
     public messageComponent: MessageComponentGetter;
     private messageElementRenderer: MessageElementRenderer;
     private chunkRenderer: ChunkRenderer;
     private chatStateManager = ChatStateManager.getIntance();
-    private apiClient: ApiClient;
+    private apiClientController: ApiClientController;
     public dashboard: any;
     
     private registeredMessageHandlers: RegisteredMessageHandlers;
@@ -51,20 +51,20 @@ export class MessageManager {
 
     constructor(
         socketClient: SocketClientConnect, 
-        apiClient: ApiClient, 
-        cacheService: CacheServiceClient
+        apiClientController: ApiClientController, 
+        chatService: ChatService
     ) {
         this.socketClient = socketClient;
-        this.apiClient = apiClient;
+        this.apiClientController = apiClientController;
         this.queueManager = new QueueManager(socketClient);
         this.messageAnalyzer = new MessageAnalyzerClient();
         this.messageComponent = new MessageComponentGetter();
         this.registeredMessageHandlers = new RegisteredMessageHandlers();
         this.registeredMessageHandlers.register();
         this.chatRegistry = new ChatRegistry();
-        this.cacheService = cacheService;
+        this.chatService = chatService;
         this.messageElementRenderer = new MessageElementRenderer(this);
-        this.chunkRenderer = new ChunkRenderer(this);
+        this.chunkRenderer = new ChunkRenderer(chatService, this);
     }
 
     public async init(): Promise<void> {
@@ -73,6 +73,14 @@ export class MessageManager {
         this.messageElementRenderer.setApp(this.appEl!);
         this.setupMessageHandling();
         await this.socketClient.connect();
+    }
+
+    public async getChatData(
+        chatId: string,
+        userId: string,
+        page: number = 0
+    ): Promise<{ messages: any[], files: any[], fromCache: boolean }> {
+        return this.chatService.getData(chatId, userId, page);
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
@@ -89,17 +97,17 @@ export class MessageManager {
         return handler;
     }
 
-    /*
-    ** Setup Subscriptions
-    */
+    /**
+     * Setup Subscriptions
+     */
     private async setupSubscriptions(): Promise<void> {
         this.messageAnalyzer.init(this.socketId, this.userId, this.username);
         await this.updateSubscription('CHAT', undefined, 'CHAT');
     }
 
-    /*
-    ** Update Subscription
-    */
+    /**
+     * Update Subscription
+     */
     private async updateSubscription(type?: string, chatId?: string, handlerType?: ChatType): Promise<void> {
         if(this.currentHandler && this.chatRegistry.getCurrentChat()) {
             const currentChatId = this.chatRegistry.getCurrentChat()!.id;
@@ -154,7 +162,7 @@ export class MessageManager {
     }
 
     public async renderAllCachedMessages(chatId: string): Promise<void> {
-        const cacheData = this.cacheService.getCacheData(chatId);
+        const cacheData = this.chatService.getCacheServiceClient().getCacheData(chatId);
         if(!cacheData) return;
 
         const allCachedMessages = Array.from(cacheData.messages.values())
@@ -170,9 +178,9 @@ export class MessageManager {
         }
     }
 
-    /*
-    ** Setup Message Handling
-    */
+    /**
+     * Setup Message Handling
+     */
     public setupMessageHandling(): void {
         if(!this.appEl) return;
 
@@ -192,9 +200,9 @@ export class MessageManager {
         });
     }
 
-    /*
-    ** Queue Message Send
-    */
+    /**
+     * Queue Message Send
+     */
     private async queueMessageSend(): Promise<void> {
         if(this.isSending) {
             console.log('Message in progress');
@@ -204,9 +212,9 @@ export class MessageManager {
         await this.handleSendMessage();
     }
 
-    /*
-    ** Set Current Chat
-    */
+    /**
+     * Set Current Chat
+     */
     public async setCurrentChat(
         chatId: string,
         chatType: ChatType,
@@ -234,14 +242,14 @@ export class MessageManager {
             }
             this.scrollHandler = null;
         }
-        if(!this.cacheService.isChatCached(chatId)) {
-            this.cacheService.init(chatId, 0);
+        if(!this.chatService.getCacheServiceClient().isChatCached(chatId)) {
+            this.chatService.getCacheServiceClient().init(chatId, 0);
         }
 
-        const cacheData = this.cacheService.getCacheData(chatId);
+        const cacheData = this.chatService.getCacheServiceClient().getCacheData(chatId);
         if(cacheData && cacheData.messages.size > 0) {
             await this.renderAllCachedMessages(chatId);
-            await this.chunkRenderer.setupScrollHandler();
+            await this.chunkRenderer.setupScrollHandler(this.userId);
             
             const container = await this.getContainer();
             if(container) {
@@ -250,14 +258,14 @@ export class MessageManager {
                 }, 100);
             }
         } else {
-            this.loadHistory(chatId, 0);
-            await this.chunkRenderer.setupScrollHandler();
+            this.loadHistory(chatId, this.userId, 0);
+            await this.chunkRenderer.setupScrollHandler(this.userId);
         }
     }
 
-    /*
-    ** Metadata Type
-    */
+    /**
+     * Metadata Type
+     */
     private async getMetadataType(context: Context): Promise<string> {
         const initData = {
             senderId: this.socketClient,
@@ -273,9 +281,9 @@ export class MessageManager {
         return type;
     }
 
-    /*
-    ** Send Message Handler
-    */
+    /**
+     * Send Message Handler
+     */
     public async handleSendMessage(): Promise<void> {
         if(this.isSending) return;
         this.isSending = true;
@@ -317,9 +325,9 @@ export class MessageManager {
     }
 
     
-    /*
-    ** Send Message Method
-    */
+    /**
+     * Send Message Method
+     */
     private async sendMessage(content: any): Promise<boolean> {
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
@@ -382,7 +390,7 @@ export class MessageManager {
         );
         if(res) {
             try {
-                const messageService = await this.apiClient.getMessageService();
+                const messageService = await this.chatService.getMessageController().getMessageService();
                 const savedMessage = await messageService.saveMessages({
                     messageId: analyzedData.messageId,
                     content: analyzedData.content,
@@ -403,7 +411,7 @@ export class MessageManager {
                     timestamp: time,
                     isTemp: false
                 }
-                this.cacheService.addMessage(chatId, messageToCache);
+                this.chatService.getMessageController().addMessage(chatId, messageToCache);
             } catch(err) {
                 console.error('Failed to save message :(', err);
                 const messageToCache = {
@@ -415,7 +423,7 @@ export class MessageManager {
                     timestamp: time,
                     isTemp: true
                 }
-                this.cacheService.addMessage(chatId, messageToCache);
+                this.chatService.getMessageController().addMessage(chatId, messageToCache);
             }
             if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
             this.chatManager.setLastMessage(
@@ -430,9 +438,9 @@ export class MessageManager {
         return res;
     }
 
-    /*
-    ** Handle Chat Message
-    */
+    /**
+     * Handle Chat Message
+     */
     private async handleChatMessage(data: any): Promise<void> {
         const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
@@ -480,9 +488,23 @@ export class MessageManager {
         );
     }
 
-    /*
-    ** Get Container
-    */
+    /**
+     * Handle Chat File
+     */
+    private handleChatFile(files: any[], chatId: string): void {
+        const fileEvent = new CustomEvent('chat-files-loaded', {
+            detail: {
+                chatId,
+                files,
+                timestamp: Date.now()
+            }
+        });
+        window.dispatchEvent(fileEvent);
+    }
+
+    /**
+     * Get Container
+     */
     public async getContainer(): Promise<HTMLDivElement | null> {
         if (this.container) return this.container;
         
@@ -507,55 +529,33 @@ export class MessageManager {
         });
     }
 
-    /*
-    ** Load History
-    */
-    public async loadHistory(chatId: string, page: number = 0): Promise<void> {
+    /**
+     * Load History
+     */
+    public async loadHistory(
+        chatId: string,
+        userId: string,
+        page: number = 0
+    ): Promise<void> {
         if(this.isLoadingHistory) return;
         this.isLoadingHistory = true;
 
         try {
-            const messageService = await this.apiClient.getMessageService();
-            const response = await messageService.getMessagesByChatId(chatId, page);
-            const totalMessages = (response.messages ? response.messages.length + (page * 20) : 0);
-            if (page === 0) {
-                this.chatStateManager.initChatState(chatId, totalMessages);
-            }
-
-            if(response.messages && response.messages.length > 0) {
-                const startIndex = page * 20;
-                const endIndex = startIndex + Math.min(response.messages.length, 20) - 1;
-
-                //Loaded Messages
-                const sortedMessages = response.messages.sort((a, b) => {
-                    const timeA = a.timestamp || a.createdAt ||0;
-                    const timeB = b.timestamp || b.createdAt || 0;
-                    return timeA - timeB;
+            const chatData = await this.getChatData(chatId, userId, page);
+            if(chatData.messages && chatData.messages.length > 0) {
+                const sortedMessages = chatData.messages.sort((a, b) => {
+                    const tA = a.timestamp || a.createdAt || 0;
+                    const tB = b.timestamp || b.createdAt || 0;
+                    return tA - tB;
                 });
-                this.cacheService.addMessagesPage(chatId, sortedMessages, page);
-                if(page > this.currentPage) this.currentPage = page;
-                
-                //New Messages
-                const newMessages = this.cacheService.getMessagesInRange(
-                    chatId,
-                    startIndex,
-                    endIndex
-                );
-                const sortedNewMessages = newMessages.sort((a, b) => {
-                    const timeA = a.timestamp || a.createdAt || 0;
-                    const timeB = b.timestamp || b.createdAt || 0;
-                    return timeA - timeB;
-                });
-                await this.messageElementRenderer.renderHistory(sortedNewMessages);
-            } else {
-                const cacheData = this.cacheService.getCacheData(chatId);
-                if (cacheData) {
-                    cacheData.hasMore = false;
-                    cacheData.isFullyLoaded = true;
-                }
+                await this.messageElementRenderer.renderHistory(sortedMessages);
             }
+            if(chatData.files && chatData.files.length > 0) {
+                this.handleChatFile(chatData.files, chatId);
+            }
+            if(page > this.currentPage) this.currentPage = page;
         } catch(err) {
-            console.error(`Failed to load history for page ${page}:`, err);
+            console.error(`Failed to load chat data for ${chatId} page ${page}:`, err);
         } finally {
             this.isLoadingHistory = false;
         }
@@ -568,45 +568,38 @@ export class MessageManager {
         this.container = null;
     }
 
-    /*
-    ** Set Chat Manager
-    */
+    /**
+     * Chat Manager
+     */
     public setChatManager(instance: ChatManager): void {
         this.chatManager = instance;
     }
 
-    /*
-    ** Get Cache Service
-    */
-    public getCacheService(): CacheServiceClient {
-        return this.cacheService;
-    }
-
-    /*
-    ** Get Message Element Renderer
-    */
+    /**
+     * Get Message Element Renderer
+     */
     public getMessageElementRenderer(): MessageElementRenderer {
         return this.messageElementRenderer;
     }
 
-    /*
-    ** Get Chunk Renderer
-    */
+    /**
+     * Get Chunk Renderer
+     */
     public getChunkRenderer(): ChunkRenderer {
         return this.chunkRenderer;
     }
 
-    /*
-    ** Get Analyzer
-    */
+    /**
+     * Get Analyzer
+     */
     public getAnalyzer(): MessageAnalyzerClient {
         return this.messageAnalyzer;
     }
 
-    /*
-    ** Get Api Client
-    */
-    public getApiClient(): ApiClient {
-        return this.apiClient;
+    /**
+     * Get Api Client
+     */
+    public getApiClientController(): ApiClientController {
+        return this.apiClientController;
     }
 }

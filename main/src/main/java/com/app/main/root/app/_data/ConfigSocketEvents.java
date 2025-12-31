@@ -1,8 +1,8 @@
 package com.app.main.root.app._data;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app._db.DbService;
-import com.app.main.root.app.main._messages_config.MessageTracker;
 import com.app.main.root.app._server.EventRegistry;
+import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app._server.ConnectionTracker;
 import org.springframework.context.ApplicationListener;
 import org.springframework.messaging.handler.annotation.DestinationVariable;

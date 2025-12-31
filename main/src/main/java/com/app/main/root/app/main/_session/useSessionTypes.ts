@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
-import { ApiClient } from '../_api-client/api-client';
+import { ApiClientController } from '../_api-client/api-client-controller';
 import { Types } from '../_api-client/session-service-client';
 
 export const useSessionTypes = () => {
     const [types, setTypes] = useState<Types>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    let apiClient!: ApiClient;
+    let ApiClientController!: ApiClientController;
 
     const loadSessionTypes = async(): Promise<void> => {
         try {
-            if(!apiClient) throw new Error('err');
+            if(!ApiClientController) throw new Error('err');
             setLoading(true);
             setError(null);
-            const service = await apiClient.getSessionService();
+            const service = await ApiClientController.getSessionService();
             const types = await service.getSessionTypes();
             setTypes(types);
         } catch(err) {

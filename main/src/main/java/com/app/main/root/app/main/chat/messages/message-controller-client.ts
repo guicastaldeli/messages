@@ -1,23 +1,23 @@
-import { ChatService } from "./chat-service"; 
-import { ApiClient } from "../_api-client/api-client";
-import { SocketClientConnect } from "../socket-client-connect";
-import { MessageServiceClient } from "../_api-client/message-service-client"
+import { ChatService } from "../chat-service"; 
+import { ApiClientController } from "../../_api-client/api-client-controller";
+import { SocketClientConnect } from "../../socket-client-connect";
+import { MessageServiceClient } from "./message-service-client";
 
 export class MessageControllerClient {
     private chatService: ChatService;
     private socketClientConnect: SocketClientConnect;
-    private apiClient: ApiClient;
+    private apiClientController: ApiClientController;
     private messageService: MessageServiceClient;
 
     constructor(
         socketClientConnect: SocketClientConnect,
-        apiClient: ApiClient,
+        apiClientController: ApiClientController,
         chatService: ChatService
     ) {
         this.socketClientConnect = socketClientConnect;
-        this.apiClient = apiClient;
+        this.apiClientController = apiClientController;
         this.chatService = chatService;
-        this.messageService = new MessageServiceClient(this.apiClient.getUrl(), socketClientConnect);
+        this.messageService = new MessageServiceClient(this.apiClientController.getUrl(), socketClientConnect);
     }
 
     /**
