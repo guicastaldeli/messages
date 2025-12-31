@@ -29,9 +29,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/main/direct")
-            .addInterceptors(interceptor)
-            .setAllowedOriginPatterns(webUrl, apiUrl);
         registry.addEndpoint("/main")
             .addInterceptors(interceptor)
             .setAllowedOriginPatterns(webUrl, apiUrl)

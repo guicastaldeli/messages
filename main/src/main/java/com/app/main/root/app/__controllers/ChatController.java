@@ -20,7 +20,7 @@ public class ChatController {
     /**
      * Get Chat Data
      */
-    @GetMapping("/{chatId/data")
+    @GetMapping("/{chatId}/data")
     public ResponseEntity<?> getChatData(
         @PathVariable String chatId,
         @RequestParam String userId,

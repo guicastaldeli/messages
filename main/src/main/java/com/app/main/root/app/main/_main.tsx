@@ -81,7 +81,6 @@ export class Main extends Component<any, State> {
         this.chatController.setChatManager(this.chatManager);
         const cacheService = await this.chatService.getCacheServiceClient();
         if(this.state.userId) await cacheService.initCache(this.state.userId);
-        this.loadData();
     }
 
     componentWillUnmount(): void {
@@ -197,6 +196,9 @@ export class Main extends Component<any, State> {
                             const cacheService = await this.chatService.getCacheServiceClient();
                             await cacheService.initCache(userInfo.userId);
                             await this.cachePreloader.startPreloading(userInfo.userId);
+
+                            await this.loadData();
+
                             const authService = await this.apiClientController.getAuthService();
                             const validation = await authService.validateSession();
                             
@@ -284,6 +286,8 @@ export class Main extends Component<any, State> {
                             const cacheService = await this.chatService.getCacheServiceClient();
                             await cacheService.initCache(authData.userId);
                             await this.cachePreloader.startPreloading(authData.userId);
+
+                            await this.loadData();
                             
                             if (this.dashboardInstance) {
                                 await this.dashboardInstance.getUserData(authData.sessionId, authData.userId);
@@ -301,6 +305,11 @@ export class Main extends Component<any, State> {
                     throw new Error('Invalid response from server - missing user data');
                 }
 
+                console.log('=== Checking cookies after login ===');
+                console.log('All cookies:', document.cookie);
+                console.log('SESSION_ID:', CookieService.getValue(SessionManager.SESSION_ID_KEY));
+                console.log('USER_INFO:', CookieService.getValue(SessionManager.USER_INFO_KEY));
+                console.log('REMEMBER_USER:', CookieService.getValue(SessionManager.REMEMBER_USER));
             } catch (err: any) {
                 console.error('Authentication API error:', err);
                 alert(`Authentication failed: ${err.message}`);

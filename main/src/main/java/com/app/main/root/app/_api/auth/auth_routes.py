@@ -12,18 +12,14 @@ class AuthRoutes:
         self.setupRoutes()
         
     def setupRoutes(self):
-        ##
         ## Extract Cookies
-        ##
         def extractCookies(req: Request) -> Dict[str, str]:
             cookies = {}
             for k, v in req.cookies.items():
                 cookies[k] = v
             return cookies
         
-        ##
         ## Set Cookies
-        ##
         def setCookies(res: Response, cookies: Dict[str, Any]):
             if(cookies):
                 for k, v in cookies.items():
@@ -36,9 +32,7 @@ class AuthRoutes:
                         max_age=7 * 24 * 60 * 60 if k == "SESSION_ID" else None
                     )
         
-        ##
         ## Register
-        ##
         @self.router.post("/register")
         async def registerUser(
             data: Dict[Any, Any],
@@ -74,9 +68,7 @@ class AuthRoutes:
                     detail=f"Registration failed: {str(err)}"
                 )
         
-        ##
         ## Login
-        ##
         @self.router.post("/login")
         async def loginUser(
             data: Dict[Any, Any],
@@ -105,9 +97,7 @@ class AuthRoutes:
                     detail=f"Login failed: {str(err)}"
                 )
                 
-        ##
         ## Logout
-        ##
         @self.router.post("/logout")
         async def logoutUser(req: Request, res: Response):
             try:
@@ -128,9 +118,7 @@ class AuthRoutes:
                     detail=f"Logout failed: {str(err)}"
                 )
                 
-        ##
         ## Validate Session
-        ##
         @self.router.get("/validate")
         async def validateSession(req: Request, res: Response):
             try:
@@ -167,9 +155,7 @@ class AuthRoutes:
                     "error": f"Validation error: {str(err)}"
                 }
                 
-        ##
         ## Refresh Token
-        ##
         @self.router.post("/refresh")
         async def refreshSessionToken(req: Request, res: Response):
             try:
@@ -190,9 +176,7 @@ class AuthRoutes:
                     detail=f"Refresh failed: {str(err)}"
                 )
                 
-        ##
         ## Session Status
-        ##
         @self.router.get("/status")
         async def sessionStatus(req: Request):
             try:

@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from time_stream import TimeStream
 from chat.chat_service import ChatService
 from chat.chat_routes import ChatRoutes
@@ -26,12 +28,7 @@ class Main:
         WEB_URL = config.WEB_URL
         SERVER_URL = config.SERVER_URL
         
-        self.app.add_middleware(
-            CORSMiddleware,
-            allow_origins=[WEB_URL, SERVER_URL],
-            allow_methods=["*"],
-            allow_headers=["*"]
-        )
+        # REMOVE the CORS middleware from here
         DB_API_URL = SERVER_URL
         TIME_API_URL = SERVER_URL
         SESSION_API_URL = SERVER_URL
@@ -79,14 +76,42 @@ class Main:
         self.fileRoutes = FileRoutes(self.fileService)
         self.app.include_router(self.fileRoutes.router)
         
+class NoWWWAuthenticateMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if('WWW-Authenticate' in response.headers):
+            del response.headers['WWW-Authenticate']
+        return response
+        
 
 # Init
 instance = Main()
 app = instance.app
-timeStream = instance.timeStream
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*"
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        config.WEB_URL,
+        config.SERVER_URL
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
+app.add_middleware(NoWWWAuthenticateMiddleware)
+
 messageService = instance.messageService
 
 # Time Update
+timeStream = instance.timeStream
+
 def timeCallback(time: str, serverTime: bool):
     print(f"Time: {time}, Server Time: {serverTime}")
 

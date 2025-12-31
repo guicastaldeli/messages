@@ -111,6 +111,9 @@ public class MessageController {
     */
     @GetMapping("/messages/userId/{userId}")
     public List<_Message> getMessagesByUserId(@PathVariable String userId) throws SQLException {
+        if(userId == null || userId.equals("null") || userId.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
         return serviceManager.getMessageService().getMessagesByUserId(userId);
     }
 

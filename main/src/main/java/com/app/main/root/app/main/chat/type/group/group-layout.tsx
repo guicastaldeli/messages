@@ -1,4 +1,4 @@
-import '../../__styles/styles.scss';
+import "@/app/main/__styles/styles.css"
 import React, { useState } from 'react';
 import { Component, createRef } from 'react';
 import { ChatController } from '../../chat-controller';
