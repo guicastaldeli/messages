@@ -10,6 +10,66 @@ body {
   justify-content: center;
 }
 
+/* Add to your styles.css */
+.file-message {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+  background-color: #f9f9f9;
+}
+
+.file-message-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-icon {
+  font-size: 24px;
+  font-weight: bold;
+  color: #666;
+}
+
+.file-info {
+  flex: 1;
+}
+
+.file-name {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.file-details {
+  font-size: 12px;
+  color: #666;
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.file-action-btn {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+}
+
+.file-action-btn:hover {
+  background: #f0f0f0;
+}
+
+.self-message.file-message {
+  background-color: #e3f2fd;
+  border-color: #bbdefb;
+  margin-left: auto;
+  margin-right: 0;
+  max-width: 70%;
+}
+
 .app {
   position: fixed;
   right: 8rem;

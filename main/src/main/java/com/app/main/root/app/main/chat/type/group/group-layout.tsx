@@ -4,6 +4,7 @@ import { Component, createRef } from 'react';
 import { ChatController } from '../../chat-controller';
 import { GroupManager } from './group-manager';
 import { GroupMembersInterface } from './layout/group-members-interface';
+import { FileUploader } from "../../file/file-uploader";
 
 export interface Props {
     chatController: ChatController;
@@ -39,6 +40,7 @@ export class GroupLayout extends Component<Props, State> {
 
     private timeout: number = 15000;
     private nameInputRef = createRef<HTMLInputElement>();
+    private fileUploaderRef = createRef<FileUploader>();
 
     constructor(props: Props) {
         super(props);
@@ -273,6 +275,28 @@ export class GroupLayout extends Component<Props, State> {
         this.setState({ showMembersInterface: false });
     }
 
+    handleFileUpload = async (): Promise<void> => {
+        this.fileUploaderRef.current?.triggerFileInput();
+    }
+
+    handleFileUploadSuccess = (res: any): void => {
+        console.log('File uploaded successfully:', res);
+        if (this.props.onSuccess) {
+            this.props.onSuccess(res);
+        }
+    }
+
+    handleFileUploadError = (err: Error): void => {
+        console.error('File upload error:', err);
+        if (this.props.onError) {
+            this.props.onError(err);
+        }
+    }
+
+    handleFileSharedInChat = (fileData: any): void => {
+        console.log('File shared in chat:', fileData);
+    }
+
     /* Render */
     render() {
         const { isLoading, error, showMembersInterface } = this.state;
@@ -361,13 +385,24 @@ export class GroupLayout extends Component<Props, State> {
                         <div className="messages"></div>
                         <div className="typebox">
                             <input type="text" id="message-input" />
-                            <button id="send-message" onClick={() => console.log('t7fdyug')}>
+                            <button id="send-message">
+                                Send
+                            </button>
+                            <button id="send-file" onClick={this.handleFileUpload}>
                                 Send
                             </button>
                         </div>
                     </div>
                 )}
 
+                <FileUploader
+                    ref={this.fileUploaderRef}
+                    chatService={this.chatController.chatService}
+                    chatController={this.chatController}
+                    onUploadSuccess={this.handleFileUploadSuccess}
+                    onUploadError={this.handleFileUploadError}
+                    onFileSharedInChat={this.handleFileSharedInChat}
+                />
                 {showMembersInterface && (
                     <GroupMembersInterface
                         groupId={this.groupManager.currentGroupId}

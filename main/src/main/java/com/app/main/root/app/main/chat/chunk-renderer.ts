@@ -62,17 +62,32 @@ export class ChunkRenderer {
         }
 
         const messageController = this.chatService.getMessageController();
-        const fileController = await this.chatService.getFileController();
+        const fileController = this.chatService.getFileController();
+
         const cacheData = await this.chatService.getCachedData(chatId);
         let nextPage = this.chatController.currentPage + 1;
 
-        if(!cacheData || 
-            (await messageController.hasMoreMessages(chatId)) ||
-            (await this.chatService.getFileController().hasMoreFiles(chatId))
-        ) return;
+        const hasMoreMessages = await messageController.hasMoreMessages(chatId);
+        const hasMoreFiles = await fileController.hasMoreFiles(chatId);
+
+        if(!hasMoreMessages && !hasMoreFiles) {
+            return;
+        }
+        if(!cacheData) {
+            console.log(`No cache data for chat ${chatId}, might be a new chat`);
+            return;
+        }
+
         this.currentLoadingPage = nextPage;
-        await this.chatController.loadHistory(chatId, userId, nextPage);
-        this.currentLoadingPage = -1;
+        
+        try {
+            console.log(`Loading chunk for chat ${chatId}, page ${nextPage}`);
+            await this.chatController.loadHistory(chatId, userId, nextPage);
+        } catch (error) {
+            console.error(`Failed to load chunk for chat ${chatId}:`, error);
+        } finally {
+            this.currentLoadingPage = -1;
+        }
     }
 
     /**
@@ -88,8 +103,9 @@ export class ChunkRenderer {
             const cacheData = await this.chatService.getCachedData(chatId);
             const data = cacheService.cache.get(chatId)!;
             if(cacheData && data.loadedPages.has(nextPage)) {
+                //i changed this!
                 const messageService = await this.chatService.getMessageController().getMessageService();
-                const response = await messageService.getMessagesByChatId(chatId, nextPage);
+                const response = await messageService.getChatData(userId, chatId, nextPage);
                 if(response.messages && response.messages.length > 0) {
                     this.chatService.getMessageController()
                         .getMessagesPage(

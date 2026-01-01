@@ -50,30 +50,43 @@ export class FileUploader extends Component<Props, State> {
                 return;
             }
 
+            const currentChatId = this.props.chatController.currentChatId;
+            if (!currentChatId) {
+                console.error('No active chat selected!');
+                return;
+            }
+
             const fileService = await this.props.chatService.getFileController().getFileService();
             const res = await fileService.uploadFile(
                 file,
                 sessionData.userId,
-                "root"
+                currentChatId
             );
+            
             if(res.success) {
-                console.log('FILE UPLOADED!');
+                console.log('FILE UPLOADED!', res);
+                
                 const fileItem: Item = {
-                    fileId: res.fileId,
+                    fileId: res.data.fileId,
                     originalFileName: file.name,
                     fileSize: file.size,
                     mimeType: file.type,
-                    chatId: res.chatId,
+                    chatId: currentChatId,
                     fileType: this.getFileType(file.type),
                     uploadedAt: new Date().toISOString(),
                     lastModified: new Date().toISOString()
                 };
+                
+                console.log('Sending file message with fileId:', fileItem.fileId);
+                
                 if(this.props.chatController) {
                     await this.props.chatController.sendFileMessage(fileItem);
                 }
+                
                 if(this.props.onFileSharedInChat) {
                     this.props.onFileSharedInChat(fileItem);
                 }
+                
                 if(this.props.onUploadSuccess) {
                     this.props.onUploadSuccess(res);
                 }
@@ -101,7 +114,7 @@ export class FileUploader extends Component<Props, State> {
         return 'other';
     }
 
-    private triggerFileInput = (): void => {
+    public triggerFileInput = (): void => {
         this.fileInputRef.current?.click();
     }
 
@@ -117,22 +130,6 @@ export class FileUploader extends Component<Props, State> {
                     style={{ display: 'none' }}
                     disabled={isUploading}
                 />
-
-                <button
-                    onClick={this.triggerFileInput}
-                    disabled={isUploading}
-                    style={{
-                        cursor: isUploading ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    {isUploading ? `Uploading... ${uploadProgress}` : 'Upload'}
-                </button>
-
-                {isUploading && (
-                    <div>
-                        <progress value={uploadProgress} max="100" style={{ width: '100%' }}></progress>
-                    </div>
-                )}
             </div>
         )
     }

@@ -32,7 +32,6 @@ export class MessageServiceClient {
             const res = await fetch(
                 `${this.url}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
             );
-
             if (!res.ok) {
                 const errorText = await res.text();
                 console.error(`API Error (${res.status}):`, errorText);
@@ -40,12 +39,10 @@ export class MessageServiceClient {
             }
 
             const resData = await res.json();
-
-            if (resData.success === false) {
+            if(resData.success === false) {
                 throw new Error(resData.error || 'Failed to fetch chat data');
             }
-
-            if (resData.data) {
+            if(resData.data) {
                 const data = resData.data;
 
                 if (Array.isArray(data.messages)) {
@@ -92,7 +89,6 @@ export class MessageServiceClient {
             throw err;
         }
     }
-
 
     /**
      * Save

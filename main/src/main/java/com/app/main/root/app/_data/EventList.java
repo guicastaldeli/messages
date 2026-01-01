@@ -3,18 +3,20 @@ import com.app.main.root.app._server.MessageRouter;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.EnvConfig;
 import com.app.main.root.app.EventTracker;
+import com.app.main.root.app._crypto.file_encoder.FileEncoderWrapper;
+import com.app.main.root.app._crypto.file_encoder.KeyManagerService;
 import com.app.main.root.app._crypto.message_encoder.SecureMessageService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.ConnectionTracker;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app._server.ConnectionInfo;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import java.time.format.DateTimeFormatter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -29,6 +31,7 @@ public class EventList {
     private final MessageAnalyzer messageAnalyzer;
     private final SimpMessagingTemplate messagingTemplate;
     @Autowired @Lazy private SecureMessageService secureMessageService;
+    @Autowired @Lazy private KeyManagerService keyManagerService;
 
     public EventList(
         ServiceManager serviceManager,
@@ -345,6 +348,91 @@ public class EventList {
             "/queue/messages",
             false
         ));
+        /* File Message */
+        configs.put("file", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> payloadData = (Map<String, Object>) payload;
+                    String chatId = (String) payloadData.get("chatId");
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String username = (String) payloadData.get("username");
+                    
+                    eventTracker.track(
+                        "FILE_MESSAGE",
+                        payloadData,
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        userId
+                    );
+
+                    boolean isGroupChat = chatId != null && chatId.startsWith("group_");
+                    boolean isDirectChat = chatId != null && chatId.startsWith("direct_");
+                    
+                    Map<String, Object> fileMessage = new HashMap<>();
+                    fileMessage.put("chatId", chatId);
+                    fileMessage.put("messageId", payloadData.get("messageId"));
+                    fileMessage.put("userId", userId);
+                    fileMessage.put("senderId", userId);
+                    fileMessage.put("username", username);
+                    fileMessage.put("content", payloadData.get("content"));
+                    fileMessage.put("type", "file");
+                    fileMessage.put("timestamp", System.currentTimeMillis());
+                    fileMessage.put("fileData", payloadData.get("fileData"));
+                    
+                    Map<String, Object> routingMetadata = new HashMap<>();
+                    routingMetadata.put("messageType", isGroupChat ? "FILE_MESSAGE" : "DIRECT_FILE_MESSAGE");
+                    routingMetadata.put("type", "file");
+                    routingMetadata.put("sessionId", sessionId);
+                    routingMetadata.put("userId", userId);
+                    routingMetadata.put("priority", "NORMAL");
+                    routingMetadata.put("isDirect", isDirectChat);
+                    routingMetadata.put("isGroup", isGroupChat);
+                    fileMessage.put("routingMetadata", routingMetadata);
+                    
+                    if(isGroupChat) {
+                        String destination = "/user/queue/messages/group/" + chatId;
+                        List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(chatId);
+                        
+                        for(_User member : groupMembers) {
+                            String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
+                            if(memberSessionId != null) {
+                                socketMethods.send(memberSessionId, destination, fileMessage);
+                            }
+                        }
+                    } else if(isDirectChat) {
+                        String destination = "/user/queue/messages/direct/" + chatId;
+                        socketMethods.send(sessionId, destination, fileMessage);
+                        
+                        String recipientId = (String) payloadData.get("targetUserId");
+                        if(recipientId != null) {
+                            String recipientSession = serviceManager.getUserService().getSessionByUserId(recipientId);
+                            if(recipientSession != null) {
+                                socketMethods.send(recipientSession, destination, fileMessage);
+                            }
+                        }
+                    }
+                    
+                    return Collections.emptyMap();
+                } catch(Exception err) {
+                    err.printStackTrace();
+                    eventTracker.track(
+                        "FILE_MESSAGE_ERROR",
+                        Map.of("error", err.getMessage(), "payload", payload),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "client"
+                    );
+                    
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "FILE_MESSAGE_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/file-message-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "",
+            false
+        ));
         /* Get Decrypted Messages */
         configs.put("get-decrypted-messages", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
@@ -357,14 +445,14 @@ public class EventList {
                     for (Map<String, Object> encryptedMessage : encryptedMessages) {
                         Map<String, Object> decryptedMessage = new HashMap<>(encryptedMessage);
                         
-                        if (encryptedMessage.containsKey("contentBytes")) {
+                        if(encryptedMessage.containsKey("contentBytes")) {
                             Object contentBytesObj = encryptedMessage.get("contentBytes");
                             byte[] contentBytes;
                             
-                            if (contentBytesObj instanceof String) {
+                            if(contentBytesObj instanceof String) {
                                 String base64Content = (String) contentBytesObj;
                                 contentBytes = Base64.getDecoder().decode(base64Content);
-                            } else if (contentBytesObj instanceof byte[]) {
+                            } else if(contentBytesObj instanceof byte[]) {
                                 contentBytes = (byte[]) contentBytesObj;
                             } else {
                                 throw new IllegalArgumentException("err");
@@ -390,6 +478,154 @@ public class EventList {
                 }
             },
             "/queue/decrypted-messages-scss",
+            false
+        ));
+        /* Get Decrypted Files */
+        configs.put("get-decrypted-files", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    List<Map<String, Object>> encryptedFiles = (List<Map<String, Object>>) data.get("files");
+                    String chatId = (String) data.get("chatId");
+                    List<Map<String, Object>> decryptedFiles = new ArrayList<>();
+                    
+                    for(Map<String, Object> encryptedFile : encryptedFiles) {
+                        try {
+                            Map<String, Object> decryptedFile = new HashMap<>(encryptedFile);
+                            
+                            Boolean isDecrypted = (Boolean) encryptedFile.get("isDecrypted");
+                            if(isDecrypted != null && isDecrypted) {
+                                decryptedFiles.add(decryptedFile);
+                                continue;
+                            }
+                            
+                            String fileId = (String) encryptedFile.get("id");
+                            String userId = (String) encryptedFile.get("userId");
+                            
+                            if(fileId == null || userId == null) {
+                                System.err.println("File ID or User ID is null");
+                                decryptedFiles.add(decryptedFile);
+                                continue;
+                            }
+                            
+                            byte[] encryptionKey = keyManagerService.retrieveKey(fileId, userId);
+                            if(encryptionKey == null) {
+                                System.err.println("No encryption key found for file: " + fileId);
+                                decryptedFiles.add(decryptedFile);
+                                continue;
+                            }
+                            
+                            Object encryptedDataObj = encryptedFile.get("encryptedContent");
+                            if(encryptedDataObj == null) {
+                                encryptedDataObj = encryptedFile.get("content");
+                            }
+                            if(encryptedDataObj == null) {
+                                System.err.println("No encrypted content found for file: " + fileId);
+                                decryptedFiles.add(decryptedFile);
+                                continue;
+                            }
+                            
+                            byte[] encryptedBytes = null;
+                            if(encryptedDataObj instanceof String) {
+                                String base64Data = (String) encryptedDataObj;
+                                encryptedBytes = Base64.getDecoder().decode(base64Data);
+                            } else if(encryptedDataObj instanceof byte[]) {
+                                encryptedBytes = (byte[]) encryptedDataObj;
+                            } else {
+                                throw new IllegalArgumentException("Unsupported encrypted data type for file: " + fileId);
+                            }
+                            
+                            FileEncoderWrapper fileEncoder = new FileEncoderWrapper();
+                            try {
+                                fileEncoder.initEncoder(encryptionKey, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
+                                
+                                Object ivObj = encryptedFile.get("iv");
+                                if(ivObj != null) {
+                                    byte[] iv;
+                                    if(ivObj instanceof String) {
+                                        iv = Base64.getDecoder().decode((String) ivObj);
+                                    } else if(ivObj instanceof byte[]) {
+                                        iv = (byte[]) ivObj;
+                                    } else {
+                                        throw new IllegalArgumentException("Invalid IV format");
+                                    }
+                                    fileEncoder.setIV(iv);
+                                }
+                                
+                                byte[] decryptedBytes = fileEncoder.decrypt(encryptedBytes);
+                                if(encryptedFile.containsKey("isFileContent")) {
+                                    String base64Decrypted = Base64.getEncoder().encodeToString(decryptedBytes);
+                                    decryptedFile.put("content", base64Decrypted);
+                                } else {
+                                    String decryptedString = new String(decryptedBytes, StandardCharsets.UTF_8);
+                                    decryptedFile.put("content", decryptedString);
+                                }
+                                decryptedFile.put("isDecrypted", true);
+                                decryptedFile.put("originalSize", decryptedBytes.length);
+                                
+                                if(encryptedFile.containsKey("encryptedFileName")) {
+                                    Object encryptedNameObj = encryptedFile.get("encryptedFileName");
+                                    byte[] encryptedName;
+                                    if(encryptedNameObj instanceof String) {
+                                        encryptedName = Base64.getDecoder().decode((String) encryptedNameObj);
+                                    } else if(encryptedNameObj instanceof byte[]) {
+                                        encryptedName = (byte[]) encryptedNameObj;
+                                    } else {
+                                        throw new IllegalArgumentException("Invalid encrypted filename format");
+                                    }
+                                    
+                                    byte[] decryptedNameBytes = fileEncoder.decrypt(encryptedName);
+                                    String decryptedName = new String(decryptedNameBytes, StandardCharsets.UTF_8);
+                                    decryptedFile.put("originalFileName", decryptedName);
+                                }
+                                
+                            } finally {
+                                fileEncoder.cleanup();
+                            }
+                            
+                            decryptedFiles.add(decryptedFile);
+                        } catch (Exception fileErr) {
+                            System.err.println("Error decrypting file: " + fileErr.getMessage());
+                            fileErr.printStackTrace();
+                            encryptedFile.put("decryptionError", fileErr.getMessage());
+                            decryptedFiles.add(encryptedFile);
+                        }
+                    }
+                    
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("files", decryptedFiles);
+                    response.put("count", decryptedFiles.size());
+                    response.put("success", true);
+                    
+                    eventTracker.track(
+                        "get-decrypted-files",
+                        Map.of("count", decryptedFiles.size(), "chatId", chatId),
+                        EventDirection.SENT,
+                        sessionId,
+                        "system"
+                    );
+                    
+                    return response;
+                } catch (Exception err) {
+                    err.printStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "LOAD_DECRYPTED_FILES_FAILED");
+                    errRes.put("message", err.getMessage());
+                    errRes.put("success", false);
+                    
+                    eventTracker.track(
+                        "get-decrypted-files-error",
+                        Map.of("error", err.getMessage(), "payload", payload),
+                        EventDirection.SENT,
+                        sessionId,
+                        "system"
+                    );
+                    
+                    socketMethods.send(sessionId, "/queue/decrypted-files-err", errRes);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/decrypted-files-scss",
             false
         ));
         configs.put("direct", new EventConfig(

@@ -139,13 +139,23 @@ export class Main extends Component<any, State> {
     componentWillUnmount(): void {
         if(this.chatManager) this.chatManager.unmount();
     }
-    
 
     private loadData = async(): Promise<void> => {
         try {
             const messageService = await this.chatService.getMessageController().getMessageService();
             const trackedMessages = await messageService.getMessagesByUserId(this.state.userId!);
-            this.setState({ chatList: trackedMessages });
+
+            const fileService = await this.chatService.getFileController().getFileService();
+            const trackedFiles = await fileService.getFilesByUserId(this.state.userId!);
+
+            const chatList = [...trackedMessages, ...trackedFiles].sort((a, b) => {
+                const timeA = a.timestamp || a.createdAt || a.uploaded_at || 0;
+                const timeB = b.timestamp || b.createdAt || b.uploaded_at || 0;
+                return timeB - timeA;
+            });
+            this.setState({ 
+                chatList: chatList,
+            });
         } catch(err) {
             console.error('Failed to load chat data:', err);
         }
@@ -270,7 +280,7 @@ export class Main extends Component<any, State> {
                         
                         const cacheService = await this.chatService.getCacheServiceClient();
                         await cacheService.initCache(userInfo.userId);
-                        await this.cachePreloader.startPreloading(userInfo.userId);
+                        //await this.cachePreloader.startPreloading(userInfo.userId);
 
                         await this.loadData();
                         if (this.dashboardInstance) {
@@ -380,7 +390,7 @@ export class Main extends Component<any, State> {
                             
                             const cacheService = await this.chatService.getCacheServiceClient();
                             await cacheService.initCache(authData.userId);
-                            await this.cachePreloader.startPreloading(authData.userId);
+                            //await this.cachePreloader.startPreloading(authData.userId);
 
                             await this.loadData();
                             

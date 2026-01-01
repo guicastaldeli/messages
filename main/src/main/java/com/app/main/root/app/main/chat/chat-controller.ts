@@ -138,7 +138,37 @@ export class ChatController {
                 return timeA - timeB;
             });
         
-        for(const message of allCachedMessages) {
+        const cachedFiles = Array.from(cacheData.files.values() as any[]);
+        const fileMessages = cachedFiles.map(file => ({
+            type: 'file',
+            fileData: {
+                ...file,
+                originalFileName: file.original_filename || file.name,
+                mimeType: file.mime_type || file.contentType,
+                fileSize: file.file_size || file.size,
+                fileType: file.file_type || 'other'
+            },
+            messageId: `file_${file.file_id || file.id}`,
+            id: `file_${file.file_id || file.id}`,
+            content: `Shared file: ${file.original_filename || file.name}`,
+            timestamp: file.uploaded_at ? new Date(file.uploaded_at).getTime() : Date.now(),
+            userId: file.uploaded_by || file.userId,
+            chatId: file.chat_id || chatId,
+            _perspective: {
+                direction: 'other',
+                isCurrentUser: false,
+                showUsername: true
+            }
+        }));
+
+        const allMessages = [...allCachedMessages, ...fileMessages]
+            .sort((a, b) => {
+                const timeA = a.timestamp || a.createdAt || 0;
+                const timeB = b.timestamp || b.createdAt || 0;
+                return timeA - timeB;
+            });
+        
+        for(const message of allMessages) {
             await this.messageElementRenderer.renderElement(message);
         }
     }
@@ -419,7 +449,9 @@ export class ChatController {
         const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
         const isSystemMessage = messageType.includes('SYSTEM');
-
+        const isFileMessage = data.type === 'file' || data.fileData;
+        console.log('Is file message:', isFileMessage, 'Type:', data.type, 'Has fileData:', !!data.fileData);
+        
         if(isSystemMessage) {
             const systemKey = `${data.event}_${data.content}_${data.timestamp}`;
             if(this.lastSystemMessageKeys.has(systemKey)) return;
@@ -433,7 +465,6 @@ export class ChatController {
                 data.username,
                 data.isSystem
             );
-            return;
         }
 
         const lastMessageId = this.lastMessageIds.get(messageType);
@@ -451,7 +482,19 @@ export class ChatController {
                 this.chatStateManager.updateMessageCount(data.chatId, currentCount + 1);
             }
         }
-        await this.messageElementRenderer.setMessage(data, { ...analysis, direction });
+
+        if(isFileMessage) {
+            await this.messageElementRenderer.renderFileMessage(
+                {
+                    ...data,
+                    _perspective: perspective
+                },
+                await this.getContainer()
+            );
+        } else {
+            await this.messageElementRenderer.setMessage(data, { ...analysis, direction });
+        }
+        
         this.chatManager.setLastMessage(
             data.chatId,
             data.userId,
@@ -465,7 +508,7 @@ export class ChatController {
     /**
      * Send File Message
      */
-    public async sendFileMessage(file: Item): Promise<boolean> {
+public async sendFileMessage(file: Item): Promise<boolean> {
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
         const chatId = currentChat?.id || currentChat?.chatId;
@@ -473,9 +516,12 @@ export class ChatController {
             console.error('No chat id found');
             return false;
         }
+        if(!this.socketId) throw new Error('No socket id!');
 
         const tempMessageId = `file_msg_${time}_${Math.random().toString(36).substr(2, 9)}`;
         const isGroupChat = chatId.startsWith('group_');
+        const isDirectChat = chatId.startsWith('direct_');
+        const chatType = isGroupChat ? 'GROUP' : (isDirectChat ? 'DIRECT' : 'CHAT');
 
         const data = {
             senderId: this.userId,
@@ -483,9 +529,11 @@ export class ChatController {
             username: this.username,
             content: `Shared file: ${file.originalFileName}`,
             messageId: tempMessageId,
+            targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != this.socketId),
+            groupId: isGroupChat ? currentChat?.id : undefined,
             chatId: chatId,
             timestamp: time,
-            chatType: isGroupChat ? 'GROUP' : 'DIRECT',
+            chatType: chatType,
             type: 'file',
             fileData: file,
             isTemp: true
@@ -505,26 +553,66 @@ export class ChatController {
             },
             _perspective: {
                 senderSessionId: this.socketId,
-                direction: analysis.direction,
+                direction: 'self',
                 messageType: 'FILE_MESSAGE',
-                isCurrentUser: analysis.direction,
+                isCurrentUser: true,
                 isDirect: analysis.context.isDirect,
                 isGroup: analysis.context.isGroup,
-                isSystem: analysis.context.isSystem
+                isSystem: analysis.context.isSystem,
+                showUsername: this.username
             },
             fileData: file
         };
 
         const res = await this.queueManager.sendWithRouting(
             analyzedData,
-            metaType,
+            'file',
             {
                 priority: analysis.priority,
                 metadata: analysis.metadata
             }
         );
+        
         if(res) {
-            await this.chatService.getMessageController().addMessage(chatId, analyzedData);
+            const fileService = await this.chatService.getFileController().getFileService();
+            try {
+                const fileToCache = {
+                    ...analyzedData,
+                    id: file.fileId,
+                    file_id: file.fileId,
+                    userId: this.userId,
+                    senderId: this.userId,
+                    username: this.username,
+                    isSystem: false,
+                    direction: 'self',
+                    timestamp: time,
+                    isTemp: false,
+                    type: 'file',
+                    fileData: file
+                };
+                
+                await fileService.addFile(chatId, fileToCache);
+            } catch(err) {
+                console.error('Failed to cache file :(', err);
+                const fileToCache = {
+                    ...analyzedData,
+                    id: tempMessageId,
+                    file_id: file.fileId,
+                    userId: this.userId,
+                    senderId: this.userId,
+                    username: this.username,
+                    isSystem: false,
+                    direction: 'self',
+                    timestamp: time,
+                    isTemp: true,
+                    type: 'file',
+                    fileData: file
+                };
+                await fileService.addFile(chatId, fileToCache);
+            }
+            
+            if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
+            
             this.chatManager.setLastMessage(
                 chatId,
                 this.userId,
@@ -534,21 +622,8 @@ export class ChatController {
                 false
             );
         }
+        
         return res;
-    }
-
-    /**
-     * Handle Chat File
-     */
-    private handleChatFile(files: any[], chatId: string): void {
-        const fileEvent = new CustomEvent('chat-files-loaded', {
-            detail: {
-                chatId,
-                files,
-                timestamp: Date.now()
-            }
-        });
-        window.dispatchEvent(fileEvent);
     }
 
     /**
@@ -586,24 +661,50 @@ export class ChatController {
         userId: string,
         page: number = 0
     ): Promise<void> {
-        console.log("LOAD HISTORY!!!")
         if(this.isLoadingHistory) return;
         this.isLoadingHistory = true;
 
         try {
             const chatData = await this.getChatData(chatId, userId, page);
-            console.log(chatData.messages)
-            if(chatData.messages && chatData.messages.length > 0) {
-                const sortedMessages = chatData.messages.sort((a, b) => {
-                    const tA = a.timestamp || a.createdAt || 0;
-                    const tB = b.timestamp || b.createdAt || 0;
-                    return tA - tB;
-                });
-                await this.messageElementRenderer.renderHistory(sortedMessages);
-            }
+            
             if(chatData.files && chatData.files.length > 0) {
-                this.handleChatFile(chatData.files, chatId);
+                console.log(`Loading ${chatData.files.length} files for history`);
+                const fileMessages = chatData.files.map(file => {
+                    return {
+                        type: 'file',
+                        fileData: {
+                            ...file,
+                            originalFileName: file.original_filename || file.name,
+                            mimeType: file.mime_type || file.contentType,
+                            fileSize: file.file_size || file.size,
+                            fileType: file.file_type || 'other'
+                        },
+                        messageId: `file_${file.file_id || file.id}`,
+                        id: `file_${file.file_id || file.id}`,
+                        content: `Shared file: ${file.original_filename || file.name}`,
+                        timestamp: file.uploaded_at ? new Date(file.uploaded_at).getTime() : Date.now(),
+                        userId: file.uploaded_by || file.userId,
+                        chatId: file.chat_id || chatId,
+                        _perspective: {
+                            direction: 'other',
+                            isCurrentUser: false,
+                            showUsername: true
+                        }
+                    };
+                });
+
+                const allMessages = [...(chatData.messages || []), ...fileMessages]
+                    .sort((a, b) => {
+                        const tA = a.timestamp || a.createdAt || 0;
+                        const tB = b.timestamp || b.createdAt || 0;
+                        return tA - tB;
+                    });
+                
+                await this.messageElementRenderer.renderHistory(allMessages);
+            } else if(chatData.messages && chatData.messages.length > 0) {
+                await this.messageElementRenderer.renderHistory(chatData.messages);
             }
+            
             if(page > this.currentPage) this.currentPage = page;
         } catch(err) {
             console.error(`Failed to load chat data for ${chatId} page ${page}:`, err);

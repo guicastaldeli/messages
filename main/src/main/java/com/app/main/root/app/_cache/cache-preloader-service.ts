@@ -47,10 +47,9 @@ export class CachePreloaderService {
     /*
     ** Preload Recent Chats
     */
-    private async preloadRecentChats(userId: string): Promise<void> {
+    private async preloadRecentChats(chatId: string): Promise<void> {
         try {
-            const service = await this.chatService.getMessageController().getMessageService();
-            const data = await service.getRecentMessages(userId, 0, 20);
+            const chatService = this.chatService.getCachedData(chatId)
             const chats = data.chats || [];
             for(const chat of chats) this.schedulePreload(chat);
         } catch(err) {

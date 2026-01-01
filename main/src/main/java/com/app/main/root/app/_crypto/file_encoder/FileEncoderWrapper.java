@@ -14,7 +14,7 @@ public class FileEncoderWrapper {
     private static void loadNativeLibraries() {
         try {
             Path directory = Paths.get(DLL_PATH);
-            if (!Files.exists(directory)) {
+            if(!Files.exists(directory)) {
                 throw new RuntimeException("dll directory does not exist: " + directory.toAbsolutePath());
             }
             System.out.println("Files in dll directory:");

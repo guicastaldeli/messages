@@ -27,38 +27,39 @@ public class FileCache {
 
     public List<Map<String, Object>> getCachedFilesPage(String userId, String chatId, int page) {
         String cacheKey = userId + "_" + chatId;
-        FileCache cache = fileCacheMap.get(cacheKey);
-        if(cache == null) return null;
         
-        cache.readLock().lock();
-        try {
-            String pageKey = chatId + "_page_" + page;
-            return cache.cachedPages.get(pageKey);
-        } finally {
-            cache.readLock().unlock();
+        synchronized(fileCacheMap) {
+            FileCache cache = fileCacheMap.get(cacheKey);
+            if(cache == null) return null;
+            
+            cache.readLock().lock();
+            try {
+                String pageKey = chatId + "_page_" + page;
+                return cache.cachedPages.get(pageKey);
+            } finally {
+                cache.readLock().unlock();
+            }
         }
     }
 
     /**
      * Cache Files Page
      */
-    public void cacheFilesPage(
-        String userId,
-        String chatId,
-        int page,
-        List<Map<String, Object>> files
-    ) {
+    public void cacheFilesPage(String userId, String chatId, int page, List<Map<String, Object>> files) {
         String cacheKey = userId + "_" + chatId;
-        FileCache cache = fileCacheMap.computeIfAbsent(cacheKey, k -> new FileCache(0, fileCacheMap));
-        cache.readLock().lock();
-
-        try {
-            String pageKey = chatId + "_page_" + page;
-            cache.cachedPages.put(pageKey, files);
-            cache.loadedPages.add(pageKey);
-            cache.lastAccessTime = System.currentTimeMillis();
-        } finally {
-            cache.writeLock().unlock();
+        
+        synchronized(fileCacheMap) {
+            FileCache cache = fileCacheMap.computeIfAbsent(cacheKey, k -> new FileCache(0, fileCacheMap));
+            cache.writeLock().lock();
+            
+            try {
+                String pageKey = chatId + "_page_" + page;
+                cache.cachedPages.put(pageKey, files);
+                cache.loadedPages.add(pageKey);
+                cache.lastAccessTime = System.currentTimeMillis();
+            } finally {
+                cache.writeLock().unlock();
+            }
         }
     }
 

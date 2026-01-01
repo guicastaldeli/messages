@@ -1,8 +1,41 @@
+import { SocketClientConnect } from "../../socket-client-connect";
+import { ChatService } from "../chat-service";
+
 export class FileServiceClient {
     private url: string | undefined;
+    private chatService: ChatService
+    private socketClient: SocketClientConnect;
     
-    constructor(url: string | undefined) {
+    constructor(
+        url: string | undefined, 
+        socketClient: SocketClientConnect,
+        chatService: ChatService
+    ) {
         this.url = url;
+        this.socketClient = socketClient;
+        this.chatService = chatService;
+    }
+
+    /**
+     * Add File
+     */
+    public async addFile(chatId: string, fileData: any): Promise<void> {
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const data = cacheService.cache.get(chatId);
+        
+        if(!data) {
+            console.warn(`Cache not initialized for chat ${chatId}`);
+            return;
+        }
+        
+        const fileId = fileData.file_id || fileData.fileId || fileData.id;
+        
+        if(!data.files.has(fileId)) {
+            data.files.set(fileId, fileData);
+            data.fileOrder.push(fileId);
+            data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
+            data.lastUpdated = Date.now();
+        }
     }
 
     /**
@@ -28,10 +61,48 @@ export class FileServiceClient {
             const res = await fetch(
                 `${this.url}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
             );
-            if(!res.ok) throw new Error('Failed to fetch chat data!');
-            
-            const data = await res.json();
-            return data.data || {
+            if(!res.ok) {
+                const errorText = await res.text();
+                console.error(`API Error (${res.status}):`, errorText);
+                throw new Error(`Failed to fetch chat data! Status: ${res.status}`);
+            }
+
+            const resData = await res.json();
+            if(resData.success === false) {
+                throw new Error(resData.error || 'Failed to fetch chat data');
+            }
+            if(resData.data) {
+                const data = resData.data;
+
+                if(Array.isArray(data.files)) {
+                    const decryptedFiles = [];
+
+                    for (const file of data.files) {
+                        try {
+                            const decryptedFile = await this.decryptFile(chatId, file);
+                            decryptedFiles.push(decryptedFile);
+                        } catch (err) {
+                            if(!file.system) {
+                                console.error('Failed to decrypt file:', err);
+                            }
+                            decryptedFiles.push(file);
+                        }
+                    }
+
+                    data.files = decryptedFiles.map(
+                        (file: any) => ({ ...file })
+                    );
+                }
+
+                return data;
+            }
+
+            if(resData.files !== undefined) {
+                return resData;
+            }
+
+            console.warn('Unexpected response structure:', resData);
+            return {
                 files: [],
                 pagination: {
                     page,
@@ -42,11 +113,55 @@ export class FileServiceClient {
                     fromCache: false
                 }
             };
-        } catch(err) {
+        } catch (err) {
             console.error(`Failed to fetch chat data for ${chatId}:`, err);
             throw err;
         }
     }
+
+    public async decryptFile(chatId: string, fileData: any): Promise<any> {
+        return new Promise(async (resolve, reject) => {
+            const successDestination = '/queue/decrypted-files-scss';
+            const errorDestination = '/queue/decrypted-files-err';
+
+            const handleSuccess = (response: any) => {
+                this.socketClient.offDestination(successDestination, handleSuccess);
+                this.socketClient.offDestination(errorDestination, handleError);
+                if(response.files && response.files.length > 0) {
+                    resolve(response.files[0]);
+                } else {
+                    reject(new Error('No decrypted files returned'));
+                }
+            };
+
+            const handleError = (error: any) => {
+                this.socketClient.offDestination(successDestination, handleSuccess);
+                this.socketClient.offDestination(errorDestination, handleError);
+                reject(new Error(error.message || 'Failed to decrypt file'));
+            };
+
+            try {
+                this.socketClient.onDestination(successDestination, handleSuccess);
+                this.socketClient.onDestination(errorDestination, handleError);
+                
+                const payload = { 
+                    files: [fileData],
+                    chatId: String(fileData.chatId || chatId)
+                };
+
+                await this.socketClient.sendToDestination(
+                    '/app/get-decrypted-files',
+                    payload,
+                    successDestination
+                );
+            } catch (err) {
+                this.socketClient.offDestination(successDestination, handleSuccess);
+                this.socketClient.offDestination(errorDestination, handleError);
+                reject(err);
+            }
+        });
+    }
+
 
     /**
      * Upload File
@@ -62,10 +177,13 @@ export class FileServiceClient {
             formData.append('chatId', chatId);
 
         try {
-            const res = await fetch(`${this.url}/api/chat/${chatId}/upload`, {
-                method: 'POST',
-                body: formData
-            });
+            const res = await fetch(
+                `${this.url}/api/files/upload/${userId}/${chatId}`,
+                {
+                    method: 'POST',
+                    body: formData
+                }
+            );
             
             if(!res.ok) throw new Error('Upload failed');
             return await res.json();
@@ -127,7 +245,7 @@ export class FileServiceClient {
             console.error('Download error:', error);
             return {
                 success: false,
-                error: error.message
+                error: error.file
             };
         }
     }
@@ -357,7 +475,7 @@ export class FileServiceClient {
         chatId: string, 
         page: number = 0
     ): Promise<{
-        messages: any[];
+        files: any[];
         currentPage: number;
         pageSize: number;
         totalFiles: number;
@@ -372,16 +490,36 @@ export class FileServiceClient {
             );
             if(!res.ok) throw new Error('Failed to fetch files by chat id');
 
-            const data = await res.json();
-            const files = Array.isArray(data) ? data : (data.files || []);
+            const resData = await res.json();
+            
+            let files = Array.isArray(resData) ? resData : (resData.files || []);
+            
+            // Decrypt files if available
+            if(files.length > 0) {
+                const decryptedFiles = [];
+                
+                for (const file of files) {
+                    try {
+                        const decryptedFile = await this.decryptFile(chatId, file);
+                        decryptedFiles.push(decryptedFile);
+                    } catch (err) {
+                        if(!file.system) {
+                            console.error('Failed to decrypt file:', err);
+                        }
+                        decryptedFiles.push(file);
+                    }
+                }
+                
+                files = decryptedFiles.map((file: any) => ({ ...file }));
+            }
             
             return {
-                messages: files,
+                files: files,
                 currentPage: page,
                 pageSize: pageSize,
-                totalFiles: data.total || files.length,
-                totalPages: Math.ceil((data.total || files.length) / pageSize),
-                hasMore: data.hasMore !== false
+                totalFiles: resData.total || files.length,
+                totalPages: Math.ceil((resData.total || files.length) / pageSize),
+                hasMore: resData.hasMore !== false
             };
         } catch(err) {
             console.error('Failed to fetch files by chat id:', err);

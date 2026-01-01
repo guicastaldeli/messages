@@ -8,7 +8,7 @@ export interface FileMessageProps extends MessageProps {
     onPreview?: (file: Item) => Promise<void>;
 }
 
-const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
+export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
     username,
     content,
     timestamp,

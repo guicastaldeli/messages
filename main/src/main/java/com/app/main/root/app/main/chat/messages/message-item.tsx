@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserColorGenerator } from "@/app/_utils/UserColorGenerator";
+import { FileMessageWrapper } from '../file/file-component';
 
 export interface MessageProps {
     username: string | null;
@@ -110,5 +111,32 @@ export class MessageComponentGetter {
                 currentUserId={this.currentUserId}
             />
         )
+    }
+    __file(props: any): React.ReactElement {
+        return (
+            <FileMessageWrapper
+                username={props.username}
+                content={props.content}
+                timestamp={props.timestamp}
+                messageId={props.messageId}
+                type="file"
+                priority={props.priority}
+                isDirect={props.isDirect}
+                isGroup={props.isGroup}
+                isSystem={props.isSystem}
+                perspective={props.perspective}
+                direction={props.direction}
+                userColor={props.userColor}
+                chatType={props.chatType}
+                currentUserId={props.currentUserId}
+                fileData={props.fileData}
+                onDownload={async (file) => {
+                    console.log('Download file:', file);
+                }}
+                onPreview={async (file) => {
+                    console.log('Preview file:', file);
+                }}
+            />
+        );
     }
 }

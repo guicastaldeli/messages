@@ -41,7 +41,6 @@ export class ChatService {
 
             const msgData = await messageService.getChatData(userId, chatId, page);
             const fileData = await fileService.getChatData(userId, chatId, page);
-
             this.addChatDataPage(
                 chatId,
                 msgData.messages,

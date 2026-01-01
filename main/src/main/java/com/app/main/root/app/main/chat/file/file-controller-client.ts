@@ -17,7 +17,11 @@ export class FileControllerClient {
         this.socketClientConnect = socketClientConnect;
         this.apiClientController = apiClientController;
         this.chatService = chatService;
-        this.fileService = new FileServiceClient(this.apiClientController.getUrl());
+        this.fileService = new FileServiceClient(
+            this.apiClientController.getUrl(), 
+            this.socketClientConnect,
+            chatService
+        );
     }
 
     public async getFilesPage(data: any, chatId: string, page: number): Promise<any[]> {
@@ -79,7 +83,7 @@ export class FileControllerClient {
 
             const cacheService = await this.chatService.getCacheServiceClient();
             cacheService.init(chatId, countData);
-            this.getFilesPage(pageData.messages, chatId, 0);
+            this.getFilesPage(pageData.files, chatId, 0);
         } catch(err) {
             console.error(`Preload for ${chatId} failed`, err);
         }
