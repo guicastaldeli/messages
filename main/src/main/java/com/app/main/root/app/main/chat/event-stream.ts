@@ -7,32 +7,24 @@ interface StreamConfig {
 
 export class EventStream {
     private socketClientConnect: SocketClientConnect;
+    private messageService: MessageService;
+    private fileService: FileService;
+
     private config: StreamConfig;
-    private messsageHandlers: Map<string, Function[]> = new Map();
+    private messageHandlers: Map<string, Function[]> = new Map();
     private isComplete: boolean = false;
     private isStarted: boolean = false;
 
-    constructor(socketClientConnect: SocketClientConnect, config: StreamConfig) {
+    constructor(
+        socketClientConnect: SocketClientConnect, 
+        config: StreamConfig,
+        messageService: MessageService,
+        fileService: FileService
+    ) {
         this.socketClientConnect = socketClientConnect;
         this.config = config; 
-    }
-
-    /**
-     * Setup Event Handlers
-     */
-    private setupEventHandlers(): void {
-        this.socketClientConnect.onDestination(this.config.succssDestination, (data: any) => {
-            if(data.type === 'STREAM_COMPLETE') {
-                this.isComplete = true;
-                this.emit('complete', data);
-                this.cleanup();
-                return;
-            }
-        });
-        this.socketClientConnect.onDestination(this.config.errDestination, (err: any) => {
-            this.emit('error', err);
-            this.cleanup();
-        });
+        this.messageService = messageService;
+        this.fileService = fileService;
     }
 
     /**
@@ -103,5 +95,110 @@ export class EventStream {
 
     public get started(): boolean {
         return this.isStarted;
+    }
+    
+    /**
+     * Setup Event Handlers
+     */
+    private setupEventHandlers(): void {
+        this.socketClientConnect.onDestination(this.config.succssDestination, async (data: any) => {
+            if(data.type === 'STREAM_COMPLETE') {
+                this.isComplete = true;
+                this.emit('complete', data);
+                this.cleanup();
+                return;
+            }
+
+            try {
+                const processedData = await this.processData(data);
+                this.emit(data.type.toLowerCase(), processedData);
+            } catch(err) {
+                console.error('Failed to process stream data:', err);
+                this.emit('processing-error', { original: data, error: err });
+            }
+        });
+        this.socketClientConnect.onDestination(this.config.errDestination, (err: any) => {
+            this.emit('error', err);
+            this.cleanup();
+        });
+    }
+
+    /**
+     * 
+     * Process Data
+     * 
+     */
+    private async processData(data: any): Promise<any> {
+        if(data.type === 'MESSAGE_DATA' && data.message) {
+            return await this.processMessageData(data);
+        } else if(data.type === 'FILE_DATA' && data.file) {
+            return await this.processFileData(data);
+        } else if(data.type === 'CHAT_DATA' && data.chat) {
+            return await this.processChatData(data);
+        }
+        return data;
+    }
+
+    private async processMessageData(data: any): Promise<any> {
+        if(!this.messageServiceClient) {
+            console.warn('No message service client available for decryption');
+            return data;
+        }
+
+        try {
+            const chatId = data.chatId || data.message.chatId;
+            const decryptedMessage = await this.messageServiceClient.decryptMessage(
+                chatId,
+                data.message
+            );
+            
+            return {
+                ...data,
+                message: decryptedMessage,
+                decrypted: true
+            }
+        } catch(err) {
+            console.error('Failed to decrypt message:', err);
+            return {
+                ...data,
+                decryptionError: err.message,
+                decrypted: false
+            }
+        }
+    }
+
+    private async processFileData(data: any): Promise<any> {
+        if(!this.fileServiceClient) {
+            console.warn('No file service client available for decryption');
+            return data;
+        }
+
+        try {
+            const chatId = data.chatId || data.file.chatId;
+            const decryptedFile = await this.fileServiceClient.decryptFile(
+                chatId,
+                data.file
+            );
+            
+            return {
+                ...data,
+                file: decryptedFile,
+                decrypted: true
+            }
+        } catch(err) {
+            console.error('Failed to decrypt file:', err);
+            return {
+                ...data,
+                decryptionError: err.message,
+                decrypted: false
+            };
+        }
+    }
+
+    private async processChatData(data: any): Promise<any> {
+        return {
+            ...data,
+            processed: true
+        };
     }
 }
