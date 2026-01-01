@@ -81,9 +81,9 @@ public class ConnectionInfo {
         }
     }
 
-    /*
-    * Parse User Agent 
-    */
+    /**
+     * Parse User Agent 
+     */
     private void parseUserAgent(String userAgent) {
         if(userAgentParserController == null) {
             setDefaultValues();
@@ -105,7 +105,6 @@ public class ConnectionInfo {
             System.err.println("Analysis failed: " + err.getMessage());
             setDefaultValues();
         }
-        //REMINDER: Extract Versions (OS, Browser, etc, later...)
     }
 
     private String capitalize(String str) {
@@ -123,19 +122,19 @@ public class ConnectionInfo {
         this.device = msg;
     }
 
-    /*
-    * ***Log
-    */
-    //@Override
+    /**
+     * ***Log
+     */
+    @Override
     public String toString() {
-        return "";
-        /*
         return String.format(
             """
                 ConnectionInfo{
                     socketId='%s',
                     sessionId='%s',
                     username='%s',
+                    userId='%s',
+                    serverId='%s'
                     account='%s',
                     ipAddress='%s',
                     userAgent='%s',
@@ -151,6 +150,8 @@ public class ConnectionInfo {
             socketId,
             sessionId,
             username,
+            userId,
+            serverId,
             account,
             ipAddress,
             userAgent,
@@ -162,6 +163,5 @@ public class ConnectionInfo {
             isConnected,
             getFormattedDuration()
         );
-        */
     }
 }

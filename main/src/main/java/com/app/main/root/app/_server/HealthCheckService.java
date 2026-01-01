@@ -1,4 +1,5 @@
 package com.app.main.root.app._server;
+import com.app.main.root.EnvConfig;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -7,6 +8,8 @@ import java.util.*;
 
 @Service
 public class HealthCheckService {
+    private static final String SERVER_ID = EnvConfig.get("MAIN_SERVER_ID");
+
     private final LoadBalancer loadBalancer;
     private final RestTemplate restTemplate;
     private final Map<String, Integer> failureCounts = new ConcurrentHashMap<>();
@@ -26,6 +29,8 @@ public class HealthCheckService {
                 for(Map.Entry<String, ServerInstance> entry : serverDetails.entrySet()) {
                     String serverId = entry.getKey();
                     ServerInstance server = entry.getValue();
+                    if(!serverId.equals(SERVER_ID)) continue;
+
                     try {
                         String healthUrl = server.getUrl() + "/health";
                         String res = restTemplate.getForObject(healthUrl, String.class);
