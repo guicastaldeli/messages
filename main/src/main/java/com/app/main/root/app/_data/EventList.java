@@ -8,6 +8,7 @@ import com.app.main.root.app._crypto.file_encoder.KeyManagerService;
 import com.app.main.root.app._crypto.message_encoder.SecureMessageService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.ConnectionTracker;
+import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._User;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app._server.ConnectionInfo;
@@ -318,6 +319,112 @@ public class EventList {
                 }
             },
             "/queue/remove-contact-scss",
+            false
+        ));
+        configs.put("stream-user-chats", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String userId = (String) data.get("userId");
+                    int page = (int) data.getOrDefault("page", 0);
+                    int pageSize = (int) data.getOrDefault("pageSize", 20);
+
+                    List<Map<String, Object>> chats = 
+                        serviceManager
+                        .getChatService()
+                        .getUserChats(userId, page, pageSize);
+                    for(Map<String, Object> chat : chats) {
+                        Map<String, Object> chatEvent = new HashMap<>();
+                        chatEvent.put("type", "CHAT_DATA");
+                        chatEvent.put("chat", chat);
+                        chatEvent.put("page", page);
+                        chatEvent.put("total", chats.size());
+
+                        socketMethods.send(sessionId, "/queue/user-chats-stream", chatEvent);
+                    }
+
+                    Map<String, Object> completionEvent = new HashMap<>();
+                    completionEvent.put("type", "STREAM_COMPLETE");
+                    completionEvent.put("userId", userId);
+                    completionEvent.put("page", page);
+
+                    return completionEvent;
+                } catch(Exception err) {
+                    Map<String, Object> errorEvent = new HashMap<>();
+                    errorEvent.put("type", "STREAM_ERROR");
+                    errorEvent.put("error", err.getMessage());
+                    
+                    socketMethods.send(sessionId, "/queue/user-chats-stream-err", errorEvent);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/user-chats-stream",
+            false
+        ));
+        /* Stream Chat Data  */
+        configs.put("stream-chat-data", new EventConfig(
+            (sessionId, payload, headerAcessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String chatId = (String) data.get("chatId");
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    int page = (int) data.getOrDefault("page", 0);
+                    int pageSize = (int) data.getOrDefault("pageSize", 20);
+                    boolean includeFiles = (boolean) data.getOrDefault("includeFiles", false);
+                    boolean includeMessages = (boolean) data.getOrDefault("includeMessages", true);
+
+                    /* Messages */
+                    if(includeMessages) {
+                        List<_Message> messages = 
+                            serviceManager
+                            .getMessageService()
+                            .getMessagesByChatId(chatId, page, pageSize);
+
+                        for(Map<String, Object> message : messages) {
+                            Map<String, Object> messageEvent = new HashMap<>();
+                            messageEvent.put("type", "MESSAGE_DATA");
+                            messageEvent.put("chatId", chatId);
+                            messageEvent.put("message", message);
+                            messageEvent.put("page", page);
+                            messageEvent.put("total", messages.size());
+
+                            socketMethods.send(sessionId, "/queue/chat-data-stream", messageEvent);
+                        }
+                    }
+                    /* Files */
+                    if(includeFiles) {
+                        List<Map<String, Object>> files = 
+                            serviceManager
+                            .getFileService()
+                            .getFilesByChatId(chatId, page, pageSize);
+
+                        for(Map<String, Object> file : files) {
+                            Map<String, Object> fileEvent = new HashMap<>();
+                            fileEvent.put("type", "FILE_DATA");
+                            fileEvent.put("chatId", chatId);
+                            fileEvent.put("file", file);
+                            fileEvent.put("page", page);
+                            fileEvent.put("total", files.size());
+
+                            socketMethods.send(sessionId, "/queue/chat-data-stream", fileEvent);
+                        }
+                    }
+
+                    Map<String, Object> completionEvent = new HashMap<>();
+                    completionEvent.put("type", "STREAM_COMPLETE");
+                    completionEvent.put("chatId", chatId);
+                    completionEvent.put("page", page);
+                    return completionEvent;
+                } catch(Exception err) {
+                    Map<String, Object> errorEvent = new HashMap<>();
+                    errorEvent.put("type", "STREAM_ERROR");
+                    errorEvent.put("error", err.getMessage());
+                    
+                    socketMethods.send(sessionId, "/queue/chat-data-stream-err", errorEvent);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/chat-data-stream",
             false
         ));
         /* Chat */
