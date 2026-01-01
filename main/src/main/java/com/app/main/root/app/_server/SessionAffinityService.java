@@ -21,12 +21,15 @@ public class SessionAffinityService {
      */
     public void assignServerToSession(String sessionId, String serverId) {
         sessionToServerMap.put(sessionId, serverId);
-        ServerInstance server = 
-            loadBalancer
-            .getStats()
-            .get("serverDetails").get(serverId);
-        if(server != null) {
-            server.incrementConnections();
+        Map<String, Object> stats = loadBalancer.getStats();
+        if(stats != null) {
+            Map<String, ServerInstance> serverDetails = (Map<String, ServerInstance>) stats.get("serverDetails");
+            if(serverDetails != null) {
+                ServerInstance server = serverDetails.get(serverId);
+                if(server != null) {
+                    server.incrementConnections();
+                }
+            }
         }
     }
 
@@ -35,13 +38,14 @@ public class SessionAffinityService {
      */
     public void removeSession(String sessionId) {
         String serverId = sessionToServerMap.remove(sessionId);
-        if(serverId != null) {
-            ServerInstance server = 
-                loadBalancer.
-                getStats()
-                .get("serverDetails").get(serverId);
-            if(server != null) {
-                server.decrementConnections();
+        Map<String, Object> stats = loadBalancer.getStats();
+        if(stats != null) {
+            Map<String, ServerInstance> serverDetails = (Map<String, ServerInstance>) stats.get("serverDetails");
+            if(serverDetails != null) {
+                ServerInstance server = serverDetails.get(serverId);
+                if(server != null) {
+                    server.decrementConnections();
+                }
             }
         }
     }

@@ -19,23 +19,27 @@ public class HealthCheckService {
 
     @Scheduled(fixedRate = 30000)
     public void performHealthChecks() {
-        for(Map.Entry<String, ServerInstance> entry :
-            loadBalancer.getStats().get("serverDetails").entrySet()
-        ) {
-            String serverId = entry.getKey();
-            ServerInstance server = entry.getValue();
-            try {
-                String healthUrl = server.getUrl() + "/health";
-                String res = restTemplate.getForObject(healthUrl, String.class);
-                if("OK".equals(res)) {
-                    loadBalancer.updateServerHealth(serverId, true);
-                    failureCounts.remove(serverId);
-                } else {
-                    handleServerFailure(serverId);
+        Map<String, Object> stats = loadBalancer.getStats();
+        if(stats != null) {
+            Map<String, ServerInstance> serverDetails = (Map<String, ServerInstance>) stats.get("serverDetails");
+            if(serverDetails != null) {
+                for(Map.Entry<String, ServerInstance> entry : serverDetails.entrySet()) {
+                    String serverId = entry.getKey();
+                    ServerInstance server = entry.getValue();
+                    try {
+                        String healthUrl = server.getUrl() + "/health";
+                        String res = restTemplate.getForObject(healthUrl, String.class);
+                        if("OK".equals(res)) {
+                            loadBalancer.updateServerHealth(serverId, true);
+                            failureCounts.remove(serverId);
+                        } else {
+                            handleServerFailure(serverId);
+                        }
+                    } catch(Exception err) {
+                        System.out.println(err);
+                        handleServerFailure(serverId);
+                    }
                 }
-            } catch(Exception err) {
-                System.out.println(err);
-                handleServerFailure(serverId);
             }
         }
     }

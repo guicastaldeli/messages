@@ -12,6 +12,7 @@ public class ConnectionInfo {
     public String socketId;
     public String sessionId;
     public String userId;
+    public String serverId;
     public String username;
     public String account;
     public String ipAddress;
@@ -53,6 +54,7 @@ public class ConnectionInfo {
         connectionInfo.ipAddress = ipAddress;
         connectionInfo.userAgent = userAgent;
         connectionInfo.userId = null;
+        connectionInfo.serverId = "Unknown";
         connectionInfo.parseUserAgent(userAgent);
         connectionInfo.connectedAt = LocalDateTime.now();
         connectionInfo.isConnected = true;

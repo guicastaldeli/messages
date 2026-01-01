@@ -2,12 +2,10 @@ package com.app.main.root.app._server;
 import com.app.main.root.app.__controllers.UserAgentParserController;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._utils.ColorConverter;
-
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,14 +18,13 @@ public class ConnectionTracker {
     private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
     private final Set<Consumer<ConnectionInfo>> connectionCallbacks = new CopyOnWriteArraySet<>();
     private final Set<Consumer<ConnectionInfo>> disconnectionCallbacks = new CopyOnWriteArraySet<>();
-    public ServiceManager serviceManager;
+
+    @Autowired private LoadBalancer loadBalancer;
+    @Autowired private ServerInstance serverInstance;
+    @Autowired private SessionAffinityService sessionAffinityService;
     @Autowired private ColorConverter colorConverter;
     @Autowired private UserAgentParserController userAgentParserController;
-    
-    @Autowired
-    public void setServiceManager(@Lazy ServiceManager serviceManager) {
-        this.serviceManager = serviceManager;
-    }
+    @Autowired @Lazy public ServiceManager serviceManager;
 
     /*
     * Track Connection 
@@ -45,6 +42,12 @@ public class ConnectionTracker {
         );
         connectionInfo.isConnected = true;
         connections.put(socketId, connectionInfo);
+
+        ServerInstance server = loadBalancer.getLeastLoadedServer();
+        if(server != null) {
+            sessionAffinityService.assignServerToSession(socketId, server.getServerId());
+            connectionInfo.serverId = server.getServerId();
+        }
         
         logConnection(connectionInfo);
         notifyConnectionCallbacks(connectionInfo);
@@ -59,6 +62,8 @@ public class ConnectionTracker {
         if(connectionInfo != null) {
             connectionInfo.disconnectedAt = LocalDateTime.now();
             connectionInfo.isConnected = false;
+
+            sessionAffinityService.removeSession(socketId);
 
             String userId = serviceManager.getUserService().getUserIdBySession(socketId);
             if(userId != null) {
