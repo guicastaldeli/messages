@@ -110,7 +110,11 @@ export class ChatController {
     /**
      * Update Subscription
      */
-    private async updateSubscription(type?: string, chatId?: string, handlerType?: ChatType): Promise<void> {
+    private async updateSubscription(
+        type?: string, 
+        chatId?: string, 
+        handlerType?: ChatType
+    ): Promise<void> {
         if(this.currentHandler && this.chatRegistry.getCurrentChat()) {
             const currentChatId = this.chatRegistry.getCurrentChat()!.id;
             const currentPattern = this.currentHandler.getSubscriptionPattern(currentChatId);
