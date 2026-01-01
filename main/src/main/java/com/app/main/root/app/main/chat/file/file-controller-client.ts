@@ -59,8 +59,13 @@ export class FileControllerClient {
      */
     public async initCache(userId: string): Promise<void> {
         try {
-            const recentChats = await this.fileService.getRecentFiles(userId, 0, 50);
-            const chats = recentChats.chats || [];
+            const recentFilesResponse = await this.fileService.getRecentFiles(userId, 0, 50);
+            const chats = recentFilesResponse.chats || recentFilesResponse || [];
+            if(!Array.isArray(chats)) {
+                console.warn('getRecentFiles did not return an array:', recentFilesResponse);
+                return;
+            }
+            
             const preloadPromises = chats.map(async (chat: any) =>
                 this.preloadData(chat.id || chat.chatId)
             );

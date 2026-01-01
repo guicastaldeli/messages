@@ -275,7 +275,6 @@ public enum CommandQueryManager {
             SELECT DISTINCT chat_id
             FROM messages
             WHERE sender_id = ? 
-                OR chat_id = ?
                 OR (chat_id LIKE 'direct_%' AND chat_id LIKE ?)
         )
         GROUP BY chat_id
@@ -287,7 +286,7 @@ public enum CommandQueryManager {
         """
             SELECT COUNT(DISTINCT chat_id) as total_chats
             FROM messages
-            WHERE sender_id = ? OR chat_id = ?        
+            WHERE sender_id = ? OR (chat_id LIKE 'direct_%' AND chat_id LIKE ?)  
         """
     ),
     GET_ALL_MESSAGES(

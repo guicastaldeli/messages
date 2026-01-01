@@ -179,8 +179,8 @@ export class MessageControllerClient {
      */
     public async initCache(userId: string): Promise<void> {
         try {
-            const recentChats = await this.messageService.getRecentMessages(userId, 0, 50);
-            const chats = recentChats.chats || [];
+            const recentChats = await this.messageService.getRecentMessages(userId);
+            const chats = recentChats.chats || []; // Fix: Access the chats property
             const preloadPromises = chats.map((chat: any) =>
                 this.preloadData(chat.id || chat.chatId)
             );

@@ -4,7 +4,6 @@ import com.app.main.root.app._types._Message;
 import com.app.main.root.app._types._RecentChat;
 import com.app.main.root.app.main.chat.messages.MessageLog;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
-
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 import java.sql.SQLException;
@@ -24,9 +23,9 @@ public class MessageController {
         this.serviceManager = serviceManager;
     }
 
-    /*
-    * Save 
-    */
+    /**
+     * Save
+     */
     @PostMapping("/messages")
     public MessageLog saveMessage(@RequestBody Map<String, Object> data) {
         try {
@@ -51,64 +50,116 @@ public class MessageController {
             );
             return log;
         } catch(SQLException err) {
-            throw new RuntimeException("Error tracker coneoller", err);
+            throw new RuntimeException("Error tracker controller", err);
         }
     }
 
-    /*
-    * All Messages 
-    */
+    /**
+     * All Messages
+     */
     @GetMapping("/get-messages")
     public List<_Message> getAllMessages() throws SQLException {
         return serviceManager.getMessageService().getAllMessages();
     }
 
-    /*
-    * Chat Id 
-    */
+    /**
+     * Chat Id
+     */
     @GetMapping("/messages/chatId/{chatId}")
-    public List<_Message> getMessagesByChatId(
+    public Map<String, Object> getMessagesByChatId(
         @PathVariable String chatId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int pageSize
-    ) throws SQLException {
-        return serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+    ) {
+        try {
+            List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+            int totalCount = serviceManager.getMessageService().getMessageCountByChatId(chatId);
+            boolean hasMore = (page + 1) * pageSize < totalCount;
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("messages", messages);
+            response.put("chatId", chatId);
+            response.put("page", page);
+            response.put("pageSize", pageSize);
+            response.put("total", totalCount);
+            response.put("hasMore", hasMore);
+            
+            return response;
+        } catch(SQLException err) {
+            throw new RuntimeException("Error fetching messages for chat: " + chatId, err);
+        }
     }
 
     @GetMapping("/messages/chatId/{chatId}/count")
-    public Map<String, Object> getMessageCountByChatId(@PathVariable String chatId) throws SQLException {
-        int count = serviceManager.getMessageService().getMessageCountByChatId(chatId);
-        Map<String, Object> res = new HashMap<>();
-        res.put("chatId", chatId);
-        res.put("count", count);
-        return res;
+    public Map<String, Object> getMessageCountByChatId(@PathVariable String chatId) {
+        try {
+            int count = serviceManager.getMessageService().getMessageCountByChatId(chatId);
+            Map<String, Object> res = new HashMap<>();
+            res.put("chatId", chatId);
+            res.put("count", count);
+            res.put("success", true);
+            return res;
+        } catch(SQLException err) {
+            Map<String, Object> errorRes = new HashMap<>();
+            errorRes.put("success", false);
+            errorRes.put("error", err.getMessage());
+            errorRes.put("chatId", chatId);
+            errorRes.put("count", 0);
+            return errorRes;
+        }
     }
 
     /*
-    * Recent Messages 
+    * Recent Messages
     */
     @GetMapping("/messages/recent/{userId}")
-    public List<_RecentChat> getRecentMessages(
+    public Map<String, Object> getRecentMessages(
         @PathVariable String userId, 
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int pageSize
-    ) throws SQLException {
-        int offset = page * pageSize;
-        return serviceManager.getMessageService().getRecentChats(userId, pageSize, offset);
+    ) {
+        try {
+            int offset = page * pageSize;
+            List<_RecentChat> chats = serviceManager.getMessageService().getRecentChats(userId, pageSize, offset);
+            int totalCount = serviceManager.getMessageService().getRecentChatsCount(userId);
+            boolean hasMore = (page + 1) * pageSize < totalCount;
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("chats", chats);
+            response.put("userId", userId);
+            response.put("page", page);
+            response.put("pageSize", pageSize);
+            response.put("total", totalCount);
+            response.put("hasMore", hasMore);
+            
+            return response;
+        } catch(SQLException err) {
+            throw new RuntimeException("Error fetching recent chats for user: " + userId, err);
+        }
     }
 
     @GetMapping("/messages/recent/{userId}/count")
-    public Map<String, Object> getRecentChatsCount(@PathVariable String userId) throws SQLException {
-        int count = serviceManager.getMessageService().getRecentChatsCount(userId);
-        Map<String, Object> res = new HashMap<>();
-        res.put("userId", userId);
-        res.put("count", count);
-        return res;
+    public Map<String, Object> getRecentChatsCount(@PathVariable String userId) {
+        try {
+            int count = serviceManager.getMessageService().getRecentChatsCount(userId);
+            Map<String, Object> res = new HashMap<>();
+            res.put("userId", userId);
+            res.put("count", count);
+            res.put("success", true);
+            return res;
+        } catch(SQLException err) {
+            Map<String, Object> errorRes = new HashMap<>();
+            errorRes.put("success", false);
+            errorRes.put("error", err.getMessage());
+            errorRes.put("userId", userId);
+            errorRes.put("count", 0);
+            return errorRes;
+        }
     }
 
-    /*
-    * User 
-    */
+    /**
+     * Get By User Id
+     */
     @GetMapping("/messages/userId/{userId}")
     public List<_Message> getMessagesByUserId(@PathVariable String userId) throws SQLException {
         if(userId == null || userId.equals("null") || userId.trim().isEmpty()) {
@@ -117,25 +168,25 @@ public class MessageController {
         return serviceManager.getMessageService().getMessagesByUserId(userId);
     }
 
-    /*
-    * Stats 
-    */
+    /**
+     * Stats
+     */
     @GetMapping("/stats")
     public Map<String, Long> getMessageStats() throws SQLException {
         return messageTracker.getMessageStats();
     }
 
-    /*
-    * Count 
-    */
+    /**
+     * Count 
+     */
     @GetMapping("/count")
     public int getMessageCount() throws SQLException {
         return messageTracker.getMessageCount();
     }
 
-    /*
-    * Clear 
-    */
+    /**
+     * Clear 
+     */
     @DeleteMapping("/clear")
     public void clearMessages() throws SQLException {
         messageTracker.clearMessages();

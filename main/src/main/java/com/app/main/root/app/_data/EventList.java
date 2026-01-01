@@ -499,8 +499,10 @@ public class EventList {
                                 continue;
                             }
                             
-                            String fileId = (String) encryptedFile.get("id");
-                            String userId = (String) encryptedFile.get("userId");
+                            String fileId = (String) encryptedFile.get("fileId");
+                            String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                            if(fileId == null) fileId = (String) encryptedFile.get("id");
+                            if(userId == null) userId = (String) encryptedFile.get("userId");
                             
                             if(fileId == null || userId == null) {
                                 System.err.println("File ID or User ID is null");

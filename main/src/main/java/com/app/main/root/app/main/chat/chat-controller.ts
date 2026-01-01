@@ -508,7 +508,8 @@ export class ChatController {
     /**
      * Send File Message
      */
-public async sendFileMessage(file: Item): Promise<boolean> {
+    //REMINDER FIX THE PERSPECTIVE!
+    public async sendFileMessage(file: Item): Promise<boolean> {
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
         const chatId = currentChat?.id || currentChat?.chatId;
@@ -553,7 +554,7 @@ public async sendFileMessage(file: Item): Promise<boolean> {
             },
             _perspective: {
                 senderSessionId: this.socketId,
-                direction: 'self',
+                direction: analysis.direction,
                 messageType: 'FILE_MESSAGE',
                 isCurrentUser: true,
                 isDirect: analysis.context.isDirect,

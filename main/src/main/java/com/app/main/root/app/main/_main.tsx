@@ -124,7 +124,7 @@ export class Main extends Component<any, State> {
             }
             
             const cacheService = await this.chatService.getCacheServiceClient();
-            if(this.state.userId) await cacheService.initCache(this.state.userId);
+            if(userInfo?.userId) await cacheService.initCache(userInfo.userId);
             
             this.setState({ 
                 isLoading: false,

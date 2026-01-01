@@ -233,10 +233,9 @@ public class MessageService {
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, userId);
-            stmt.setString(2, userId);
-            stmt.setString(3, "%" + userId + "%");
-            stmt.setInt(4, actualLimit);
-            stmt.setInt(5, offset);
+            stmt.setString(2, "%" + userId + "%");
+            stmt.setInt(3, actualLimit); 
+            stmt.setInt(4, offset);
 
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {

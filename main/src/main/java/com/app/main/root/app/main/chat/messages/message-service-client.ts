@@ -242,6 +242,10 @@ export class MessageServiceClient {
     /**
      * Recent Chats
      */
+    // ...existing code...
+    /**
+     * Recent Chats
+     */
     public async getRecentMessages(
         userId: string,
         page: number = 0,
@@ -255,21 +259,20 @@ export class MessageServiceClient {
         hasMore: boolean
     }> {
         try {
-            const url = await fetch(
+            const res = await fetch(
                 `${this.url}/api/message/messages/recent/${userId}?page=${page}&pageSize=${pageSize}`
             );
-            if(!url.ok) throw new Error('Failed to fetch recent chats');
+            if(!res.ok) throw new Error('Failed to fetch recent chats');
             
-            const data = await url.json();
-            const res = {
-                chats: data,
-                currentPage: page,
-                pageSize: pageSize,
-                totalChats: data.length,
-                totalPages: Math.ceil(data.length / pageSize),
-                hasMore: true
-            }
-            return res;
+            const data = await res.json();
+            return {
+                chats: data.chats || [],
+                currentPage: data.page || page,
+                pageSize: data.pageSize || pageSize,
+                totalChats: data.total || (data.chats ? data.chats.length : 0),
+                totalPages: Math.ceil((data.total || (data.chats ? data.chats.length : 0)) / (data.pageSize || pageSize)),
+                hasMore: data.hasMore || false
+            };
         } catch(err) {
             console.error(err);
             throw new Error('Failed to fetch recent chats');
