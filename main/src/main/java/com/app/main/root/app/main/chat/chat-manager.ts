@@ -33,6 +33,8 @@ interface State {
 export class ChatManager {
     private apiClientController: ApiClientController;
     private socketClient: SocketClientConnect;
+    private dashboard: Dashboard;
+
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
@@ -43,7 +45,7 @@ export class ChatManager {
     private updateQueue: Array<() => void> = [];
     private isUpdating = false;
 
-    private loader: Loader;
+    private loader!: Loader;
     private chatService: ChatService;
     private directManager: DirectManager;
     private groupManager: GroupManager;
@@ -53,19 +55,15 @@ export class ChatManager {
         socketClient: SocketClientConnect,
         chatController: ChatController,
         apiClientController: ApiClientController,
-        dashboard: Dashboard | null,
+        dashboard: Dashboard,
         appEl: HTMLDivElement | null = null,
         username: string | undefined,
         setState: React.Component<any, State>['setState']
     ) {
         this.chatService = chatService;
         this.socketClient = socketClient;
+        this.dashboard = dashboard;
         this.apiClientController = apiClientController;
-        this.loader = new Loader(
-            socketClient, 
-            chatService, 
-            this
-        );
         this.directManager = new DirectManager(
             socketClient,
             chatController,
@@ -83,37 +81,93 @@ export class ChatManager {
         this.setState = setState;
     }
 
+    public setUpdateCallback(callback: (list: any[]) => void): void {
+        this.updateCallback = callback;
+    }
+
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
         this.userId = userId;
         await this.directManager.getUserData(sessionId, userId);
         await this.groupManager.getUserData(sessionId, userId, username);
     }
 
-    public initLoader(): void {
-        this.loader = new Loader(
-            this.socketClient,
-            this.chatService,
-            this
-        );
+    /**
+     * Chat Item Added
+     */
+    private handleChatItemAdded = (event: CustomEvent): void => {
+        const chatItem = event.detail;
+        
+        const existingChatIndex = this.chatList.findIndex(chat => chat.id === chatItem.id);
+        
+        if (existingChatIndex === -1) {
+            this.chatList.push(chatItem);
+        } else {
+            this.chatList[existingChatIndex] = {
+                ...this.chatList[existingChatIndex],
+                ...chatItem,
+                lastUpdated: new Date()
+            };
+        }
+
+        this.sortChats(this.chatList);
+        this.updateChatList();
+        if(this.updateCallback) this.updateCallback([...this.chatList]);
+        if(this.setState) this.setState({ chatList: [...this.chatList] });
     }
 
-    public mount(): void {
-       // window.addEventListener('chat-should-be-created', this.handleChatItemAdded as EventListener);
-        window.addEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
-        window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
-        window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
+    /**
+     * Load Chats
+     */
+    public async loadChats(userId: string): Promise<void> {
+        try {
+            const handleChatItemAdded = (event: CustomEvent) => {
+                this.handleChatItemAdded(event);
+            };
+
+            const handleStreamComplete = (event: CustomEvent) => {
+                console.log('Chats streaming completed:', event.detail);
+                window.removeEventListener('chat-item-added', handleChatItemAdded as EventListener);
+                window.removeEventListener('chat-item-streamed', handleChatItemAdded as EventListener);
+                window.removeEventListener('chat-activated', this.handleChatActivated as EventListener);
+                window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);
+                window.removeEventListener('chats-stream-complete', handleStreamComplete as EventListener);
+                window.removeEventListener('chats-stream-error', handleStreamError as EventListener);
+            };
+
+            const handleStreamError = (event: CustomEvent) => {
+                console.error('Chats streaming error:', event.detail.error);
+                window.removeEventListener('chat-item-added', handleChatItemAdded as EventListener);
+                window.removeEventListener('chat-item-streamed', handleChatItemAdded as EventListener);
+                window.removeEventListener('chat-activated', this.handleChatActivated as EventListener);
+                window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);
+                window.removeEventListener('chats-stream-complete', handleStreamComplete as EventListener);
+                window.removeEventListener('chats-stream-error', handleStreamError as EventListener);
+            };
+
+            window.addEventListener('chat-item-added', handleChatItemAdded as EventListener);
+            window.addEventListener('chat-item-streamed', handleChatItemAdded as EventListener);
+            window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
+            window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
+            window.addEventListener('chats-stream-complete', handleStreamComplete as EventListener);
+            window.addEventListener('chats-stream-error', handleStreamError as EventListener);
+
+            const chatService = new ChatService(this.socketClient, this.apiClientController);
+            const loader = new Loader(this.socketClient, chatService, this);
+            await loader.loadChatItems(userId);
+        } catch (err) {
+            console.error('Failed to load chats via events:', err);
+        }
     }
 
-    public unmount(): void {
-        //window.removeEventListener('chat-should-be-created', this.handleChatItemAdded as EventListener);
-        window.removeEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
-        window.removeEventListener('chat-activated', this.handleChatActivated as EventListener);
-        window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);
-    }
-
-    private queueUpdate(updateFn: () => void): void {
-        this.updateQueue.push(updateFn);
-        this.processQueue();
+    /**
+     * Update Chat List
+     */
+    private updateChatList(): void {
+        if(this.dashboard) this.dashboard.updateChatList(this.chatList);
+        const event = new CustomEvent('chat-list-updated', {
+            detail: { chatList: this.chatList }
+        });
+        window.dispatchEvent(event);
     }
 
     private processQueue(): void {
@@ -129,50 +183,9 @@ export class ChatManager {
         }, 0);
     }
 
-    private handleChatItemAdded = (event: CustomEvent): void => {
-        const newChat: Item = event.detail;
-        this.queueUpdate(() => {
-            this.setState(prevState => {
-                const chatExists = prevState.chatList.some(chat =>
-                    chat.id === newChat.id ||
-                    chat.chatId === newChat.id ||
-                    chat.groupId === newChat.id ||
-                    (chat.chatId && chat.chatId === newChat.id) ||
-                    (chat.groupId && chat.groupId === newChat.groupId)
-                );
-                if(chatExists) {
-                    console.log('Chat already exists!', newChat.id);
-                    return prevState;
-                }
-                //console.log('Adding new chat:', newChat.id, newChat.name);
-                return {
-                    ...prevState,
-                    chatList: [...prevState.chatList, newChat]
-                }
-            });
-        });
-    }
-
-    private handleChatActivated = (event: CustomEvent): void => {
-        const activeChat: ActiveChat = event.detail.chat;
-        const shouldRender = event.detail.shouldRender;
-        chatState.setType(activeChat.type === 'DIRECT' ? 'DIRECT' : 'GROUP');
-        this.setState({ activeChat });
-
-        if(activeChat.type === 'GROUP') {
-            this.groupManager.currentGroupId = activeChat.id;
-            this.groupManager.currentGroupName = activeChat.name;
-        }
-        if(shouldRender && this.updateCallback) this.updateCallback([...this.chatList])
-    }
-
-    public setUpdateCallback(callback: (list: any[]) => void): void {
-        this.updateCallback = callback;
-    }
-
-    /*
-    ** Update Last Message
-    */
+    /**
+     * Update Last Message
+     */
     private handleLastMessage = (event: CustomEvent): void => {
         const { 
             messageId, 
@@ -306,67 +319,6 @@ export class ChatManager {
         );
     }
 
-    /* Set Container */
-    public setContainer(container: HTMLElement): void {
-        this.container = container;
-        const directManager = this.getDirectManager();
-        if(directManager) directManager.container = container;
-        const groupManager = this.getGroupManager();
-        if(groupManager) groupManager.container = container;
-    }
-
-    /* Set Dashboard */
-    public setDashboard(instance: Dashboard): void {
-        const groupManager = this.getGroupManager();
-        if(groupManager) groupManager.dashboard = instance;
-    }
-
-    /* Set Username */
-    public setUsername(username: string): void {
-        const groupManager = this.getGroupManager();
-        if(groupManager) groupManager.username = username;
-    }
-
-    /*
-    ** Formatted Message
-    */
-    public formattedMessage(
-        chatId: string, 
-        lastMessage: string, 
-        isCurrentUser: string, 
-        sender: string,
-        systemMessage: boolean
-    ): string {
-        const isDirect = chatId.startsWith('direct_');
-        let formattedMessage;
-
-        if(isDirect) {
-            if(systemMessage) {
-                formattedMessage = lastMessage;
-            } else {
-                formattedMessage = lastMessage;
-            }
-        } else {
-            if(systemMessage) {
-                formattedMessage = lastMessage;
-            } else {
-                formattedMessage = isCurrentUser 
-                    ? `You: ${lastMessage}`
-                    : `${sender}: ${lastMessage}`;
-            }
-        }
-
-        return formattedMessage;
-    }
-
-    public formattedLastMessage(message: string): string {
-        if(message.length > 10) return message.substring(0, 15) + '...';
-        return message;
-    }
-
-    /*
-    ** Last Message
-    */
     public async lastMessage(id: string): Promise<{
         content: string,
         currentUserId: string, 
@@ -421,9 +373,83 @@ export class ChatManager {
         window.dispatchEvent(updateEvent);
     }
 
-    /*
-    ** System Message
-    */
+    /**
+     * Activate Chat
+     */
+    private handleChatActivated = (event: CustomEvent): void => {
+        const activeChat: ActiveChat = event.detail.chat;
+        const shouldRender = event.detail.shouldRender;
+        chatState.setType(activeChat.type === 'DIRECT' ? 'DIRECT' : 'GROUP');
+        this.setState({ activeChat });
+
+        if(activeChat.type === 'GROUP') {
+            this.groupManager.currentGroupId = activeChat.id;
+            this.groupManager.currentGroupName = activeChat.name;
+        }
+        if(shouldRender && this.updateCallback) this.updateCallback([...this.chatList])
+    }
+
+    /* Set Container */
+    public setContainer(container: HTMLElement): void {
+        this.container = container;
+        const directManager = this.getDirectManager();
+        if(directManager) directManager.container = container;
+        const groupManager = this.getGroupManager();
+        if(groupManager) groupManager.container = container;
+    }
+
+    /* Set Dashboard */
+    public setDashboard(instance: Dashboard): void {
+        const groupManager = this.getGroupManager();
+        if(groupManager) groupManager.dashboard = instance;
+    }
+
+    /* Set Username */
+    public setUsername(username: string): void {
+        const groupManager = this.getGroupManager();
+        if(groupManager) groupManager.username = username;
+    }
+
+    /**
+     * Formatted Message
+     */
+    public formattedMessage(
+        chatId: string, 
+        lastMessage: string, 
+        isCurrentUser: string, 
+        sender: string,
+        systemMessage: boolean
+    ): string {
+        const isDirect = chatId.startsWith('direct_');
+        let formattedMessage;
+
+        if(isDirect) {
+            if(systemMessage) {
+                formattedMessage = lastMessage;
+            } else {
+                formattedMessage = lastMessage;
+            }
+        } else {
+            if(systemMessage) {
+                formattedMessage = lastMessage;
+            } else {
+                formattedMessage = isCurrentUser 
+                    ? `You: ${lastMessage}`
+                    : `${sender}: ${lastMessage}`;
+            }
+        }
+
+        return formattedMessage;
+    }
+
+    public formattedLastMessage(message: string): string {
+        if(message.length > 10) return message.substring(0, 15) + '...';
+        return message;
+    }
+
+    /**
+     * System Message
+     */
     private isSystemMessage(message: any): boolean {
         if(message.isSystem === true) return true;
         if(message.messageId.includes('sys_')) return true;
@@ -431,23 +457,31 @@ export class ChatManager {
         return false;
     }
 
-    /*
-    ** Get Loader
-    */
+    private sortChats(chats: any[]): any[] {
+        return chats.sort((a, b) => {
+            const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : new Date(a.createdAt).getTime();
+            const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : new Date(b.createdAt).getTime();
+            return timeB - timeA;
+        });
+    }
+
+    /**
+     * Get Loader
+     */
     public getLoader(): Loader {
         return this.loader;
     }
 
-    /*
-    ** Get Direct Manager
-    */
+    /**
+     * Get Direct Manager
+     */
     public getDirectManager(): DirectManager {
         return this.directManager;
     }
 
-    /*
-    ** Get Group Manager
-    */
+    /**
+     * Get Group Manager
+     */
     public getGroupManager(): GroupManager {
         return this.groupManager;
     }

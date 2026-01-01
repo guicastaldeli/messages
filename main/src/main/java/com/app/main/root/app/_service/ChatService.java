@@ -73,9 +73,19 @@ public class ChatService {
         return chats;
     }
 
-    /*
-    * Get Chats 
-    */
+    public List<Map<String, Object>> getUserChats(String userId, int page, int pageSize) throws SQLException {
+        List<Map<String, Object>> allChats = getChats(userId);
+        
+        int startIndex = page * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, allChats.size());
+        if(startIndex >= allChats.size()) return new ArrayList<>();
+        
+        return allChats.subList(startIndex, endIndex);
+    }
+
+    /**
+     * Get Chats
+     */
     public List<Map<String, Object>> getChats(String userId) throws SQLException {
         List<Map<String, Object>> allChats = new ArrayList<>();
         List<Map<String, Object>> directChats = getUserDirectChats(userId);

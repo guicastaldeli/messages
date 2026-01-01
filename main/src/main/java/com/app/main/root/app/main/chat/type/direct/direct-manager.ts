@@ -39,6 +39,22 @@ export class DirectManager {
         }) as EventListener);
     }
 
+    public setCurrentChat(chatId: string): void {
+        if(!this.container || !(this.container instanceof HTMLElement)) return;
+        this.currentChatId = chatId;
+        
+        const content = React.createElement(DirectLayout, {
+            chatController: this.chatController,
+            directManager: this
+        });
+        if(!this.root) {
+            this.root = createRoot(this.container);
+        }
+        this.root.render(content);
+        
+        console.log('Direct chat activated:', chatId);
+    }
+
     /*
     ** User Data
     */

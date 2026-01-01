@@ -68,7 +68,7 @@ export class Main extends Component<any, State> {
     }
 
     async componentDidMount(): Promise<void> {
-         try {
+        try {
             const userInfo = SessionManager.getUserInfo();
             console.log('Loaded user info from cookies:', userInfo);
         
@@ -89,14 +89,13 @@ export class Main extends Component<any, State> {
                 this.socketClientConnect,
                 this.chatController,
                 this.apiClientController,
-                this.dashboardInstance,
+                this.dashboardInstance!,
                 this.appContainerRef.current,
                 userInfo?.username,
                 this.setState.bind(this)
             );
 
-            this.chatManager.initLoader();
-            this.chatManager.mount();
+            this.chatManager.loadChats(userInfo!.userId);
             this.chatController.setChatManager(this.chatManager);
             if(userInfo?.userId) {
                 try {
@@ -133,31 +132,6 @@ export class Main extends Component<any, State> {
         } catch(err) {
             console.error('Error in componentDidMount:', err);
             this.setState({ isLoading: false });
-        }
-    }
-
-    componentWillUnmount(): void {
-        if(this.chatManager) this.chatManager.unmount();
-    }
-
-    private loadData = async(): Promise<void> => {
-        try {
-            const messageService = await this.chatService.getMessageController().getMessageService();
-            const trackedMessages = await messageService.getMessagesByUserId(this.state.userId!);
-
-            const fileService = await this.chatService.getFileController().getFileService();
-            const trackedFiles = await fileService.getFilesByUserId(this.state.userId!);
-
-            const chatList = [...trackedMessages, ...trackedFiles].sort((a, b) => {
-                const timeA = a.timestamp || a.createdAt || a.uploaded_at || 0;
-                const timeB = b.timestamp || b.createdAt || b.uploaded_at || 0;
-                return timeB - timeA;
-            });
-            this.setState({ 
-                chatList: chatList,
-            });
-        } catch(err) {
-            console.error('Failed to load chat data:', err);
         }
     }
 
@@ -282,7 +256,6 @@ export class Main extends Component<any, State> {
                         await cacheService.initCache(userInfo.userId);
                         //await this.cachePreloader.startPreloading(userInfo.userId);
 
-                        await this.loadData();
                         if (this.dashboardInstance) {
                             await this.dashboardInstance.getUserData(
                                 userInfo.sessionId,
@@ -391,8 +364,6 @@ export class Main extends Component<any, State> {
                             const cacheService = await this.chatService.getCacheServiceClient();
                             await cacheService.initCache(authData.userId);
                             //await this.cachePreloader.startPreloading(authData.userId);
-
-                            await this.loadData();
                             
                             if (this.dashboardInstance) {
                                 await this.dashboardInstance.getUserData(

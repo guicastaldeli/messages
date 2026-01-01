@@ -31,8 +31,9 @@ interface State {
 }
 
 export class Dashboard extends Component<Props, State> {
-    private groupContainerRef: React.RefObject<HTMLDivElement | null>;
     public contactService: ContactServiceClient | null = null;
+    private chatContainerRef: React.RefObject<HTMLDivElement | null>;
+    private groupContainerRef: React.RefObject<HTMLDivElement | null>;
 
     constructor(props: Props) {
         super(props);
@@ -45,6 +46,7 @@ export class Dashboard extends Component<Props, State> {
             contactService: null,
             isLoading: true,
         }
+        this.chatContainerRef = React.createRef();
         this.groupContainerRef = React.createRef();
     }
 
@@ -52,6 +54,27 @@ export class Dashboard extends Component<Props, State> {
         this.setState({ userId });
         this.props.chatManager.getUserData(sessionId, userId, username);
         console.log(sessionId, userId,'username:', username)
+    }
+
+    public updateChatList(chatList: any[]): void {
+        this.setState({ chatList });
+        if(this.props.onChatListUpdate) {
+            this.props.onChatListUpdate(chatList);
+        }
+        
+        const event = new CustomEvent('chat-list-updated', {
+            detail: { chatList }
+        });
+        window.dispatchEvent(event);
+    }
+
+    private handleChatListUpdated = (event: CustomEvent): void => {
+        const { chatList } = event.detail;
+        this.setState({ chatList });
+        
+        if (this.props.onChatListUpdate) {
+            this.props.onChatListUpdate(chatList);
+        }
     }
 
     async componentDidMount(): Promise<void> {
@@ -80,7 +103,12 @@ export class Dashboard extends Component<Props, State> {
         this.props.chatManager.setDashboard(this);
         this.props.chatManager.setContainer(this.groupContainerRef.current);
         this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
+        if(this.chatContainerRef.current && this.props.chatManager.getGroupManager()) {
+            this.props.chatManager.getGroupManager().container = this.chatContainerRef.current;
+        }
+
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
+        window.addEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
 
         this.contactService = new ContactServiceClient({
             socketClient: this.props.chatController.socketClient,
@@ -93,6 +121,7 @@ export class Dashboard extends Component<Props, State> {
 
     componentWillUnmount(): void {
         window.removeEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
+        window.removeEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
     }
 
     componentDidUpdate(prevProps: Props): void {
@@ -138,15 +167,24 @@ export class Dashboard extends Component<Props, State> {
                 chatType,
                 chat.members || []
             );
+            if(this.chatContainerRef.current && this.props.chatManager.getGroupManager()) {
+                this.props.chatManager.getGroupManager().container = this.chatContainerRef.current;
+            }
             this.setState({
-                activeChat: { ...chat }
+                activeChat: { 
+                    ...chat,
+                    id: chatId,
+                    name: chat.name || chat.contactUsername || 'Chat',
+                    type: chatType
+                }
             });
-            
             const event = new CustomEvent('chat-activated', {
                 detail: {
                     chat: {
                         ...chat,
-                        type: chatType
+                        id: chatId,
+                        type: chatType,
+                        name: chat.name || chat.contactUsername || 'Chat'
                     },
                     shouldRender: true
                 }
@@ -290,6 +328,18 @@ export class Dashboard extends Component<Props, State> {
                             )}
 
                             <div className="group-container" ref={this.groupContainerRef}></div>
+                            <div className="chat-container" ref={this.chatContainerRef}>
+                                {activeChat && (
+                                    <GroupLayout
+                                        chatController={chatController}
+                                        groupManager={chatManager.getGroupManager()}
+                                        groupId={activeChat.id}
+                                        groupName={activeChat.name}
+                                        onClose={this.handleCloseGroupLayout}
+                                        mode="chat"
+                                    />
+                                )}
+                            </div>
 
                             <div id="chat-container">
                                 <div className="chat-list">
@@ -321,17 +371,6 @@ export class Dashboard extends Component<Props, State> {
                                     )}
                                 </div>
                             </div>
-
-                            {activeChat && (
-                                <GroupLayout
-                                    chatController={chatController}
-                                    groupManager={chatManager.getGroupManager()}
-                                    groupId={activeChat.id}
-                                    groupName={activeChat.name}
-                                    onClose={this.handleCloseGroupLayout}
-                                    mode="chat"
-                                />
-                            )}
                         </>
                     )
                 }}

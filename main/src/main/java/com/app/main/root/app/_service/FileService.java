@@ -63,6 +63,24 @@ public class FileService {
     }
 
     /**
+     * Get Files By Chat Id
+     */
+    public Map<String, Object> getFilesByChatId(
+        String userId, 
+        String chatId, 
+        int page, 
+        int pageSize
+    ) {
+        return listFiles(userId, chatId, page, pageSize);
+    }
+    
+    public Map<String, Object> getFilesByChatId(String chatId, int page) {
+        String defaultUserId = "unknown";
+        int defaultPageSize = 20;
+        return listFiles(defaultUserId, chatId, page, defaultPageSize);
+    }
+
+    /**
      * List Files
      */
     public Map<String, Object> listFiles(

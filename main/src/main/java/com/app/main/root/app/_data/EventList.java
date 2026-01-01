@@ -380,7 +380,7 @@ public class EventList {
                             .getMessageService()
                             .getMessagesByChatId(chatId, page, pageSize);
 
-                        for(Map<String, Object> message : messages) {
+                        for(_Message message : messages) {
                             Map<String, Object> messageEvent = new HashMap<>();
                             messageEvent.put("type", "MESSAGE_DATA");
                             messageEvent.put("chatId", chatId);
@@ -393,10 +393,12 @@ public class EventList {
                     }
                     /* Files */
                     if(includeFiles) {
-                        List<Map<String, Object>> files = 
+                        Map<String, Object> filesRes = 
                             serviceManager
                             .getFileService()
-                            .getFilesByChatId(chatId, page, pageSize);
+                            .getFilesByChatId(userId, chatId, page, pageSize);
+                        List<Map<String, Object>> files = (List<Map<String, Object>>) filesRes.get("files");
+                        if(files == null) files = new ArrayList<>();
 
                         for(Map<String, Object> file : files) {
                             Map<String, Object> fileEvent = new HashMap<>();
