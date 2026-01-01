@@ -203,6 +203,48 @@ export class ChatService {
     }
 
     /**
+     * Stream User Chats
+     */
+    public async streamUserChats(
+        userId: string,
+        page: number = 0,
+        pageSize: number = 20
+    ): Promise<EventStream> {
+        return new EventStream(this.socketClientConnect, {
+            destination: '/app/stream-user-chats',
+            payload: { userId, page, pageSize },
+            successDestination: '/queue/user-chats-stream',
+            errorDestination: '/queue/user-chats-stream-err'
+        });
+    }
+
+    /**
+     * Stream Chat Data
+     */
+    public async streamChatData(
+        chatId: string,
+        userId: string,
+        page: number = 0,
+        pageSize: number = 20,
+        includeFiles: boolean = true,
+        includeMessages: boolean = true
+    ): Promise<EventStream> {
+        return new EventStream(this.socketClientConnect, {
+            destination: '/app/stream-chat-data',
+            payload: { 
+                chatId, 
+                userId, 
+                page, 
+                pageSize,
+                includeFiles,
+                includeMessages 
+            },
+            successDestination: '/queue/chat-data-stream',
+            errorDestination: '/queue/chat-data-stream-err'
+        });
+    }
+
+    /**
      * Get Cache Service
      */
     public async getCacheServiceClient(): Promise<CacheServiceClient> {
