@@ -1,3 +1,6 @@
+import { SocketClientConnect } from "../socket-client-connect";
+import { ChatService } from "./chat-service";
+
 interface StreamConfig {
     destination: string;
     payload: any;
@@ -7,8 +10,7 @@ interface StreamConfig {
 
 export class EventStream {
     private socketClientConnect: SocketClientConnect;
-    private messageService: MessageService;
-    private fileService: FileService;
+    private chatService: ChatService;
 
     private config: StreamConfig;
     private messageHandlers: Map<string, Function[]> = new Map();
@@ -17,14 +19,12 @@ export class EventStream {
 
     constructor(
         socketClientConnect: SocketClientConnect, 
-        config: StreamConfig,
-        messageService: MessageService,
-        fileService: FileService
+        chatService: ChatService,
+        config: StreamConfig
     ) {
         this.socketClientConnect = socketClientConnect;
         this.config = config; 
-        this.messageService = messageService;
-        this.fileService = fileService;
+        this.chatService = chatService;
     }
 
     /**
@@ -68,7 +68,7 @@ export class EventStream {
         this.isStarted = true;
         this.setupEventHandlers();
 
-        await this.socketClient.sendToDestination(
+        await this.socketClientConnect.sendToDestination(
             this.config.destination,
             this.config.payload,
             this.config.succssDestination
@@ -140,14 +140,15 @@ export class EventStream {
     }
 
     private async processMessageData(data: any): Promise<any> {
-        if(!this.messageServiceClient) {
+        const messageService = await this.chatService.getMessageController().getMessageService();
+        if(!messageService) {
             console.warn('No message service client available for decryption');
             return data;
         }
 
         try {
             const chatId = data.chatId || data.message.chatId;
-            const decryptedMessage = await this.messageServiceClient.decryptMessage(
+            const decryptedMessage = await messageService.decryptMessage(
                 chatId,
                 data.message
             );
@@ -157,7 +158,7 @@ export class EventStream {
                 message: decryptedMessage,
                 decrypted: true
             }
-        } catch(err) {
+        } catch(err: any) {
             console.error('Failed to decrypt message:', err);
             return {
                 ...data,
@@ -168,14 +169,15 @@ export class EventStream {
     }
 
     private async processFileData(data: any): Promise<any> {
-        if(!this.fileServiceClient) {
+        const fileService = await this.chatService.getFileController().getFileService();
+        if(!fileService) {
             console.warn('No file service client available for decryption');
             return data;
         }
 
         try {
             const chatId = data.chatId || data.file.chatId;
-            const decryptedFile = await this.fileServiceClient.decryptFile(
+            const decryptedFile = await fileService.decryptFile(
                 chatId,
                 data.file
             );
@@ -185,7 +187,7 @@ export class EventStream {
                 file: decryptedFile,
                 decrypted: true
             }
-        } catch(err) {
+        } catch(err: any) {
             console.error('Failed to decrypt file:', err);
             return {
                 ...data,

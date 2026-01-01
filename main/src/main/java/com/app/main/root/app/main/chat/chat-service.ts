@@ -3,6 +3,7 @@ import { ApiClientController } from "../_api-client/api-client-controller";
 import { SocketClientConnect } from "../socket-client-connect";
 import { MessageControllerClient } from "./messages/message-controller-client";
 import { FileControllerClient } from "./file/file-controller-client";
+import { EventStream } from "./event-stream";
 
 export class ChatService {
     private socketClientConnect: SocketClientConnect;
@@ -210,11 +211,14 @@ export class ChatService {
         page: number = 0,
         pageSize: number = 20
     ): Promise<EventStream> {
-        return new EventStream(this.socketClientConnect, {
+        return new EventStream(
+            this.socketClientConnect,
+            this, 
+        {
             destination: '/app/stream-user-chats',
             payload: { userId, page, pageSize },
-            successDestination: '/queue/user-chats-stream',
-            errorDestination: '/queue/user-chats-stream-err'
+            succssDestination: '/queue/user-chats-stream',
+            errDestination: '/queue/user-chats-stream-err'
         });
     }
 
@@ -229,7 +233,10 @@ export class ChatService {
         includeFiles: boolean = true,
         includeMessages: boolean = true
     ): Promise<EventStream> {
-        return new EventStream(this.socketClientConnect, {
+        return new EventStream(
+            this.socketClientConnect,
+            this,  
+        {
             destination: '/app/stream-chat-data',
             payload: { 
                 chatId, 
@@ -239,8 +246,8 @@ export class ChatService {
                 includeFiles,
                 includeMessages 
             },
-            successDestination: '/queue/chat-data-stream',
-            errorDestination: '/queue/chat-data-stream-err'
+            succssDestination: '/queue/chat-data-stream',
+            errDestination: '/queue/chat-data-stream-err'
         });
     }
 
