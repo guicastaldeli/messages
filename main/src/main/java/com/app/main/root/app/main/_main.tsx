@@ -114,8 +114,7 @@ export class Main extends Component<any, State> {
                             data,
                             '/topic/user'
                         );
-                        const loader = this.chatManager.getLoader();
-                        if(loader) await loader.loadChatItems(userInfo.userId);
+                        
                     } catch (err) {
                         console.error('Failed to load chat items:', err);
                     }
@@ -123,7 +122,7 @@ export class Main extends Component<any, State> {
                 
                 const cacheService = await this.chatService.getCacheServiceClient();
                 if(userInfo?.userId) await cacheService.initCache(userInfo.userId);
-                
+                this.loadData(userInfo.userId);
                 this.setState({ 
                     isLoading: false,
                     rememberUser: rememberUser
@@ -139,6 +138,11 @@ export class Main extends Component<any, State> {
         if(!this.socketClientConnect) return;
         await this.socketClientConnect.connect();
         await this.chatController.init();
+    }
+
+    public async loadData(userId: string): Promise<any> {
+        const loader = this.chatManager.getLoader();
+        if(loader) await loader.loadChatItems(userId);
     }
 
     private setDashboardRef = (instance: Dashboard | null): void => {
@@ -502,6 +506,7 @@ export class Main extends Component<any, State> {
                                                     chatService={this.chatService}
                                                     chatList={chatList}
                                                     activeChat={activeChat}
+                                                    main={this}
                                                     onLogout={() => this.handleLogout(sessionContext)}
                                                 />
                                             )}

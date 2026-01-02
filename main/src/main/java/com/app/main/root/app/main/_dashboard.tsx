@@ -9,6 +9,7 @@ import { GroupLayout } from "./chat/type/group/group-layout";
 import { ContactServiceClient } from "./contact/contact-service-client";
 import { ContactLayout } from "./contact/contact-layout";
 import { SessionManager } from "./_session/session-manager";
+import { Main } from "./_main";
 
 interface Props {
     chatController: ChatController;
@@ -16,6 +17,7 @@ interface Props {
     chatService: ChatService;
     chatList: any[];
     activeChat: any;
+    main: Main;
     onChatListUpdate?: (chatList: any[]) => void;
     onLogout?: () => Promise<void>;
 }
@@ -24,10 +26,12 @@ interface State {
     userId: string | null;
     currentSession: SessionType;
     groups: any[];
-    chatList: any[];
+    chatList: any[] | any;
     activeChat: any;
     contactService: ContactServiceClient | null;
     isLoading: boolean;
+    contactsLoaded: boolean;
+    chatsLoaded: boolean;
 }
 
 export class Dashboard extends Component<Props, State> {
@@ -45,6 +49,8 @@ export class Dashboard extends Component<Props, State> {
             activeChat: props.activeChat || null,
             contactService: null,
             isLoading: true,
+            contactsLoaded: false,
+            chatsLoaded: false
         }
         this.chatContainerRef = React.createRef();
         this.groupContainerRef = React.createRef();
@@ -85,18 +91,47 @@ export class Dashboard extends Component<Props, State> {
         if(userId) {
             this.setState({ userId });
             try {
-                const messageService = 
-                    await this.props.chatService
-                        .getMessageController()
-                        .getMessageService();
-                const chatList = await messageService.getMessagesByUserId(this.state.userId!);
-                this.setState({ chatList, isLoading: false });
+                await this.props.main.loadData(this.state.userId!);
+
+                this.contactService = new ContactServiceClient({
+                    socketClient: this.props.chatController.socketClient,
+                    chatController: this.props.chatController,
+                    userId: this.props.chatController.userId,
+                    username: this.props.chatController.username
+                });
+                this.contactService.setupEventListeners();
+
+                await new Promise<void>((res) => {
+                    const checkChatsLoaded = () => {
+                        if(this.props.chatList && this.props.chatList.length > 0) {
+                            res();
+                        } else {
+                            setTimeout(checkChatsLoaded, 100);
+                        }
+                    }
+                    checkChatsLoaded();
+                });
+            
+                this.setState({
+                    contactService: this.contactService,
+                    contactsLoaded: true,
+                    chatsLoaded: true,
+                    isLoading: false
+                });
             } catch(err) {
                 console.error('Error loading chat list', err);
-                this.setState({ isLoading: false });
+                this.setState({
+                    contactsLoaded: false,
+                    chatsLoaded: false, 
+                    isLoading: false 
+                });
             }
         } else {
-            this.setState({ isLoading: false });
+            this.setState({
+                contactsLoaded: false,
+                chatsLoaded: false, 
+                isLoading: false 
+            });
         }
 
         if(!this.groupContainerRef.current || !this.props.chatManager) return;
@@ -109,14 +144,6 @@ export class Dashboard extends Component<Props, State> {
 
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.addEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
-
-        this.contactService = new ContactServiceClient({
-            socketClient: this.props.chatController.socketClient,
-            chatController: this.props.chatController,
-            userId: this.props.chatController.userId,
-            username: this.props.chatController.username
-        });
-        this.contactService.setupEventListeners();
     }
 
     componentWillUnmount(): void {
@@ -212,7 +239,7 @@ export class Dashboard extends Component<Props, State> {
         const removedId = id || groupId;
         if(!removedId) return;
 
-        const itemExists = this.state.chatList.some(chat =>
+        const itemExists = this.state.chatList.some((chat: any) =>
             chat.id === removedId || chat.groupId === removedId
         );
         if(!itemExists) return;
@@ -225,7 +252,7 @@ export class Dashboard extends Component<Props, State> {
         }
 
         this.setState(prevState => ({
-            chatList: prevState.chatList.filter(chat => {
+            chatList: prevState.chatList.filter((chat: any) => {
                 const shouldKeep = chat.id !== removedId && chat.groupId != removedId;
                 return shouldKeep;
             })
@@ -276,19 +303,35 @@ export class Dashboard extends Component<Props, State> {
         if(this.onStateChange) this.onStateChange(this.currentState);
     }
 
-    render() {
-        if(this.state.isLoading) {
-            return <div>Loading dashboard...</div>;
-        }
+    /**
+     * Is Loaded
+     */
+    private isLoaded(): boolean {
+        return this.state.chatsLoaded && 
+            this.state.contactsLoaded &&
+            this.props.chatList.length > 0;
+    }
 
+    render() {
         const sessionData = SessionManager.getUserInfo();
         const userId = sessionData?.userId;
+        const { chatList, activeChat } = this.props;
+        const { chatController, chatManager } = this.props
+
         if(!userId) {
             return <div>Loading user data...</div>;
         }
-
-        const { chatList, activeChat } = this.props;
-        const { chatController, chatManager } = this.props
+        const loadingOverlay = (this.state.isLoading || !this.isLoaded()) ? (
+            <div className="dashboard-loading-overlay">
+                <div className="loading-content">
+                    <div>Loading dashboard...</div>
+                    <div className="loading-status">
+                        {!this.state.chatsLoaded && <span>Loading chats...</span>}
+                        {!this.state.contactsLoaded && <span>Loading contacts...</span>}
+                    </div>
+                </div>
+            </div>
+        ) : null;
 
         return (
             <SessionContext.Consumer>
@@ -299,6 +342,7 @@ export class Dashboard extends Component<Props, State> {
 
                     return (
                         <>
+                            {loadingOverlay}
                             {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
                                     <div className="sidebar">
