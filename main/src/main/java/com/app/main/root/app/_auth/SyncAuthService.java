@@ -1,12 +1,10 @@
 package com.app.main.root.app._auth;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-
 import com.app.main.root.EnvConfig;
 import com.app.main.root.app._service.ServiceManager;
-import java.util.Map;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.stereotype.Service;
 import java.util.HashMap;
-import java.util.*;
+import java.util.Map;
 
 @Service
 public class SyncAuthService {
@@ -111,5 +109,68 @@ public class SyncAuthService {
         return res;
     }
 
-    
+    /**
+     * Register User from External Service
+     */
+    public Map<String, Object> registerUserFromExternalService(
+        String username, 
+        String email, 
+        String password, 
+        String sourceService
+    ) {
+        Map<String, Object> res = new HashMap<>();
+
+        try {
+            Map<String, Object> localRes = 
+                serviceManager
+                    .getUserService()
+                    .registerUser(
+                        username,
+                        email,
+                        password,
+                        "external-session-" + sourceService,
+                        WEB_URL
+                    );
+
+            res.put("messagesService", localRes);
+            res.put("success", true);
+        } catch(Exception err) {
+            res.put("success", false);
+            res.put("error", err.getMessage());
+        }
+
+        return res;
+    }
+
+    /**
+     * Login User from External Service
+     */
+    public Map<String, Object> loginUserFromExternalService(
+        String email, 
+        String password, 
+        String sessionId,
+        String sourceService
+    ) {
+        Map<String, Object> res = new HashMap<>();
+
+        try {
+            Map<String, Object> localRes =
+                serviceManager
+                    .getUserService()
+                    .loginUser(
+                        email,
+                        password,
+                        sessionId,
+                        WEB_URL
+                    );
+
+            res.put("messageService", localRes);
+            res.put("success", true);
+        } catch(Exception err) {
+            res.put("success", false);
+            res.put("error", err.getMessage());
+        }
+
+        return res;
+    }
 }
