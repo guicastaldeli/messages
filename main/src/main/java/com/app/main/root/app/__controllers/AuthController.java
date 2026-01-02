@@ -55,24 +55,13 @@ public class AuthController {
         try {
             System.out.println("Registration attempt for: " + request.getEmail());
 
-            Map<String, Object> result = serviceManager.getSyncAuthService().registerUser(
+            Map<String, Object> result = serviceManager.getUserService().registerUser(
                 request.getUsername(),
                 request.getEmail(),
                 request.getPassword(),
                 request.getSessionId(),
                 connectionTracker.getClientIpAddress(httpRequest)
             );
-            if(!(boolean) result.get("success")) {
-                return ResponseEntity.badRequest()
-                    .body(
-                        Map.of(
-                            "error",
-                            "REGISTRATION_FAILED",
-                            "message",
-                            result.get("error")
-                        )
-                    );
-            }
 
             String userId = (String) result.get("userId");
             String username = (String) result.get("username");
@@ -137,23 +126,12 @@ public class AuthController {
         try {
             System.out.println("Login attempt for: " + request.getEmail());
 
-            Map<String, Object> result = serviceManager.getSyncAuthService().loginUser(
+            Map<String, Object> result = serviceManager.getUserService().loginUser(
                 request.getEmail(),
                 request.getPassword(),
                 request.getSessionId(),
                 connectionTracker.getClientIpAddress(httpRequest)
             );
-            if(!(boolean) result.get("success")) {
-                return ResponseEntity.badRequest()
-                    .body(
-                        Map.of(
-                            "error",
-                            "LOGIN_FAILED",
-                            "message",
-                            result.get("error")
-                        )
-                    );
-            }
 
             String userId = (String) result.get("userId");
             String username = (String) result.get("username");
@@ -226,59 +204,6 @@ public class AuthController {
                         "LOGIN_FAILED",
                         "message",
                         err.getMessage()
-                    )
-                );
-        }
-    }
-
-    /**
-     * Sync Register User
-     */
-    @PostMapping("/sync-register")
-    public ResponseEntity<?> syncRegisterUser(@RequestBody Map<String, String> request) {
-        try {
-            System.out.println("Shared registration from drive service for: " + request.get("email"));
-
-            Map<String, Object> res = serviceManager.getSyncAuthService().registerUserFromExternalService(
-                request.get("username"),
-                request.get("email"),
-                request.get("password"),
-                request.get("sourceService")
-            );
-            return ResponseEntity.ok(res);
-        } catch(Exception err) {
-            System.err.println("Shared registration failed: " + err.getMessage());
-            return ResponseEntity.badRequest()
-                .body(
-                    Map.of(
-                        "success", false,
-                        "error", err.getMessage()
-                    )
-                );
-        }
-    }
-
-    /**
-     * Sync Register Login
-     */
-    @PostMapping("/sync-login")
-    public ResponseEntity<?> syncLoginUser(@RequestBody Map<String, String> request) {
-        try {
-            System.out.println("Shared login from drive service for: " + request.get("email"));
-
-            Map<String, Object> res = serviceManager.getSyncAuthService().loginUserFromExternalService(
-                request.get("email"),
-                request.get("password"),
-                request.get("sessionId")
-            );
-            return ResponseEntity.ok(res);
-        } catch(Exception err) {
-            System.err.println("Shared login failed: " + err.getMessage());
-            return ResponseEntity.badRequest()
-                .body(
-                    Map.of(
-                        "success", false,
-                        "error", err.getMessage()
                     )
                 );
         }

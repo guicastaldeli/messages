@@ -9,9 +9,7 @@ class AuthService:
         self.url = url
         self.sessionService = sessionService
         
-    ##
     ## Register User
-    ##
     async def registerUser(self, data: Dict) -> Dict:
         return await self._request(
             "post", 
@@ -19,9 +17,7 @@ class AuthService:
             json=data
         )
     
-    ##
     ## Login User
-    ##
     async def loginUser(self, data: Dict) -> Dict:
         return await self._request(
             "post", 
@@ -29,9 +25,7 @@ class AuthService:
             json=data
         )
         
-    ##
     ## Logout User
-    ##
     async def logoutUser(self, cookies: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         headers = {}
         if(cookies):

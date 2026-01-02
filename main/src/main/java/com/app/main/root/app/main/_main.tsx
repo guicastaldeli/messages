@@ -69,66 +69,66 @@ export class Main extends Component<any, State> {
 
     async componentDidMount(): Promise<void> {
         try {
+            await this.connect();
+
             const userInfo = SessionManager.getUserInfo();
             console.log('Loaded user info from cookies:', userInfo);
-        
             if(userInfo) {
                 this.setState({
                     userId: userInfo.userId,
                     sessionId: userInfo.sessionId,
                     username: userInfo.username
                 });
-            }
-            await this.connect();
             
-            const rememberUser = CookieService.getValue(SessionManager.REMEMBER_USER) === 'true';
-            console.log('Remember user from cookie:', rememberUser);
-
-            this.chatManager = new ChatManager(
-                this.chatService,
-                this.socketClientConnect,
-                this.chatController,
-                this.apiClientController,
-                this.dashboardInstance!,
-                this.appContainerRef.current,
-                userInfo?.username,
-                this.setState.bind(this)
-            );
-
-            this.chatManager.loadChats(userInfo!.userId);
-            this.chatController.setChatManager(this.chatManager);
-            if(userInfo?.userId) {
-                try {
-                    this.chatController.getUserData(
-                        userInfo.sessionId,
-                        userInfo.userId,
-                        userInfo.username
-                    );
-
-                    const data = {
-                        sessionId: userInfo.sessionId,
-                        userId: userInfo.userId,
-                        username: userInfo.username
-                    };
-                    await this.socketClientConnect.sendToDestination(
-                        '/app/new-user',
-                        data,
-                        '/topic/user'
-                    );
-                    const loader = this.chatManager.getLoader();
-                    if(loader) await loader.loadChatItems(userInfo.userId);
-                } catch (err) {
-                    console.error('Failed to load chat items:', err);
+                const rememberUser = CookieService.getValue(SessionManager.REMEMBER_USER) === 'true';
+                console.log('Remember user from cookie:', rememberUser);
+    
+                this.chatManager = new ChatManager(
+                    this.chatService,
+                    this.socketClientConnect,
+                    this.chatController,
+                    this.apiClientController,
+                    this.dashboardInstance!,
+                    this.appContainerRef.current,
+                    userInfo?.username,
+                    this.setState.bind(this)
+                );
+    
+                this.chatManager.loadChats(userInfo!.userId);
+                this.chatController.setChatManager(this.chatManager);
+                if(userInfo?.userId) {
+                    try {
+                        this.chatController.getUserData(
+                            userInfo.sessionId,
+                            userInfo.userId,
+                            userInfo.username
+                        );
+    
+                        const data = {
+                            sessionId: userInfo.sessionId,
+                            userId: userInfo.userId,
+                            username: userInfo.username
+                        };
+                        await this.socketClientConnect.sendToDestination(
+                            '/app/new-user',
+                            data,
+                            '/topic/user'
+                        );
+                        const loader = this.chatManager.getLoader();
+                        if(loader) await loader.loadChatItems(userInfo.userId);
+                    } catch (err) {
+                        console.error('Failed to load chat items:', err);
+                    }
                 }
+                
+                const cacheService = await this.chatService.getCacheServiceClient();
+                if(userInfo?.userId) await cacheService.initCache(userInfo.userId);
+                
+                this.setState({ 
+                    isLoading: false,
+                    rememberUser: rememberUser
+                });
             }
-            
-            const cacheService = await this.chatService.getCacheServiceClient();
-            if(userInfo?.userId) await cacheService.initCache(userInfo.userId);
-            
-            this.setState({ 
-                isLoading: false,
-                rememberUser: rememberUser
-            });
         } catch(err) {
             console.error('Error in componentDidMount:', err);
             this.setState({ isLoading: false });

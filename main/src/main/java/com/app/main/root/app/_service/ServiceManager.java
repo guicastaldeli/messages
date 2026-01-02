@@ -1,6 +1,5 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.DbService;
-import com.app.main.root.app._auth.SyncAuthService;
 import com.app.main.root.app._auth.TokenService;
 import com.app.main.root.app.main.email_service.EmailService;
 import org.springframework.context.annotation.Lazy;
@@ -15,7 +14,6 @@ public class ServiceManager {
     private final SystemMessageService systemMessageService;
     private final MessagePerspectiveService messagePerspectiveService;
     private final UserService userService;
-    private final SyncAuthService syncAuthService;
     private final DirectService directService;
     private final ContactService contactService;
     private final GroupService groupService;
@@ -40,8 +38,8 @@ public class ServiceManager {
         @Lazy SessionService sessionService,
         @Lazy TokenService tokenService,
         @Lazy CookieService cookieService,
-        @Lazy FileService fileService,
-        @Lazy SyncAuthService syncAuthService) {
+        @Lazy FileService fileService
+    ) {
         this.dbService = dbService;
         this.messageService = messageService;
         this.systemMessageService = systemMessageService;
@@ -56,7 +54,6 @@ public class ServiceManager {
         this.tokenService = tokenService;
         this.cookieService = cookieService;
         this.fileService = fileService;
-        this.syncAuthService = syncAuthService;
     }
 
     /**
@@ -92,13 +89,6 @@ public class ServiceManager {
     */
     public ChatService getChatService() {
         return chatService;
-    }
-
-    /**
-     * Sync Auth Service
-     */
-    public SyncAuthService getSyncAuthService() {
-        return syncAuthService;
     }
 
     /**

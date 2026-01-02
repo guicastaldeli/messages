@@ -6,8 +6,12 @@ public class RegisterRequest {
     private String password;
     private String sessionId;
     private boolean rememberUser;
+    private String registrationId;
+    private boolean async;
 
-    /* Email */
+    /**
+     * Email
+     */
     public void setEmail(String email) {
         this.email = email;
     }
@@ -15,7 +19,9 @@ public class RegisterRequest {
         return email;
     }
 
-    /* Username */
+    /**
+     * Username
+     */
     public void setUsername(String username) {
         this.username = username;
     }
@@ -23,7 +29,9 @@ public class RegisterRequest {
         return username;
     }
 
-    /* Password */
+    /**
+     * Password
+     */
     public void setPassword(String password) {
         this.password = password;
     }
@@ -31,7 +39,9 @@ public class RegisterRequest {
         return password;
     }
 
-    /* Session Id */
+    /**
+     * Session Id
+     */
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
     }
@@ -39,12 +49,36 @@ public class RegisterRequest {
         return sessionId;
     }
 
-    /* Remember User */
+    /**
+     * Remember User
+     */
     public boolean isRememberUser() {
         return rememberUser;
     }
     public void setRememberUser(boolean rememberUser) {
         this.rememberUser = rememberUser;
+    }
+
+    /**
+     * Registration Id
+     */
+    public String getRegistrationId() {
+        return registrationId;
+    }
+    
+    public void setRegistrationId(String registrationId) {
+        this.registrationId = registrationId;
+    }
+    
+    /**
+     * Async
+     */
+    public boolean isAsync() {
+        return async;
+    }
+    
+    public void setAsync(boolean async) {
+        this.async = async;
     }
 }
  
