@@ -1,5 +1,6 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.DbService;
+import com.app.main.root.app._auth.SyncAuthService;
 import com.app.main.root.app._auth.TokenService;
 import com.app.main.root.app.main.email_service.EmailService;
 import org.springframework.context.annotation.Lazy;
@@ -14,6 +15,7 @@ public class ServiceManager {
     private final SystemMessageService systemMessageService;
     private final MessagePerspectiveService messagePerspectiveService;
     private final UserService userService;
+    private final SyncAuthService syncAuthService;
     private final DirectService directService;
     private final ContactService contactService;
     private final GroupService groupService;
@@ -38,8 +40,8 @@ public class ServiceManager {
         @Lazy SessionService sessionService,
         @Lazy TokenService tokenService,
         @Lazy CookieService cookieService,
-        @Lazy FileService fileService
-    ) {
+        @Lazy FileService fileService,
+        @Lazy SyncAuthService syncAuthService) {
         this.dbService = dbService;
         this.messageService = messageService;
         this.systemMessageService = systemMessageService;
@@ -54,32 +56,33 @@ public class ServiceManager {
         this.tokenService = tokenService;
         this.cookieService = cookieService;
         this.fileService = fileService;
+        this.syncAuthService = syncAuthService;
     }
 
-    /*
-    * Db Service 
-    */
+    /**
+     * Database Service
+     */
     public DbService getDbService() {
         return dbService;
     }
 
-    /*
-    * Message Service 
-    */
+    /**
+     * Message Service 
+     */
     public MessageService getMessageService() {
         return messageService;
     }
 
-    /*
-    * Message Service 
-    */
+    /**
+     * System Message Service 
+     */
     public SystemMessageService getSystemMessageService() {
         return systemMessageService;
     }
 
-    /*
-    * Message Perspective Service 
-    */
+    /**
+     * Message Perspective Service
+     */
     public MessagePerspectiveService getMessagePerspectiveService() {
         return messagePerspectiveService;
     }
@@ -91,37 +94,44 @@ public class ServiceManager {
         return chatService;
     }
 
-    /*
-    * User Service 
-    */
+    /**
+     * Sync Auth Service
+     */
+    public SyncAuthService getSyncAuthService() {
+        return syncAuthService;
+    }
+
+    /**
+     * User Service
+     */
     public UserService getUserService() {
         return userService;
     }
 
-    /*
-    * Direct Service 
-    */
+    /**
+     * Direct Service 
+     */
     public DirectService getDirectService() {
         return directService;
     }
 
-    /*
-    * Contact Service 
-    */
+    /**
+     * Contact Service 
+     */
     public ContactService getContactService() {
         return contactService;
     }
 
-    /*
-    * Group Service 
-    */
+    /**
+     * Group Service 
+     */
     public GroupService getGroupService() {
         return groupService;
     }
 
-    /*
-    * Email Service 
-    */
+    /**
+     * Email Service 
+     */
     public EmailService getEmailService() {
         return emailService;
     }

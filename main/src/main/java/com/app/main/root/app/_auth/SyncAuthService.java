@@ -21,7 +21,7 @@ public class SyncAuthService {
     /**
      * Register
      */
-    public Map<String, Object> resgisterUser(
+    public Map<String, Object> registerUser(
         String username,
         String email,
         String password,
@@ -148,8 +148,7 @@ public class SyncAuthService {
     public Map<String, Object> loginUserFromExternalService(
         String email, 
         String password, 
-        String sessionId,
-        String sourceService
+        String sessionId
     ) {
         Map<String, Object> res = new HashMap<>();
 
