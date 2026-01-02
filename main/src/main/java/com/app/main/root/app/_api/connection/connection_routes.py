@@ -11,23 +11,17 @@ class ConnectionRoutes:
         self.connectionRegistry = ConnectionRegistry(self.router, self.connectionService)
         
     def setupRoutes(self):
-        ##
         ## Get All Connections
-        ##
         @self.router.get("/all")
         async def getAllConnections() -> dict:
             return await self.connectionService.getAllConnections()
         
-        ##
         ## Get Active Connections
-        ##
         @self.router.get("/active")
         async def getActiveConnections() -> list:
             return await self.connectionService.getActiveConnections()
         
-        ##
         ## Count
-        ##
         @self.router.get("/count")
         async def getConnectionsCount() -> Dict[str, int]:
             return {
@@ -35,9 +29,7 @@ class ConnectionRoutes:
                 "active": await self.connectionService.getActiveConnections()
             }
             
-        ##
         ## Get Connection Socket Id
-        ##
         @self.router.get("/{socketId}")
         async def getConnectionSocketId(id: str) -> dict:
             conn = await self.connectionService.getConnectionSocketId(id)
@@ -45,16 +37,12 @@ class ConnectionRoutes:
                 raise HTTPException(status_code=400, detail="Connection not found!")
             return conn
         
-        ##
         ## Get Connections Ip
-        ##
         @self.router.get("/ip/{ipAddress}")
         async def getConnectionsIp(ip: str) -> dict:
             return await self.connectionService.getConnectionsIp(ip)
         
-        ##
         ## Update Username
-        ##
         @self.router.get("/{socketId}/username")
         async def updateUsername(id: str, userId: str, username: str) -> dict:
             conn = await self.connectionService.updateUsername(id, userId, username)
@@ -62,9 +50,7 @@ class ConnectionRoutes:
                 raise HTTPException(status_code=400, detail="Connection not found!")
             return conn
         
-        ##
         ## Track Connection
-        ##
         @self.router.post("/track")
         async def trackConnection(req: Request) -> dict:
             clientHost = req.client.host if req.client else "unknown"

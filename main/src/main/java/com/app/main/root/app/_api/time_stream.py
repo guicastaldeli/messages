@@ -13,9 +13,7 @@ class TimeStream:
         self.router = APIRouter()
         self.setupRoutes()
       
-    ##  
     ## Fetch Server Time
-    ##
     async def fetchServerTime(self) -> Dict[str, Any]:
         try:
             now = datetime.now()
@@ -29,16 +27,12 @@ class TimeStream:
         except Exception as err:
             print(err)
             
-    ##
     ## Formatted Time
-    ##
     async def getFormattedTime(self) -> str:
         timeData = await self.fetchServerTime()
         return timeData["local"]
     
-    ##
     ## Update
-    ##
     async def update(
         self,
         updateCallback: Callable[[str, bool], None],
@@ -62,9 +56,7 @@ class TimeStream:
         task = loop.create_task(updateLoop())
         return task
     
-    ##
     ## Routes
-    ##
     def setupRoutes(self):
         ## Current Time
         @self.router.get("/api/time-stream")
