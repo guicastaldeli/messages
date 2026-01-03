@@ -32,6 +32,9 @@ interface State {
     isLoading: boolean;
     contactsLoaded: boolean;
     chatsLoaded: boolean;
+    chatStreamComplete: boolean;
+    chatItemsAdded: boolean;
+    expectedChatCount: number;
 }
 
 export class Dashboard extends Component<Props, State> {
@@ -50,7 +53,10 @@ export class Dashboard extends Component<Props, State> {
             contactService: null,
             isLoading: true,
             contactsLoaded: false,
-            chatsLoaded: false
+            chatsLoaded: false,
+            chatStreamComplete: false,
+            chatItemsAdded: false,
+            expectedChatCount: 0
         }
         this.chatContainerRef = React.createRef();
         this.groupContainerRef = React.createRef();
@@ -74,11 +80,76 @@ export class Dashboard extends Component<Props, State> {
         window.dispatchEvent(event);
     }
 
+    /**
+     * Handle Stream Complete
+     */
+    private async handleChatStreamComplete() {
+        await new Promise<void>((resolve) => {
+            const complete = (event: any) => {
+                const { total } = event.detail;
+                console.log('Stream complete event received. Expected total chats:', total);
+                
+                this.setState({ 
+                    chatStreamComplete: true,
+                    expectedChatCount: total || 0
+                }, () => {
+                    this.checkChatItemsAdded();
+                    resolve();
+                });
+                
+                window.removeEventListener('chat-stream-complete', complete);
+            };
+                
+            const err = () => {
+                this.setState({ 
+                    chatStreamComplete: true,
+                    chatItemsAdded: true
+                });
+                resolve();
+                window.removeEventListener('chats-stream-error', err);
+            };
+                
+            window.addEventListener('chat-stream-complete', complete);
+            window.addEventListener('chats-stream-error', err);
+        });
+    }
+
+    private checkChatItemsAdded() {
+        const currentCount = this.props.chatList.length;
+        const expectedCount = this.state.expectedChatCount;
+        const allChatsLoaded = expectedCount === 0 || currentCount >= expectedCount;
+        if(allChatsLoaded) this.setState({ chatItemsAdded: true });
+    }
+
+    private async checkChatsCompleted() {
+        await new Promise<void>((res) => {
+            const completed = () => {
+                if(this.state.chatStreamComplete) {
+                    console.log('Chat stream complete, total chats:', this.props.chatList.length);
+                    res();
+                } else {
+                    setTimeout(completed, 100);
+                }
+            };
+            completed();
+        });
+    }
+
+    /**
+     * Handle Chat List Update
+     */
     private handleChatListUpdated = (event: CustomEvent): void => {
         const { chatList } = event.detail;
         this.setState({ chatList });
         
-        if (this.props.onChatListUpdate) {
+        if(this.state.chatStreamComplete && 
+           this.state.expectedChatCount > 0 && 
+           chatList.length >= this.state.expectedChatCount
+        ) {
+            this.setState({ chatItemsAdded: true });
+        }
+        
+        if(this.props.onChatListUpdate) {
             this.props.onChatListUpdate(chatList);
         }
     }
@@ -101,16 +172,8 @@ export class Dashboard extends Component<Props, State> {
                 });
                 this.contactService.setupEventListeners();
 
-                await new Promise<void>((res) => {
-                    const checkChatsLoaded = () => {
-                        if(this.props.chatList && this.props.chatList.length > 0) {
-                            res();
-                        } else {
-                            setTimeout(checkChatsLoaded, 100);
-                        }
-                    }
-                    checkChatsLoaded();
-                });
+                await this.handleChatStreamComplete();
+                await this.checkChatsCompleted();
             
                 this.setState({
                     contactService: this.contactService,
@@ -122,7 +185,8 @@ export class Dashboard extends Component<Props, State> {
                 console.error('Error loading chat list', err);
                 this.setState({
                     contactsLoaded: false,
-                    chatsLoaded: false, 
+                    chatsLoaded: false,
+                    chatStreamComplete: false,
                     isLoading: false 
                 });
             }
@@ -130,6 +194,7 @@ export class Dashboard extends Component<Props, State> {
             this.setState({
                 contactsLoaded: false,
                 chatsLoaded: false, 
+                chatStreamComplete: false,
                 isLoading: false 
             });
         }
@@ -149,6 +214,8 @@ export class Dashboard extends Component<Props, State> {
     componentWillUnmount(): void {
         window.removeEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.removeEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
+        window.removeEventListener('chat-stream-complete', () => {});
+        window.removeEventListener('chats-stream-error', () => {});
     }
 
     componentDidUpdate(prevProps: Props): void {
@@ -258,8 +325,7 @@ export class Dashboard extends Component<Props, State> {
             })
         }));
         this.setState(prevState => {
-            if (
-                prevState.activeChat && 
+            if (prevState.activeChat && 
                 (prevState.activeChat.id === removedId ||
                 prevState.activeChat.groupId === removedId)
             ) {
@@ -309,7 +375,8 @@ export class Dashboard extends Component<Props, State> {
     private isLoaded(): boolean {
         return this.state.chatsLoaded && 
             this.state.contactsLoaded &&
-            this.props.chatList.length > 0;
+            this.state.chatStreamComplete &&
+            this.state.chatItemsAdded;
     }
 
     render() {
@@ -321,6 +388,7 @@ export class Dashboard extends Component<Props, State> {
         if(!userId) {
             return <div>Loading user data...</div>;
         }
+        
         const loadingOverlay = (this.state.isLoading || !this.isLoaded()) ? (
             <div className="dashboard-loading-overlay">
                 <div className="loading-content">
@@ -328,6 +396,13 @@ export class Dashboard extends Component<Props, State> {
                     <div className="loading-status">
                         {!this.state.chatsLoaded && <span>Loading chats...</span>}
                         {!this.state.contactsLoaded && <span>Loading contacts...</span>}
+                        {this.state.chatsLoaded && this.state.contactsLoaded && 
+                        !this.state.chatStreamComplete && (
+                            <span>Streaming chat data...</span>
+                        )}
+                        {this.state.chatStreamComplete && !this.state.chatItemsAdded && (
+                            <span>Processing chats ({this.props.chatList.length}/{this.state.expectedChatCount})...</span>
+                        )}
                     </div>
                 </div>
             </div>
@@ -396,7 +471,7 @@ export class Dashboard extends Component<Props, State> {
                                                     key={chat.id || `${chat.type}_${i}`}
                                                     className={`chat-item${
                                                         activeChat && 
-                                                        activeChat.id === chat.id ? 'active' : ''
+                                                        activeChat.id === chat.id ? ' active' : ''
                                                     }`}
                                                     onClick={() => this.handleChatSelect(chat)}
                                                 >

@@ -333,12 +333,19 @@ public class EventList {
                         serviceManager
                         .getChatService()
                         .getUserChats(userId, page, pageSize);
+
+                    List<Map<String, Object>> allChats =
+                        serviceManager
+                        .getChatService()
+                        .getChats(userId);
+                    int totalCount = allChats.size();
+
                     for(Map<String, Object> chat : chats) {
                         Map<String, Object> chatEvent = new HashMap<>();
                         chatEvent.put("type", "CHAT_DATA");
                         chatEvent.put("chat", chat);
                         chatEvent.put("page", page);
-                        chatEvent.put("total", chats.size());
+                        chatEvent.put("total", totalCount);
 
                         socketMethods.send(sessionId, "/queue/user-chats-stream", chatEvent);
                     }
@@ -347,6 +354,7 @@ public class EventList {
                     completionEvent.put("type", "STREAM_COMPLETE");
                     completionEvent.put("userId", userId);
                     completionEvent.put("page", page);
+                    completionEvent.put("total", totalCount);
 
                     return completionEvent;
                 } catch(Exception err) {

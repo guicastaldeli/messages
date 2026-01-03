@@ -88,14 +88,14 @@ export class Main extends Component<any, State> {
                     this.socketClientConnect,
                     this.chatController,
                     this.apiClientController,
-                    this.dashboardInstance!,
+                    null as any,
                     this.appContainerRef.current,
                     userInfo?.username,
                     this.setState.bind(this)
                 );
     
-                this.chatManager.loadChats(userInfo!.userId);
                 this.chatController.setChatManager(this.chatManager);
+                this.chatManager.loadChats(userInfo!.userId);
                 if(userInfo?.userId) {
                     try {
                         this.chatController.getUserData(
@@ -124,6 +124,7 @@ export class Main extends Component<any, State> {
                 if(userInfo?.userId) await cacheService.initCache(userInfo.userId);
                 this.loadData(userInfo.userId);
                 this.setState({ 
+                    chatManager: this.chatManager,
                     isLoading: false,
                     rememberUser: rememberUser
                 });
@@ -424,7 +425,7 @@ export class Main extends Component<any, State> {
     /* */
 
     render() {
-        const { chatList, activeChat } = this.state;
+        const { chatList, activeChat, chatManager } = this.state;
 
         return (
             <div className='app' ref={this.appContainerRef}>
@@ -502,7 +503,7 @@ export class Main extends Component<any, State> {
                                                 <Dashboard 
                                                     ref={this.setDashboardRef}
                                                     chatController={this.chatController}
-                                                    chatManager={this.chatManager}
+                                                    chatManager={chatManager!}
                                                     chatService={this.chatService}
                                                     chatList={chatList}
                                                     activeChat={activeChat}

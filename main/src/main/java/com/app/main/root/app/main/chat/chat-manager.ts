@@ -110,9 +110,11 @@ export class ChatManager {
         }
 
         this.sortChats(this.chatList);
-        this.updateChatList();
-        if(this.updateCallback) this.updateCallback([...this.chatList]);
+
         if(this.setState) this.setState({ chatList: [...this.chatList] });
+        if(this.updateCallback) this.updateCallback([...this.chatList]);
+
+        this.updateChatList();
     }
 
     /**
