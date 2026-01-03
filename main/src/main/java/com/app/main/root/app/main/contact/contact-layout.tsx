@@ -76,6 +76,23 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
             });
         }
 
+        /**
+         * Handle Status Changes
+         */
+        const handleStatusChanged = (e: CustomEvent) => {
+            const { contactId, isOnline } = e.detail;
+            setContacts(prevContacts =>
+                prevContacts.map(contact =>
+                    contact.id === contactId 
+                        ? { ...contact, isOnline }
+                        : contact
+                )
+            );
+        }
+
+        /**
+         * Handle Poll Update
+         */
         const handlePollUpdate = (e: CustomEvent) => {
             const { contacts, pendingRequests } = e.detail;
 
@@ -100,6 +117,7 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
         window.addEventListener('contact-request-updated', handleRequestUpdated as EventListener);
         window.addEventListener('contact-request-received', handleNewRequest as EventListener);
         window.addEventListener('contact-poll-update', handlePollUpdate as EventListener);
+        window.addEventListener('contact-status-changed', handleStatusChanged as EventListener);
 
         return () => {
             window.removeEventListener('contact-added', handleContactAdded as EventListener);
@@ -107,6 +125,7 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
             window.removeEventListener('contact-request-updated', handleRequestUpdated as EventListener);
             window.removeEventListener('contact-request-received', handleNewRequest as EventListener);
             window.removeEventListener('contact-poll-update', handlePollUpdate as EventListener);
+            window.removeEventListener('contact-status-changed', handleStatusChanged as EventListener);
         }
     }
 

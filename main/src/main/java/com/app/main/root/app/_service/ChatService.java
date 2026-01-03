@@ -37,11 +37,17 @@ public class ChatService {
                 }
                 String senderId = (String) lastMessage.get("senderId");
 
+                if(!content.isEmpty()) {
+                    c.put("lastMessageTime", lastMessage.get("timestamp"));
+                    c.put("lastMessageContent", content);
+                    c.put("lastMessageSender", senderId);
+                    chats.add(c);
+                }
+
                 c.put("lastMessageTime", lastMessage.get("timestamp"));
                 c.put("lastMessageContent", content);
                 c.put("lastMessageSender", senderId);
             }
-            chats.add(c);
         }
         return chats;
     }

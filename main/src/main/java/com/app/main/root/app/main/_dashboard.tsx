@@ -120,7 +120,7 @@ export class Dashboard extends Component<Props, State> {
     }
 
     private checkChatItemsAdded() {
-        const currentCount = this.props.chatList.length;
+        const currentCount = this.state.chatList.length;
         const expectedCount = this.state.expectedChatCount;
         const allChatsLoaded = expectedCount === 0 || currentCount >= expectedCount;
         if(allChatsLoaded) this.setState({ chatItemsAdded: true });
@@ -130,7 +130,7 @@ export class Dashboard extends Component<Props, State> {
         await new Promise<void>((res) => {
             const completed = () => {
                 if(this.state.chatStreamComplete) {
-                    console.log('Chat stream complete, total chats:', this.props.chatList.length);
+                    console.log('Chat stream complete, total chats:', this.state.chatList.length);
                     res();
                 } else {
                     setTimeout(completed, 100);
@@ -159,7 +159,7 @@ export class Dashboard extends Component<Props, State> {
         }
         
         if(this.props.onChatListUpdate) {
-            this.props.onChatListUpdate(chatList);
+            this.props.onChatListUpdate(filteredChatList);
         }
     }
 
@@ -268,6 +268,9 @@ export class Dashboard extends Component<Props, State> {
                 contactsLoaded: true,
                 chatsLoaded: true,
                 isLoading: false
+            }, () => {
+                const event = new CustomEvent('dashboard-loaded');
+                window.dispatchEvent(event);
             });
         } catch(err) {
             console.error('Error loading chat list', err);
@@ -452,7 +455,7 @@ export class Dashboard extends Component<Props, State> {
                             <span>Streaming chat data...</span>
                         )}
                         {this.state.chatStreamComplete && !this.state.chatItemsAdded && (
-                            <span>Processing chats ({this.props.chatList.length}/{this.state.expectedChatCount})...</span>
+                            <span>Processing chats ({this.state.chatList.length}/{this.state.expectedChatCount})...</span>
                         )}
                     </div>
                 </div>
@@ -468,7 +471,7 @@ export class Dashboard extends Component<Props, State> {
 
                     return (
                         <>
-                            
+                            {loadingOverlay}
                             {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
                                     <div className="sidebar">

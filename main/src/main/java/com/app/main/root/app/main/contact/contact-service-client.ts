@@ -220,18 +220,27 @@ export class ContactServiceClient {
         this.socketClient.on('contact-added', (data: any) => {
             this.emitContactAdded(data.contact);
         });
-
         this.socketClient.on('contact-removed', (data: any) => {
             this.emitContactRemoved(data.contactId);
         });
-
         this.socketClient.on('contact-request-accepted', (data: any) => {
             this.emitRequestUpdated(data.requestId, 'accepted');
             if (data.contact) {
                 this.emitContactAdded(data.contact);
             }
         });
-
+        this.socketClient.on('contact-request-rejected', (data: any) => {
+            this.emitRequestUpdated(data.requestId, 'rejected');
+        });
+        this.socketClient.on('contact-request-received', (data: any) => {
+            this.emitNewRequest(data.request);
+        });
+        this.socketClient.on('user-status-changed', (data: any) => {
+            this.emitUserStatusChanged(data.userId, data.isOnline);
+        });
+        this.socketClient.on('contact-status-changed', (data: any) => {
+            this.emitContactStatusChanged(data.contactId, data.isOnline);
+        });
         this.socketClient.on('contact-request-accepted-by-recipient', (data: any) => {
             if(data.requestId) {
                 this.emitRequestUpdated(data.requestId, 'accepted');
@@ -249,14 +258,6 @@ export class ContactServiceClient {
                     }
                 }, 500);
             }
-        });
-
-        this.socketClient.on('contact-request-rejected', (data: any) => {
-            this.emitRequestUpdated(data.requestId, 'rejected');
-        });
-
-        this.socketClient.on('contact-request-received', (data: any) => {
-            this.emitNewRequest(data.request);
         });
     }
     
@@ -276,6 +277,11 @@ export class ContactServiceClient {
         try {
             const contacts = await this.getContacts();
             const pendingRequests = await this.getPendingRequests();
+            
+            contacts.forEach(contact => {
+                this.emitContactStatusChanged(contact.id, contact.isOnline);
+            });
+            
             const event = new CustomEvent('contact-poll-update', {
                 detail: { contacts, pendingRequests }
             });
@@ -320,5 +326,19 @@ export class ContactServiceClient {
         });
         window.dispatchEvent(event);
         console.log('Emitted contact-request-received event:', request);
+    }
+
+    private emitUserStatusChanged(userId: string, isOnline: boolean): void {
+        const event = new CustomEvent('user-status-changed', {
+            detail: { userId, isOnline }
+        });
+        window.dispatchEvent(event);
+    }
+
+    private emitContactStatusChanged(contactId: string, isOnline: boolean): void {
+        const event = new CustomEvent('contact-status-changed', {
+            detail: { contactId, isOnline }
+        });
+        window.dispatchEvent(event);
     }
 }
