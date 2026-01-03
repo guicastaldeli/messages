@@ -140,6 +140,20 @@ export class ChatController {
         const cacheData = await this.chatService.getCachedData(chatId);
         if(!cacheData) return;
 
+        const container = await this.getContainer();
+        if(!container) return;
+
+        const existingMessageIds = new Set();
+        const messageElements = container.querySelectorAll('[data-message-id]');
+        messageElements.forEach(el => {
+            const messageId = el.getAttribute('data-message-id');
+            if(messageId) existingMessageIds.add(messageId);
+        });
+
+        this.messageRoots.forEach((_, messageId) => {
+            existingMessageIds.add(messageId);
+        });
+
         const allCachedMessages = 
             Array.from(cacheData.messages.values() as any[])
             .sort((a, b) => {
@@ -171,14 +185,19 @@ export class ChatController {
             }
         }));
 
-        const allMessages = [...allCachedMessages, ...fileMessages]
+        const messagesToRender = [...allCachedMessages, ...fileMessages]
+            .filter(msg => {
+                const messageId = msg.messageId || msg.id;
+                return !existingMessageIds.has(messageId);
+            })
             .sort((a, b) => {
                 const timeA = a.timestamp || a.createdAt || 0;
                 const timeB = b.timestamp || b.createdAt || 0;
                 return timeA - timeB;
             });
         
-        for(const message of allMessages) {
+        console.log(`Rendering ${messagesToRender.length} cached messages`);
+        for(const message of messagesToRender) {
             await this.messageElementRenderer.renderElement(message);
         }
     }
@@ -226,6 +245,15 @@ export class ChatController {
         members?: string[]
     ): Promise<void> {
         if(!chatId || !chatType) return;
+        
+        /*
+        if(this.currentChatId && this.currentChatId !== chatId) {
+            this.messageRoots.forEach(root => root.unmount());
+            this.messageRoots.clear();
+            this.container = null;
+        }
+            */
+
         const context = this.chatRegistry.getContext(chatType, members || [], chatId);
         context.id = chatId;
         context.type = chatType;
@@ -237,10 +265,7 @@ export class ChatController {
         this.currentChatId = chatId;
         this.currentPage = 0;
         this.chunkRenderer.reset();
-        this.messageRoots.forEach(root => root.unmount());
-        this.messageRoots.clear();
-        this.container = null;
-
+        
         if(this.scrollHandler) {
             const container = await this.getContainer();
             if(container) {
@@ -683,6 +708,10 @@ export class ChatController {
         try {
             const chatData = await this.getChatData(chatId, userId, page);
             
+            // DON'T clear messages here - let renderHistory handle duplicates
+            // this.messageRoots.forEach(root => root.unmount());
+            // this.messageRoots.clear();
+            
             if(chatData.files && chatData.files.length > 0) {
                 console.log(`Loading ${chatData.files.length} files for history`);
                 const fileMessages = chatData.files.map(file => {
@@ -727,13 +756,6 @@ export class ChatController {
         } finally {
             this.isLoadingHistory = false;
         }
-    }
-
-    public cleanupCurrentChat(): void {
-        this.messageRoots.forEach(root => root.unmount());
-        this.messageRoots.clear();
-        this.currentChatId = null;
-        this.container = null;
     }
 
     /**

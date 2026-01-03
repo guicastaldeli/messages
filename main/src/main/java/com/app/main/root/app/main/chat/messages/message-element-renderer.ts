@@ -18,9 +18,9 @@ export class MessageElementRenderer {
         this.app = app;
     }
 
-    /*
-    ** Render History
-    */
+    /**
+     * Render History
+     */
     public async renderHistory(messages: any[]): Promise<void> {
         if(!this.app) throw new Error('App Element not found');
         if(messages.length === 0) return;
@@ -31,36 +31,32 @@ export class MessageElementRenderer {
         this.lastScrollTop = container.scrollTop;
         this.lastScrollHeight = container.scrollHeight;
 
-        const exMessagesIds = new Set(this.chatController.messageRoots.keys());
+        const existingMessageIds = new Set();
+        const messageElements = container.querySelectorAll('[data-message-id]');
+        messageElements.forEach(el => {
+            const messageId = el.getAttribute('data-message-id');
+            if(messageId) existingMessageIds.add(messageId);
+        });
+
+        this.chatController.messageRoots.forEach((_, messageId) => {
+            existingMessageIds.add(messageId);
+        });
         const newMessages = messages.filter(msg => {
             const id = msg.id || msg.messageId;
-            return !exMessagesIds.has(id);
+            return !existingMessageIds.has(id);
         });
 
-        const fileMessages = newMessages.filter(msg => 
-            msg.type === 'file' || msg.fileData
-        );
-        const regularMessages = newMessages.filter(msg => 
-            !(msg.type === 'file' || msg.fileData)
-        );
+        console.log(`Rendering ${newMessages.length} new messages out of ${messages.length} total`);
 
-        const sortedMessages = regularMessages.sort((a, b) => {
-            const timeA = a.timestamp || a.createdAt || 0;
-            const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
-        });
-        const sortedFileMessages = fileMessages.sort((a, b) => {
-            const timeA = a.timestamp || a.createdAt || 0;
-            const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
-        });
-        const allMessages = [...sortedMessages, ...sortedFileMessages].sort((a, b) => {
+        if(newMessages.length === 0) return;
+
+        const sortedMessages = newMessages.sort((a, b) => {
             const timeA = a.timestamp || a.createdAt || 0;
             const timeB = b.timestamp || b.createdAt || 0;
             return timeA - timeB;
         });
 
-        for(const data of allMessages) {
+        for(const data of sortedMessages) {
             await this.renderElement(data);
         }
         
@@ -78,9 +74,9 @@ export class MessageElementRenderer {
         }, 50);
     }
 
-    /*
-    ** Set Message
-    */
+    /**
+     * Set Message
+     */
     public async setMessage(data: any, analysis: Analysis): Promise<void> {
         if(!this.app || this.chatController.currentChatId !== data.chatId) return;
             
@@ -160,6 +156,9 @@ export class MessageElementRenderer {
         this.chatController.messageRoots.set(messageId, root);
     }
 
+    /**
+     * Render Element
+     */
     public async renderElement(data: any): Promise<void> {
         const isSystemMessage = 
             data.messageType === 'SYSTEM' ||
@@ -317,11 +316,6 @@ export class MessageElementRenderer {
         }
         
         return Date.now();
-    }
-
-    public clearRenderedMessages(): void {
-        this.chatController.messageRoots.forEach(root => root.unmount());
-        this.chatController.messageRoots.clear();
     }
 
     public getMessageCount(): number {

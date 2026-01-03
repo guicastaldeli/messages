@@ -128,9 +128,9 @@ public class MessageTracker {
         return 0;
     }
 
-    /*
-    * Log to Console 
-    */
+    /**
+     * Log to Console
+     */
     private void logMessageToConsole(MessageLog log) {
         String timestamp = new SimpleDateFormat("HH:mm:ss").format(log.getTimestamp());
         String direction = log.getDirection() == MessageDirection.SENT ? "SENT" : "RECEIVED";

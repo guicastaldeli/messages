@@ -19,15 +19,20 @@ public class SocketMethods {
         this.eventTracker = eventTracker;
     }
 
-    /*
-    ** Send
-    */
+    /**
+     * Send
+     */
     public void send(
         String sessionId,
         String destination,
         Object data
     ) {
         try {
+            if(sessionId == null || sessionId.isEmpty() || sessionId.equals("unknown")) {
+                System.out.println("Invalid session ID, skipping message to: " + destination);
+                return;
+            }
+
             eventTracker.track(
                 destination,
                 data,
@@ -40,13 +45,18 @@ public class SocketMethods {
                 data
             );
         } catch(Exception err) {
-            System.err.println("Error sending message: " + err.getMessage());
+            if(!err.getMessage().contains("No session") && 
+                !err.getMessage().contains("not found") &&
+                !err.getMessage().contains("disconnected")
+            ) {
+                System.err.println("Error sending message to " + destination + ": " + err.getMessage());
+            }
         }
     }
 
-    /*
-    ** Broadcast to All 
-    */
+    /**
+     * Broadcast to All 
+     */
     public void broadcastAll(String event, Object data) {
         try {
             eventTracker.track(
@@ -65,9 +75,9 @@ public class SocketMethods {
         }
     }
 
-    /*
-    * Broadcast to Destination 
-    */
+    /**
+     * Broadcast to Destination
+     */
     public void broadcastToDestination(String destination, Object data) {
         try {
             eventTracker.track(
@@ -83,9 +93,9 @@ public class SocketMethods {
         }
     }
 
-    /*
-    ** Session Id 
-    */
+    /**
+     * Session Id 
+     */
     public String getSessionId(Object src) {
         if(src instanceof String) {
             return (String) src;
@@ -100,9 +110,9 @@ public class SocketMethods {
         return "unknown";
     }
 
-    /*
-    * Socket Username 
-    */
+    /**
+     * Socket Username 
+     */
     public String getSocketUsername(String sessionId) {
         return sessionId;
     }

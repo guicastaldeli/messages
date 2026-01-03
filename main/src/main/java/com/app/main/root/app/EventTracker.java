@@ -55,7 +55,7 @@ public class EventTracker {
         }
 
         emitMessageEvent(eventLogs);
-        logToConsole(eventLogs);
+        //logToConsole(eventLogs);
     }
 
     /*

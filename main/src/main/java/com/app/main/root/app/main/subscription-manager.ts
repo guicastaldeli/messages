@@ -120,7 +120,7 @@ export class SubscriptionManager {
     private async handleIncomingMessage(eventName: string, msg: IMessage): Promise<void> {
         try {
             const data = JSON.parse(msg.body);
-            console.log(eventName, msg.body)
+            //console.log(eventName, msg.body)
             await this.emitToEvent(eventName, data);
         } catch(err) {
             console.error(err);

@@ -123,7 +123,7 @@ export class SocketClientConnect {
             return false;
         }
 
-        console.log('Sending to:', destination, data);
+        //console.log('Sending to:', destination, data);
 
         this.client.publish({
             destination: destination,

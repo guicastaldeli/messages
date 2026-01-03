@@ -87,7 +87,7 @@ public class EventList {
                 String username = (String) data.get("username");
                 String userId = (String) data.get("userId");
 
-                System.out.print("USERID " + userId + " username" + username);
+                //System.out.print("USERID " + userId + " username" + username);
                 eventTracker.track(
                     "new-user",
                     username,

@@ -152,7 +152,7 @@ public class MessageService {
         if(chatCache != null) {
             List<_Message> cachedMessages = cacheService.getChatCache().getCachedMessages(chatId, page);
             if(cachedMessages != null) {
-                System.out.println("Returning cached messages for chat " + chatId + " page " + page);
+                //System.out.println("Returning cached messages for chat " + chatId + " page " + page);
                 return cachedMessages;
             }
         }

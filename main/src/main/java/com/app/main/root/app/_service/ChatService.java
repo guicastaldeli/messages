@@ -72,7 +72,6 @@ public class ChatService {
                 c.put("lastMessageTime", lastMessage.get("timestamp"));
                 c.put("lastMessageContent", content);
                 c.put("lastMessageSender", senderId);
-                System.out.println(content);
             }
             chats.add(c);
         }
@@ -134,14 +133,18 @@ public class ChatService {
             List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
             chatData.put("messages", messages != null ? messages : new ArrayList<>());
             
-            Map<String, Object> filesResult = serviceManager.getFileService().listFiles(userId, chatId, page, pageSize);
-            chatData.put("files", filesResult != null && filesResult.get("files") != null ? 
-                filesResult.get("files") : new ArrayList<>());
+            Map<String, Object> filesResult = serviceManager.getFileService().getFilesByChatId(userId, chatId, page, pageSize);
+            List<Map<String, Object>> files = new ArrayList<>();
+            if(filesResult != null && filesResult.get("files") != null) {
+                files = (List<Map<String, Object>>) filesResult.get("files");
+            }
+            chatData.put("files", files);
             
             Map<String, Object> pagination = new HashMap<>();
             pagination.put("page", page);
             pagination.put("pageSize", pageSize);
             pagination.put("hasMore", messages != null && messages.size() == pageSize);
+            pagination.put("totalFiles", files.size());
             chatData.put("pagination", pagination);
         } catch (Exception e) {
             chatData.put("messages", new ArrayList<>());
@@ -149,7 +152,8 @@ public class ChatService {
             chatData.put("pagination", Map.of(
                 "page", page,
                 "pageSize", pageSize,
-                "hasMore", false
+                "hasMore", false,
+                "totalFiles", 0
             ));
         }
         

@@ -274,7 +274,7 @@ std::vector<unsigned char> MessageEncoder::decryptMessage(
     auto decrypted = AESOperations::aesGcmDecrypt(encryptedData, messageKey, {});
     if(decrypted.empty()) throw std::runtime_error("Decryption returned empty data");
 
-    std::cout << "Successfully decrypted message from " << senderId << " with counter " << messageCounter << std::endl;
+    //std::cout << "Successfully decrypted message from " << senderId << " with counter " << messageCounter << std::endl;
 
     sessionManager.saveSessions();
     return decrypted;

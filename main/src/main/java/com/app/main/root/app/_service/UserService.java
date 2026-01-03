@@ -244,6 +244,11 @@ public class UserService {
         Object data
     ) {
         try {
+            if(sessionId == null || sessionId.isEmpty() || !isSessionActive(sessionId)) {
+                System.out.println("Session " + sessionId + " is not active, skipping message: " + event);
+                return;
+            }
+
             eventTracker.track(
                 event,
                 data,
@@ -257,7 +262,9 @@ public class UserService {
                 data
             );
         } catch(Exception err) {
-            System.err.println("Error sending message: " + err.getMessage());
+            if(!err.getMessage().contains("No session") && !err.getMessage().contains("not found")) {
+                System.err.println("Error sending message to session " + sessionId + ": " + err.getMessage());
+            }
         }
     }
 
@@ -576,5 +583,14 @@ public class UserService {
         userInfo.put("sessionId", userToSessionMap.get(userId));
         userInfo.put("createdAt", user.getCreatedAt());
         return userInfo;
+    }
+
+    public boolean isSessionActive(String sessionId) {
+        if(sessionId == null || sessionId.isEmpty()) {
+            return false;
+        }
+        
+        return sessionToUserMap.containsKey(sessionId) ||
+            userToSessionMap.containsValue(sessionId);
     }
 }

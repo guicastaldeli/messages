@@ -70,7 +70,7 @@ export class Dashboard extends Component<Props, State> {
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
         this.setState({ userId });
         this.props.chatManager.getUserData(sessionId, userId, username);
-        console.log(sessionId, userId,'username:', username)
+        //console.log(sessionId, userId,'username:', username)
     }
 
     public updateChatList(chatList: any[]): void {
