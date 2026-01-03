@@ -440,10 +440,6 @@ export class Dashboard extends Component<Props, State> {
             return <div>Loading user data...</div>;
         }
         
-       console.log('Dashboard render - activeChat:', activeChat);
-    console.log('Dashboard render - activeChat type:', activeChat?.type);
-    console.log('Dashboard render - chatList length:', chatList.length);
-        
         const loadingOverlay = (this.state.isLoading || !this.isLoaded()) ? (
             <div className="dashboard-loading-overlay">
                 <div className="loading-content">
@@ -472,7 +468,7 @@ export class Dashboard extends Component<Props, State> {
 
                     return (
                         <>
-                            {loadingOverlay}
+                            
                             {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
                                     <div className="sidebar">

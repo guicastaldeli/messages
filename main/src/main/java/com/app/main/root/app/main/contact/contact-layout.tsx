@@ -14,14 +14,107 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
             hasSubscribedRef.current = true;
             loadContacts();
             loadPendingRequests();
+            setupEventListeners();
         }
     }, [contactService]);
 
-    /*
-    **
-    *** Load Contacts
-    ** 
-    */
+    const setupEventListeners = () => {
+        if(!contactService) return;
+
+        /**
+         * Contact Added
+         */
+        const handleContactAdded = (e: CustomEvent) => {
+            const { contact } = e.detail;
+            setContacts(prevContacts => {
+                const contactExists = prevContacts.some(c => c.id === contact.id);
+                if(!contactExists) {
+                    return [...prevContacts, contact];
+                }
+                return prevContacts;
+            });
+        }
+
+        /**
+         * Contact Removed
+         */
+        const handleContactRemoved = (e: CustomEvent) => {
+            const { contactId } = e.detail;
+            setContacts(prevContacts =>
+                prevContacts.filter(c => c.id !== contactId)
+            );
+        } 
+
+        /**
+         * Request Updated
+         */
+        const handleRequestUpdated = (e: CustomEvent) => {
+            const { requestId, status } = e.detail;
+            if(status === 'accepted') {
+                setPendingRequests(prevRequests =>
+                    prevRequests.filter(req => req.requestId !== requestId)
+                );
+                setTimeout(() => loadContacts(), 300);
+            } else if(status === 'rejected') {
+                setPendingRequests(prevRequests =>
+                    prevRequests.filter(req => req.requestId !== requestId)
+                );
+            }
+        }
+
+        /**
+         * Handle New Request
+         */
+        const handleNewRequest = (e: CustomEvent) => {
+            const { request } = e.detail;
+            setPendingRequests(prevRequests => {
+                const requestExists = prevRequests.some(req => req.requestId === request.requestId);
+                if(!requestExists) {
+                    return [...prevRequests, request];
+                }
+                return prevRequests;
+            });
+        }
+
+        const handlePollUpdate = (e: CustomEvent) => {
+            const { contacts, pendingRequests } = e.detail;
+
+            setContacts(prevContacts => {
+                if(prevContacts.length !== contacts.length) {
+                    console.log('ContactLayout: Updating contacts from poll');
+                    return contacts;
+                }
+                return prevContacts;
+            });
+            setPendingRequests(prevRequests => {
+                if (prevRequests.length !== pendingRequests.length) {
+                    console.log('ContactLayout: Updating pending requests from poll');
+                    return pendingRequests;
+                }
+                return prevRequests;
+            });
+        }
+
+        window.addEventListener('contact-added', handleContactAdded as EventListener);
+        window.addEventListener('contact-removed', handleContactRemoved as EventListener);
+        window.addEventListener('contact-request-updated', handleRequestUpdated as EventListener);
+        window.addEventListener('contact-request-received', handleNewRequest as EventListener);
+        window.addEventListener('contact-poll-update', handlePollUpdate as EventListener);
+
+        return () => {
+            window.removeEventListener('contact-added', handleContactAdded as EventListener);
+            window.removeEventListener('contact-removed', handleContactRemoved as EventListener);
+            window.removeEventListener('contact-request-updated', handleRequestUpdated as EventListener);
+            window.removeEventListener('contact-request-received', handleNewRequest as EventListener);
+            window.removeEventListener('contact-poll-update', handlePollUpdate as EventListener);
+        }
+    }
+
+    /**
+     * 
+     * Load Contacts
+     * 
+     */
     const loadContacts = async () => {
         try {
             const contactList = await contactService.getContacts();
@@ -31,11 +124,11 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
         }
     }
 
-    /*
-    **
-    *** Load Pending Requests
-    ** 
-    */
+    /**
+     * 
+     * Load Pending Requests
+     * 
+     */
     const loadPendingRequests = async () => {
         try {
             const requests = await contactService.getPendingRequests();
@@ -45,9 +138,9 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
         }
     }
 
-    /*
-    ** Add Contact
-    */
+    /**
+     * Add Contact
+     */
     const handleAddContact = async () => {
         if(!usernameToAdd.trim()) return;
         setLoading(true);
@@ -65,24 +158,27 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
         }
     }
 
-    /*
-    ** Response Request
-    */
+    /**
+     * Response Request
+     */
     const handleResponseRequest = async (requestId: string, accept: boolean) => {
-        try {
-            await contactService.responseContactRequest(requestId, accept);
-            await loadPendingRequests();
-            if(accept) {
-                setTimeout(() => loadContacts(), 500);
-            }
-        } catch(err: any) {
-            console.log(`Failed to respond: ${err.message}`);
+    console.log('ContactLayout: handleResponseRequest called', { requestId, accept });
+    try {
+        await contactService.responseContactRequest(requestId, accept);
+        console.log('ContactLayout: Response sent successfully');
+        await loadPendingRequests();
+        if(accept) {
+            console.log('ContactLayout: Request accepted, reloading contacts');
+            setTimeout(() => loadContacts(), 100);
         }
+    } catch(err: any) {
+        console.log(`ContactLayout: Failed to respond: ${err.message}`);
     }
+}
 
-    /*
-    ** Remove Contact
-    */
+    /**
+     * Remove Contact
+     */
     const handleRemoveContact = async (contactId: string) => {
         if(confirm('Remove contact?')) {
             try {

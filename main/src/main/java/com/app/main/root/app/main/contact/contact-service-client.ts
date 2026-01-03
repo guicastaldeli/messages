@@ -7,9 +7,12 @@ import { ContactLayout } from './contact-layout';
 export class ContactServiceClient {
     private socketClient: SocketClientConnect;
     private chatController: ChatController;
+
     private userId: string;
     private username: string;
+
     private contactLayout: React.FC<ContactLayoutProps> | null = null;
+    private pollingInterval: NodeJS.Timeout | null = null;
 
     constructor(props: ContactServiceClientProps) {
         this.socketClient = props.socketClient;
@@ -17,11 +20,12 @@ export class ContactServiceClient {
         this.userId = props.userId;
         this.username = props.username;
         this.contactLayout = null;
+        this.pollingInterval = null;
     }
 
-    /*
-    ** Send Contact Request
-    */
+    /**
+     * Send Contact Request
+     */
     public async sendContactRequest(username: string): Promise<void> {
         const responseDestination = '/queue/contact-request-scss';
         const requestDestination = '/app/send-contact-request';
@@ -64,9 +68,40 @@ export class ContactServiceClient {
 
         return new Promise((res, rej) => {
             this.socketClient.onDestination(responseDestination, (response: any) => {
+                console.log('ContactServiceClient: responseContactRequest response:', response);
                 if(response.error) {
                     rej(new Error(response.message));
                 } else {
+                    this.emitRequestUpdated(requestId, accept ? 'accepted' : 'rejected');
+                    if(accept) {
+                        console.log('ContactServiceClient: Request accepted, forcing contact reloads');
+                        setTimeout(async () => {
+                            try {
+                                const contacts = await this.getContacts();
+                                console.log('ContactServiceClient: First contact reload after acceptance');
+                                
+                                if(response.contact) {
+                                    this.emitContactAdded(response.contact);
+                                } else if (contacts.length > 0) {
+                                    contacts.forEach(contact => {
+                                        this.emitContactAdded(contact);
+                                    });
+                                }
+                                
+                                setTimeout(async () => {
+                                    try {
+                                        await this.getContacts();
+                                        console.log('ContactServiceClient: Second contact reload after acceptance');
+                                    } catch (error) {
+                                        console.error('Error in second contact reload:', error);
+                                    }
+                                }, 1000);
+                                
+                            } catch (error) {
+                                console.error('Error in first contact reload:', error);
+                            }
+                        }, 300);
+                    }
                     res();
                 }
                 this.socketClient.offDestination(responseDestination);
@@ -179,16 +214,111 @@ export class ContactServiceClient {
         });
     }
 
-    setupEventListeners(): void {
-        this.socketClient.onDestination('/user/queue/contact-request', (message: any) => {
-            console.log(`New contact request from ${message.fromUsername}`);
+    public setupEventListeners(): void {
+        this.startPolling();
+
+        this.socketClient.on('contact-added', (data: any) => {
+            this.emitContactAdded(data.contact);
         });
-        this.socketClient.onDestination('/user/queue/contact-request-response', (message: any) => {
-            const action = message.accepted ? 'accepted' : 'rejected';
-            console.log(`Your request was ${action} by ${message.respondentUsername}`);
+
+        this.socketClient.on('contact-removed', (data: any) => {
+            this.emitContactRemoved(data.contactId);
         });
-        this.socketClient.onDestination('/user/queue/contact-added', (message: any) => {
-            console.log(`New contact added ${message.username}`);
+
+        this.socketClient.on('contact-request-accepted', (data: any) => {
+            this.emitRequestUpdated(data.requestId, 'accepted');
+            if (data.contact) {
+                this.emitContactAdded(data.contact);
+            }
         });
+
+        this.socketClient.on('contact-request-accepted-by-recipient', (data: any) => {
+            if(data.requestId) {
+                this.emitRequestUpdated(data.requestId, 'accepted');
+                setTimeout(async () => {
+                    try {
+                        const contacts = await this.getContacts();
+                        const newContact = contacts.find(c =>
+                            c.id === data.contactId || c.username === data.contactUsername
+                        );
+                        if(newContact) {
+                            this.emitContactAdded(newContact);
+                        }
+                    } catch(err) {
+                        console.error('Error loading contacts!:', err);
+                    }
+                }, 500);
+            }
+        });
+
+        this.socketClient.on('contact-request-rejected', (data: any) => {
+            this.emitRequestUpdated(data.requestId, 'rejected');
+        });
+
+        this.socketClient.on('contact-request-received', (data: any) => {
+            this.emitNewRequest(data.request);
+        });
+    }
+    
+    private startPolling(): void {
+        if(this.pollingInterval) clearInterval(this.pollingInterval);
+        
+        this.pollingInterval = setInterval(async () => {
+            try {
+                await this.pollForUpdates();
+            } catch(err) {
+                console.error('Error pollinf for contact updates: ', err);
+            }
+        }, 1000);
+    }
+
+    private async pollForUpdates(): Promise<void> {
+        try {
+            const contacts = await this.getContacts();
+            const pendingRequests = await this.getPendingRequests();
+            const event = new CustomEvent('contact-poll-update', {
+                detail: { contacts, pendingRequests }
+            });
+            window.dispatchEvent(event);
+        } catch(err) {
+            console.error('Error polling for contact updates:', err);
+        }
+    }
+
+    /**
+     * 
+     * Emitters
+     * 
+     */
+    private emitContactAdded(contact: any): void {
+        const event = new CustomEvent('contact-added', {
+            detail: { contact }
+        });
+        window.dispatchEvent(event);
+        console.log('Emitted contact-added event:', contact);
+    }
+
+    private emitContactRemoved(contactId: string): void {
+        const event = new CustomEvent('contact-removed', {
+            detail: { contactId }
+        });
+        window.dispatchEvent(event);
+        console.log('Emitted contact-removed event:', contactId);
+    }
+
+    private emitRequestUpdated(requestId: string, status: string): void {
+        const event = new CustomEvent('contact-request-updated', {
+            detail: { requestId, status }
+        });
+        window.dispatchEvent(event);
+        console.log('Emitted contact-request-updated event:', requestId, status);
+    }
+
+    private emitNewRequest(request: any): void {
+        const event = new CustomEvent('contact-request-received', {
+            detail: { request }
+        });
+        window.dispatchEvent(event);
+        console.log('Emitted contact-request-received event:', request);
     }
 }
