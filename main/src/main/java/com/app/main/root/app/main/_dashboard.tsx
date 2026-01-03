@@ -278,9 +278,6 @@ export class Dashboard extends Component<Props, State> {
     private handleChatSelect = async (chat: any): Promise<void> => {
         const chatType = chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP';
         const chatId = chat.id || chat.chatId;
-        if(this.state.activeChat && this.state.activeChat.id === chatId) {
-            return;
-        }
         
         chatState.setType(chatType);
         
@@ -343,6 +340,7 @@ export class Dashboard extends Component<Props, State> {
             showGroup: false,
             groupName: ''
         });
+        this.props.chatController.setCurrentChat(null, null, []);
     }
 
     private handleChatItemRemoved = (event: CustomEvent): void => {

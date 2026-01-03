@@ -221,10 +221,11 @@ export class ChatController {
      * Set Current Chat
      */
     public async setCurrentChat(
-        chatId: string,
-        chatType: ChatType,
+        chatId: string | null,
+        chatType: ChatType | null,
         members?: string[]
     ): Promise<void> {
+        if(!chatId || !chatType) return;
         const context = this.chatRegistry.getContext(chatType, members || [], chatId);
         context.id = chatId;
         context.type = chatType;

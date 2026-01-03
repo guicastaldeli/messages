@@ -5,7 +5,6 @@ import { ApiClientController } from './_api-client/api-client-controller';
 import { SocketClientConnect } from './socket-client-connect';
 import { ChatController } from './chat/chat-controller';
 import { ChatService } from './chat/chat-service';
-import { CachePreloaderService } from '../_cache/cache-preloader-service';
 import { Dashboard } from './_dashboard';
 import { SessionProvider, SessionType, SessionContext } from './_session/session-provider';
 import { ChatManager } from './chat/chat-manager';
@@ -30,7 +29,6 @@ export class Main extends Component<any, State> {
     private socketClientConnect: SocketClientConnect;
     private apiClientController: ApiClientController;
     private chatService: ChatService;
-    private cachePreloader: CachePreloaderService;
     private chatManager!: ChatManager;
     private chatController!: ChatController;
 
@@ -47,7 +45,6 @@ export class Main extends Component<any, State> {
             this.apiClientController, 
             this.chatService
         );
-        this.cachePreloader = new CachePreloaderService(this.apiClientController, this.chatService);
 
         const rememberUserCookie = 
             typeof window !== 'undefined' ?

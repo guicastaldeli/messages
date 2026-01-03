@@ -49,6 +49,7 @@ export class ChatManager {
     private chatService: ChatService;
     private directManager: DirectManager;
     private groupManager: GroupManager;
+    private chatController: ChatController;
 
     constructor(
         chatService: ChatService,
@@ -64,6 +65,7 @@ export class ChatManager {
         this.socketClient = socketClient;
         this.dashboard = dashboard;
         this.apiClientController = apiClientController;
+        this.chatController = chatController;
         this.directManager = new DirectManager(
             socketClient,
             chatController,
@@ -388,6 +390,7 @@ export class ChatManager {
             this.groupManager.currentGroupId = activeChat.id;
             this.groupManager.currentGroupName = activeChat.name;
         }
+
         if(shouldRender && this.updateCallback) this.updateCallback([...this.chatList])
     }
 
