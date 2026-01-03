@@ -81,7 +81,7 @@ public class KeyManagerService {
     public void storeKey(String fileId, String userId, byte[] encryptionKey) {
         try {
             JdbcTemplate keyTemplate = jdbcTemplates.get("file_encryption_keys");
-            if (keyTemplate == null) {
+            if(keyTemplate == null) {
                 throw new RuntimeException("file_encryption_keys database not available");
             }
             
@@ -119,7 +119,7 @@ public class KeyManagerService {
     
     private String bytesToHex(byte[] bytes) {
         StringBuilder result = new StringBuilder();
-        for (byte b : bytes) {
+        for(byte b : bytes) {
             result.append(String.format("%02x", b));
         }
         return result.toString();

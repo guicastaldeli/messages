@@ -262,8 +262,10 @@ public class UserService {
                 data
             );
         } catch(Exception err) {
-            if(!err.getMessage().contains("No session") && !err.getMessage().contains("not found")) {
-                System.err.println("Error sending message to session " + sessionId + ": " + err.getMessage());
+            String errorMessage = err.getMessage();
+            if(errorMessage != null && 
+            !errorMessage.contains("No session") && !errorMessage.contains("not found")) {
+                System.err.println("Error sending message to session " + sessionId + ": " + errorMessage);
             }
         }
     }

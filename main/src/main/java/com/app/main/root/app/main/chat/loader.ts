@@ -41,7 +41,7 @@ export class Loader {
             });
             stream.on('processing-error', (err: any) => {
                 console.error('Chat processing error:', err.error);
-                if (err.original && err.original.chat) {
+                if(err.original && err.original.chat) {
                     this.processChatItem(err.original.chat);
                 }
             });

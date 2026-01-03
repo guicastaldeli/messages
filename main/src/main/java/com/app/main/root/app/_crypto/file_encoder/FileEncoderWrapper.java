@@ -34,7 +34,7 @@ public class FileEncoderWrapper {
             
             for(String lib : libraries) {
                 Path libPath = directory.resolve(lib);
-                if (!Files.exists(libPath)) {
+                if(!Files.exists(libPath)) {
                     System.err.println("Missing required DLL: " + libPath.toAbsolutePath());
                     throw new RuntimeException("Required DLL not found: " + lib);
                 }
@@ -73,7 +73,7 @@ public class FileEncoderWrapper {
         }
         
         public static EncryptionAlgorithm fromValue(int value) {
-            for (EncryptionAlgorithm algo : values()) {
+            for(EncryptionAlgorithm algo : values()) {
                 if(algo.value == value) {
                     return algo;
                 }

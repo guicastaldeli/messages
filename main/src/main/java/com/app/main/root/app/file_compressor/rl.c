@@ -16,7 +16,7 @@ uint8_t* rlCompress(const uint8_t* data, size_t size, size_t* outputSize) {
     printf("DEBUG RL: Compressing %zu bytes\n", size);
     
     uint8_t* outputBuffer = (uint8_t*)malloc(size * 2);
-    if (!outputBuffer) {
+    if(!outputBuffer) {
         printf("ERROR RL: malloc failed for size: %zu\n", size * 2);
         *outputSize = 0;
         return NULL;
@@ -36,7 +36,7 @@ uint8_t* rlCompress(const uint8_t* data, size_t size, size_t* outputSize) {
         }
         
         if(runLength > 3 || current == 0xFF) {
-            if (outIdx + 3 >= size * 2) {
+            if(outIdx + 3 >= size * 2) {
                 printf("ERROR RL: Output buffer overflow\n");
                 free(outputBuffer);
                 *outputSize = 0;
@@ -47,7 +47,7 @@ uint8_t* rlCompress(const uint8_t* data, size_t size, size_t* outputSize) {
             outputBuffer[outIdx++] = current;
             i += runLength;
         } else {
-            if (outIdx + runLength >= size * 2) {
+            if(outIdx + runLength >= size * 2) {
                 printf("ERROR RL: Output buffer overflow\n");
                 free(outputBuffer);
                 *outputSize = 0;
@@ -67,7 +67,7 @@ uint8_t* rlCompress(const uint8_t* data, size_t size, size_t* outputSize) {
     *outputSize = outIdx;
     
     uint8_t* finalBuffer = (uint8_t*)realloc(outputBuffer, outIdx);
-    if (!finalBuffer && outIdx > 0) {
+    if(!finalBuffer && outIdx > 0) {
         finalBuffer = outputBuffer;
     }
     

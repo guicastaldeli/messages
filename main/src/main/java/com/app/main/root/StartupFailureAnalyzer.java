@@ -20,7 +20,7 @@ public class StartupFailureAnalyzer implements FailureAnalyzer {
             description.append("Bean creation failed for: ").append(bce.getBeanName()).append("\n");
             action.append("Check the bean configuration and dependencies\n");
         }
-        if (failure instanceof PortInUseException) {
+        if(failure instanceof PortInUseException) {
             action.append("The server port is already in use. Change the port in configuration\n");
         }
 

@@ -16,7 +16,7 @@ public class MessageEncoderWrapper {
     private static void loadNativeLibraries() {
         try {
             Path directory = Paths.get(DLL_PATH);
-            if (!Files.exists(directory)) {
+            if(!Files.exists(directory)) {
                 throw new RuntimeException("DLL directory does not exist: " + directory.toAbsolutePath());
             }
             
@@ -26,9 +26,9 @@ public class MessageEncoderWrapper {
                 "message_encoder.dll"
             };
             
-            for (String lib : libraries) {
+            for(String lib : libraries) {
                 Path libPath = directory.resolve(lib);
-                if (!Files.exists(libPath)) {
+                if(!Files.exists(libPath)) {
                     throw new RuntimeException("Required DLL not found: " + lib);
                 }
                 System.load(libPath.toAbsolutePath().toString());
@@ -84,7 +84,7 @@ public class MessageEncoderWrapper {
     }
 
     public byte[] encryptMessage(String recipientId, String message) {
-        if (!init) {
+        if(!init) {
             throw new IllegalStateException("MessageEncoder not initialized");
         }
         byte[] result = encryptMessage(recipientId, message.getBytes());
@@ -93,7 +93,7 @@ public class MessageEncoderWrapper {
     }
     
     public String decryptMessageToString(String senderId, byte[] ciphertext) {
-        if (!init) {
+        if(!init) {
             throw new IllegalStateException("MessageEncoder not initialized");
         }
         byte[] plaintext = decryptMessage(senderId, ciphertext);

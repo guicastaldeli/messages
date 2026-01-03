@@ -204,9 +204,9 @@ export class SessionManager {
         if(!sessionData) return false;
 
         let sessionId = CookieService.getValue(this.SESSION_ID_KEY);
-        if (!sessionId) {
+        if(!sessionId) {
             const userInfo = this.getUserInfo();
-            if (userInfo && userInfo.sessionId) {
+            if(userInfo && userInfo.sessionId) {
                 sessionId = userInfo.sessionId;
             }
         }
@@ -237,12 +237,12 @@ export class SessionManager {
 
     public static getSessionId(): string | null {
         const sessionId = CookieService.getValue(this.SESSION_ID_KEY);
-        if (sessionId) {
+        if(sessionId) {
             return sessionId;
         }
         
         const userInfo = this.getUserInfo();
-        if (userInfo && userInfo.sessionId) {
+        if(userInfo && userInfo.sessionId) {
             return userInfo.sessionId;
         }
         
@@ -268,7 +268,7 @@ export class SessionManager {
         
             if(value.includes(':')) {
                 const parts = value.split(':');
-                if (parts.length >= 4) {
+                if(parts.length >= 4) {
                     return {
                         sessionId: parts[0] || '', 
                         userId: parts[1] || '',

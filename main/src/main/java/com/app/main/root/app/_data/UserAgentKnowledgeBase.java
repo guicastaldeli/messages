@@ -231,8 +231,8 @@ public class UserAgentKnowledgeBase {
         else if(!conclusion.contains("'") && !conclusion.contains("=")) {
             prediction.setDeviceType(conclusion);
         }
-        else if (!conclusion.contains("'") && !conclusion.contains("=")) {
-            if (conclusion.toLowerCase().contains("mobile") || 
+        else if(!conclusion.contains("'") && !conclusion.contains("=")) {
+            if(conclusion.toLowerCase().contains("mobile") || 
                 conclusion.toLowerCase().contains("tablet") || 
                 conclusion.toLowerCase().contains("desktop")) {
                 prediction.setDeviceType(conclusion);

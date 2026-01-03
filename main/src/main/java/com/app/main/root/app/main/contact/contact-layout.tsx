@@ -104,7 +104,7 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
                 return prevContacts;
             });
             setPendingRequests(prevRequests => {
-                if (prevRequests.length !== pendingRequests.length) {
+                if(prevRequests.length !== pendingRequests.length) {
                     console.log('ContactLayout: Updating pending requests from poll');
                     return pendingRequests;
                 }

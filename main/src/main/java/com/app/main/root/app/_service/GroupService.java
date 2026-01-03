@@ -307,7 +307,7 @@ public class GroupService {
                 );
 
                 for(String sessionId : sessions) {
-                    if (isSessionInGroup(sessionId, groupId)) {
+                    if(isSessionInGroup(sessionId, groupId)) {
                         String destination = "/user/queue/messages/group/" + groupId; 
                         messagingTemplate.convertAndSend(destination, data);
                     }
@@ -334,7 +334,7 @@ public class GroupService {
                 );
 
                 for(String sessionId : sessions) {
-                    if (isSessionInGroup(sessionId, groupId)) {
+                    if(isSessionInGroup(sessionId, groupId)) {
                         String destination = "/user/queue/messages/group/" + groupId; 
                         messagingTemplate.convertAndSendToUser(
                             sessionId,

@@ -24,7 +24,7 @@ export class MessageControllerClient {
      * Add Message
      */
     public async addMessage(
-        chatId: string, 
+        chatId: string,
         messages: any | any[],
         page: number = 0
     ): Promise<void> {
@@ -35,8 +35,16 @@ export class MessageControllerClient {
 
         const data = cacheService.cache.get(chatId)!;
         const messageArray = Array.isArray(messages) ? messages : [messages];
+        
         messageArray.forEach((m: any) => {
             const id = m.id || m.messageId;
+            const messageChatId = m.chatId;
+            
+            if(messageChatId !== chatId) {
+                console.warn(`[addMessage] Rejecting message ${id} - belongs to ${messageChatId}, not ${chatId}`);
+                return;
+            }
+            
             if(!data.messages.has(id)) {
                 data.messages.set(id, m);
                 data.messageOrder.push(id);
@@ -44,10 +52,20 @@ export class MessageControllerClient {
         });
 
         const time = Date.now();
-        data.messageOrder = data.messageOrder.filter(id => id && data.messages.has(id));
+        data.messageOrder = data.messageOrder.filter(id => {
+            const msg = data.messages.get(id);
+            if(msg && msg.chatId !== chatId) {
+                console.warn(`[addMessage] Removing corrupted message ${id} from cache`);
+                data.messages.delete(id);
+                return false;
+            }
+            return id && data.messages.has(id);
+        });
+        
         data.loadedPages.add(page);
         data.lastAccessTime = time;
         data.lastUpdated = time;
+        
         const totalMessagesKnown = data.messageOrder.length;
         const estimatedTotal = Math.max(data.totalMessagesCount, totalMessagesKnown);
         const totalPossiblePages = Math.ceil(estimatedTotal / cacheService.config.pageSize);
@@ -55,7 +73,7 @@ export class MessageControllerClient {
         
         data.hasMore =
             currentPagesLoaded < totalPossiblePages || 
-            (messages.length === cacheService.config.pageSize);
+            (messageArray.length === cacheService.config.pageSize);
         
         data.isFullyLoaded = 
             !data.hasMore && 
@@ -66,10 +84,10 @@ export class MessageControllerClient {
         let messagesArray: any[];
         let messageOrder: string[];
         
-        if (Array.isArray(data)) {
+        if(Array.isArray(data)) {
             messagesArray = data;
             messageOrder = data.map(msg => msg.id || msg.messageId);
-        } else if (data && data.messageOrder && Array.isArray(data.messageOrder)) {
+        } else if(data && data.messageOrder && Array.isArray(data.messageOrder)) {
             messagesArray = Array.from(data.messages?.values() || []);
             messageOrder = data.messageOrder;
         } else {
@@ -180,7 +198,7 @@ export class MessageControllerClient {
     public async initCache(userId: string): Promise<void> {
         try {
             const recentChats = await this.messageService.getRecentMessages(userId);
-            const chats = recentChats.chats || []; // Fix: Access the chats property
+            const chats = recentChats.chats || [];
             const preloadPromises = chats.map((chat: any) =>
                 this.preloadData(chat.id || chat.chatId)
             );
@@ -212,10 +230,22 @@ export class MessageControllerClient {
             
             pageData.messages.forEach((msg: any) => {
                 const id = msg.id || msg.messageId;
-                if (id) {
-                    cacheData.messages.set(id, msg);
-                    cacheData.messageOrder.push(id);
+                const messageChatId = msg.chatId;
+                
+                if(!id) {
+                    console.warn(`[preloadData] Message missing ID, skipping`);
+                    return;
                 }
+                if(messageChatId && messageChatId !== chatId) {
+                    console.warn(`[preloadData] Skipping message ${id} - belongs to ${messageChatId}, not ${chatId}`);
+                    return;
+                }
+                if(!msg.chatId) {
+                    msg.chatId = chatId;
+                }
+                
+                cacheData.messages.set(id, msg);
+                cacheData.messageOrder.push(id);
             });
             
             cacheData.loadedPages.add(0);
@@ -225,7 +255,7 @@ export class MessageControllerClient {
             cacheData.isFullyLoaded = !cacheData.hasMore;
             cacheData.lastUpdated = Date.now();
             
-            console.log(`Preloaded ${pageData.messages.length} messages for chat ${chatId}`);
+            console.log(`Preloaded ${cacheData.messageOrder.length} messages for chat ${chatId}`);
             
             await this.getMessagesPage(cacheData, chatId, 0);
         } catch(err) {

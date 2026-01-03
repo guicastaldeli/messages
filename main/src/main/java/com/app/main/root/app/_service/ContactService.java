@@ -131,7 +131,7 @@ public class ContactService {
                 if(accept) notifyContactAdded(fromUserId, toUserId);
 
                 String fromUserSession = serviceManager.getUserService().getSessionByUserId(fromUserId);
-                if (fromUserSession != null) {
+                if(fromUserSession != null) {
                     Map<String, Object> notification = new HashMap<>();
                     notification.put("type", "contact_request_response");
                     notification.put("requestId", requestId);

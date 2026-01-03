@@ -15,7 +15,7 @@ public class UserValidatorWrapper {
     private static void loadNativeLibraries() {
         try {
             Path directory = Paths.get(DLL_PATH);
-            if (!Files.exists(directory)) {
+            if(!Files.exists(directory)) {
                 throw new RuntimeException("dll directory does not exist: " + directory.toAbsolutePath());
             }
             System.out.println("Files in dll directory:");
@@ -35,7 +35,7 @@ public class UserValidatorWrapper {
             
             for(String lib : libraries) {
                 Path libPath = directory.resolve(lib);
-                if (!Files.exists(libPath)) {
+                if(!Files.exists(libPath)) {
                     System.err.println("Missing required DLL: " + libPath.toAbsolutePath());
                     throw new RuntimeException("Required DLL not found: " + lib);
                 }

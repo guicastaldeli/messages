@@ -71,11 +71,11 @@ public class ColorConverter {
         hex = hex.replace("#", "");
         int r, g, b;
         
-        if (hex.length() == 3) {
+        if(hex.length() == 3) {
             r = Integer.parseInt(hex.substring(0, 1) + hex.substring(0, 1), 16);
             g = Integer.parseInt(hex.substring(1, 2) + hex.substring(1, 2), 16);
             b = Integer.parseInt(hex.substring(2, 3) + hex.substring(2, 3), 16);
-        } else if (hex.length() == 6) {
+        } else if(hex.length() == 6) {
             r = Integer.parseInt(hex.substring(0, 2), 16);
             g = Integer.parseInt(hex.substring(2, 4), 16);
             b = Integer.parseInt(hex.substring(4, 6), 16);
@@ -112,9 +112,9 @@ public class ColorConverter {
         int b,
         int g
     ) {
-        if (r == g && g == b) {
-            if (r < 8) return "\u001B[38;5;16m";
-            if (r > 248) return "\u001B[38;5;231m";
+        if(r == g && g == b) {
+            if(r < 8) return "\u001B[38;5;16m";
+            if(r > 248) return "\u001B[38;5;231m";
             int gray = Math.round(((r - 8) / 247.0f) * 24) + 232;
 
             String format = "\u001B[38;5;%dm";

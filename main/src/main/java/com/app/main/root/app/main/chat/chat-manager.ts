@@ -101,7 +101,7 @@ export class ChatManager {
         
         const existingChatIndex = this.chatList.findIndex(chat => chat.id === chatItem.id);
         
-        if (existingChatIndex === -1) {
+        if(existingChatIndex === -1) {
             this.chatList.push(chatItem);
         } else {
             this.chatList[existingChatIndex] = {

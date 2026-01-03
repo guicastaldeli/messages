@@ -44,7 +44,7 @@ export class CacheServiceClient {
         chatService: ChatService,
         apiClientController: ApiClientController
     ): CacheServiceClient {
-        if (!CacheServiceClient.instance) {
+        if(!CacheServiceClient.instance) {
             const instance = new CacheServiceClient();
             instance.apiClientController = apiClientController;
             instance.chatService = chatService;
@@ -60,7 +60,7 @@ export class CacheServiceClient {
         totalFilesCount: number = 0
     ): void {
         const time = Date.now();
-        if (!this.cache.has(chatId)) {
+        if(!this.cache.has(chatId)) {
             this.cache.set(chatId, {
                 messages: new Map(),
                 files: new Map(),
@@ -121,5 +121,52 @@ export class CacheServiceClient {
 
     public getCachedChats(): string[] {
         return Array.from(this.cache.keys());
+    }
+
+    public validateCache(chatId: string): void {
+        const cacheData = this.cache.get(chatId);
+        if(!cacheData) return;
+        
+        let removedCount = 0;
+        const validMessageIds: string[] = [];
+        
+        cacheData.messageOrder.forEach(messageId => {
+            const message = cacheData.messages.get(messageId);
+            
+            if(!message) {
+                console.warn(`[validateCache] Message ${messageId} in order but not in map`);
+                return;
+            }
+            
+            const messageChatId = message.chatId;
+            
+            if(messageChatId && messageChatId !== chatId) {
+                console.warn(`[validateCache] Removing message ${messageId} from ${chatId} - belongs to ${messageChatId}`);
+                cacheData.messages.delete(messageId);
+                removedCount++;
+            } else {
+                if(!message.chatId) {
+                    message.chatId = chatId;
+                }
+                validMessageIds.push(messageId);
+            }
+        });
+
+        cacheData.messageOrder = validMessageIds;
+        if(removedCount > 0) {
+            console.log(`[validateCache] Cleaned ${removedCount} invalid messages from ${chatId}`);
+            console.log(`[validateCache] ${cacheData.messages.size} valid messages remain`);
+        }
+    }
+
+    /**
+     * Validate All Caches
+     */
+    public validateAllCaches(): void {
+        console.log('[validateAllCaches] Starting cache validation...');
+        this.cache.forEach((_, chatId) => {
+            this.validateCache(chatId);
+        });
+        console.log('[validateAllCaches] Cache validation complete');
     }
 }

@@ -559,7 +559,7 @@ public class EventList {
                     String chatId = (String) data.get("chatId");
                     List<Map<String, Object>> decryptedMessages = new ArrayList<>();
                     
-                    for (Map<String, Object> encryptedMessage : encryptedMessages) {
+                    for(Map<String, Object> encryptedMessage : encryptedMessages) {
                         Map<String, Object> decryptedMessage = new HashMap<>(encryptedMessage);
                         
                         if(encryptedMessage.containsKey("contentBytes")) {

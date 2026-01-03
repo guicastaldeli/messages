@@ -175,8 +175,8 @@ export class Main extends Component<any, State> {
             try {
                 let email: any, username: any, password: any;
 
-                if (isCreateAccount) {
-                    if (!this.createEmailRef.current || !this.createUsernameRef.current || !this.createPasswordRef.current) {
+                if(isCreateAccount) {
+                    if(!this.createEmailRef.current || !this.createUsernameRef.current || !this.createPasswordRef.current) {
                         alert('Form elements not found');
                         return;
                     }
@@ -185,14 +185,14 @@ export class Main extends Component<any, State> {
                     username = this.createUsernameRef.current.value.trim();
                     password = this.createPasswordRef.current.value.trim();
 
-                    if (!email || !username || !password) {
+                    if(!email || !username || !password) {
                         alert('All fields are required for account creation');
                         return;
                     }
                     try {
                         const userService = await this.apiClientController.getUserService();
                         const usernameExists = await userService.checkUsernameExists(username);
-                        if (usernameExists) {
+                        if(usernameExists) {
                             alert('Username already taken');
                             return;
                         }
@@ -202,7 +202,7 @@ export class Main extends Component<any, State> {
                     try {
                         const userService = await this.apiClientController.getUserService();
                         const emailExists = await userService.checkUserExists(email);
-                        if (emailExists) {
+                        if(emailExists) {
                             alert('Email already registered');
                             return;
                         }
@@ -210,7 +210,7 @@ export class Main extends Component<any, State> {
                         console.error('Error checking email:', err);
                     }
                 } else {
-                    if (!this.loginEmailRef.current || !this.loginPasswordRef.current) {
+                    if(!this.loginEmailRef.current || !this.loginPasswordRef.current) {
                         alert('Form elements not found');
                         return;
                     }
@@ -218,7 +218,7 @@ export class Main extends Component<any, State> {
                     email = this.loginEmailRef.current.value.trim();
                     password = this.loginPasswordRef.current.value.trim();
 
-                    if (!email || !password) {
+                    if(!email || !password) {
                         alert('Email and password are required');
                         return;
                     }
@@ -235,7 +235,7 @@ export class Main extends Component<any, State> {
                 console.log('User info from cookies:', userInfo);
                 console.log('Requested email:', email);
                 */
-                if (isSessionValid && userInfo && userInfo.email === email) {
+                if(isSessionValid && userInfo && userInfo.email === email) {
                 console.log('Valid session exists for this user, skipping login API');
                 this.setState({ 
                     username: userInfo.username,
@@ -258,7 +258,7 @@ export class Main extends Component<any, State> {
                         await cacheService.initCache(userInfo.userId);
                         //await this.cachePreloader.startPreloading(userInfo.userId);
 
-                        if (this.dashboardInstance) {
+                        if(this.dashboardInstance) {
                             await this.dashboardInstance.getUserData(
                                 userInfo.sessionId,
                                 userInfo.userId,
@@ -308,7 +308,7 @@ export class Main extends Component<any, State> {
                 let result;
                 const authService = await this.apiClientController.getAuthService();
                 
-                if (isCreateAccount) {
+                if(isCreateAccount) {
                     result = await authService.registerUser({
                         email: email,
                         username: username!,
@@ -328,7 +328,7 @@ export class Main extends Component<any, State> {
                 console.log('Auth result:', result);
                 const authData = result;
 
-                if (authData && authData.userId) {
+                if(authData && authData.userId) {
                     SessionManager.saveSession(
                         {
                             userId: authData.userId,
@@ -341,7 +341,7 @@ export class Main extends Component<any, State> {
                     
                     console.log('New session saved with ID:', authData.sessionId);
                     
-                    if (typeof localStorage !== 'undefined') {
+                    if(typeof localStorage !== 'undefined') {
                         localStorage.setItem('LAST_SOCKET_ID', socketId);
                     }
                     
@@ -367,7 +367,7 @@ export class Main extends Component<any, State> {
                             await cacheService.initCache(authData.userId);
                             //await this.cachePreloader.startPreloading(authData.userId);
                             
-                            if (this.dashboardInstance) {
+                            if(this.dashboardInstance) {
                                 await this.dashboardInstance.getUserData(
                                     authData.sessionId,
                                     authData.userId,
@@ -402,10 +402,10 @@ export class Main extends Component<any, State> {
                 SessionManager.clearSession();
                 sessionContext.setSession('LOGIN');
                 
-                if (sessionContext && sessionContext.clearSession) {
+                if(sessionContext && sessionContext.clearSession) {
                     await sessionContext.clearSession();
                 }
-                if (this.props.onLogout) {
+                if(this.props.onLogout) {
                     this.props.onLogout();
                 }
                 
@@ -414,7 +414,7 @@ export class Main extends Component<any, State> {
                 console.error('Logout failed:', err);
                 SessionManager.clearSession();
                 
-                if (sessionContext && sessionContext.setSession) {
+                if(sessionContext && sessionContext.setSession) {
                     sessionContext.setSession('LOGIN');
                 }
             }

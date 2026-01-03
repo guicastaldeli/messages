@@ -77,7 +77,7 @@ export class FileServiceClient {
                 if(Array.isArray(data.files)) {
                     const decryptedFiles = [];
 
-                    for (const file of data.files) {
+                    for(const file of data.files) {
                         try {
                             const decryptedFile = await this.decryptFile(chatId, file);
                             decryptedFiles.push(decryptedFile);
@@ -498,7 +498,7 @@ export class FileServiceClient {
             if(files.length > 0) {
                 const decryptedFiles = [];
                 
-                for (const file of files) {
+                for(const file of files) {
                     try {
                         const decryptedFile = await this.decryptFile(chatId, file);
                         decryptedFiles.push(decryptedFile);

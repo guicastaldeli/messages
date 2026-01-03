@@ -32,7 +32,7 @@ export class MessageServiceClient {
             const res = await fetch(
                 `${this.url}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
             );
-            if (!res.ok) {
+            if(!res.ok) {
                 const errorText = await res.text();
                 console.error(`API Error (${res.status}):`, errorText);
                 throw new Error(`Failed to fetch chat data! Status: ${res.status}`);
@@ -45,15 +45,15 @@ export class MessageServiceClient {
             if(resData.data) {
                 const data = resData.data;
 
-                if (Array.isArray(data.messages)) {
+                if(Array.isArray(data.messages)) {
                     const decryptedMessages = [];
 
-                    for (const message of data.messages) {
+                    for(const message of data.messages) {
                         try {
                             const decryptedMessage = await this.decryptMessage(chatId, message);
                             decryptedMessages.push(decryptedMessage);
                         } catch (err) {
-                            if (!message.system) {
+                            if(!message.system) {
                                 console.error('Failed to decrypt message:', err);
                             }
                             decryptedMessages.push(message);
@@ -68,7 +68,7 @@ export class MessageServiceClient {
                 return data;
             }
 
-            if (resData.messages !== undefined) {
+            if(resData.messages !== undefined) {
                 return resData;
             }
 
@@ -146,7 +146,7 @@ export class MessageServiceClient {
             let data = await res.json();
             let messages = Array.isArray(data) ? data : (data.messages || []);
             const decryptedMessages = [];
-            for (const message of messages) {
+            for(const message of messages) {
                 try {
                     const decryptedMessage = await this.decryptMessage(id, message);
                     decryptedMessages.push(decryptedMessage);
@@ -191,7 +191,7 @@ export class MessageServiceClient {
             const handlesuccss = (response: any) => {
                 this.socketClient.offDestination(succssDestination, handlesuccss);
                 this.socketClient.offDestination(errDestination, handleErr);
-                if (response.messages && response.messages.length > 0) {
+                if(response.messages && response.messages.length > 0) {
                     res(response.messages[0]);
                 } else {
                     rej(new Error('No decrypted messages returned'));

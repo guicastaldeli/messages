@@ -109,7 +109,7 @@ int decompressFile(const char* inputPath, const char* outputPath) {
         &decompressedSize,
         (CompressionType)header.compType
     );
-    if (decompressedSize != header.originalSize) {
+    if(decompressedSize != header.originalSize) {
         printf("Warning: Size mismatch! Expected %u, got %zu\n",
                header.originalSize, decompressedSize);
     }

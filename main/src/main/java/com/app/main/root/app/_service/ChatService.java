@@ -30,7 +30,7 @@ public class ChatService {
             if(lastMessage != null) {
                 byte[] encryptedContent = (byte[]) lastMessage.get("contentBytes");
                 String content;
-                if (encryptedContent != null) {
+                if(encryptedContent != null) {
                     content = chatDecryptionService.decryptMessage(chatId, encryptedContent);
                 } else {
                     content = "";
@@ -62,7 +62,7 @@ public class ChatService {
             if(lastMessage != null) {
                 byte[] encryptedContent = (byte[]) lastMessage.get("contentBytes");
                 String content;
-                if (encryptedContent != null) {
+                if(encryptedContent != null) {
                     content = chatDecryptionService.decryptMessage(chatId, encryptedContent);
                 } else {
                     content = "";
@@ -118,6 +118,22 @@ public class ChatService {
         return allChats;
     }
 
+    private boolean userHasAccessToChat(String userId, String chatId) throws SQLException {
+        List<Map<String, Object>> directChats = serviceManager.getUserService().getUserDirect(userId);
+        for(Map<String, Object> chat : directChats) {
+            if(chatId.equals(chat.get("id"))) {
+                return true;
+            }
+        }
+        List<Map<String, Object>> groupChats = serviceManager.getUserService().getUserGroups(userId);
+        for(Map<String, Object> chat : groupChats) {
+            if(chatId.equals(chat.get("id"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Get Chat Data
      */
@@ -127,16 +143,49 @@ public class ChatService {
         int page, 
         int pageSize
     ) throws SQLException {
+        // ✅ CRITICAL FIX: Validate user has access to this chat
+        if(!userHasAccessToChat(userId, chatId)) {
+            throw new SecurityException("User " + userId + " does not have access to chat " + chatId);
+        }
+        
         Map<String, Object> chatData = new HashMap<>();
         
         try {
             List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
-            chatData.put("messages", messages != null ? messages : new ArrayList<>());
+            
+            if(messages != null) {
+                List<_Message> validatedMessages = new ArrayList<>();
+                for(_Message msg : messages) {
+                    if(chatId.equals(msg.getChatId())) {
+                        validatedMessages.add(msg);
+                    } else {
+                        System.err.println("WARNING: Message " + msg.getId() + 
+                            " returned for chat " + chatId + 
+                            " but belongs to chat " + msg.getChatId());
+                    }
+                }
+                chatData.put("messages", validatedMessages);
+            } else {
+                chatData.put("messages", new ArrayList<>());
+            }
             
             Map<String, Object> filesResult = serviceManager.getFileService().getFilesByChatId(userId, chatId, page, pageSize);
             List<Map<String, Object>> files = new ArrayList<>();
             if(filesResult != null && filesResult.get("files") != null) {
                 files = (List<Map<String, Object>>) filesResult.get("files");
+                
+                List<Map<String, Object>> validatedFiles = new ArrayList<>();
+                for(Map<String, Object> file : files) {
+                    String fileChatId = (String) file.get("chat_id");
+                    if(chatId.equals(fileChatId)) {
+                        validatedFiles.add(file);
+                    } else {
+                        System.err.println("WARNING: File " + file.get("file_id") + 
+                            " returned for chat " + chatId + 
+                            " but belongs to chat " + fileChatId);
+                    }
+                }
+                files = validatedFiles;
             }
             chatData.put("files", files);
             
@@ -146,6 +195,8 @@ public class ChatService {
             pagination.put("hasMore", messages != null && messages.size() == pageSize);
             pagination.put("totalFiles", files.size());
             chatData.put("pagination", pagination);
+        } catch (SecurityException e) {
+            throw e;
         } catch (Exception e) {
             chatData.put("messages", new ArrayList<>());
             chatData.put("files", new ArrayList<>());

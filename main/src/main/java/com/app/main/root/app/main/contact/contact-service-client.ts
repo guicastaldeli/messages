@@ -82,7 +82,7 @@ export class ContactServiceClient {
                                 
                                 if(response.contact) {
                                     this.emitContactAdded(response.contact);
-                                } else if (contacts.length > 0) {
+                                } else if(contacts.length > 0) {
                                     contacts.forEach(contact => {
                                         this.emitContactAdded(contact);
                                     });
@@ -225,7 +225,7 @@ export class ContactServiceClient {
         });
         this.socketClient.on('contact-request-accepted', (data: any) => {
             this.emitRequestUpdated(data.requestId, 'accepted');
-            if (data.contact) {
+            if(data.contact) {
                 this.emitContactAdded(data.contact);
             }
         });

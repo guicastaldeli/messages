@@ -51,7 +51,7 @@ export class FileUploader extends Component<Props, State> {
             }
 
             const currentChatId = this.props.chatController.currentChatId;
-            if (!currentChatId) {
+            if(!currentChatId) {
                 console.error('No active chat selected!');
                 return;
             }

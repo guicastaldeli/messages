@@ -103,7 +103,7 @@ public class FileUploader {
                 try {
                     System.out.println("DEBUG: Starting compression...");
                     
-                    if (fileSize > 50 * 1024 * 1024) {
+                    if(fileSize > 50 * 1024 * 1024) {
                         System.out.println("DEBUG: Large file detected, using streaming compression");
                         
                         InputStream inputStream = file.getInputStream();
@@ -122,7 +122,7 @@ public class FileUploader {
                         System.out.println("  Compression type: " + compressionType);
                         System.out.println("  Ratio: " + (ratio * 100) + "%");
                         
-                        if (compressionType == 10 && ratio < 0.95) {
+                        if(compressionType == 10 && ratio < 0.95) {
                             this.compressed = true;
                             System.out.println("  Using stream-compressed data");
                         } else {

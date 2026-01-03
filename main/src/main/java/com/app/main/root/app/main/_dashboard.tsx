@@ -317,7 +317,7 @@ export class Dashboard extends Component<Props, State> {
                         if(this.props.chatManager.getGroupManager()) {
                             this.props.chatManager.getGroupManager().container = this.groupContainerRef.current!;
                         }
-                    } else if (chatType === 'DIRECT') {
+                    } else if(chatType === 'DIRECT') {
                         if(this.props.chatManager.getDirectManager()) {
                             this.props.chatManager.getDirectManager().container = this.directContainerRef.current!;
                         }

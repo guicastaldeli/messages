@@ -283,14 +283,14 @@ export class GroupLayout extends Component<Props, State> {
 
     handleFileUploadSuccess = (res: any): void => {
         console.log('File uploaded successfully:', res);
-        if (this.props.onSuccess) {
+        if(this.props.onSuccess) {
             this.props.onSuccess(res);
         }
     }
 
     handleFileUploadError = (err: Error): void => {
         console.error('File upload error:', err);
-        if (this.props.onError) {
+        if(this.props.onError) {
             this.props.onError(err);
         }
     }

@@ -31,10 +31,10 @@ public class BufferConfig {
         int openBrackets = 0;
 
         for(char c : message.toCharArray()) {
-            if (c == '{') openBraces++;
-            if (c == '}') openBraces--;
-            if (c == '[') openBrackets++;
-            if (c == ']') openBrackets--;
+            if(c == '{') openBraces++;
+            if(c == '}') openBraces--;
+            if(c == '[') openBrackets++;
+            if(c == ']') openBrackets--;
         }
 
         return openBraces == 0 && openBrackets == 0;

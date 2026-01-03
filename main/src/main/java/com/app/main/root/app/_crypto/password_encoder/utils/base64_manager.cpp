@@ -58,7 +58,7 @@ std::vector<unsigned char> Base64Manager::decode(const std::string& encoded_stri
     unsigned char char_array_4[4], char_array_3[3];
     std::vector<unsigned char> ret;
 
-    while (in_len-- && (standard_encoded[in_] != '=') && is_base64(standard_encoded[in_])) {
+    while(in_len-- && (standard_encoded[in_] != '=') && is_base64(standard_encoded[in_])) {
         char_array_4[i++] = standard_encoded[in_]; 
         in_++;
         

@@ -481,7 +481,7 @@ public class MessageService {
         ) {
             stmt.setString(1, chatId);
             try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
+                if(rs.next()) {
                     Map<String, Object> lastMessage = new HashMap<>();
                     byte[] contentBytes = rs.getBytes("content");
                     lastMessage.put("contentBytes", contentBytes);
@@ -496,13 +496,13 @@ public class MessageService {
     }
 
     private boolean isEncryptedData(byte[] bytes) {
-        if (bytes == null || bytes.length < 32) return false;
-        if (bytes.length >= 32) return true;
+        if(bytes == null || bytes.length < 32) return false;
+        if(bytes.length >= 32) return true;
         
         int nonPrintableCount = 0;
-        for (int i = 0; i < Math.min(bytes.length, 50); i++) {
+        for(int i = 0; i < Math.min(bytes.length, 50); i++) {
             byte b = bytes[i];
-            if ((b < 32 && b != 9 && b != 10 && b != 13) || b > 126) {
+            if((b < 32 && b != 9 && b != 10 && b != 13) || b > 126) {
                 nonPrintableCount++;
             }
         }
@@ -539,7 +539,7 @@ public class MessageService {
         message.setContentBytes(contentBytes);
         
         String content;
-        if (isEncryptedData(contentBytes)) {
+        if(isEncryptedData(contentBytes)) {
             content = "[ENCRYPTED]" + new String(contentBytes, StandardCharsets.UTF_8);;
         } else {
             content = new String(contentBytes, StandardCharsets.UTF_8);

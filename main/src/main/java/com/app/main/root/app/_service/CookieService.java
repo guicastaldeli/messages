@@ -51,7 +51,7 @@ public class CookieService {
      * Create Cookie
      */
     public Cookie createCookie(String name, String value, int maxAge) {        
-        if (name == null || name.trim().isEmpty()) {
+        if(name == null || name.trim().isEmpty()) {
             System.err.println("ERR Cookie name is null or empty! name=" + name);
         }
         

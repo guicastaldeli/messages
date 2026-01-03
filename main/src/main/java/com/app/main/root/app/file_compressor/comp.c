@@ -99,7 +99,7 @@ uint8_t* compress(
     
     if(size > 10 * 1024 * 1024) {
         int binaryLikelihood = 0;
-        for (int i = 0; i < 100 && i < size; i++) {
+        for(int i = 0; i < 100 && i < size; i++) {
             if(data[i] < 32 && data[i] != '\t' && data[i] != '\n' && data[i] != '\r') {
                 binaryLikelihood++;
             }

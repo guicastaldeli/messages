@@ -330,7 +330,7 @@ export class GroupManager {
         const joinEvent = new CustomEvent('group-join-complete', { detail: data });
         window.dispatchEvent(joinEvent);
 
-        if (this.onJoinSuccess) this.onJoinSuccess(data);
+        if(this.onJoinSuccess) this.onJoinSuccess(data);
     }
 
     private renderJoinLayout(

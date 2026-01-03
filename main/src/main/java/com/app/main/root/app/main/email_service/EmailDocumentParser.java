@@ -73,7 +73,7 @@ public class EmailDocumentParser {
     public String renderElement(Element element, Map<String, Object> context) {
         String tagName = element.getTagName();
         ElementRenderer renderer = elementRenderers.get(tagName);
-        if (renderer != null) return renderer.render(element, context, this);
+        if(renderer != null) return renderer.render(element, context, this);
         return renderDynamicElement(element, context);
     }
     
@@ -82,7 +82,7 @@ public class EmailDocumentParser {
         
         StringBuilder attributes = new StringBuilder();
         NamedNodeMap attrs = element.getAttributes();
-        for (int i = 0; i < attrs.getLength(); i++) {
+        for(int i = 0; i < attrs.getLength(); i++) {
             Node attr = attrs.item(i);
             attributes.append(" ")
                 .append(attr.getNodeName())
@@ -91,7 +91,7 @@ public class EmailDocumentParser {
                 .append("\"");
         }
     
-        if (attributes.indexOf("class=") == -1) {
+        if(attributes.indexOf("class=") == -1) {
             attributes.append(" class=\"").append(tagName).append("\"");
         }
         
@@ -104,11 +104,11 @@ public class EmailDocumentParser {
         StringBuilder result = new StringBuilder();
         NodeList children = parent.getChildNodes();
         
-        for (int i = 0; i < children.getLength(); i++) {
+        for(int i = 0; i < children.getLength(); i++) {
             Node child = children.item(i);
-            if (child.getNodeType() == Node.ELEMENT_NODE) {
+            if(child.getNodeType() == Node.ELEMENT_NODE) {
                 result.append(renderElement((Element) child, context));
-            } else if (child.getNodeType() == Node.TEXT_NODE) {
+            } else if(child.getNodeType() == Node.TEXT_NODE) {
                 result.append(renderTextContent(child.getTextContent(), context));
             }
         }
@@ -117,9 +117,9 @@ public class EmailDocumentParser {
     }
     
     public String renderTextContent(String text, Map<String, Object> context) {
-        if (text == null || text.trim().isEmpty()) return "";
+        if(text == null || text.trim().isEmpty()) return "";
         String result = text;
-        for (Map.Entry<String, Object> entry : context.entrySet()) {
+        for(Map.Entry<String, Object> entry : context.entrySet()) {
             String placeholder = "{{" + entry.getKey() + "}}";
             String value = entry.getValue() != null ? entry.getValue().toString() : "";
             result = result.replace(placeholder, value);

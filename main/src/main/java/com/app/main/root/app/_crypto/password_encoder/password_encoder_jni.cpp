@@ -89,8 +89,8 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
         encodedPasswordStr = env->GetStringUTFChars(encodedPassword, NULL);
         
         if(!passwordStr || !encodedPasswordStr) {
-            if (passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
-            if (encodedPasswordStr) env->ReleaseStringUTFChars(encodedPassword, encodedPasswordStr);
+            if(passwordStr) env->ReleaseStringUTFChars(password, passwordStr);
+            if(encodedPasswordStr) env->ReleaseStringUTFChars(encodedPassword, encodedPasswordStr);
             return JNI_FALSE;
         }
         

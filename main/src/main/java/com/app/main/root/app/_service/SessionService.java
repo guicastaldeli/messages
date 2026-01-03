@@ -497,7 +497,7 @@ public class SessionService {
             URI uri = new URI(url);
             String host = uri.getHost();
 
-            if (host.equals("localhost") || host.equals("127.0.0.1")) {
+            if(host.equals("localhost") || host.equals("127.0.0.1")) {
                 return "localhost";
             }
             return host;
