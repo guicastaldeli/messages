@@ -143,7 +143,6 @@ public class ChatService {
         int page, 
         int pageSize
     ) throws SQLException {
-        // ✅ CRITICAL FIX: Validate user has access to this chat
         if(!userHasAccessToChat(userId, chatId)) {
             throw new SecurityException("User " + userId + " does not have access to chat " + chatId);
         }
