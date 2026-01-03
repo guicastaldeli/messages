@@ -1,61 +1,66 @@
-import React, { useState, useEffect, Component } from 'react';
+import React, { Component } from 'react';
 import { DirectManager } from './direct-manager';
 import { ChatController } from '../../chat-controller';
 
 interface Props {
     chatController: ChatController;
     directManager: DirectManager;
-    onBack?: () => void;
+    onClose?: () => void;
+    chatId?: string;
+    participantName?: string;
 }
 
 interface State {
     isActive: boolean;
-    currentChat: any;
 }
 
 export class DirectLayout extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
-            isActive: false,
-            currentChat: null
+            isActive: false
         }
     }
 
     componentDidMount(): void {
-        window.addEventListener('direct-activated', this.handleChatActivated as EventListener);
+        console.log("DIRECT LAYOUT------ chatId:", this.props.chatId);
+        
+        if(this.props.chatId && this.props.directManager) {
+            this.setState({ isActive: true });
+            this.props.directManager.setCurrentChat(this.props.chatId);
+        }
     }
 
-    componentWillUnmount(): void {
-        window.removeEventListener('direct-activated', this.handleChatActivated as EventListener);
-    }
-
-    /*
-    ** Chat Activated
-    */
-    private handleChatActivated = (e: CustomEvent): void => {
-        this.setState({
-            currentChat: e.detail,
-            isActive: true
-        });
+    componentDidUpdate(prevProps: Props): void {
+        if(prevProps.chatId !== this.props.chatId || 
+            prevProps.directManager !== this.props.directManager) {
+            if(this.props.chatId && this.props.directManager) {
+                this.setState({ isActive: true });
+                this.props.directManager.setCurrentChat(this.props.chatId);
+            } else {
+                this.setState({ isActive: false });
+            }
+        }
     }
 
     /*
     ** Back
     */
     private handleBack = (): void => {
-        if(this.props.onBack) this.props.onBack();
+        if(this.props.onClose) this.props.onClose();
     }
 
     render() {
-        const { isActive, currentChat } = this.state;
-        if(!isActive || !currentChat) return null;
+        const { isActive } = this.state;
+        const { participantName } = this.props;
+        
+        if(!isActive) return null;
 
         return (
             <div className="screen chat-screen">
                 <div className="header">
                     <div id="participant-name">
-                        {currentChat.participant?.username || 'Unknown User'}
+                        {participantName || 'Unknown User'}
                     </div>
                     <button onClick={this.handleBack} id="exit-chat">
                         Back

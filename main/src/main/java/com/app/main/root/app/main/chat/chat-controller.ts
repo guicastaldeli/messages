@@ -115,16 +115,22 @@ export class ChatController {
         chatId?: string, 
         handlerType?: ChatType
     ): Promise<void> {
-        if(this.currentHandler && this.chatRegistry.getCurrentChat()) {
-            const currentChatId = this.chatRegistry.getCurrentChat()!.id;
-            const currentPattern = this.currentHandler.getSubscriptionPattern(currentChatId);
+        const targetHandler = this.getHandlerByType(handlerType!);
+        const targetPattern = targetHandler.getSubscriptionPattern(chatId || 'default');
+        
+        const currentChat = this.chatRegistry.getCurrentChat();
+        const currentPattern = this.currentHandler?.getSubscriptionPattern(currentChat?.id || 'default') || '';
+        if(this.currentHandler && currentPattern && currentPattern === targetPattern) {
+            return;
+        }
+        if(this.currentHandler && currentPattern && currentPattern !== targetPattern) {
             await this.queueManager.unsubscribe(currentPattern);
         }
-
-        this.currentHandler = this.getHandlerByType(handlerType!);
-        const pattern = this.currentHandler.getSubscriptionPattern(chatId || 'default');
-        await this.queueManager.subscribe(pattern, this.handleChatMessage.bind(this));
+        
+        this.currentHandler = targetHandler;
+        await this.queueManager.subscribe(targetPattern, this.handleChatMessage.bind(this));
     }
+
 
     public setUsername(username: string): void {
         this.username = username;
@@ -264,9 +270,13 @@ export class ChatController {
                 this.loadHistory(chatId, userIdToUse);
                 await this.chunkRenderer.setupScrollHandler(userIdToUse);
             } else {
-                console.error('Cannot load history: userId is undefined');
                 const sessionData = SessionManager?.getUserInfo?.();
                 if(sessionData?.userId) {
+                    const container = await this.getContainer();
+                    if(!container) {
+                        console.error('Container not found after waiting');
+                        return;
+                    }
                     this.loadHistory(chatId, sessionData.userId);
                     await this.chunkRenderer.setupScrollHandler(sessionData.userId);
                 }

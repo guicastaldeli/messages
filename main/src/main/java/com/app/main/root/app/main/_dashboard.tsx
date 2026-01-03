@@ -10,6 +10,7 @@ import { ContactServiceClient } from "./contact/contact-service-client";
 import { ContactLayout } from "./contact/contact-layout";
 import { SessionManager } from "./_session/session-manager";
 import { Main } from "./_main";
+import { DirectLayout } from "./chat/type/direct/direct-layout";
 
 interface Props {
     chatController: ChatController;
@@ -40,6 +41,7 @@ interface State {
 export class Dashboard extends Component<Props, State> {
     public contactService: ContactServiceClient | null = null;
     private chatContainerRef: React.RefObject<HTMLDivElement | null>;
+    private directContainerRef: React.RefObject<HTMLDivElement | null>;
     private groupContainerRef: React.RefObject<HTMLDivElement | null>;
 
     constructor(props: Props) {
@@ -59,6 +61,7 @@ export class Dashboard extends Component<Props, State> {
             expectedChatCount: 0
         }
         this.chatContainerRef = React.createRef();
+        this.directContainerRef = React.createRef();
         this.groupContainerRef = React.createRef();
     }
 
@@ -159,37 +162,42 @@ export class Dashboard extends Component<Props, State> {
 
         const sessionData = SessionManager.getUserInfo();
         const userId = sessionData?.userId;
-        if(userId) {
-            this.setState({ userId });
+
+        const savedActiveChat = localStorage.getItem('active-chat');
+        if(savedActiveChat) {
             try {
-                await this.props.main.loadData(this.state.userId!);
-
-                this.contactService = new ContactServiceClient({
-                    socketClient: this.props.chatController.socketClient,
-                    chatController: this.props.chatController,
-                    userId: this.props.chatController.userId,
-                    username: this.props.chatController.username
-                });
-                this.contactService.setupEventListeners();
-
-                await this.handleChatStreamComplete();
-                await this.checkChatsCompleted();
-            
-                this.setState({
-                    contactService: this.contactService,
-                    contactsLoaded: true,
-                    chatsLoaded: true,
+                const activeChat = JSON.parse(savedActiveChat);
+                console.log('Restored active chat from storage:', activeChat);
+                this.setState({ 
+                    activeChat,
                     isLoading: false
                 });
             } catch(err) {
-                console.error('Error loading chat list', err);
-                this.setState({
-                    contactsLoaded: false,
-                    chatsLoaded: false,
-                    chatStreamComplete: false,
-                    isLoading: false 
-                });
+                console.error('Failed to parse saved active chat:', err);
             }
+        }
+
+        if(this.props.chatManager) {
+            this.props.chatManager.setDashboard(this);
+            this.props.chatManager.setUpdateCallback((updatedList) => { 
+                this.setState({ chatList: updatedList }) 
+            });
+            if(this.directContainerRef.current && this.props.chatManager.getDirectManager()) {
+                this.props.chatManager.getDirectManager().container = this.directContainerRef.current;
+            }
+            if(this.groupContainerRef.current && this.props.chatManager.getGroupManager()) {
+                this.props.chatManager.getGroupManager().container = this.groupContainerRef.current;
+            }
+            if(this.state.activeChat) {
+                setTimeout(() => {
+                    this.handleChatSelect(this.state.activeChat);
+                }, 100);
+            }
+        }
+
+        if(userId) {
+            this.setState({ userId });
+            await this.loadData();
         } else {
             this.setState({
                 contactsLoaded: false,
@@ -197,14 +205,6 @@ export class Dashboard extends Component<Props, State> {
                 chatStreamComplete: false,
                 isLoading: false 
             });
-        }
-
-        if(!this.groupContainerRef.current || !this.props.chatManager) return;
-        this.props.chatManager.setDashboard(this);
-        this.props.chatManager.setContainer(this.groupContainerRef.current);
-        this.props.chatManager.setUpdateCallback((updatedList) => { this.setState({ chatList: updatedList }) });
-        if(this.chatContainerRef.current && this.props.chatManager.getGroupManager()) {
-            this.props.chatManager.getGroupManager().container = this.chatContainerRef.current;
         }
 
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
@@ -239,57 +239,103 @@ export class Dashboard extends Component<Props, State> {
         }
     }
 
+    private async loadData(): Promise<void> {
+        try {
+            await this.props.main.loadData(this.state.userId!);
+
+            this.contactService = new ContactServiceClient({
+                socketClient: this.props.chatController.socketClient,
+                chatController: this.props.chatController,
+                userId: this.props.chatController.userId,
+                username: this.props.chatController.username
+            });
+            this.contactService.setupEventListeners();
+
+            await this.handleChatStreamComplete();
+            await this.checkChatsCompleted();
+            
+            this.setState({
+                contactService: this.contactService,
+                contactsLoaded: true,
+                chatsLoaded: true,
+                isLoading: false
+            });
+        } catch(err) {
+            console.error('Error loading chat list', err);
+            this.setState({
+                contactsLoaded: false,
+                chatsLoaded: false,
+                chatStreamComplete: false,
+                isLoading: false 
+            });
+        }
+    }
+
     private setSession = (session: SessionType): void => {
         this.setState({ currentSession: session });
     }
 
-    handleChatSelect = async (chat: any): Promise<void> => {
-        const chatType = chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP'
+    private handleChatSelect = async (chat: any): Promise<void> => {
+        const chatType = chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP';
         const chatId = chat.id || chat.chatId;
+        if(this.state.activeChat && this.state.activeChat.id === chatId) {
+            return;
+        }
+        
         chatState.setType(chatType);
         
         try {
-            this.updateState({
-                showCreationForm: false,
-                showJoinForm: false,
-                showGroup: true,
-                hideGroup: false,
-                groupName: chat.name
+            const activeChatData = {
+                ...chat,
+                id: chatId,
+                name: chat.name || chat.contactUsername || 'Chat',
+                type: chatType
+            };
+            
+            this.setState({ activeChat: null }, () => {
+                this.setState({ activeChat: activeChatData }, () => {
+                    localStorage.setItem('active-chat', JSON.stringify(activeChatData));
+                    
+                    this.updateState({
+                        showCreationForm: false,
+                        showJoinForm: false,
+                        showGroup: chatType === 'GROUP',
+                        hideGroup: false,
+                        groupName: chat.name || chat.contactUsername || 'Chat'
+                    });
+
+                    if(chatType === 'GROUP') {
+                        if(this.props.chatManager.getGroupManager()) {
+                            this.props.chatManager.getGroupManager().container = this.groupContainerRef.current!;
+                        }
+                    } else if (chatType === 'DIRECT') {
+                        if(this.props.chatManager.getDirectManager()) {
+                            this.props.chatManager.getDirectManager().container = this.directContainerRef.current!;
+                        }
+                    }
+
+                    this.props.chatController.setCurrentChat(
+                        chatId,
+                        chatType,
+                        chat.members || []
+                    );
+
+                    const event = new CustomEvent('chat-activated', {
+                        detail: {
+                            chat: activeChatData,
+                            shouldRender: true
+                        }
+                    });
+                    window.dispatchEvent(event);
+                });
             });
-            await this.props.chatController.setCurrentChat(
-                chatId,
-                chatType,
-                chat.members || []
-            );
-            if(this.chatContainerRef.current && this.props.chatManager.getGroupManager()) {
-                this.props.chatManager.getGroupManager().container = this.chatContainerRef.current;
-            }
-            this.setState({
-                activeChat: { 
-                    ...chat,
-                    id: chatId,
-                    name: chat.name || chat.contactUsername || 'Chat',
-                    type: chatType
-                }
-            });
-            const event = new CustomEvent('chat-activated', {
-                detail: {
-                    chat: {
-                        ...chat,
-                        id: chatId,
-                        type: chatType,
-                        name: chat.name || chat.contactUsername || 'Chat'
-                    },
-                    shouldRender: true
-                }
-            });
-            window.dispatchEvent(event);
         } catch(err) {
             console.error('Error loading chat history:', err);
         }
     }
 
     private handleCloseGroupLayout = (): void => {
+        localStorage.removeItem('active-chat');
         this.setState({
             activeChat: null
         });
@@ -382,12 +428,16 @@ export class Dashboard extends Component<Props, State> {
     render() {
         const sessionData = SessionManager.getUserInfo();
         const userId = sessionData?.userId;
-        const { chatList, activeChat } = this.props;
+        const { chatList } = this.props;
+        const { activeChat } = this.state;
         const { chatController, chatManager } = this.props
 
         if(!userId) {
             return <div>Loading user data...</div>;
         }
+        
+        console.log('Dashboard render - activeChat:', activeChat);
+        console.log('Dashboard render - activeChat type:', activeChat?.type);
         
         const loadingOverlay = (this.state.isLoading || !this.isLoaded()) ? (
             <div className="dashboard-loading-overlay">
@@ -446,17 +496,30 @@ export class Dashboard extends Component<Props, State> {
                                 </div>
                             )}
 
-                            <div className="group-container" ref={this.groupContainerRef}></div>
+                            <div className="direct-container" ref={this.directContainerRef} />
+                            <div className="group-container" ref={this.groupContainerRef} />
                             <div className="chat-container" ref={this.chatContainerRef}>
-                                {activeChat && (
-                                    <GroupLayout
-                                        chatController={chatController}
-                                        groupManager={chatManager.getGroupManager()}
-                                        groupId={activeChat.id}
-                                        groupName={activeChat.name}
-                                        onClose={this.handleCloseGroupLayout}
-                                        mode="chat"
-                                    />
+                                {activeChat && chatManager && (
+                                    activeChat.type === 'DIRECT' && chatManager.getDirectManager() ? (
+                                        <DirectLayout
+                                            chatController={chatController}
+                                            directManager={chatManager.getDirectManager()}
+                                            onClose={this.handleCloseGroupLayout}
+                                            chatId={activeChat.id}
+                                            participantName={activeChat.name}
+                                             key={`direct-${activeChat.id}`}
+                                        />
+                                    ) : activeChat.type === 'GROUP' && chatManager.getGroupManager() ? (
+                                        <GroupLayout
+                                            chatController={chatController}
+                                            groupManager={chatManager.getGroupManager()}
+                                            groupId={activeChat.id}
+                                            groupName={activeChat.name}
+                                            onClose={this.handleCloseGroupLayout}
+                                            mode="chat"
+                                            key={`group-${activeChat.id}`}
+                                        />
+                                    ) : null
                                 )}
                             </div>
 

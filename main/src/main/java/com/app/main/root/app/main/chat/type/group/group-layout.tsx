@@ -66,6 +66,7 @@ export class GroupLayout extends Component<Props, State> {
     }
 
     componentDidMount(): void {
+        console.log("GROUP LAYOUT----------")
         this.groupManager.dashboard?.setStateChange((state: any) => {
             this.setState({ managerState: state });
         });
@@ -77,15 +78,16 @@ export class GroupLayout extends Component<Props, State> {
             this.loadMessages(this.props.groupId);
         }
     }
+
     componentDidUpdate(prevProps: Props): void {
-        if(
-            this.props.mode === 'chat' &&
+        if(this.props.mode === 'chat' &&
             this.props.groupId !== prevProps.groupId &&
             this.props.groupId
         ) {
             this.loadMessages(this.props.groupId);
         }
     }
+
     componentWillUnmount(): void {
         window.removeEventListener('group-creation-complete', this.handleGroupActivation as EventListener);
         window.removeEventListener('group-activated', this.handleGroupActivation as EventListener);
