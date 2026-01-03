@@ -44,6 +44,8 @@ export class Dashboard extends Component<Props, State> {
     private directContainerRef: React.RefObject<HTMLDivElement | null>;
     private groupContainerRef: React.RefObject<HTMLDivElement | null>;
 
+    private removedChatIds = new Set<string>();
+
     constructor(props: Props) {
         super(props);
         this.state = {
@@ -143,7 +145,11 @@ export class Dashboard extends Component<Props, State> {
      */
     private handleChatListUpdated = (event: CustomEvent): void => {
         const { chatList } = event.detail;
-        this.setState({ chatList });
+
+        const filteredChatList = chatList.filter((chat: any) =>
+            !this.removedChatIds.has(chat.id) && !this.removedChatIds.has(chat.groupId)
+        );
+        this.setState({ chatList: filteredChatList });
         
         if(this.state.chatStreamComplete && 
            this.state.expectedChatCount > 0 && 
@@ -180,7 +186,11 @@ export class Dashboard extends Component<Props, State> {
         if(this.props.chatManager) {
             this.props.chatManager.setDashboard(this);
             this.props.chatManager.setUpdateCallback((updatedList) => { 
-                this.setState({ chatList: updatedList }) 
+                const filteredList = updatedList.filter((chat: any) => 
+                    !this.removedChatIds.has(chat.id) &&
+                    !this.removedChatIds.has(chat.groupId)
+                );
+                this.setState({ chatList: filteredList }); 
             });
             if(this.directContainerRef.current && this.props.chatManager.getDirectManager()) {
                 this.props.chatManager.getDirectManager().container = this.directContainerRef.current;
@@ -207,6 +217,8 @@ export class Dashboard extends Component<Props, State> {
             });
         }
 
+        window.removeEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
+        window.removeEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.addEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
     }
@@ -227,9 +239,6 @@ export class Dashboard extends Component<Props, State> {
         }
 
         let stateUpdates: Partial<State> = {};
-        if(prevProps.chatList !== this.props.chatList) {
-            stateUpdates.chatList = this.props.chatList || [];
-        }
         if(prevProps.activeChat !== this.props.activeChat) {
             stateUpdates.activeChat = this.props.activeChat || null;
         }
@@ -343,6 +352,9 @@ export class Dashboard extends Component<Props, State> {
         this.props.chatController.setCurrentChat(null, null, []);
     }
 
+    /**
+     * Remove Chat Item
+     */
     private handleChatItemRemoved = (event: CustomEvent): void => {
         const { id, groupId, reason } = event.detail;
         if(reason !== 'group-exit') return;
@@ -350,33 +362,27 @@ export class Dashboard extends Component<Props, State> {
         const removedId = id || groupId;
         if(!removedId) return;
 
-        const itemExists = this.state.chatList.some((chat: any) =>
-            chat.id === removedId || chat.groupId === removedId
+        this.removedChatIds.add(removedId);
+        const updatedChatList = this.state.chatList.filter((chat: any) => 
+            chat.id !== removedId && chat.groupId !== removedId
         );
-        if(!itemExists) return;
-
+        
+        this.setState({ 
+            chatList: updatedChatList 
+        });
         if(this.props.onChatListUpdate) {
-            const updatedList = this.props.chatList.filter(chat =>
-                chat.id !== removedId && chat.groupId !== removedId
-            );
-            this.props.onChatListUpdate(updatedList);
+            this.props.onChatListUpdate(updatedChatList);
         }
 
-        this.setState(prevState => ({
-            chatList: prevState.chatList.filter((chat: any) => {
-                const shouldKeep = chat.id !== removedId && chat.groupId != removedId;
-                return shouldKeep;
-            })
-        }));
-        this.setState(prevState => {
-            if (prevState.activeChat && 
-                (prevState.activeChat.id === removedId ||
-                prevState.activeChat.groupId === removedId)
-            ) {
-                return { activeChat: null };
-            }
-            return null;
-        });
+        if(this.state.activeChat && 
+            (this.state.activeChat.id === removedId ||
+            this.state.activeChat.groupId === removedId)
+        ) {
+            console.log('Clearing active chat');
+            this.setState({ activeChat: null });
+            localStorage.removeItem('active-chat');
+        }
+
         this.updateState({
             showGroup: false,
             groupName: ''
@@ -426,7 +432,7 @@ export class Dashboard extends Component<Props, State> {
     render() {
         const sessionData = SessionManager.getUserInfo();
         const userId = sessionData?.userId;
-        const { chatList } = this.props;
+        const { chatList } = this.state;
         const { activeChat } = this.state;
         const { chatController, chatManager } = this.props
 
@@ -434,8 +440,9 @@ export class Dashboard extends Component<Props, State> {
             return <div>Loading user data...</div>;
         }
         
-        console.log('Dashboard render - activeChat:', activeChat);
-        console.log('Dashboard render - activeChat type:', activeChat?.type);
+       console.log('Dashboard render - activeChat:', activeChat);
+    console.log('Dashboard render - activeChat type:', activeChat?.type);
+    console.log('Dashboard render - chatList length:', chatList.length);
         
         const loadingOverlay = (this.state.isLoading || !this.isLoaded()) ? (
             <div className="dashboard-loading-overlay">
@@ -527,7 +534,7 @@ export class Dashboard extends Component<Props, State> {
                                         <p>No chats.</p>
                                     ) : (
                                         <ul>
-                                            {chatList.map((chat, i) => (
+                                            {chatList.map((chat: any, i: any) => (
                                                 <li
                                                     key={chat.id || `${chat.type}_${i}`}
                                                     className={`chat-item${

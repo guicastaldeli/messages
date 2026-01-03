@@ -489,43 +489,45 @@ export class GroupManager {
      * 
      */
     private async handleGroupExitScss(data: any): Promise<void> {
-        const exitedGroupId = data.id;
-        if(this.currentGroupId === exitedGroupId) {
-            this.currentGroupId = '';
-            this.currentGroupName = '';
-        }
-
-        if(this.dashboard) {
-            this.dashboard.updateState({
-                showCreationForm: false,
-                showJoinForm: false,
-                showGroup: false,
-                hideGroup: true,
-                groupName: ''
-            });
-        }
-
-        const removeEvent = new CustomEvent('chat-item-removed', {
-            detail: {
-                id: exitedGroupId,
-                groupId: exitedGroupId,
-                reason: 'group-exit'
-            }
-        });
-        window.dispatchEvent(removeEvent);
-        console.log(removeEvent)
-
-        const exitEvent = new CustomEvent('group-exit-complete', { detail: data });
-        window.dispatchEvent(exitEvent);
-
-        if(this.root) {
-            this.root.unmount();
-            this.root = null;
-        }
-        if(this.onExitSuccess) {
-            this.onExitSuccess(data);
-        }
+    const exitedGroupId = data.id;
+    console.log('handleGroupExitScss called for group:', exitedGroupId);
+    
+    if(this.currentGroupId === exitedGroupId) {
+        this.currentGroupId = '';
+        this.currentGroupName = '';
     }
+
+    if(this.dashboard) {
+        this.dashboard.updateState({
+            showCreationForm: false,
+            showJoinForm: false,
+            showGroup: false,
+            hideGroup: true,
+            groupName: ''
+        });
+    }
+
+    const removeEvent = new CustomEvent('chat-item-removed', {
+        detail: {
+            id: exitedGroupId,
+            groupId: exitedGroupId,
+            reason: 'group-exit'
+        }
+    });
+    console.log('Dispatching chat-item-removed event');
+    window.dispatchEvent(removeEvent);
+
+    const exitEvent = new CustomEvent('group-exit-complete', { detail: data });
+    window.dispatchEvent(exitEvent);
+
+    if(this.root) {
+        this.root.unmount();
+        this.root = null;
+    }
+    if(this.onExitSuccess) {
+        this.onExitSuccess(data);
+    }
+}
 
     /* Exit Method */
     public async exitGroup(groupId?: string): Promise<any> {
