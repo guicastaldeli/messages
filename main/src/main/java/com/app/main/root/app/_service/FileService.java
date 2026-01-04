@@ -1,6 +1,7 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DbManager;
+import com.app.main.root.app._types.File;
 import com.app.main.root.app.file_compressor.WrapperFileCompressor;
 import com.app.main.root.app._cache.CacheService;
 import com.app.main.root.app._crypto.file_encoder.FileEncoderWrapper;
@@ -65,7 +66,7 @@ public class FileService {
     /**
      * Get Files By Chat Id
      */
-    public Map<String, Object> getFilesByChatId(
+    public List<File> getFilesByChatId(
         String userId, 
         String chatId, 
         int page, 
@@ -74,7 +75,7 @@ public class FileService {
         return listFiles(userId, chatId, page, pageSize);
     }
     
-    public Map<String, Object> getFilesByChatId(String chatId, int page) {
+    public List<File> getFilesByChatId(String chatId, int page) {
         String defaultUserId = "unknown";
         int defaultPageSize = 20;
         return listFiles(defaultUserId, chatId, page, defaultPageSize);
@@ -83,7 +84,7 @@ public class FileService {
     /**
      * List Files
      */
-    public Map<String, Object> listFiles(
+    public List<File> listFiles(
         String userId,
         String chatId,
         int page,
@@ -98,14 +99,7 @@ public class FileService {
                     page
                 );
         if(cachedFiles != null) {
-            return createRes(
-                cachedFiles,
-                page,
-                pageSize,
-                userId,
-                chatId,
-                true
-            );
+            return convertToFileList(cachedFiles);
         }
 
         JdbcTemplate metadataTemplate = jdbcTemplates.get(METADATA_DB);
@@ -129,14 +123,7 @@ public class FileService {
             files
         );
 
-        return createRes(
-            files,
-            page,
-            pageSize,
-            userId,
-            chatId,
-            false
-        );
+        return convertToFileList(files);
     }
 
     /**
@@ -379,5 +366,95 @@ public class FileService {
             lowerMime.contains("html") ||
             lowerMime.contains("css") ||
             lowerMime.contains("javascript");
+    }
+
+    /**
+     * Get Encrypted File Content
+     */
+    public byte[] getEncryptedFileContent(String fileId, String userId) {
+        try {
+            String dbName = findFileDatabase(userId, null, fileId);
+            if(dbName == null) {
+                System.err.println("Could not find database for file: " + fileId);
+                return null;
+            }
+
+            JdbcTemplate dbTemplate = jdbcTemplates.get(dbName);
+            if(dbTemplate == null) {
+                System.err.println("Database template not found: " + dbName);
+                return null;
+            }
+
+            String query = String.format(
+                CommandQueryManager.GET_ENCRYPTED_FILE_CONTENT.get(),
+                dbName
+            );
+            try {
+                byte[] encryptedContent = dbTemplate.queryForObject(
+                    query,
+                    byte[].class,
+                    fileId
+                );
+                
+                return encryptedContent;
+            } catch (Exception err) {
+                System.err.println("Error retrieving encrypted content for file " + fileId + ": " + err.getMessage());
+                return null;
+            }
+        } catch (Exception err) {
+            System.err.println("Error in getEncryptedFileContent for file " + fileId + ": " + err.getMessage());
+            err.printStackTrace();
+            return null;
+        }
+    }
+
+    private List<File> convertToFileList(List<Map<String, Object>> rows) {
+        List<File> files = new ArrayList<>();
+        for(Map<String, Object> row : rows) {
+            File file = new File();
+            
+            Object fileSizeObj = row.get("file_size");
+            Long fileSize = null;
+            if(fileSizeObj != null) {
+                if(fileSizeObj instanceof Integer) {
+                    fileSize = ((Integer) fileSizeObj).longValue();
+                } else if(fileSizeObj instanceof Long) {
+                    fileSize = (Long) fileSizeObj;
+                }
+            }
+            
+            Object uploadedAtObj = row.get("uploaded_at");
+            Long uploadedAt = null;
+            if(uploadedAtObj != null) {
+                if(uploadedAtObj instanceof Integer) {
+                    uploadedAt = ((Integer) uploadedAtObj).longValue();
+                } else if(uploadedAtObj instanceof Long) {
+                    uploadedAt = (Long) uploadedAtObj;
+                }
+            }
+            
+            Object lastModifiedObj = row.get("last_modified");
+            Long lastModified = null;
+            if(lastModifiedObj != null) {
+                if(lastModifiedObj instanceof Integer) {
+                    lastModified = ((Integer) lastModifiedObj).longValue();
+                } else if(lastModifiedObj instanceof Long) {
+                    lastModified = (Long) lastModifiedObj;
+                }
+            }
+            
+            file.setFileId((String) row.get("file_id"));
+            file.setSenderId((String) row.get("sender_id"));
+            file.setOriginalFileName((String) row.get("original_filename"));
+            file.setFileSize(fileSize);
+            file.setMimeType((String) row.get("mime_type"));
+            file.setFileType((String) row.get("file_type"));
+            file.setChatId((String) row.get("chat_id"));
+            file.setUploadedAt(uploadedAt);
+            file.setLastModified(lastModified);
+            
+            files.add(file);
+        }
+        return files;
     }
 }

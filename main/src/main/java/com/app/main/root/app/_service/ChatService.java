@@ -1,5 +1,6 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._crypto.message_encoder.ChatDecryptionService;
+import com.app.main.root.app._types.File;
 import com.app.main.root.app._types.Message;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -150,7 +151,6 @@ public class ChatService {
         
         try {
             List<Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
-            
             if(messages != null) {
                 List<Message> validatedMessages = new ArrayList<>();
                 for(Message msg : messages) {
@@ -167,31 +167,16 @@ public class ChatService {
                 chatData.put("messages", new ArrayList<>());
             }
             
-            Map<String, Object> filesResult = serviceManager.getFileService().getFilesByChatId(userId, chatId, page, pageSize);
-            List<Map<String, Object>> files = new ArrayList<>();
-            if(filesResult != null && filesResult.get("files") != null) {
-                files = (List<Map<String, Object>>) filesResult.get("files");
-                
-                List<Map<String, Object>> validatedFiles = new ArrayList<>();
-                for(Map<String, Object> file : files) {
-                    String fileChatId = (String) file.get("chat_id");
-                    if(chatId.equals(fileChatId)) {
-                        Map<String, Object> convertedFile = new HashMap<>();
-                        convertedFile.put("fileId", file.get("file_id"));
-                        timelineItem.put("senderId", file.getSenderId());
-                        convertedFile.put("originalFileName", file.get("original_filename"));
-                        convertedFile.put("fileSize", file.get("file_size"));
-                        convertedFile.put("mimeType", file.get("mime_type"));
-                        convertedFile.put("fileType", file.get("file_type"));
-                        convertedFile.put("chatId", file.get("chat_id"));
-                        convertedFile.put("uploadedAt", file.get("uploaded_at"));
-                        convertedFile.put("lastModified", file.get("last_modified"));
-                        
-                        validatedFiles.add(convertedFile);
+            List<File> files = serviceManager.getFileService().getFilesByChatId(userId, chatId, page, pageSize);
+            if(files != null) {
+                List<File> validatedFiles = new ArrayList<>();
+                for(File file : files) {
+                    if(chatId.equals(file.getChatId())) {
+                        validatedFiles.add(file);
                     } else {
-                        System.err.println("WARNING: File " + file.get("file_id") + 
+                        System.err.println("WARNING: File " + file.getFileId() + 
                             " returned for chat " + chatId + 
-                            " but belongs to chat " + fileChatId);
+                            " but belongs to chat " + file.getChatId());
                     }
                 }
                 files = validatedFiles;
@@ -232,20 +217,20 @@ public class ChatService {
                     }
                 }
             }
-            for(Map<String, Object> file : files) {
+            for(File file : files) {
                 Map<String, Object> timelineItem = new HashMap<>();
                 timelineItem.put("type", "file");
-                timelineItem.put("id", "file_" + file.get("fileId"));
-                timelineItem.put("messageId", "file_" + file.get("fileId"));
+                timelineItem.put("id", "file_" + file.getFileId());
+                timelineItem.put("senderId", file.getSenderId());
+                timelineItem.put("messageId", "file_" + file.getFileId());
                 timelineItem.put("fileData", file);
-                timelineItem.put("content", "Shared file: " + file.get("originalFileName"));
-                timelineItem.put("chatId", file.get("chatId"));
+                timelineItem.put("content", "Shared file: " + file.getOriginalFileName());
+                timelineItem.put("chatId", file.getChatId());
                 timelineItem.put("userId", userId);
-                
-                Object uploadedAt = file.get("uploadedAt");
+
+                Object uploadedAt = file.getUploadedAt();
                 long timestamp;
-                String createdAtStr;
-                
+                String createdAtStr;                
                 if(uploadedAt instanceof Timestamp) {
                     Timestamp ts = (Timestamp) uploadedAt;
                     timestamp = ts.getTime();

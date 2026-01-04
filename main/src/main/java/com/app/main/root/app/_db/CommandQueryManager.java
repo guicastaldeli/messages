@@ -429,6 +429,11 @@ public enum CommandQueryManager {
             WHERE file_id = ? AND user_id = ? AND is_deleted = FALSE     
         """
     ),
+    GET_ENCRYPTED_FILE_CONTENT(
+        """
+            SELECT content FROM %s WHERE file_id = ?
+        """
+    ),
 
     /*
     * ~~~ IMAGE DATA ~~~ 

@@ -2,6 +2,7 @@ package com.app.main.root.app.__controllers;
 import com.app.main.root.app._cache.CacheService;
 import com.app.main.root.app._data.FileUploader;
 import com.app.main.root.app._service.ServiceManager;
+import com.app.main.root.app._types.File;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.context.annotation.Lazy;
@@ -162,18 +163,41 @@ public class FileController {
                 ));
             }
 
-            Map<String, Object> res = serviceManager.getFileService()
+            List<File> files = serviceManager.getFileService()
                 .listFiles(
                     userId, 
                     chatId, 
                     page, 
                     pageSize
                 );
-            List<Map<String, Object>> files = (List<Map<String, Object>>) res.get("files");
+            
+            List<Map<String, Object>> fileMaps = new ArrayList<>();
+            for(File file : files) {
+                Map<String, Object> fileMap = new HashMap<>();
+                fileMap.put("fileId", file.getFileId());
+                fileMap.put("senderId", file.getSenderId());
+                fileMap.put("originalFileName", file.getOriginalFileName());
+                fileMap.put("fileSize", file.getFileSize());
+                fileMap.put("mimeType", file.getMimeType());
+                fileMap.put("fileType", file.getFileType());
+                fileMap.put("chatId", file.getChatId());
+                fileMap.put("uploadedAt", file.getUploadedAt());
+                fileMap.put("lastModified", file.getLastModified());
+                fileMaps.add(fileMap);
+            }
+            
+            int totalFiles = serviceManager.getFileService().countTotalFiles(userId, chatId);
+            Map<String, Object> pagination = new HashMap<>();
+            pagination.put("currentPage", page);
+            pagination.put("pageSize", pageSize);
+            pagination.put("totalFiles", totalFiles);
+            pagination.put("totalPages", (int) Math.ceil((double) totalFiles / pageSize));
+            pagination.put("hasMore", (page + 1) * pageSize < totalFiles);
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", files != null ? files : new ArrayList<>(),
-                "pagination", res.get("pagination")
+                "data", fileMaps,
+                "pagination", pagination
             ));
         } catch(Exception err) {
             err.printStackTrace();

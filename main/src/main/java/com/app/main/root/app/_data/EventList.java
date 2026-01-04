@@ -8,6 +8,7 @@ import com.app.main.root.app._crypto.file_encoder.KeyManagerService;
 import com.app.main.root.app._crypto.message_encoder.SecureMessageService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.ConnectionTracker;
+import com.app.main.root.app._types.File;
 import com.app.main.root.app._types.Message;
 import com.app.main.root.app._types.User;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
@@ -17,7 +18,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import java.time.format.DateTimeFormatter;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -401,14 +401,17 @@ public class EventList {
                     }
                     /* Files */
                     if(includeFiles) {
-                        Map<String, Object> filesRes = 
+                        List<File> files = 
                             serviceManager
-                            .getFileService()
-                            .getFilesByChatId(userId, chatId, page, pageSize);
-                        List<Map<String, Object>> files = (List<Map<String, Object>>) filesRes.get("files");
-                        if(files == null) files = new ArrayList<>();
+                                .getFileService()
+                                .getFilesByChatId(
+                                    userId, 
+                                    chatId, 
+                                    page, 
+                                    pageSize
+                                );
 
-                        for(Map<String, Object> file : files) {
+                        for(File file : files) {
                             Map<String, Object> fileEvent = new HashMap<>();
                             fileEvent.put("type", "FILE_DATA");
                             fileEvent.put("chatId", chatId);
@@ -602,110 +605,73 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
-                    List<Map<String, Object>> files = (List<Map<String, Object>>) data.get("files");
+                    List<Map<String, Object>> fileMaps = (List<Map<String, Object>>) data.get("files");
                     String chatId = (String) data.get("chatId");
                     String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     List<Map<String, Object>> processedFiles = new ArrayList<>();
                     
-                    for(Map<String, Object> file : files) {
+                    for(Map<String, Object> fileMap : fileMaps) {
                         try {
-                            Map<String, Object> processedFile = new HashMap<>(file);
+                            Map<String, Object> processedFile = new HashMap<>(fileMap);
                             
-                            Boolean isDecrypted = (Boolean) file.get("isDecrypted");
-                            String originalFileName = (String) file.get("originalFileName");
+                            Boolean isDecrypted = (Boolean) fileMap.get("isDecrypted");
+                            String originalFileNameFromMap = (String) fileMap.get("originalFileName");
                     
                             if(isDecrypted != null && isDecrypted) {
                                 processedFiles.add(processedFile);
                                 continue;
                             }
-                            if(originalFileName != null && !originalFileName.isEmpty()) {
+                            if(originalFileNameFromMap != null && !originalFileNameFromMap.isEmpty()) {
                                 processedFile.put("isDecrypted", true);
-                                processedFile.put("originalFileName", originalFileName);
+                                processedFile.put("originalFileName", originalFileNameFromMap);
                                 processedFiles.add(processedFile);
                                 continue;
                             }
                             
-                            String fileId = (String) file.get("fileId");
-                            if(fileId == null) fileId = (String) file.get("file_id");
-
-                            String userId = currentUserId;
+                            String fileId = (String) fileMap.get("fileId");
                             if(fileId == null) {
                                 System.err.println("File ID is null!");
                                 processedFiles.add(processedFile);
                                 continue;
                             }
                             
-                            byte[] encryptionKey = keyManagerService.retrieveKey(fileId, userId);
+                            byte[] encryptedBytes = serviceManager.getFileService().getEncryptedFileContent(fileId, currentUserId);
+                            if(encryptedBytes == null || encryptedBytes.length == 0) {
+                                System.err.println("No encrypted content found for file: " + fileId);
+                                processedFile.put("isDecrypted", true);
+                                processedFile.put("decryptionError", "No encrypted content available");
+                                processedFiles.add(processedFile);
+                                continue;
+                            }
+                            
+                            byte[] encryptionKey = keyManagerService.retrieveKey(fileId, currentUserId);
                             if(encryptionKey == null) {
                                 System.err.println("No encryption key found for file: " + fileId);
+                                processedFile.put("decryptionError", "Encryption key not found");
                                 processedFiles.add(processedFile);
                                 continue;
-                            }
-                            
-                            Object encryptedDataObj = file.get("encryptedContent");
-                            if(encryptedDataObj == null) {
-                                encryptedDataObj = file.get("content");
-                            }
-                            if(encryptedDataObj == null) {
-                                System.err.println("No encrypted content found for file: " + fileId);
-                                processedFiles.add(processedFile);
-                                continue;
-                            }
-                            
-                            byte[] encryptedBytes = null;
-                            if(encryptedDataObj instanceof String) {
-                                String base64Data = (String) encryptedDataObj;
-                                encryptedBytes = Base64.getDecoder().decode(base64Data);
-                            } else if(encryptedDataObj instanceof byte[]) {
-                                encryptedBytes = (byte[]) encryptedDataObj;
-                            } else {
-                                throw new IllegalArgumentException("Unsupported encrypted data type for file: " + fileId);
                             }
                             
                             FileEncoderWrapper fileEncoder = new FileEncoderWrapper();
                             try {
                                 fileEncoder.initEncoder(encryptionKey, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
-                                
-                                Object ivObj = file.get("iv");
-                                if(ivObj != null) {
-                                    byte[] iv;
-                                    if(ivObj instanceof String) {
-                                        iv = Base64.getDecoder().decode((String) ivObj);
-                                    } else if(ivObj instanceof byte[]) {
-                                        iv = (byte[]) ivObj;
-                                    } else {
-                                        throw new IllegalArgumentException("Invalid IV format");
-                                    }
-                                    fileEncoder.setIV(iv);
-                                }
-                                
+
                                 byte[] decryptedBytes = fileEncoder.decrypt(encryptedBytes);
-                                if(file.containsKey("isFileContent")) {
-                                    String base64Decrypted = Base64.getEncoder().encodeToString(decryptedBytes);
-                                    processedFile.put("content", base64Decrypted);
-                                } else {
-                                    String decryptedString = new String(decryptedBytes, StandardCharsets.UTF_8);
-                                    processedFile.put("content", decryptedString);
+                                if(decryptedBytes == null) {
+                                    System.err.println("Failed to decrypt file: " + fileId);
+                                    processedFile.put("decryptionError", "Decryption failed");
+                                    processedFiles.add(processedFile);
+                                    continue;
                                 }
+                                
+                                String base64Decrypted = Base64.getEncoder().encodeToString(decryptedBytes);
+                                processedFile.put("content", base64Decrypted);
                                 processedFile.put("isDecrypted", true);
                                 processedFile.put("originalSize", decryptedBytes.length);
                                 
-                                if(file.containsKey("encryptedFileName")) {
-                                    Object encryptedNameObj = file.get("encryptedFileName");
-                                    byte[] encryptedName;
-                                    if(encryptedNameObj instanceof String) {
-                                        encryptedName = Base64.getDecoder().decode((String) encryptedNameObj);
-                                    } else if(encryptedNameObj instanceof byte[]) {
-                                        encryptedName = (byte[]) encryptedNameObj;
-                                    } else {
-                                        throw new IllegalArgumentException("Invalid encrypted filename format");
-                                    }
-                                    
-                                    byte[] decryptedNameBytes = fileEncoder.decrypt(encryptedName);
-                                    String decryptedName = new String(decryptedNameBytes, StandardCharsets.UTF_8);
-                                    processedFile.put("originalFileName", decryptedName);
+                                if(originalFileNameFromMap != null) {
+                                    processedFile.put("originalFileName", originalFileNameFromMap);
                                 }
-                                
                             } finally {
                                 fileEncoder.cleanup();
                             }
@@ -714,8 +680,9 @@ public class EventList {
                         } catch (Exception fileErr) {
                             System.err.println("Error decrypting file: " + fileErr.getMessage());
                             fileErr.printStackTrace();
-                            file.put("decryptionError", fileErr.getMessage());
-                            processedFiles.add(file);
+                            Map<String, Object> errorFile = new HashMap<>(fileMap);
+                            errorFile.put("decryptionError", fileErr.getMessage());
+                            processedFiles.add(errorFile);
                         }
                     }
                     
@@ -1469,5 +1436,13 @@ public class EventList {
         ));   
 
         return configs;
+    }
+
+    private Long convertToLong(Object obj) {
+        if(obj == null) return null;
+        if(obj instanceof Long) return (Long) obj;
+        if(obj instanceof Integer) return ((Integer) obj).longValue();
+        if(obj instanceof Number) return ((Number) obj).longValue();
+        return null;
     }
 }
