@@ -10,7 +10,6 @@ body {
   justify-content: center;
 }
 
-/* Add to your styles.css */
 .file-message {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
@@ -74,12 +73,12 @@ body {
   position: fixed;
   right: 8rem;
   width: 100%;
-  height: 100%;
+  height: 100vh;
   max-width: 500px;
   background-color: #fff;
   border-left: 1px solid #eee;
   border-right: 1px solid #eee;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .app > .screen.active {
@@ -143,11 +142,13 @@ body {
 
 .chat-screen .header {
   background: #776262;
-  height: 50px;
+  height: 60px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0px 0px;
+  padding: 0px 20px;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .chat-screen .header .logo {
@@ -166,13 +167,31 @@ body {
   outline: none;
 }
 
-.chat-screen .messages {
+.chat-screen .typebox {
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  height: calc(100% - 100px);
+  height: 50px;
   display: flex;
-  flex-direction: column;
+  flex-shrink: 0; /* Prevent typebox from shrinking */
+  border-top: 1px solid #eee;
+}
+
+.chat-screen .typebox input {
+  flex: 1;
+  height: 50px;
+  font-size: 18px;
+  border: none;
+  padding: 0 15px;
+}
+
+.chat-screen .typebox button {
+  width: 80px;
+  height: 100%;
+  background: #111;
+  color: #eee;
+  font-size: 16px;
+  outline: none;
+  border: none;
+  cursor: pointer;
 }
 
 .messages {
@@ -180,7 +199,11 @@ body {
 }
 
 .message {
-  transition: opacity 0.3s ease;
+  margin: 5px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 80%;
+  word-wrap: break-word;
 }
 
 .message + .message {
@@ -188,9 +211,20 @@ body {
 }
 
 .chat-screen {
-  height: 60%;
+  height: 50vh;
   display: flex;
   flex-direction: column;
+}
+
+.chat-screen .messages {
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  padding: 10px 0;
 }
 
 .chat-screen .messages .message {
@@ -230,12 +264,19 @@ body {
   width: 100%;
   height: 50px;
   display: flex;
+  flex-shrink: 0;
+  border-top: 1px solid #eee;
+  background: #fff;
+  z-index: 10;
 }
 
 .chat-screen .typebox input {
   flex: 1;
-  height: 50px;
-  font-size: 18px;
+  height: 100%;
+  font-size: 16px;
+  border: none;
+  padding: 0 15px;
+  outline: none;
 }
 
 .chat-screen .typebox button {
@@ -608,4 +649,40 @@ li:hover {
   color: #6c757d;
   font-style: italic;
   padding: 20px;
+}
+
+/*
+    Dashboard Overlay
+*/
+.dashboard-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgb(202, 202, 202);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.dashboard-loading-overlay .loading-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+.dashboard-loading-overlay .loading-content .loading-status {
+  margin-top: 1rem;
+}
+.dashboard-loading-overlay .loading-content .loading-status span {
+  display: block;
+  margin: 0.5rem 0;
+  color: #666;
+}
+
+.screen.main-dashboard {
+  position: relative;
+  z-index: 1;
 }/*# sourceMappingURL=styles.css.map */

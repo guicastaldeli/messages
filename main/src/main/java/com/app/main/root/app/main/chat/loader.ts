@@ -54,7 +54,8 @@ export class Loader {
     }
 
     private async createChatItem(chat: any): Promise<any> {
-        const hasMessages = await this.chatHasMessages(chat.id);
+        const userId = this.chatManager.userId;
+        const hasMessages = await this.chatHasMessages(userId, chat.id);
         
         return {
             id: chat.id,
@@ -65,7 +66,7 @@ export class Loader {
             creator: chat.creator || chat.creatorId,
             members: chat.members || [],
             unreadCount: chat.unreadCount || 0,
-            lastMessage: await this.setLastMessage(chat),
+            lastMessage: await this.setLastMessage(userId, chat),
             lastMessageTime: chat.lastMessageTime || chat.createdAt,
             timestamp: new Date(chat.lastMessageTime || chat.createdAt),
             createdAt: chat.createdAt,
@@ -126,9 +127,9 @@ export class Loader {
         window.dispatchEvent(event);
     }
 
-    private async chatHasMessages(id: string): Promise<boolean> {
+    private async chatHasMessages(userId: string, chatId: string): Promise<boolean> {
         try {
-            const lastMessage = await this.chatManager.lastMessage(id);
+            const lastMessage = await this.chatManager.lastMessage(userId, chatId);
             return !!lastMessage;
         } catch(err) {
             console.error('Failed to check if chat has messages:', err);
@@ -136,9 +137,9 @@ export class Loader {
         }
     }
 
-    private async setLastMessage(chat: any): Promise<string> {
+    private async setLastMessage(userId: string, chat: any): Promise<string> {
         const chatId = chat.id;
-        const lastMessageData = await this.chatManager.lastMessage(chatId);
+        const lastMessageData = await this.chatManager.lastMessage(userId, chatId);
         if(!lastMessageData) return 'Err';
         const formattedMessage = this.chatManager.formattedMessage(
             chatId,
@@ -158,8 +159,9 @@ export class Loader {
     private async setChatState(chat: any): Promise<boolean> {
         const chatId = chat.id;
         const type = chat.type;
+        const userId = this.chatManager.userId;
         if(type === 'DIRECT') {
-            const hasMessages = await this.chatHasMessages(chatId);
+            const hasMessages = await this.chatHasMessages(userId, chatId);
             this.chatStateManager.initChatState(chatId, hasMessages ? 1 : 0);
             if(!hasMessages) return false;
         }

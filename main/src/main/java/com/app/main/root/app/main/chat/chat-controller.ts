@@ -137,107 +137,124 @@ export class ChatController {
     }
 
     public async renderAllCachedMessages(chatId: string): Promise<void> {
-    const cacheData = await this.chatService.getCachedData(chatId);
-    if(!cacheData) {
-        console.log(`No cache data found for chat ${chatId}`);
-        return;
-    }
-
-    const cacheService = await this.chatService.getCacheServiceClient();
-    cacheService.validateCache(chatId);
-
-    const container = await this.getContainer();
-    if(!container) {
-        console.error('Container not found');
-        return;
-    }
-
-    // Build set of TRULY existing message IDs
-    const existingMessageIds = new Set<string>();
-    
-    // Only trust the React roots map as source of truth
-    this.messageRoots.forEach((_, messageId) => {
-        existingMessageIds.add(messageId);
-    });
-
-    console.log(`[renderAllCached] Chat: ${chatId}`);
-    console.log(`[renderAllCached] Existing React roots: ${existingMessageIds.size}`);
-    console.log(`[renderAllCached] Existing IDs:`, Array.from(existingMessageIds));
-
-    // Get all cached messages
-    const allCachedMessages = Array.from(cacheData.messages.values() as any[])
-        .sort((a, b) => {
-            const timeA = a.timestamp || a.createdAt || 0;
-            const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
-        });
-    
-    console.log(`[renderAllCached] Total messages in cache: ${allCachedMessages.length}`);
-    console.log(`[renderAllCached] Message IDs in cache:`, allCachedMessages.map(m => m.messageId || m.id));
-
-    // Get cached files
-    const cachedFiles = Array.from(cacheData.files.values() as any[]);
-    const fileMessages = cachedFiles.map(file => ({
-        type: 'file',
-        fileData: {
-            ...file,
-            originalFileName: file.original_filename || file.name,
-            mimeType: file.mime_type || file.contentType,
-            fileSize: file.file_size || file.size,
-            fileType: file.file_type || 'other'
-        },
-        messageId: `file_${file.file_id || file.id}`,
-        id: `file_${file.file_id || file.id}`,
-        content: `Shared file: ${file.original_filename || file.name}`,
-        timestamp: file.uploaded_at ? new Date(file.uploaded_at).getTime() : Date.now(),
-        userId: file.uploaded_by || file.userId,
-        chatId: file.chat_id || chatId,
-        _perspective: {
-            direction: 'other',
-            isCurrentUser: false,
-            showUsername: true
+        const cacheData = await this.chatService.getCachedData(chatId);
+        if(!cacheData) {
+            console.log(`No cache data found for chat ${chatId}`);
+            return;
         }
-    }));
 
-    console.log(`[renderAllCached] Total files in cache: ${cachedFiles.length}`);
+        const cacheService = await this.chatService.getCacheServiceClient();
+        cacheService.validateCache(chatId);
 
-    
-    // Filter out messages that already exist
-    const messagesToRender = [...allCachedMessages, ...fileMessages]
-        .filter(msg => {
-            const messageId = msg.messageId || msg.id;
-            const exists = existingMessageIds.has(messageId);
-            if(exists) {
-                console.log(`[renderAllCached] Skipping existing message: ${messageId}`);
+        const container = await this.getContainer();
+        if(!container) {
+            console.error('Container not found');
+            return;
+        }
+
+        const existingMessageIds = new Set<string>();
+        const orphanedMessageIds: string[] = [];
+        
+        this.messageRoots.forEach((root, messageId) => {
+            const element = container.querySelector(`[data-message-id="${messageId}"]`);
+            if(element) {
+                existingMessageIds.add(messageId);
+            } else {
+                orphanedMessageIds.push(messageId);
             }
-            return !exists;
-        })
-        .sort((a, b) => {
-            const timeA = a.timestamp || a.createdAt || 0;
-            const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
         });
-        console.log(`[renderAllCached] Messages to render: ${messagesToRender.length}`);
-console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m => m.messageId || m.id));
-    
-    console.log(`[renderAllCached] Messages to render: ${messagesToRender.length}`);
-    console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m =>    m.messageId || m.id));
-    
-    // Render each message
-    for(const message of messagesToRender) {
-        const msgId = message.messageId || message.id;
-        console.log(`[renderAllCached] Rendering message: ${msgId}`);
-        await this.messageElementRenderer.renderElement(message);
-    }
-    console.log(`[renderAllCached] Full message details:`, messagesToRender.map(m => ({
-    id: m.messageId || m.id,
-    chatId: m.chatId,
-    content: m.content?.substring(0, 50),
-    timestamp: m.timestamp
-})));
 
-    console.log(`[renderAllCached] Final React roots count: ${this.messageRoots.size}`);
-}
+        if(orphanedMessageIds.length > 0) {
+            console.log(`[renderAllCached] Cleaning up ${orphanedMessageIds.length} orphaned roots:`, orphanedMessageIds);
+            orphanedMessageIds.forEach(messageId => {
+                const root = this.messageRoots.get(messageId);
+                if(root) {
+                    try {
+                        root.unmount();
+                    } catch (error) {
+                        console.error(`Failed to unmount orphaned root ${messageId}:`, error);
+                    }
+                    this.messageRoots.delete(messageId);
+                }
+            });
+        }
+
+        console.log(`[renderAllCached] Chat: ${chatId}`);
+        console.log(`[renderAllCached] Valid React roots: ${existingMessageIds.size}`);
+        console.log(`[renderAllCached] Orphaned roots cleaned: ${orphanedMessageIds.length}`);
+        console.log(`[renderAllCached] Existing IDs:`, Array.from(existingMessageIds));
+
+        const loadedPages = Array.from(cacheData.loadedPages);
+        console.log(`[renderAllCached] Loaded pages:`, loadedPages);
+        
+        const allCachedMessages = Array.from(cacheData.messages.values() as any[])
+            .sort((a, b) => {
+                const timeA = a.timestamp || a.createdAt || 0;
+                const timeB = b.timestamp || b.createdAt || 0;
+                return timeA - timeB;
+            });
+        
+        console.log(`[renderAllCached] Total messages in cache: ${allCachedMessages.length}`);
+        console.log(`[renderAllCached] Message IDs in cache:`, allCachedMessages.map(m => m.messageId || m.id));
+
+        const cachedFiles = Array.from(cacheData.files.values() as any[]);
+        const fileMessages = cachedFiles.map(file => ({
+            type: 'file',
+            fileData: {
+                ...file,
+                originalFileName: file.original_filename || file.name,
+                mimeType: file.mime_type || file.contentType,
+                fileSize: file.file_size || file.size,
+                fileType: file.file_type || 'other'
+            },
+            messageId: `file_${file.file_id || file.id}`,
+            id: `file_${file.file_id || file.id}`,
+            content: `Shared file: ${file.original_filename || file.name}`,
+            timestamp: file.uploaded_at ? new Date(file.uploaded_at).getTime() : Date.now(),
+            userId: file.uploaded_by || file.userId,
+            chatId: file.chat_id || chatId,
+            _perspective: {
+                direction: 'other',
+                isCurrentUser: false,
+                showUsername: true
+            }
+        }));
+
+        console.log(`[renderAllCached] Total files in cache: ${cachedFiles.length}`);
+        
+        const messagesToRender = [...allCachedMessages, ...fileMessages]
+            .filter(msg => {
+                const messageId = msg.messageId || msg.id;
+                const exists = existingMessageIds.has(messageId);
+                if(exists) {
+                    console.log(`[renderAllCached] Skipping existing message: ${messageId}`);
+                }
+                return !exists;
+            })
+            .sort((a, b) => {
+                const timeA = a.timestamp || a.createdAt || 0;
+                const timeB = b.timestamp || b.createdAt || 0;
+                return timeA - timeB;
+            });
+        
+        console.log(`[renderAllCached] Messages to render: ${messagesToRender.length}`);
+        console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m => m.messageId || m.id));
+        
+        for(const message of messagesToRender) {
+            const msgId = message.messageId || message.id;
+            console.log(`[renderAllCached] Rendering message: ${msgId}`);
+            await this.messageElementRenderer.renderElement(message);
+        }
+        
+        console.log(`[renderAllCached] Full message details:`, messagesToRender.map(m => ({
+            id: m.messageId || m.id,
+            chatId: m.chatId,
+            content: m.content?.substring(0, 50),
+            timestamp: m.timestamp
+        })));
+
+        console.log(`[renderAllCached] Final React roots count: ${this.messageRoots.size}`);
+    }
 
     /**
      * Setup Message Handling
@@ -282,14 +299,10 @@ console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m => m.mess
         members?: string[]
     ): Promise<void> {
         if(!chatId || !chatType) return;
-        
-        console.log(`[setCurrentChat] Setting chat: ${chatId}, current: ${this.currentChatId}`);
-        
+
         if(this.currentChatId && this.currentChatId !== chatId) {
-            console.log(`[setCurrentChat] Switching from ${this.currentChatId} to ${chatId} - clearing old messages`);
             setTimeout(() => {
                 this.messageRoots.forEach((root, messageId) => {
-                    console.log(`[setCurrentChat] Unmounting message: ${messageId}`);
                     try {
                         root.unmount();
                     } catch (error) {
@@ -307,9 +320,6 @@ console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m => m.mess
                 }
                 this.scrollHandler = null;
             }
-        } else if(this.currentChatId === chatId) {
-            console.log(`[setCurrentChat] Reopening same chat: ${chatId}`);
-            console.log(`[setCurrentChat] Current React roots: ${this.messageRoots.size}`);
         }
 
         const context = this.chatRegistry.getContext(chatType, members || [], chatId);
@@ -325,36 +335,22 @@ console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m => m.mess
         this.chunkRenderer.reset();
 
         const cacheService = await this.chatService.getCacheServiceClient(); 
-        if(!cacheService.isChatCached(chatId)) {
-            console.log(`[setCurrentChat] Initializing cache for: ${chatId}`);
-            cacheService.init(chatId);
-        }
+        if(!cacheService.isChatCached(chatId)) cacheService.init(chatId);
 
         this.container = null;
         const container = await this.getContainer();
-        if(!container) {
-            console.error('[setCurrentChat] Failed to get container');
-            return;
-        }
+        if(!container) return;
 
         const cacheData = cacheService.getCacheData(chatId);
-        console.log(`[setCurrentChat] Cache data exists: ${!!cacheData}`);
-        console.log(`[setCurrentChat] Cached messages: ${cacheData?.messages.size || 0}`);
-        console.log(`[setCurrentChat] React roots before render: ${this.messageRoots.size}`);
-        
         if(cacheData && cacheData.messages.size > 0) {
             await this.renderAllCachedMessages(chatId);
             await this.chunkRenderer.setupScrollHandler(this.userId);
-            
-            console.log(`[setCurrentChat] React roots after render: ${this.messageRoots.size}`);
-            
             setTimeout(() => {
                 if(container) {
                     container.scrollTop = container.scrollHeight;
                 }
             }, 100);
         } else {
-            console.log(`[setCurrentChat] No cached messages, loading history`);
             const userIdToUse = this.userId || this.chatManager?.userId;
             if(userIdToUse) {
                 await this.loadHistory(chatId, userIdToUse);
@@ -766,7 +762,8 @@ console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m => m.mess
 
         try {
             const chatData = await this.getChatData(chatId, userId, page);
-            
+            console.log(`[loadHistory] Loaded ${chatData.messages?.length || 0} messages for page ${page}`);
+
             if(chatData.files && chatData.files.length > 0) {
                 console.log(`Loading ${chatData.files.length} files for history`);
                 const fileMessages = chatData.files.map(file => {
@@ -806,6 +803,12 @@ console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m => m.mess
             }
             
             if(page > this.currentPage) this.currentPage = page;
+            const cacheService = await this.chatService.getCacheServiceClient();
+            const cacheData = cacheService.getCacheData(chatId);
+            if(cacheData) {
+                cacheData.loadedPages.add(page);
+                console.log(`[loadHistory] Updated cache - loaded pages:`, Array.from(cacheData.loadedPages));
+            }
         } catch(err) {
             console.error(`Failed to load chat data for ${chatId} page ${page}:`, err);
         } finally {

@@ -93,7 +93,7 @@ export class GroupManager {
         this.currentGroupName = data.name;
         this.currentGroupId = data.id;
 
-        const lastMessage = await this.chatManager.lastMessage(this.currentGroupId);
+        const lastMessage = await this.chatManager.lastMessage(this.userId!, this.currentGroupId);
         chatState.setType('GROUP');
         await this.chatController.setCurrentChat(
             this.currentGroupId,
@@ -287,7 +287,7 @@ export class GroupManager {
         const time = new Date().toISOString();
         this.currentGroupId = data.id;
 
-        const lastMessage = await this.chatManager.lastMessage(this.currentGroupId);
+        const lastMessage = await this.chatManager.lastMessage(this.userId!, this.currentGroupId);
         chatState.setType('GROUP');
         await this.chatController.setCurrentChat(
             data.id, 

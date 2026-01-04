@@ -25,8 +25,7 @@ export class ChunkRenderer {
         if(this.chatController.scrollHandler) {
             container.removeEventListener('scroll', this.chatController.scrollHandler);
         }
-
-        this.chatController.scrollHandler = (e: Event) => {
+        this.chatController.scrollHandler = async (e: Event) => {
             const now = Date.now();
             if(now - this.lastScrollTime < this.scrollThrottle) return;
             this.lastScrollTime = now;
@@ -34,20 +33,19 @@ export class ChunkRenderer {
             const target = e.target as HTMLDivElement;
             const scrollTop = target.scrollTop;
             const distanceFromTop = scrollTop;
-            const loadThreshold = 300;
+            const loadThreshold = 600;
 
             if(distanceFromTop < loadThreshold &&
                 !this.chatController.isLoadingHistory &&
                 !this.isPreloading &&
                 this.currentLoadingPage === -1
             ) {
-                this.loadChunk(this.chatController.currentChatId!, userId);
+                await this.loadChunk(this.chatController.currentChatId!, userId);
             }
         };
 
         container.addEventListener('scroll', this.chatController.scrollHandler);
     }
-
 
     /**
      * Load Chunk
@@ -58,35 +56,47 @@ export class ChunkRenderer {
             this.isPreloading ||
             this.currentLoadingPage !== -1
         ) {
+            console.log('Skipping - conditions not met');
             return;
         }
 
-        const messageController = this.chatService.getMessageController();
-        const fileController = this.chatService.getFileController();
-
-        const cacheData = await this.chatService.getCachedData(chatId);
-        let nextPage = this.chatController.currentPage + 1;
-
-        const hasMoreMessages = await messageController.hasMoreMessages(chatId);
-        const hasMoreFiles = await fileController.hasMoreFiles(chatId);
-
-        if(!hasMoreMessages && !hasMoreFiles) {
-            return;
-        }
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const cacheData = cacheService.getCacheData(chatId);
         if(!cacheData) {
-            console.log(`No cache data for chat ${chatId}, might be a new chat`);
+            console.log(`No cache data for chat ${chatId}`);
             return;
         }
-
-        this.currentLoadingPage = nextPage;
         
-        try {
-            console.log(`Loading chunk for chat ${chatId}, page ${nextPage}`);
-            await this.chatController.loadHistory(chatId, userId, nextPage);
-        } catch (error) {
-            console.error(`Failed to load chunk for chat ${chatId}:`, error);
-        } finally {
-            this.currentLoadingPage = -1;
+        const loadedPages = Array.from(cacheData.loadedPages);
+        const nextPage = loadedPages.length > 0 ? Math.max(...loadedPages) + 1 : 1;
+        
+        const totalMessagesExpected = cacheData.totalMessagesCount;
+        const messagesPerPage = cacheService.config.pageSize;
+        const totalPagesNeeded = Math.ceil(totalMessagesExpected / messagesPerPage);
+        
+        if(nextPage < totalPagesNeeded) {
+            console.log(` Loading page ${nextPage} for chat ${chatId}`);
+            this.currentLoadingPage = nextPage;
+            
+            try {
+                const container = await this.chatController.getContainer();
+                const oldScrollHeight = container?.scrollHeight || 0;
+                await this.chatController.loadHistory(chatId, userId, nextPage);
+                
+                if(container) {
+                    setTimeout(() => {
+                        const newScrollHeight = container.scrollHeight;
+                        const scrollDiff = newScrollHeight - oldScrollHeight;
+                        container.scrollTop = scrollDiff;
+                    }, 100);
+                }
+            } catch (error) {
+                console.error(`Failed to load chunk for chat ${chatId}:`, error);
+            } finally {
+                this.currentLoadingPage = -1;
+            }
+        } else {
+            console.log(`All pages loaded for chat ${chatId}`);
         }
     }
 
@@ -103,7 +113,6 @@ export class ChunkRenderer {
             const cacheData = await this.chatService.getCachedData(chatId);
             const data = cacheService.cache.get(chatId)!;
             if(cacheData && data.loadedPages.has(nextPage)) {
-                //i changed this!
                 const messageService = await this.chatService.getMessageController().getMessageService();
                 const response = await messageService.getChatData(userId, chatId, nextPage);
                 if(response.messages && response.messages.length > 0) {
@@ -126,7 +135,7 @@ export class ChunkRenderer {
     /**
      * Load Cached Pages
      */
-    public async loadCachedPages(userId: string, chatId: string): Promise<void> {
+    public async loadCachedPages(chatId: string): Promise<void> {
         const cacheService = await this.chatService.getCacheServiceClient();
         const cacheData = this.chatService.getCachedData(chatId);
         const data = cacheService.cache.get(chatId)!;

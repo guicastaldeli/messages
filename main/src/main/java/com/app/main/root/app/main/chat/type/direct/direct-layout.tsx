@@ -23,8 +23,6 @@ export class DirectLayout extends Component<Props, State> {
     }
 
     componentDidMount(): void {
-        console.log("DIRECT LAYOUT------ chatId:", this.props.chatId);
-        
         if(this.props.chatId && this.props.directManager) {
             this.setState({ isActive: true });
             this.props.directManager.setCurrentChat(this.props.chatId);
@@ -43,9 +41,9 @@ export class DirectLayout extends Component<Props, State> {
         }
     }
 
-    /*
-    ** Back
-    */
+    /**
+     * Back
+     */
     private handleBack = (): void => {
         if(this.props.onClose) this.props.onClose();
     }

@@ -200,7 +200,7 @@ export class MessageControllerClient {
             const recentChats = await this.messageService.getRecentMessages(userId);
             const chats = recentChats.chats || [];
             const preloadPromises = chats.map((chat: any) =>
-                this.preloadData(chat.id || chat.chatId)
+                this.preloadData(userId, chat.id || chat.chatId)
             );
             await Promise.all(preloadPromises);
         } catch(err) {
@@ -212,11 +212,11 @@ export class MessageControllerClient {
     /**
      * Preload Data
      */
-    public async preloadData(chatId: string): Promise<void> {
+    public async preloadData(userId: string, chatId: string): Promise<void> {
         try {
             const [countData, pageData] = await Promise.all([
                 this.messageService.getMessageCountByChatId(chatId),
-                this.messageService.getMessagesByChatId(chatId, 0)
+                this.messageService.getChatData(userId, chatId, 0)
             ]);
 
             const cacheService = await this.chatService.getCacheServiceClient();
@@ -251,12 +251,11 @@ export class MessageControllerClient {
             cacheData.loadedPages.add(0);
             cacheData.totalMessagesCount = countData;
             cacheData.lastAccessTime = Date.now();
-            cacheData.hasMore = pageData.hasMore || false;
+            cacheData.hasMore = pageData.pagination.hasMore;
             cacheData.isFullyLoaded = !cacheData.hasMore;
             cacheData.lastUpdated = Date.now();
             
             console.log(`Preloaded ${cacheData.messageOrder.length} messages for chat ${chatId}`);
-            
             await this.getMessagesPage(cacheData, chatId, 0);
         } catch(err) {
             console.error(`Preload for ${chatId} failed`, err);

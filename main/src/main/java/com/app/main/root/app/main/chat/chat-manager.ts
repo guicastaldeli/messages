@@ -323,7 +323,7 @@ export class ChatManager {
         );
     }
 
-    public async lastMessage(id: string): Promise<{
+    public async lastMessage(userId: string, chatId: string): Promise<{
         content: string,
         currentUserId: string, 
         sender: string, 
@@ -331,7 +331,7 @@ export class ChatManager {
     } | null> {
         try {
             const service = await this.chatService.getMessageController().getMessageService();
-            const res = await service.getMessagesByChatId(id, 0);
+            const res = await service.getChatData(userId, chatId, 0);
             const messages = res.messages || [];
             if(messages && messages.length > 0) {
                 const sortedMessages = messages.sort((a, b) => {

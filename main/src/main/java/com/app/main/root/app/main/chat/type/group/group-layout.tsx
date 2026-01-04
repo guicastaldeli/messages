@@ -66,7 +66,6 @@ export class GroupLayout extends Component<Props, State> {
     }
 
     componentDidMount(): void {
-        console.log("GROUP LAYOUT----------")
         this.groupManager.dashboard?.setStateChange((state: any) => {
             this.setState({ managerState: state });
         });

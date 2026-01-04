@@ -124,65 +124,6 @@ export class MessageServiceClient {
         return res.json();
     }
 
-    /**
-     * Chat Id
-     */
-    public async getMessagesByChatId(id: string, page: number = 0): Promise<{
-        messages: any[];
-        currentPage: number;
-        pageSize: number;
-        totalMessages: number;
-        totalPages: number;
-        hasMore: boolean
-    }> {
-        const pageSize: number = 20;
-
-        try {
-            const res = await fetch(
-                `${this.url}/api/message/messages/chatId/${id}?page=${page}&pageSize=${pageSize}`
-            );
-            if(!res.ok) throw new Error('Failed to fetch messages by chat id!');
-
-            let data = await res.json();
-            let messages = Array.isArray(data) ? data : (data.messages || []);
-            const decryptedMessages = [];
-            for(const message of messages) {
-                try {
-                    const decryptedMessage = await this.decryptMessage(id, message);
-                    decryptedMessages.push(decryptedMessage);
-                } catch(err) {
-                    if(!message.system) console.error('Failed to decrypt message:', err);
-                    decryptedMessages.push(message);
-                }
-            }
-            messages = decryptedMessages.map(
-                (message: any) => (
-                { ...message }
-            ));
-            if(Array.isArray(data)) {
-                data = messages;
-            } else {
-                data.messages = messages;
-            }
-
-            if(Array.isArray(data)) {
-                return {
-                    messages: data,
-                    currentPage: page,
-                    pageSize: pageSize,
-                    totalMessages: data.length,
-                    totalPages: Math.ceil(data.length / pageSize),
-                    hasMore: data.length >= pageSize
-                }
-            } else {
-                return data;
-            }
-        } catch(err) {
-            console.error(err);
-            throw new Error('Failed to fetch messages by chat Id');
-        }
-    }
-
     public async decryptMessage(id: string, data: any): Promise<any> {
         return new Promise(async (res, rej) => {
             const succssDestination = '/queue/decrypted-messages-scss';
