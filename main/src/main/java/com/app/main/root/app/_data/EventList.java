@@ -602,45 +602,53 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
-                    List<Map<String, Object>> encryptedFiles = (List<Map<String, Object>>) data.get("files");
+                    List<Map<String, Object>> files = (List<Map<String, Object>>) data.get("files");
                     String chatId = (String) data.get("chatId");
-                    List<Map<String, Object>> decryptedFiles = new ArrayList<>();
+                    String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    List<Map<String, Object>> processedFiles = new ArrayList<>();
                     
-                    for(Map<String, Object> encryptedFile : encryptedFiles) {
+                    for(Map<String, Object> file : files) {
                         try {
-                            Map<String, Object> decryptedFile = new HashMap<>(encryptedFile);
+                            Map<String, Object> processedFile = new HashMap<>(file);
                             
-                            Boolean isDecrypted = (Boolean) encryptedFile.get("isDecrypted");
+                            Boolean isDecrypted = (Boolean) file.get("isDecrypted");
+                            String originalFileName = (String) file.get("originalFileName");
+                    
                             if(isDecrypted != null && isDecrypted) {
-                                decryptedFiles.add(decryptedFile);
+                                processedFiles.add(processedFile);
+                                continue;
+                            }
+                            if(originalFileName != null && !originalFileName.isEmpty()) {
+                                processedFile.put("isDecrypted", true);
+                                processedFile.put("originalFileName", originalFileName);
+                                processedFiles.add(processedFile);
                                 continue;
                             }
                             
-                            String fileId = (String) encryptedFile.get("fileId");
-                            String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
-                            if(fileId == null) fileId = (String) encryptedFile.get("id");
-                            if(userId == null) userId = (String) encryptedFile.get("userId");
-                            
-                            if(fileId == null || userId == null) {
-                                System.err.println("File ID or User ID is null");
-                                decryptedFiles.add(decryptedFile);
+                            String fileId = (String) file.get("fileId");
+                            if(fileId == null) fileId = (String) file.get("file_id");
+
+                            String userId = currentUserId;
+                            if(fileId == null) {
+                                System.err.println("File ID is null!");
+                                processedFiles.add(processedFile);
                                 continue;
                             }
                             
                             byte[] encryptionKey = keyManagerService.retrieveKey(fileId, userId);
                             if(encryptionKey == null) {
                                 System.err.println("No encryption key found for file: " + fileId);
-                                decryptedFiles.add(decryptedFile);
+                                processedFiles.add(processedFile);
                                 continue;
                             }
                             
-                            Object encryptedDataObj = encryptedFile.get("encryptedContent");
+                            Object encryptedDataObj = file.get("encryptedContent");
                             if(encryptedDataObj == null) {
-                                encryptedDataObj = encryptedFile.get("content");
+                                encryptedDataObj = file.get("content");
                             }
                             if(encryptedDataObj == null) {
                                 System.err.println("No encrypted content found for file: " + fileId);
-                                decryptedFiles.add(decryptedFile);
+                                processedFiles.add(processedFile);
                                 continue;
                             }
                             
@@ -658,7 +666,7 @@ public class EventList {
                             try {
                                 fileEncoder.initEncoder(encryptionKey, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
                                 
-                                Object ivObj = encryptedFile.get("iv");
+                                Object ivObj = file.get("iv");
                                 if(ivObj != null) {
                                     byte[] iv;
                                     if(ivObj instanceof String) {
@@ -672,18 +680,18 @@ public class EventList {
                                 }
                                 
                                 byte[] decryptedBytes = fileEncoder.decrypt(encryptedBytes);
-                                if(encryptedFile.containsKey("isFileContent")) {
+                                if(file.containsKey("isFileContent")) {
                                     String base64Decrypted = Base64.getEncoder().encodeToString(decryptedBytes);
-                                    decryptedFile.put("content", base64Decrypted);
+                                    processedFile.put("content", base64Decrypted);
                                 } else {
                                     String decryptedString = new String(decryptedBytes, StandardCharsets.UTF_8);
-                                    decryptedFile.put("content", decryptedString);
+                                    processedFile.put("content", decryptedString);
                                 }
-                                decryptedFile.put("isDecrypted", true);
-                                decryptedFile.put("originalSize", decryptedBytes.length);
+                                processedFile.put("isDecrypted", true);
+                                processedFile.put("originalSize", decryptedBytes.length);
                                 
-                                if(encryptedFile.containsKey("encryptedFileName")) {
-                                    Object encryptedNameObj = encryptedFile.get("encryptedFileName");
+                                if(file.containsKey("encryptedFileName")) {
+                                    Object encryptedNameObj = file.get("encryptedFileName");
                                     byte[] encryptedName;
                                     if(encryptedNameObj instanceof String) {
                                         encryptedName = Base64.getDecoder().decode((String) encryptedNameObj);
@@ -695,30 +703,30 @@ public class EventList {
                                     
                                     byte[] decryptedNameBytes = fileEncoder.decrypt(encryptedName);
                                     String decryptedName = new String(decryptedNameBytes, StandardCharsets.UTF_8);
-                                    decryptedFile.put("originalFileName", decryptedName);
+                                    processedFile.put("originalFileName", decryptedName);
                                 }
                                 
                             } finally {
                                 fileEncoder.cleanup();
                             }
                             
-                            decryptedFiles.add(decryptedFile);
+                            processedFiles.add(processedFile);
                         } catch (Exception fileErr) {
                             System.err.println("Error decrypting file: " + fileErr.getMessage());
                             fileErr.printStackTrace();
-                            encryptedFile.put("decryptionError", fileErr.getMessage());
-                            decryptedFiles.add(encryptedFile);
+                            file.put("decryptionError", fileErr.getMessage());
+                            processedFiles.add(file);
                         }
                     }
                     
                     Map<String, Object> response = new HashMap<>();
-                    response.put("files", decryptedFiles);
-                    response.put("count", decryptedFiles.size());
+                    response.put("files", processedFiles);
+                    response.put("count", processedFiles.size());
                     response.put("success", true);
                     
                     eventTracker.track(
                         "get-decrypted-files",
-                        Map.of("count", decryptedFiles.size(), "chatId", chatId),
+                        Map.of("count", processedFiles.size(), "chatId", chatId),
                         EventDirection.SENT,
                         sessionId,
                         "system"
@@ -729,7 +737,7 @@ public class EventList {
                     err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
                     errRes.put("error", "LOAD_DECRYPTED_FILES_FAILED");
-                    errRes.put("message", err.getMessage());
+                    errRes.put("message", err.getMessage() != null ? err.getMessage() : "Unknown error");
                     errRes.put("success", false);
                     
                     eventTracker.track(

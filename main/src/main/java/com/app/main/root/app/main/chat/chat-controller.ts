@@ -190,15 +190,15 @@ export class ChatController {
             type: 'file',
             fileData: {
                 ...file,
-                originalFileName: file.original_filename || file.name,
-                mimeType: file.mime_type || file.contentType,
-                fileSize: file.file_size || file.size,
-                fileType: file.file_type || 'other'
+                originalFileName: file.originalFileName || file.name,
+                mimeType: file.mimeType || file.contentType,
+                fileSize: file.fileSize || file.size,
+                fileType: file.fileSize || 'other'
             },
-            messageId: `file_${file.file_id || file.id}`,
-            id: `file_${file.file_id || file.id}`,
-            content: `Shared file: ${file.original_filename || file.name}`,
-            timestamp: file.uploaded_at ? new Date(file.uploaded_at).getTime() : Date.now(),
+            messageId: `file_${file.fileId || file.id}`,
+            id: `file_${file.fileId || file.id}`,
+            content: `Shared file: ${file.originalFileName || file.name}`,
+            timestamp: file.uploadedAt ? new Date(file.uploadedAt).getTime() : Date.now(),
             userId: file.uploaded_by || file.userId,
             chatId: file.chat_id || chatId,
             _perspective: {
@@ -644,7 +644,7 @@ export class ChatController {
                 const fileToCache = {
                     ...analyzedData,
                     id: file.fileId,
-                    file_id: file.fileId,
+                    fileId: file.fileId,
                     userId: this.userId,
                     senderId: this.userId,
                     username: this.username,
@@ -662,7 +662,7 @@ export class ChatController {
                 const fileToCache = {
                     ...analyzedData,
                     id: tempMessageId,
-                    file_id: file.fileId,
+                    fileId: file.fileId,
                     userId: this.userId,
                     senderId: this.userId,
                     username: this.username,
@@ -731,42 +731,44 @@ export class ChatController {
 
         try {
             const chatData = await this.getChatData(chatId, userId, page);
-            if(chatData.files && chatData.files.length > 0) {
-                const fileMessages = chatData.files.map(file => {
-                    return {
-                        type: 'file',
-                        fileData: {
-                            ...file,
-                            originalFileName: file.original_filename || file.name,
-                            mimeType: file.mime_type || file.contentType,
-                            fileSize: file.file_size || file.size,
-                            fileType: file.file_type || 'other'
-                        },
-                        messageId: `file_${file.file_id || file.id}`,
-                        id: `file_${file.file_id || file.id}`,
-                        content: `Shared file: ${file.original_filename || file.name}`,
-                        timestamp: file.uploaded_at ? new Date(file.uploaded_at).getTime() : Date.now(),
-                        userId: file.uploaded_by || file.userId,
-                        chatId: file.chat_id || chatId,
-                        _perspective: {
-                            direction: 'other',
-                            isCurrentUser: false,
-                            showUsername: true
-                        }
-                    };
-                });
 
-                const allMessages = [...(chatData.messages || []), ...fileMessages]
-                    .sort((a, b) => {
-                        const tA = a.timestamp || a.createdAt || 0;
-                        const tB = b.timestamp || b.createdAt || 0;
-                        return tA - tB;
-                    });
-                
-                await this.messageElementRenderer.renderHistory(allMessages);
-            } else if(chatData.messages && chatData.messages.length > 0) {
-                await this.messageElementRenderer.renderHistory(chatData.messages);
-            }
+            /* Messages*/
+            const messages = chatData.messages;
+
+            /* Files */
+            const fileMessages = chatData.files.map(file => {
+                return {
+                    type: 'file',
+                    fileData: {
+                        ...file,
+                        originalFileName: file.originalFileName || file.name,
+                        mimeType: file.mimeType || file.contentType,
+                        fileSize: file.fileSize || file.size,
+                        fileType: file.fileSize || 'other',
+                        fileId: file.fileId || file.id
+                    },
+                    messageId: `file_${file.fileId || file.id}`,
+                    id: `file_${file.fileId || file.id}`,
+                    content: `Shared file: ${file.originalFileName || file.name}`,
+                    timestamp: file.uploadedAt ? new Date(file.uploadedAt).getTime() : Date.now(),
+                    userId: file.userId,
+                    chatId: file.chatId || chatId,
+                    _perspective: {
+                        direction: 'other',
+                        isCurrentUser: false,
+                        showUsername: true
+                    }
+                };
+            });
+
+            const allMessages = [...(messages || []), ...fileMessages]
+                .sort((a, b) => {
+                    const tA = a.timestamp || a.createdAt || 0;
+                    const tB = b.timestamp || b.createdAt || 0;
+                    return tA - tB;
+                });
+            
+            await this.messageElementRenderer.renderHistory(allMessages);
             
             if(page > this.currentPage) this.currentPage = page;
             const cacheService = await this.chatService.getCacheServiceClient();

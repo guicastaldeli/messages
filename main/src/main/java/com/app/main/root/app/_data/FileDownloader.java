@@ -54,7 +54,7 @@ public class FileDownloader {
 
             if(!metadataTemplate.isEmpty()) {
                 Map<String, Object> metadata = metadataTemplate.get(0);
-                String originalFilename = (String) metadata.get("original_filename");
+                String originalFileName = (String) metadata.get("original_filename");
                 String mimeType = (String) metadata.get("mime_type");
                 String dbType = (String) metadata.get("database_name");
                 Integer compressionType = (Integer) metadata.get("compression_type"); // Get compression type
@@ -112,7 +112,7 @@ public class FileDownloader {
                     
                     Map<String, Object> res = new HashMap<>();
                     res.put("content", decryptedContent);
-                    res.put("filename", originalFilename);
+                    res.put("filename", originalFileName);
                     res.put("mimeType", mimeType);
                     res.put("fileSize", decryptedContent.length);
                     res.put("wasCompressed", isCompressed);

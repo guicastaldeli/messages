@@ -91,9 +91,9 @@ export class MessageElementRenderer {
         const isFileMessage = 
             data.type === 'file' || 
             data.fileData || 
-            data.file_id || 
-            data.original_filename || 
-            data.mime_type;
+            data.fileId || 
+            data.originalFileName || 
+            data.mimeType;
         if(isFileMessage) {
             await this.renderFileMessage(data, container);
             return;
