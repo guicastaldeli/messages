@@ -80,9 +80,9 @@ export class CacheServiceClient {
         this.selectChat(chatId);
     }
 
-    public async initCache(userId: string): Promise<void> {
+    public async initCache(userId: string, activeChat?: string): Promise<void> {
         this.chatService.getMessageController().initCache(userId);
-        this.chatService.getFileController().initCache(userId);
+        this.chatService.getFileController().initCache(userId, activeChat);
     }
 
     public setApiClientController(apiClientController: ApiClientController): void {

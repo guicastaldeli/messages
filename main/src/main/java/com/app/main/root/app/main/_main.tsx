@@ -112,13 +112,30 @@ export class Main extends Component<any, State> {
                             '/topic/user'
                         );
                         
-                    } catch (err) {
+                    } catch(err) {
                         console.error('Failed to load chat items:', err);
                     }
                 }
                 
+                const activeChat = localStorage.getItem('active-chat');
+                console.log('Found active chat from storage:', activeChat);
+                let activeChatId = null;
+                if(activeChat) {
+                    try {
+                        const chatObj = JSON.parse(activeChat);
+                        activeChatId = chatObj.id || chatObj.chatId;
+                        console.log(`Extracted active chat ID: ${activeChatId}`);
+                    } catch(err) {
+                        console.warn('Failed to parse active chat, using as-is:', activeChat);
+                        activeChatId = activeChat;
+                    }
+                }
+
                 const cacheService = await this.chatService.getCacheServiceClient();
-                if(userInfo?.userId) await cacheService.initCache(userInfo.userId);
+                if(userInfo.userId) {
+                    console.log('Initializing cache with active chat:', activeChatId);
+                    await cacheService.initCache(userInfo.userId, activeChatId || undefined);
+                }
                 this.loadData(userInfo.userId);
                 this.setState({ 
                     chatManager: this.chatManager,
@@ -196,7 +213,7 @@ export class Main extends Component<any, State> {
                             alert('Username already taken');
                             return;
                         }
-                    } catch (err) {
+                    } catch(err) {
                         console.error('Error checking username:', err);
                     }
                     try {
@@ -206,7 +223,7 @@ export class Main extends Component<any, State> {
                             alert('Email already registered');
                             return;
                         }
-                    } catch (err) {
+                    } catch(err) {
                         console.error('Error checking email:', err);
                     }
                 } else {
@@ -286,7 +303,7 @@ export class Main extends Component<any, State> {
             }
 
                 await this.forceNewLogin(sessionContext, email, password, isCreateAccount, username);
-            } catch (err: any) {
+            } catch(err: any) {
                 console.error('Authentication error:', err);
                 alert(`Authentication failed: ${err.message}`);
             }
@@ -377,7 +394,7 @@ export class Main extends Component<any, State> {
                             
                             sessionContext.setSession('MAIN_DASHBOARD');
                             console.log('Successfully logged in and switched to dashboard');
-                        } catch (err: any) {
+                        } catch(err: any) {
                             console.error('Error in post-login setup:', err);
                             alert('Login successful but setup failed: ' + err.getMessage());
                         }
@@ -386,7 +403,7 @@ export class Main extends Component<any, State> {
                     console.error('Invalid auth data:', authData);
                     throw new Error('Invalid response from server - missing user data');
                 }
-            } catch (err: any) {
+            } catch(err: any) {
                 console.error('Authentication API error:', err);
                 alert(`Authentication failed: ${err.message}`);
                 throw err;
@@ -410,7 +427,7 @@ export class Main extends Component<any, State> {
                 }
                 
                 console.log('Logged out successfully');
-            } catch (err) {
+            } catch(err) {
                 console.error('Logout failed:', err);
                 SessionManager.clearSession();
                 

@@ -393,22 +393,31 @@ export class FileServiceClient {
     /**
      * Get Count By Chat Id
      */
-    public async getFilesCountByChatId(chatId: string, userId: string): Promise<number> {
-        try {
-            const params = new URLSearchParams();
-            if(userId) params.append('userId', userId);
-            
-            const url = `${this.url}/api/files/chat/${chatId}/count${params.toString() ? `?${params}` : ''}`;
-            const res = await fetch(url);
-            if(!res.ok) throw new Error(`Failed to fetch files count: ${res.status}`);
-            
-            const data = await res.json();
-            const count = typeof data === 'number' ? data : (data.count || data.total || 0);
-            return count;
-        } catch(err) {
-            throw err;
-        }
+    /**
+ * Get Count By Chat Id
+ */
+public async getFilesCountByChatId(chatId: string, userId: string): Promise<number> {
+    try {
+        const params = new URLSearchParams({
+            userId: userId,
+            chatId: chatId
+        });
+
+        const url = `${this.url}/api/files/count?${params.toString()}`;
+        console.log(`Fetching files count from: ${url}`);
+        
+        const res = await fetch(url);
+        if(!res.ok) throw new Error(`Failed to fetch files count: ${res.status}`);
+        
+        const data = await res.json();
+        const count = data.total || data.count || 0;
+        console.log(`Files count response:`, data);
+        return count;
+    } catch(err) {
+        console.error(`Error fetching files count for chat ${chatId}:`, err);
+        throw err;
     }
+}
 
     /**
      * Get Recent Files Count

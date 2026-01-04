@@ -177,7 +177,17 @@ public class ChatService {
                 for(Map<String, Object> file : files) {
                     String fileChatId = (String) file.get("chat_id");
                     if(chatId.equals(fileChatId)) {
-                        validatedFiles.add(file);
+                        Map<String, Object> convertedFile = new HashMap<>();
+                        convertedFile.put("fileId", file.get("file_id"));
+                        convertedFile.put("originalFileName", file.get("original_filename"));
+                        convertedFile.put("fileSize", file.get("file_size"));
+                        convertedFile.put("mimeType", file.get("mime_type"));
+                        convertedFile.put("fileType", file.get("file_type"));
+                        convertedFile.put("chatId", file.get("chat_id"));
+                        convertedFile.put("uploadedAt", file.get("uploaded_at"));
+                        convertedFile.put("lastModified", file.get("last_modified"));
+                        
+                        validatedFiles.add(convertedFile);
                     } else {
                         System.err.println("WARNING: File " + file.get("file_id") + 
                             " returned for chat " + chatId + 

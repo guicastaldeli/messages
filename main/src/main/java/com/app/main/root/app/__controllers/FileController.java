@@ -298,16 +298,37 @@ public class FileController {
                 ));
             }
 
-            Map<String, Object> res = serviceManager.getFileService()
-                .listFiles(userId, "root", page, pageSize);
+            List<Map<String, Object>> allChats = serviceManager.getChatService().getChats(userId);
+            List<Map<String, Object>> chatsWithFiles = new ArrayList<>();
+            for(Map<String, Object> chat : allChats) {
+                String chatId = (String) chat.get("id");
+                int fileCount = serviceManager.getFileService().countTotalFiles(userId, chatId);
+                if(fileCount > 0) {
+                    Map<String, Object> chatInfo = new HashMap<>();
+                    chatInfo.put("id", chatId);
+                    chatInfo.put("chatId", chatId);
+                    chatInfo.put("name", chat.get("name"));
+                    chatInfo.put("type", chat.get("type"));
+                    chatInfo.put("fileCount", fileCount);
+                    chatInfo.put("lastMessageTime", chat.get("lastMessageTime"));
+                    chatsWithFiles.add(chatInfo);
+                }
+            }
             
-            List<Map<String, Object>> files = (List<Map<String, Object>>) res.get("files");
+            int startIndex = page * pageSize;
+            int endIndex = Math.min(startIndex + pageSize, chatsWithFiles.size());
+            List<Map<String, Object>> paginatedChats = startIndex < chatsWithFiles.size() 
+                ? chatsWithFiles.subList(startIndex, endIndex)
+                : new ArrayList<>();
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "chats", files != null ? files : new ArrayList<>(),
-                "total", files != null ? files.size() : 0,
-                "hasMore", files != null && files.size() == pageSize
+                "chats", paginatedChats,
+                "currentPage", page,
+                "pageSize", pageSize,
+                "totalChats", chatsWithFiles.size(),
+                "totalPages", Math.ceil((double) chatsWithFiles.size() / pageSize),
+                "hasMore", endIndex < chatsWithFiles.size()
             ));
         } catch(Exception err) {
             err.printStackTrace();
