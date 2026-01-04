@@ -79,35 +79,14 @@ export class MessageElementRenderer {
      */
     public async setMessage(data: any, analysis: Analysis): Promise<void> {
         const messageId = data.messageId || data.id;
-        console.log(`[setMessage] ===== START ===== Message: ${messageId}`);
-        console.log(`[setMessage] Data chatId: ${data.chatId}, Current chatId: ${this.chatController.currentChatId}`);
-        
-        if(!this.app) {
-            console.log(`[setMessage] ===== ABORT (no app) ===== Message: ${messageId}`);
-            return;
-        }
-        
-        if(this.chatController.currentChatId !== data.chatId) {
-            console.log(`[setMessage] ===== ABORT (chatId mismatch) ===== Message: ${messageId}`);
-            console.log(`[setMessage] Expected: ${this.chatController.currentChatId}, Got: ${data.chatId}`);
-            return;
-        }
+        if(!this.app) return;
+        if(this.chatController.currentChatId !== data.chatId) return;
             
-        console.log(`[setMessage] Getting container...`);
         const container = await this.chatController.getContainer();
-        if(!container) {
-            console.log(`[setMessage] ===== ABORT (no container) ===== Message: ${messageId}`);
-            return;
-        }
-        console.log(`[setMessage] Container found`);
+        if(!container) return;
 
-        // Check if already rendered
         const hasRoot = this.chatController.messageRoots.has(messageId);
-        console.log(`[setMessage] Checking if already rendered... Has root: ${hasRoot}`);
-        if(hasRoot) {
-            console.log(`[setMessage] ===== ABORT (already rendered) ===== Message: ${messageId}`);
-            return;
-        }
+        if(hasRoot) return;
 
         const isFileMessage = 
             data.type === 'file' || 
@@ -115,16 +94,11 @@ export class MessageElementRenderer {
             data.file_id || 
             data.original_filename || 
             data.mime_type;
-            
-        console.log(`[setMessage] Is file message: ${isFileMessage}`);
         if(isFileMessage) {
-            console.log(`[setMessage] Redirecting to renderFileMessage...`);
             await this.renderFileMessage(data, container);
-            console.log(`[setMessage] ===== END (file redirect) ===== Message: ${messageId}`);
             return;
         }
 
-        console.log(`[setMessage] Building message props...`);
         const perspective = data._perspective || analysis.perspective;
         const senderId = data.userId;
 
@@ -143,7 +117,8 @@ export class MessageElementRenderer {
             );
         }
 
-        this.chatController.messageComponent
+        this.chatController
+            .messageComponent
             .setCurrentUserId(this.chatController.userId!);
             
         const messageProps = {
@@ -169,9 +144,6 @@ export class MessageElementRenderer {
             chatType: currentChat?.type
         }
 
-        console.log(`[setMessage] Message props:`, messageProps);
-        console.log(`[setMessage] Creating DOM element...`);
-
         const el = document.createElement('div');
         el.classList = 'message-container';
         el.setAttribute('data-message-id', messageId);
@@ -179,25 +151,15 @@ export class MessageElementRenderer {
         
         const messageIdStr = messageId ? messageId.toString() : '';
         const isNewMessage = messageIdStr && messageIdStr.startsWith('msg_');
-        
-        console.log(`[setMessage] Inserting element into container... (isNew: ${isNewMessage})`);
         if(isNewMessage) {
             container.appendChild(el);
         } else {
             container.insertBefore(el, container.firstChild);
         }
 
-        console.log(`[setMessage] Creating React root...`);
         const root = ReactDOM.createRoot(el);
-        
-        console.log(`[setMessage] Rendering React component...`);
         root.render(this.chatController.messageComponent.__message(messageProps));
-        
-        console.log(`[setMessage] Storing React root in map...`);
         this.chatController.messageRoots.set(messageId, root);
-        
-        console.log(`[setMessage] ===== SUCCESS ===== Message: ${messageId}`);
-        console.log(`[setMessage] Total roots now: ${this.chatController.messageRoots.size}`);
     }
 
     /**
@@ -205,33 +167,14 @@ export class MessageElementRenderer {
      */
     public async renderElement(data: any): Promise<void> {
         const messageId = data.messageId || data.id;
-        console.log(`[renderElement] ===== START ===== Message: ${messageId}`);
-        console.log(`[renderElement] Data:`, {
-            messageId,
-            id: data.id,
-            chatId: data.chatId,
-            content: data.content,
-            type: data.type,
-            messageType: data.messageType,
-            isSystem: data.isSystem
-        });
-        
         const hasRoot = this.chatController.messageRoots.has(messageId);
-        console.log(`[renderElement] Has React root already? ${hasRoot}`);
-        if(hasRoot) {
-            console.log(`[renderElement] ===== SKIP (has root) ===== Message: ${messageId}`);
-            return;
-        }
+        if(hasRoot) return;
         
         const isSystemMessage = 
             data.messageType === 'SYSTEM' ||
             data.type === 'SYSTEM' ||
             data.isSystem === true;
-
-        console.log(`[renderElement] Is system message? ${isSystemMessage}`);
-
         if(isSystemMessage) {
-            console.log(`[renderElement] Rendering as SYSTEM message: ${messageId}`);
             await this.setMessage({
                 ...data,
                 isSystem: true,
@@ -250,7 +193,6 @@ export class MessageElementRenderer {
                     showUsername: false
                 }
             } as unknown as Analysis);
-            console.log(`[renderElement] ===== END (system) ===== Message: ${messageId}`);
             return;
         }
 
@@ -260,33 +202,21 @@ export class MessageElementRenderer {
             data.file_id || 
             data.original_filename || 
             data.mime_type;
-        
-        console.log(`[renderElement] Is file message? ${isFileMessage}`);
-            
         if(isFileMessage) {
-            console.log(`[renderElement] Rendering as FILE message: ${messageId}`);
             await this.renderFileMessage(data, null);
-            console.log(`[renderElement] ===== END (file) ===== Message: ${messageId}`);
             return;
         }
-
-        console.log(`[renderElement] Rendering as REGULAR message: ${messageId}`);
-        console.log(`[renderElement] Getting perspective for message...`);
         
         const perspective = this.chatController.getAnalyzer()
             .getPerspective().calculateClientPerspective(data);
-        console.log(`[renderElement] Perspective calculated:`, perspective);
         
         const analysis = this.chatController.getAnalyzer()
             .getPerspective().analyzeWithPerspective({
             ...data,
             _perspective: perspective
         });
-        console.log(`[renderElement] Analysis completed:`, analysis);
-            
-        console.log(`[renderElement] Calling setMessage...`);
+
         await this.setMessage(data, analysis);
-        console.log(`[renderElement] ===== END (regular) ===== Message: ${messageId}`);
     }
 
     public async renderFileMessage(messageData: any, container: HTMLDivElement | null): Promise<void> {
@@ -354,7 +284,7 @@ export class MessageElementRenderer {
                     this.chatController.messageRoots.set(messageProps.messageId, root);
                     
                 } else {
-                    console.error('File message rendering not available, falling back to regular message');
+                    console.error('File message rendering not available');
                     await this.renderElement(messageData);
                 }
             } else {

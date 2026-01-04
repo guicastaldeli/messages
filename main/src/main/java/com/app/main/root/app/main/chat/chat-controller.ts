@@ -155,7 +155,7 @@ export class ChatController {
         const existingMessageIds = new Set<string>();
         const orphanedMessageIds: string[] = [];
         
-        this.messageRoots.forEach((root, messageId) => {
+        this.messageRoots.forEach((messageId: any) => {
             const element = container.querySelector(`[data-message-id="${messageId}"]`);
             if(element) {
                 existingMessageIds.add(messageId);
@@ -165,7 +165,6 @@ export class ChatController {
         });
 
         if(orphanedMessageIds.length > 0) {
-            console.log(`[renderAllCached] Cleaning up ${orphanedMessageIds.length} orphaned roots:`, orphanedMessageIds);
             orphanedMessageIds.forEach(messageId => {
                 const root = this.messageRoots.get(messageId);
                 if(root) {
@@ -179,23 +178,12 @@ export class ChatController {
             });
         }
 
-        console.log(`[renderAllCached] Chat: ${chatId}`);
-        console.log(`[renderAllCached] Valid React roots: ${existingMessageIds.size}`);
-        console.log(`[renderAllCached] Orphaned roots cleaned: ${orphanedMessageIds.length}`);
-        console.log(`[renderAllCached] Existing IDs:`, Array.from(existingMessageIds));
-
-        const loadedPages = Array.from(cacheData.loadedPages);
-        console.log(`[renderAllCached] Loaded pages:`, loadedPages);
-        
         const allCachedMessages = Array.from(cacheData.messages.values() as any[])
             .sort((a, b) => {
                 const timeA = a.timestamp || a.createdAt || 0;
                 const timeB = b.timestamp || b.createdAt || 0;
                 return timeA - timeB;
             });
-        
-        console.log(`[renderAllCached] Total messages in cache: ${allCachedMessages.length}`);
-        console.log(`[renderAllCached] Message IDs in cache:`, allCachedMessages.map(m => m.messageId || m.id));
 
         const cachedFiles = Array.from(cacheData.files.values() as any[]);
         const fileMessages = cachedFiles.map(file => ({
@@ -219,16 +207,11 @@ export class ChatController {
                 showUsername: true
             }
         }));
-
-        console.log(`[renderAllCached] Total files in cache: ${cachedFiles.length}`);
         
         const messagesToRender = [...allCachedMessages, ...fileMessages]
             .filter(msg => {
                 const messageId = msg.messageId || msg.id;
                 const exists = existingMessageIds.has(messageId);
-                if(exists) {
-                    console.log(`[renderAllCached] Skipping existing message: ${messageId}`);
-                }
                 return !exists;
             })
             .sort((a, b) => {
@@ -237,23 +220,9 @@ export class ChatController {
                 return timeA - timeB;
             });
         
-        console.log(`[renderAllCached] Messages to render: ${messagesToRender.length}`);
-        console.log(`[renderAllCached] IDs to render:`, messagesToRender.map(m => m.messageId || m.id));
-        
         for(const message of messagesToRender) {
-            const msgId = message.messageId || message.id;
-            console.log(`[renderAllCached] Rendering message: ${msgId}`);
             await this.messageElementRenderer.renderElement(message);
         }
-        
-        console.log(`[renderAllCached] Full message details:`, messagesToRender.map(m => ({
-            id: m.messageId || m.id,
-            chatId: m.chatId,
-            content: m.content?.substring(0, 50),
-            timestamp: m.timestamp
-        })));
-
-        console.log(`[renderAllCached] Final React roots count: ${this.messageRoots.size}`);
     }
 
     /**
@@ -762,10 +731,7 @@ export class ChatController {
 
         try {
             const chatData = await this.getChatData(chatId, userId, page);
-            console.log(`[loadHistory] Loaded ${chatData.messages?.length || 0} messages for page ${page}`);
-
             if(chatData.files && chatData.files.length > 0) {
-                console.log(`Loading ${chatData.files.length} files for history`);
                 const fileMessages = chatData.files.map(file => {
                     return {
                         type: 'file',
@@ -805,10 +771,7 @@ export class ChatController {
             if(page > this.currentPage) this.currentPage = page;
             const cacheService = await this.chatService.getCacheServiceClient();
             const cacheData = cacheService.getCacheData(chatId);
-            if(cacheData) {
-                cacheData.loadedPages.add(page);
-                console.log(`[loadHistory] Updated cache - loaded pages:`, Array.from(cacheData.loadedPages));
-            }
+            if(cacheData) cacheData.loadedPages.add(page);
         } catch(err) {
             console.error(`Failed to load chat data for ${chatId} page ${page}:`, err);
         } finally {
