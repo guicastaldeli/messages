@@ -186,13 +186,13 @@ public class ChatService {
                 }
                 files = validatedFiles;
             }
-            chatData.put("files", files);
+            chatData.put("files", files != null ? files : new ArrayList<>());
             
             Map<String, Object> pagination = new HashMap<>();
             pagination.put("page", page);
             pagination.put("pageSize", pageSize);
             pagination.put("hasMore", messages != null && messages.size() == pageSize);
-            pagination.put("totalFiles", files.size());
+            pagination.put("totalFiles", files != null ? files.size() : 0);
             chatData.put("pagination", pagination);
         } catch (SecurityException e) {
             throw e;
@@ -210,9 +210,6 @@ public class ChatService {
         return chatData;
     }
 
-    /*
-    * Timestamp 
-    */
     private Timestamp getTimestamp(Object timestampObj) {
         if(timestampObj == null) return null;
         if(timestampObj instanceof Timestamp) {

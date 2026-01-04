@@ -37,88 +37,10 @@ export class FileServiceClient {
             data.lastUpdated = Date.now();
         }
     }
-
+    
     /**
-     * Get Chat Data
+     * Decrypt Files
      */
-    public async getChatData(
-        userId: string,
-        chatId: string,
-        page: number = 0,
-        pageSize: number = 20
-    ): Promise<{
-        files: any[];
-        pagination: {
-            page: number;
-            pageSize: number;
-            totalFiles: number;
-            totalPages: number;
-            hasMore: boolean;
-            fromCache: boolean;
-        }
-    }> {
-        try {
-            const res = await fetch(
-                `${this.url}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
-            );
-            if(!res.ok) {
-                const errorText = await res.text();
-                console.error(`API Error (${res.status}):`, errorText);
-                throw new Error(`Failed to fetch chat data! Status: ${res.status}`);
-            }
-
-            const resData = await res.json();
-            if(resData.success === false) {
-                throw new Error(resData.error || 'Failed to fetch chat data');
-            }
-            if(resData.data) {
-                const data = resData.data;
-
-                if(Array.isArray(data.files)) {
-                    const decryptedFiles = [];
-
-                    for(const file of data.files) {
-                        try {
-                            const decryptedFile = await this.decryptFile(chatId, file);
-                            decryptedFiles.push(decryptedFile);
-                        } catch (err) {
-                            if(!file.system) {
-                                console.error('Failed to decrypt file:', err);
-                            }
-                            decryptedFiles.push(file);
-                        }
-                    }
-
-                    data.files = decryptedFiles.map(
-                        (file: any) => ({ ...file })
-                    );
-                }
-
-                return data;
-            }
-
-            if(resData.files !== undefined) {
-                return resData;
-            }
-
-            console.warn('Unexpected response structure:', resData);
-            return {
-                files: [],
-                pagination: {
-                    page,
-                    pageSize,
-                    totalFiles: 0,
-                    totalPages: 0,
-                    hasMore: false,
-                    fromCache: false
-                }
-            };
-        } catch (err) {
-            console.error(`Failed to fetch chat data for ${chatId}:`, err);
-            throw err;
-        }
-    }
-
     public async decryptFile(chatId: string, fileData: any): Promise<any> {
         return new Promise(async (resolve, reject) => {
             const successDestination = '/queue/decrypted-files-scss';
@@ -469,78 +391,21 @@ export class FileServiceClient {
     }
 
     /**
-     * Get Files By Chat Id
-     */
-    public async getFilesByChatId(
-        chatId: string, 
-        page: number = 0
-    ): Promise<{
-        files: any[];
-        currentPage: number;
-        pageSize: number;
-        totalFiles: number;
-        totalPages: number;
-        hasMore: boolean;
-    }> {
-        const pageSize: number = 20;
-
-        try {
-            const res = await fetch(
-                `${this.url}/api/files/chat/${chatId}?page=${page}&pageSize=${pageSize}`
-            );
-            if(!res.ok) throw new Error('Failed to fetch files by chat id');
-
-            const resData = await res.json();
-            
-            let files = Array.isArray(resData) ? resData : (resData.files || []);
-            
-            // Decrypt files if available
-            if(files.length > 0) {
-                const decryptedFiles = [];
-                
-                for(const file of files) {
-                    try {
-                        const decryptedFile = await this.decryptFile(chatId, file);
-                        decryptedFiles.push(decryptedFile);
-                    } catch (err) {
-                        if(!file.system) {
-                            console.error('Failed to decrypt file:', err);
-                        }
-                        decryptedFiles.push(file);
-                    }
-                }
-                
-                files = decryptedFiles.map((file: any) => ({ ...file }));
-            }
-            
-            return {
-                files: files,
-                currentPage: page,
-                pageSize: pageSize,
-                totalFiles: resData.total || files.length,
-                totalPages: Math.ceil((resData.total || files.length) / pageSize),
-                hasMore: resData.hasMore !== false
-            };
-        } catch(err) {
-            console.error('Failed to fetch files by chat id:', err);
-            throw err;
-        }
-    }
-
-    /**
      * Get Count By Chat Id
      */
-    public async getFilesCountByChatId(chatId: string): Promise<number> {
+    public async getFilesCountByChatId(chatId: string, userId: string): Promise<number> {
         try {
-            const res = await fetch(
-                `${this.url}/api/files/chat/${chatId}/count`
-            );
-            if(!res.ok) throw new Error('Failed to fetch files count');
+            const params = new URLSearchParams();
+            if(userId) params.append('userId', userId);
+            
+            const url = `${this.url}/api/files/chat/${chatId}/count${params.toString() ? `?${params}` : ''}`;
+            const res = await fetch(url);
+            if(!res.ok) throw new Error(`Failed to fetch files count: ${res.status}`);
             
             const data = await res.json();
-            return typeof data === 'number' ? data : (data.count || data.total || 0);
+            const count = typeof data === 'number' ? data : (data.count || data.total || 0);
+            return count;
         } catch(err) {
-            console.error('Failed to fetch files count:', err);
             throw err;
         }
     }

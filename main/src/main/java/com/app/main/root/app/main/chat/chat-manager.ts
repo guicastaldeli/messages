@@ -330,8 +330,7 @@ export class ChatManager {
         isSystem: boolean
     } | null> {
         try {
-            const service = await this.chatService.getMessageController().getMessageService();
-            const res = await service.getChatData(userId, chatId, 0);
+            const res = await this.chatService.getChatData(userId, chatId, 0);
             const messages = res.messages || [];
             if(messages && messages.length > 0) {
                 const sortedMessages = messages.sort((a, b) => {

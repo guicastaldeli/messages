@@ -24,9 +24,11 @@ export class Loader {
      */
     public async loadChatItems(userId: string): Promise<void> {
         try {
+            console.log(`[Loader.loadChatItems] Loading chat items for userId: ${userId}`);
+            
             const stream = await this.chatService.streamUserChats(userId);
             stream.on('chat_data', (data: any) => {
-                this.processChatItem(data.chat);
+                this.processChatItem(data.chat, userId);
             });
             stream.on('complete', (data: any) => {
                 this.emitStreamComplete('chat-stream-complete', {
@@ -42,7 +44,7 @@ export class Loader {
             stream.on('processing-error', (err: any) => {
                 console.error('Chat processing error:', err.error);
                 if(err.original && err.original.chat) {
-                    this.processChatItem(err.original.chat);
+                    this.processChatItem(err.original.chat, userId);
                 }
             });
 
@@ -53,8 +55,7 @@ export class Loader {
         }
     }
 
-    private async createChatItem(chat: any): Promise<any> {
-        const userId = this.chatManager.userId;
+    private async createChatItem(chat: any, userId: string): Promise<any> {
         const hasMessages = await this.chatHasMessages(userId, chat.id);
         
         return {
@@ -79,12 +80,12 @@ export class Loader {
     /**
      * Process Chat Item
      */
-    private async processChatItem(chat: any): Promise<void> {
+    private async processChatItem(chat: any, userId: string): Promise<void> {
         try {
-            const shouldContinue = await this.setChatState(chat);
+            const shouldContinue = await this.setChatState(chat, userId);
             if(!shouldContinue) return;
 
-            const chatItem = await this.createChatItem(chat);
+            const chatItem = await this.createChatItem(chat, userId);
             this.emitChatItemAdded(chatItem);
 
             const chatEvent = new CustomEvent('chat-item-streamed', {
@@ -156,15 +157,12 @@ export class Loader {
         }
     }
 
-    private async setChatState(chat: any): Promise<boolean> {
+    private async setChatState(chat: any, userId: string): Promise<boolean> {
         const chatId = chat.id;
         const type = chat.type;
-        const userId = this.chatManager.userId;
-        if(type === 'DIRECT') {
-            const hasMessages = await this.chatHasMessages(userId, chatId);
-            this.chatStateManager.initChatState(chatId, hasMessages ? 1 : 0);
-            if(!hasMessages) return false;
-        }
+        const hasMessages = await this.chatHasMessages(userId, chatId);
+        this.chatStateManager.initChatState(chatId, hasMessages ? 1 : 0);
+        if(!hasMessages) return false;
         return true;
     }
 }

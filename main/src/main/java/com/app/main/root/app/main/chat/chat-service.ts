@@ -28,6 +28,127 @@ export class ChatService {
         );
     }
 
+    public async getChatData(
+        userId: string,
+        chatId: string,
+        page: number = 0,
+        pageSize: number = 20
+    ): Promise<{
+        messages: any[];
+        files: any[];
+        pagination: {
+            page: number;
+            pageSize: number;
+            totalMessages: number;
+            totalFiles: number;
+            totalPages: number;
+            hasMore: boolean;
+            fromCache: boolean;
+        }
+    }> {
+        try {
+            console.log(`Fetching unified chat data for ${chatId}, page ${page}`);
+            
+            const res = await fetch(
+                `${this.apiClientController.getUrl()}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
+            );
+            
+            if(!res.ok) {
+                const errorText = await res.text();
+                console.error(`API Error (${res.status}):`, errorText);
+                throw new Error(`Failed to fetch chat data! Status: ${res.status}`);
+            }
+
+            const resData = await res.json();
+            console.log("Unified API response:", resData);
+            
+            if(resData.success === false) {
+                throw new Error(resData.error || 'Failed to fetch chat data');
+            }
+            
+            let messages = [];
+            let files = [];
+            let pagination = {
+                page,
+                pageSize,
+                totalMessages: 0,
+                totalFiles: 0,
+                totalPages: 0,
+                hasMore: false,
+                fromCache: false
+            };
+
+            if(resData.data) {
+                const data = resData.data;
+                messages = Array.isArray(data.messages) ? data.messages : [];
+                files = Array.isArray(data.files) ? data.files : [];
+                
+                if(data.pagination) {
+                    pagination = {
+                        ...pagination,
+                        ...data.pagination,
+                        totalMessages: data.pagination.totalMessages || data.pagination.total || 0,
+                        totalFiles: data.pagination.totalFiles || 0
+                    };
+                }
+            }
+
+            if(Array.isArray(messages) && messages.length > 0) {
+                const decryptedMessages = [];
+                for(const message of messages) {
+                    try {
+                        if(!message.system) {
+                            const messageService = await this.getMessageController().getMessageService(); 
+                            const decryptedMessage = await messageService.decryptMessage(chatId, message);
+                            decryptedMessages.push(decryptedMessage);
+                        } else {
+                            decryptedMessages.push(message);
+                        }
+                    } catch (err) {
+                        console.error('Failed to decrypt message:', err);
+                        decryptedMessages.push(message);
+                    }
+                }
+                messages = decryptedMessages.map((message: any) => ({ ...message }));
+            }
+            if(Array.isArray(files) && files.length > 0) {
+                const decryptedFiles = [];
+                for(const file of files) {
+                    try {
+                        const fileService = await this.getFileController().getFileService(); 
+                        const decryptedFile = await fileService.decryptFile(chatId, file);
+                        decryptedFiles.push(decryptedFile);
+                    } catch (err) {
+                        console.error('Failed to decrypt file:', err);
+                        decryptedFiles.push(file);
+                    }
+                }
+                files = decryptedFiles.map((file: any) => ({ ...file }));
+            }
+
+            return {
+                messages,
+                files,
+                pagination
+            };
+        } catch (err) {
+            console.error(`Failed to fetch chat data for ${chatId}:`, err);
+            return {
+                messages: [],
+                files: [],
+                pagination: {
+                    page,
+                    pageSize,
+                    totalMessages: 0,
+                    totalFiles: 0,
+                    totalPages: 0,
+                    hasMore: false,
+                    fromCache: false
+                }
+            };
+        }
+    }
+
     public async fetchAndCacheData(
         chatId: string,
         userId: string,
@@ -37,20 +158,16 @@ export class ChatService {
         files: any[] 
     }> {
         try {
-            const messageService = await this.messageControllerClient.getMessageService();
-            const fileService = await this.fileControllerClient.getFileService();
-
-            const msgData = await messageService.getChatData(userId, chatId, page);
-            const fileData = await fileService.getChatData(userId, chatId, page);
+            const chatData = await this.getChatData(userId, chatId, page);
             this.addChatDataPage(
                 chatId,
-                msgData.messages,
-                fileData.files,
+                chatData.messages,
+                chatData.files,
                 page
             );
             return {
-                messages: msgData.messages || [],
-                files: fileData.files || [] 
+                messages: chatData.messages || [],
+                files: chatData.files || [] 
             }
         } catch(err) {
             console.error(`Failed to fetch chat data for ${chatId} page ${page}:`, err);
@@ -135,11 +252,11 @@ export class ChatService {
             });
 
             /* Files */
-            const sortedFiles = files.sort((a, b) => {
+            const sortedFiles = Array.isArray(files) ? files.sort((a, b) => {
                 const tA = a.timestamp || a.createdAt || 0;
                 const tB = b.timestamp || b.createdAt || 0;
                 return tA - tB;
-            });
+            }) : [];
 
             const fileStartIndex = page * this.cacheServiceClient.config.pageSize;
             sortedFiles.forEach((f, i) => {

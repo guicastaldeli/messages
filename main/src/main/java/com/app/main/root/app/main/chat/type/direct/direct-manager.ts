@@ -98,8 +98,7 @@ export class DirectManager {
     */
     public async lastMessage(id: string): Promise<string> {
         try {
-            const messageService = await this.chatService.getMessageController().getMessageService();
-            const res = await messageService.getChatData(this.userId, id);
+            const res = await this.chatService.getChatData(this.userId, id);
             const messages = res.messages || [];
             if(messages && messages.length > 0) {
                 const lastMessage = messages[messages.length - 1]

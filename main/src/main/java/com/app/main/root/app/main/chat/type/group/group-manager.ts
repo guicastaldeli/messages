@@ -75,8 +75,11 @@ export class GroupManager {
         this.inviteCodeManager = new InviteCodeManager(socketClient, this);
     }
 
-    public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
-        console.log("SESSIONID", sessionId, "USERID", userId);
+    public async getUserData(
+        sessionId: string, 
+        userId: string, 
+        username: string
+    ): Promise<void> {
         this.socketId = sessionId;
         this.userId = userId;
         this.username = username;

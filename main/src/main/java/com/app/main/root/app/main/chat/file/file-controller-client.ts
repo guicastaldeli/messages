@@ -57,37 +57,94 @@ export class FileControllerClient {
     /**
      * Init Cache
      */
-    public async initCache(userId: string): Promise<void> {
-        try {
-            const recentFilesResponse = await this.fileService.getRecentFiles(userId, 0, 50);
-            const chats = recentFilesResponse.chats || recentFilesResponse || [];
-            if(!Array.isArray(chats)) {
-                console.warn('getRecentFiles did not return an array:', recentFilesResponse);
+    /**
+ * Init Cache
+ */
+public async initCache(userId: string): Promise<void> {
+    try {
+        console.log('Starting file cache initialization for user:', userId);
+        
+        const recentFilesResponse = await this.fileService.getRecentFiles(userId);
+        console.log('Recent files response:', recentFilesResponse);
+        
+        let chats = [];
+        if (Array.isArray(recentFilesResponse)) {
+            chats = recentFilesResponse;
+        } else if (recentFilesResponse && Array.isArray(recentFilesResponse.chats)) {
+            chats = recentFilesResponse.chats;
+        } else {
+            console.warn('getRecentFiles did not return expected format:', recentFilesResponse);
+            return;
+        }
+        
+        console.log(`Found ${chats.length} chats to preload`);
+        
+        const preloadPromises = chats.map(async (chat: any) => {
+            const chatId = chat.id || chat.chatId;
+            if (!chatId) {
+                console.warn('Chat missing ID:', chat);
                 return;
             }
-            
-            const preloadPromises = chats.map(async (chat: any) =>
-                this.preloadData(chat.id || chat.chatId)
-            );
-            await Promise.all(preloadPromises);
-        } catch(err) {
-            console.log('Cache initialization failed: ', err);
-            throw err;
-        }
+            console.log(`Preloading files for chat: ${chatId}`);
+            return this.preloadData(userId, chatId);
+        });
+        
+        await Promise.all(preloadPromises);
+        console.log('File cache initialization completed');
+    } catch(err) {
+        console.error('File cache initialization failed: ', err);
+        throw err;
     }
+}
 
     /**
      * Preload Data
      */
-    public async preloadData(chatId: string): Promise<void> {
+    public async preloadData(userId: string, chatId: string): Promise<void> {
+        console.log("PRELOAD DATA FILES")
         try {
             const [countData, pageData] = await Promise.all([
-                this.fileService.getFilesCountByChatId(chatId),
-                this.fileService.getFilesByChatId(chatId, 0)
+                this.fileService.getFilesCountByChatId(userId, chatId),
+                this.chatService.getChatData(userId, chatId, 0)
             ]);
 
             const cacheService = await this.chatService.getCacheServiceClient();
-            cacheService.init(chatId, countData);
+            if(!cacheService.cache.has(chatId)) {
+                cacheService.init(chatId, countData);
+            }
+
+            const cacheData = cacheService.cache.get(chatId)!;
+            cacheData.files.clear();
+            cacheData.fileOrder = [];
+            
+            pageData.files.forEach((file: any) => {
+                const id = file.id || file.fileId;
+                const fileChatId = file.chatId;
+                
+                if(!id) {
+                    console.warn(`[preloadData] Message missing ID, skipping`);
+                    return;
+                }
+                if(fileChatId && fileChatId !== chatId) {
+                    console.warn(`[preloadData] Skipping message ${id} - belongs to ${fileChatId}, not ${chatId}`);
+                    return;
+                }
+                if(!file.chatId) {
+                    file.chatId = chatId;
+                }
+                
+                cacheData.files.set(id, file);
+                cacheData.fileOrder.push(id);
+            });
+            
+            cacheData.loadedPages.add(0);
+            cacheData.totalFilesCount = countData;
+            cacheData.lastAccessTime = Date.now();
+            cacheData.hasMore = pageData.pagination.hasMore;
+            cacheData.isFullyLoaded = !cacheData.hasMore;
+            cacheData.lastUpdated = Date.now();
+            
+            console.log(`Preloaded ${cacheData.fileOrder.length} messages for chat ${chatId}`);
             this.getFilesPage(pageData.files, chatId, 0);
         } catch(err) {
             console.error(`Preload for ${chatId} failed`, err);

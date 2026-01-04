@@ -113,8 +113,7 @@ export class ChunkRenderer {
             const cacheData = await this.chatService.getCachedData(chatId);
             const data = cacheService.cache.get(chatId)!;
             if(cacheData && data.loadedPages.has(nextPage)) {
-                const messageService = await this.chatService.getMessageController().getMessageService();
-                const response = await messageService.getChatData(userId, chatId, nextPage);
+                const response = await this.chatService.getChatData(userId, chatId, nextPage);
                 if(response.messages && response.messages.length > 0) {
                     this.chatService.getMessageController()
                         .getMessagesPage(
