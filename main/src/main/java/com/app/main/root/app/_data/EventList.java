@@ -8,8 +8,8 @@ import com.app.main.root.app._crypto.file_encoder.KeyManagerService;
 import com.app.main.root.app._crypto.message_encoder.SecureMessageService;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._server.ConnectionTracker;
-import com.app.main.root.app._types._Message;
-import com.app.main.root.app._types._User;
+import com.app.main.root.app._types.Message;
+import com.app.main.root.app._types.User;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app._server.ConnectionInfo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -383,12 +383,12 @@ public class EventList {
 
                     /* Messages */
                     if(includeMessages) {
-                        List<_Message> messages = 
+                        List<Message> messages = 
                             serviceManager
                             .getMessageService()
                             .getMessagesByChatId(chatId, page, pageSize);
 
-                        for(_Message message : messages) {
+                        for(Message message : messages) {
                             Map<String, Object> messageEvent = new HashMap<>();
                             messageEvent.put("type", "MESSAGE_DATA");
                             messageEvent.put("chatId", chatId);
@@ -508,9 +508,9 @@ public class EventList {
                     
                     if(isGroupChat) {
                         String destination = "/user/queue/messages/group/" + chatId;
-                        List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(chatId);
+                        List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(chatId);
                         
-                        for(_User member : groupMembers) {
+                        for(User member : groupMembers) {
                             String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                             if(memberSessionId != null) {
                                 socketMethods.send(memberSessionId, destination, fileMessage);
@@ -955,7 +955,7 @@ public class EventList {
 
                     String groupId = serviceManager.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
                     Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
-                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
                     
                     if(groupId == null) throw new Exception("Group Id is required!");
                     if(userId == null) throw new Exception("User Id is required!");
@@ -988,7 +988,7 @@ public class EventList {
                     serviceManager.getUserService().sendMessageToUser(sessionId, "join-group-scss", res);
 
                     /* System Message */
-                    for(_User member : groupMembers) {
+                    for(User member : groupMembers) {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
                             Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
@@ -1064,7 +1064,7 @@ public class EventList {
                     }
 
                     serviceManager.getGroupService().removeUserFromGroupMapping(userId, groupId);
-                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
                     
                     eventTracker.track(
                         "exit-group", 
@@ -1085,7 +1085,7 @@ public class EventList {
                     serviceManager.getUserService().sendMessageToUser(sessionId, "exit-group-scss", res);
 
                     /* System Message */
-                    for(_User member : groupMembers) {
+                    for(User member : groupMembers) {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
                             Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
@@ -1132,7 +1132,7 @@ public class EventList {
                     String inviterUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
 
                     Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
-                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
                     
                     if(groupId == null) throw new Exception("Group Id is required!");
                     if(userId == null) throw new Exception("User Id is required!");
@@ -1163,7 +1163,7 @@ public class EventList {
                     serviceManager.getUserService().sendMessageToUser(sessionId, "add-user-group-scss", res);
 
                     /* System Message */
-                    for(_User member : groupMembers) {
+                    for(User member : groupMembers) {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
                             Map<String, Object> systemMessageData = new HashMap<>();
@@ -1218,7 +1218,7 @@ public class EventList {
                     String inviterUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
 
                     Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
-                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
                     
                     if(groupId == null) throw new Exception("Group Id is required!");
                     if(userId == null) throw new Exception("User Id is required!");
@@ -1249,7 +1249,7 @@ public class EventList {
                     serviceManager.getUserService().sendMessageToUser(sessionId, "remove-user-group-scss", res);
 
                     /* System Message */
-                    for(_User member : groupMembers) {
+                    for(User member : groupMembers) {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
                             Map<String, Object> systemMessageData = new HashMap<>();
@@ -1391,10 +1391,10 @@ public class EventList {
                     String groupId = serviceManager.getGroupService().getInviteCodes().findGroupByCode(inviteCode);
                     Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
                     Object creator = groupInfo.get("creator") != null ? groupInfo.get("creator") : groupInfo.get("creatorId");
-                    List<_User> members = serviceManager.getGroupService().getGroupMembers(groupId);
+                    List<User> members = serviceManager.getGroupService().getGroupMembers(groupId);
                     List<String> memberNames = new ArrayList<>();
                     List<String> memberIds = new ArrayList<>();
-                    for(_User member : members) {
+                    for(User member : members) {
                         memberNames.add(member.getUsername());
                         memberIds.add(member.getId());
                     }
@@ -1439,10 +1439,10 @@ public class EventList {
                     Map<String, Object> data = (Map<String, Object>) payload;
                     String groupId = (String) data.get("groupId");
 
-                    List<_User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
                     List<Map<String, Object>> members = new ArrayList<>();
 
-                    for(_User member : groupMembers) {
+                    for(User member : groupMembers) {
                         Map<String, Object> memberInfo = new HashMap<>();
                         memberInfo.put("id", member.getId());
                         memberInfo.put("username", member.getUsername());

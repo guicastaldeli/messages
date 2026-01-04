@@ -5,7 +5,7 @@ import com.app.main.root.app._auth.LoginRequest;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._service.SessionService;
-import com.app.main.root.app._types._User;
+import com.app.main.root.app._types.User;
 import com.app.main.root.app._server.ConnectionTracker;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
@@ -301,7 +301,7 @@ public class AuthController {
                 response
             );
 
-            _User user = serviceManager.getUserService().getUserById(sessionData.getUserId());
+            User user = serviceManager.getUserService().getUserById(sessionData.getUserId());
             if(user == null) {
                 return ResponseEntity.status(401)
                     .body(

@@ -1,7 +1,7 @@
 package com.app.main.root.app._types;
 import java.sql.Timestamp;
 
-public class _Group {
+public class Group {
     private String id;
     private String name;
     private String creatorId;

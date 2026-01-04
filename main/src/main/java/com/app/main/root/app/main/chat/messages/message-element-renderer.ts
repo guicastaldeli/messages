@@ -21,9 +21,9 @@ export class MessageElementRenderer {
     /**
      * Render History
      */
-    public async renderHistory(messages: any[]): Promise<void> {
+    public async renderHistory(timeline: any[]): Promise<void> {
         if(!this.app) throw new Error('App Element not found');
-        if(messages.length === 0) return;
+        if(timeline.length === 0) return;
 
         const container = await this.chatController.getContainer();
         if(!container) return;
@@ -41,23 +41,20 @@ export class MessageElementRenderer {
         this.chatController.messageRoots.forEach((_, messageId) => {
             existingMessageIds.add(messageId);
         });
-        const newMessages = messages.filter(msg => {
-            const id = msg.id || msg.messageId;
+
+        const sortedTimeline = timeline.sort((a, b) => {
+            const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
+            const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
+            return timeB - timeA;
+        });
+
+        const newItems = sortedTimeline.filter(item => {
+            const id = item.id || item.messageId;
             return !existingMessageIds.has(id);
         });
-
-        console.log(`Rendering ${newMessages.length} new messages out of ${messages.length} total`);
-
-        if(newMessages.length === 0) return;
-
-        const sortedMessages = newMessages.sort((a, b) => {
-            const timeA = a.timestamp || a.createdAt || 0;
-            const timeB = b.timestamp || b.createdAt || 0;
-            return timeA - timeB;
-        });
-
-        for(const data of sortedMessages) {
-            await this.renderElement(data);
+        if(newItems.length === 0) return;
+        for(const item of newItems) {
+            await this.renderElement(item);
         }
         
         this.restoreScrollPos(container);
@@ -148,14 +145,7 @@ export class MessageElementRenderer {
         el.classList = 'message-container';
         el.setAttribute('data-message-id', messageId);
         el.setAttribute('data-timestamp', data.timestamp?.toString() || Date.now().toString());
-        
-        const messageIdStr = messageId ? messageId.toString() : '';
-        const isNewMessage = messageIdStr && messageIdStr.startsWith('msg_');
-        if(isNewMessage) {
-            container.appendChild(el);
-        } else {
-            container.insertBefore(el, container.firstChild);
-        }
+        this.insertMessageInOrder(container, el, data.timestamp || Date.now());
 
         const root = ReactDOM.createRoot(el);
         root.render(this.chatController.messageComponent.__message(messageProps));
@@ -276,6 +266,7 @@ export class MessageElementRenderer {
                     const messageDiv = document.createElement('div');
                     messageDiv.className = `message-container file-message-container`;
                     messageDiv.setAttribute('data-message-id', messageProps.messageId);
+                    messageDiv.setAttribute('data-timestamp', messageProps.timestamp?.toString() || Date.now().toString());
                     
                     const root = ReactDOM.createRoot(messageDiv);
                     root.render(messageComponent.__file(messageProps));
@@ -296,16 +287,20 @@ export class MessageElementRenderer {
         }
     }
 
-    private insertMessageInOrder(container: HTMLDivElement, newElement: HTMLElement, timestamp: number): void {
+    private insertMessageInOrder(
+        container: HTMLDivElement, 
+        newElement: HTMLElement, 
+        timestamp: number
+    ): void {
         const messageElements = Array.from(container.children);
-        let insertIndex = 0;
+        let insertIndex = messageElements.length;
         
-        for(let i = 0; i < messageElements.length; i++) {
+        for(let i = messageElements.length - 1; i >= 0; i--) {
             const element = messageElements[i];
             const elementTimestamp = this.getMessageTimestamp(element);
             
-            if(timestamp > elementTimestamp) {
-                insertIndex = i + 1;
+            if(timestamp < elementTimestamp) {
+                insertIndex = i;
             } else {
                 break;
             }

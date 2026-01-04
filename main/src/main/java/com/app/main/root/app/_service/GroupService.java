@@ -1,6 +1,6 @@
 package com.app.main.root.app._service;
-import com.app.main.root.app._types._User;
-import com.app.main.root.app._types._Group;
+import com.app.main.root.app._types.User;
+import com.app.main.root.app._types.Group;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._crypto.message_encoder.PreKeyBundle;
@@ -110,9 +110,9 @@ public class GroupService {
             );
         }
 
-        List<_User> members = getGroupMembers(id);
+        List<User> members = getGroupMembers(id);
         List<String> memberIds = members.stream()
-            .map(_User::getId)
+            .map(User::getId)
             .collect(Collectors.toList());
 
         try {
@@ -222,7 +222,7 @@ public class GroupService {
         sessionGroups.computeIfAbsent(sessionId, k -> new CopyOnWriteArraySet<>()).add(groupId);
     }
 
-    public _Group getGroupId(String id) throws SQLException {
+    public Group getGroupId(String id) throws SQLException {
         String query = CommandQueryManager.GET_GROUP_BY_ID.get();
 
         try(
@@ -240,9 +240,9 @@ public class GroupService {
         return null;
     }
 
-    public List<_User> getGroupMembers(String groupId) throws SQLException {
+    public List<User> getGroupMembers(String groupId) throws SQLException {
         String query = CommandQueryManager.GET_GROUP_MEMBERS.get();
-        List<_User> members = new ArrayList<>();
+        List<User> members = new ArrayList<>();
 
         try(
             Connection conn = getConnection();
@@ -251,7 +251,7 @@ public class GroupService {
             stmt.setString(1, groupId);
             try(ResultSet rs = stmt.executeQuery()) {
                 while(rs.next()) {
-                    _User user = mapUserFromResultSet(rs);
+                    User user = mapUserFromResultSet(rs);
                     try {
                         String username = serviceManager.getUserService().getUsernameByUserId(user.getId());
                         user.setUsername(username != null ? username : "Unknown");
@@ -267,9 +267,9 @@ public class GroupService {
         return members;
     }
 
-    public List<_Group> getUserGroups(String userId) throws SQLException {
+    public List<Group> getUserGroups(String userId) throws SQLException {
         String query = CommandQueryManager.GET_USER_GROUPS.get();
-        List<_Group> groups = new ArrayList<>();
+        List<Group> groups = new ArrayList<>();
 
         try(
             Connection conn = getConnection();
@@ -709,8 +709,8 @@ public class GroupService {
     ***
     **
     */
-    private _Group mapGroupFromResultSet(ResultSet rs) throws SQLException {
-        _Group group = new _Group();
+    private Group mapGroupFromResultSet(ResultSet rs) throws SQLException {
+        Group group = new Group();
         group.setId(rs.getString("id"));
         group.setName(rs.getString("name"));
         group.setCreatorId(rs.getString("creator_id"));
@@ -718,8 +718,8 @@ public class GroupService {
         return group;
     }
 
-    private _User mapUserFromResultSet(ResultSet rs) throws SQLException {
-        _User user = new _User();
+    private User mapUserFromResultSet(ResultSet rs) throws SQLException {
+        User user = new User();
         user.setId(rs.getString("id"));
         user.setUsername(rs.getString("username"));
         user.setCreatedAt(rs.getTimestamp("created_at"));

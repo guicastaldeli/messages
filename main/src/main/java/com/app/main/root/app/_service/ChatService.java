@@ -1,7 +1,6 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._crypto.message_encoder.ChatDecryptionService;
-import com.app.main.root.app._types._Message;
-
+import com.app.main.root.app._types.Message;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.SQLException;
@@ -150,11 +149,11 @@ public class ChatService {
         Map<String, Object> chatData = new HashMap<>();
         
         try {
-            List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+            List<Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
             
             if(messages != null) {
-                List<_Message> validatedMessages = new ArrayList<>();
-                for(_Message msg : messages) {
+                List<Message> validatedMessages = new ArrayList<>();
+                for(Message msg : messages) {
                     if(chatId.equals(msg.getChatId())) {
                         validatedMessages.add(msg);
                     } else {
@@ -179,6 +178,7 @@ public class ChatService {
                     if(chatId.equals(fileChatId)) {
                         Map<String, Object> convertedFile = new HashMap<>();
                         convertedFile.put("fileId", file.get("file_id"));
+                        timelineItem.put("senderId", file.getSenderId());
                         convertedFile.put("originalFileName", file.get("original_filename"));
                         convertedFile.put("fileSize", file.get("file_size"));
                         convertedFile.put("mimeType", file.get("mime_type"));
@@ -196,23 +196,127 @@ public class ChatService {
                 }
                 files = validatedFiles;
             }
-            chatData.put("files", files != null ? files : new ArrayList<>());
+            
+            List<Map<String, Object>> timeline = new ArrayList<>();
+            
+            if(messages != null) {
+                for(Message msg : messages) {
+                    if(chatId.equals(msg.getChatId())) {
+                        Map<String, Object> timelineItem = new HashMap<>();
+                        timelineItem.put("type", "message");
+                        timelineItem.put("id", msg.getId());
+                        timelineItem.put("messageId", msg.getId());
+                        timelineItem.put("content", msg.getContent());
+                        timelineItem.put("contentBytes", msg.getContentBytes());
+                        timelineItem.put("senderId", msg.getSenderId());
+                        timelineItem.put("chatId", msg.getChatId());
+                        
+                        Timestamp createdAt = msg.getCreatedAt();
+                        long timestamp;
+                        String createdAtStr;
+                        if(createdAt != null) {
+                            timestamp = createdAt.getTime();
+                            createdAtStr = createdAt.toString();
+                        } else {
+                            timestamp = System.currentTimeMillis();
+                            createdAtStr = new Timestamp(timestamp).toString();
+                        }
+                        
+                        timelineItem.put("createdAt", createdAtStr);
+                        timelineItem.put("timestamp", timestamp);
+                        timelineItem.put("messageType", msg.getMessageType());
+                        timelineItem.put("username", msg.getUsername());
+                        timelineItem.put("isSystem", msg.isSystem());
+                        
+                        timeline.add(timelineItem);
+                    }
+                }
+            }
+            for(Map<String, Object> file : files) {
+                Map<String, Object> timelineItem = new HashMap<>();
+                timelineItem.put("type", "file");
+                timelineItem.put("id", "file_" + file.get("fileId"));
+                timelineItem.put("messageId", "file_" + file.get("fileId"));
+                timelineItem.put("fileData", file);
+                timelineItem.put("content", "Shared file: " + file.get("originalFileName"));
+                timelineItem.put("chatId", file.get("chatId"));
+                timelineItem.put("userId", userId);
+                
+                Object uploadedAt = file.get("uploadedAt");
+                long timestamp;
+                String createdAtStr;
+                
+                if(uploadedAt instanceof Timestamp) {
+                    Timestamp ts = (Timestamp) uploadedAt;
+                    timestamp = ts.getTime();
+                    createdAtStr = ts.toString();
+                } else if(uploadedAt instanceof String) {
+                    try {
+                        Timestamp ts = Timestamp.valueOf((String) uploadedAt);
+                        timestamp = ts.getTime();
+                        createdAtStr = ts.toString();
+                    } catch(Exception e) {
+                        try {
+                            LocalDateTime dateTime = LocalDateTime.parse(
+                                (String) uploadedAt, 
+                                DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                            );
+                            Timestamp ts = Timestamp.valueOf(dateTime);
+                            timestamp = ts.getTime();
+                            createdAtStr = ts.toString();
+                        } catch(Exception e2) {
+                            timestamp = System.currentTimeMillis();
+                            createdAtStr = new Timestamp(timestamp).toString();
+                        }
+                    }
+                } else {
+                    timestamp = System.currentTimeMillis();
+                    createdAtStr = new Timestamp(timestamp).toString();
+                }
+                
+                timelineItem.put("timestamp", timestamp);
+                timelineItem.put("createdAt", createdAtStr);
+                timeline.add(timelineItem);
+            }
+
+            timeline.sort((a, b) -> {
+                Long timeA = (Long) a.get("timestamp");
+                Long timeB = (Long) b.get("timestamp");
+                if(timeA == null) timeA = 0L;
+                if(timeB == null) timeB = 0L;
+                return timeB.compareTo(timeA);
+            });
+
+            int totalItems = timeline.size();
+            int startIndex = Math.max(0, totalItems - ((page + 1) * pageSize));
+            int endIndex = totalItems - (page * pageSize);
+            
+            startIndex = Math.max(0, startIndex);
+            endIndex = Math.min(totalItems, endIndex);
+
+            chatData.put("timeline", timeline);
+            chatData.put("messages", messages != null ? messages : new ArrayList<>());
+            chatData.put("files", files);
             
             Map<String, Object> pagination = new HashMap<>();
             pagination.put("page", page);
             pagination.put("pageSize", pageSize);
-            pagination.put("hasMore", messages != null && messages.size() == pageSize);
-            pagination.put("totalFiles", files != null ? files.size() : 0);
+            pagination.put("hasMore", timeline.size() > endIndex);
+            pagination.put("totalItems", timeline.size());
+            pagination.put("totalFiles", files.size());
             chatData.put("pagination", pagination);
         } catch (SecurityException e) {
             throw e;
         } catch (Exception e) {
+            e.printStackTrace();
+            chatData.put("timeline", new ArrayList<>());
             chatData.put("messages", new ArrayList<>());
             chatData.put("files", new ArrayList<>());
             chatData.put("pagination", Map.of(
                 "page", page,
                 "pageSize", pageSize,
                 "hasMore", false,
+                "totalItems", 0,
                 "totalFiles", 0
             ));
         }

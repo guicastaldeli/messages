@@ -4,7 +4,7 @@ import com.app.main.root.app._data.MessagePerspectiveDetector;
 import com.app.main.root.app._data.MessagePerspectiveResult;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
-import com.app.main.root.app._types._Message;
+import com.app.main.root.app._types.Message;
 import com.app.main.root.app.main.chat.messages.MessageLog;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
 
@@ -76,9 +76,9 @@ public class SystemMessageService {
     /*
     * Messages By Group 
     */
-    public List<_Message> getMessagesByGroup(String groupId) throws SQLException {
+    public List<Message> getMessagesByGroup(String groupId) throws SQLException {
         String query = CommandQueryManager.GET_SYSTEM_MESSAGES_BY_GROUP.get();
-        List<_Message> messages = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
 
         try(
             Connection conn = getConnection();
@@ -99,8 +99,8 @@ public class SystemMessageService {
     /*
     * Map Messages ResultSet
     */
-    private _Message mapMessagesFromResultSet(ResultSet rs) throws SQLException {
-        _Message message = new _Message();
+    private Message mapMessagesFromResultSet(ResultSet rs) throws SQLException {
+        Message message = new Message();
         message.setId(rs.getInt("id"));
         message.setChatId(rs.getString("chat_id"));
         message.setSenderId("system");

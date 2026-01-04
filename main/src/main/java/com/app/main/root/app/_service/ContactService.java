@@ -2,7 +2,7 @@ package com.app.main.root.app._service;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._server.ConnectionTracker;
-import com.app.main.root.app._types._User;
+import com.app.main.root.app._types.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -34,7 +34,7 @@ public class ContactService {
     * Send Contact Request 
     */
     public Map<String, Object> sendContactRequest(String fromUserId, String toUsername) throws SQLException {
-        _User toUser = serviceManager.getUserService().getUserByUsername(toUsername);
+        User toUser = serviceManager.getUserService().getUserByUsername(toUsername);
         if(toUser == null) throw new IllegalArgumentException("User not found");
         if(fromUserId.equals(toUser.getId())) throw new IllegalArgumentException("Cannot add yourself");
         if(isContact(fromUserId, toUser.getId())) throw new IllegalArgumentException("User is already in your contacts");

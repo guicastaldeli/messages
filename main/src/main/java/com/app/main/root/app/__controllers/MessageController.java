@@ -1,7 +1,7 @@
 package com.app.main.root.app.__controllers;
 import com.app.main.root.app._service.ServiceManager;
-import com.app.main.root.app._types._Message;
-import com.app.main.root.app._types._RecentChat;
+import com.app.main.root.app._types.Message;
+import com.app.main.root.app._types.RecentChat;
 import com.app.main.root.app.main.chat.messages.MessageLog;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
 import org.springframework.context.annotation.Lazy;
@@ -58,7 +58,7 @@ public class MessageController {
      * All Messages
      */
     @GetMapping("/get-messages")
-    public List<_Message> getAllMessages() throws SQLException {
+    public List<Message> getAllMessages() throws SQLException {
         return serviceManager.getMessageService().getAllMessages();
     }
 
@@ -72,7 +72,7 @@ public class MessageController {
         @RequestParam(defaultValue = "20") int pageSize
     ) {
         try {
-            List<_Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+            List<Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
             int totalCount = serviceManager.getMessageService().getMessageCountByChatId(chatId);
             boolean hasMore = (page + 1) * pageSize < totalCount;
             
@@ -120,7 +120,7 @@ public class MessageController {
     ) {
         try {
             int offset = page * pageSize;
-            List<_RecentChat> chats = serviceManager.getMessageService().getRecentChats(userId, pageSize, offset);
+            List<RecentChat> chats = serviceManager.getMessageService().getRecentChats(userId, pageSize, offset);
             int totalCount = serviceManager.getMessageService().getRecentChatsCount(userId);
             boolean hasMore = (page + 1) * pageSize < totalCount;
             
@@ -161,7 +161,7 @@ public class MessageController {
      * Get By User Id
      */
     @GetMapping("/messages/userId/{userId}")
-    public List<_Message> getMessagesByUserId(@PathVariable String userId) throws SQLException {
+    public List<Message> getMessagesByUserId(@PathVariable String userId) throws SQLException {
         if(userId == null || userId.equals("null") || userId.trim().isEmpty()) {
             return new ArrayList<>();
         }

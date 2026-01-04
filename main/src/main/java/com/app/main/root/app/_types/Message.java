@@ -1,7 +1,7 @@
 package com.app.main.root.app._types;
 import java.sql.Timestamp;
 
-public class _Message {
+public class Message {
     private int id;
     private String chatId;
     private String senderId;

@@ -36,11 +36,13 @@ export class ChatService {
     ): Promise<{
         messages: any[];
         files: any[];
+        timeline: any[];
         pagination: {
             page: number;
             pageSize: number;
             totalMessages: number;
             totalFiles: number;
+            totalTimeline: number;
             totalPages: number;
             hasMore: boolean;
             fromCache: boolean;
@@ -68,11 +70,13 @@ export class ChatService {
             
             let messages = [];
             let files = [];
+            let timeline = [];
             let pagination = {
                 page,
                 pageSize,
                 totalMessages: 0,
                 totalFiles: 0,
+                totalTimeline: 0,
                 totalPages: 0,
                 hasMore: false,
                 fromCache: false
@@ -82,13 +86,15 @@ export class ChatService {
                 const data = resData.data;
                 messages = Array.isArray(data.messages) ? data.messages : [];
                 files = Array.isArray(data.files) ? data.files : [];
+                timeline = Array.isArray(data.timeline) ? data.timeline : [];
                 
                 if(data.pagination) {
                     pagination = {
                         ...pagination,
                         ...data.pagination,
                         totalMessages: data.pagination.totalMessages || data.pagination.total || 0,
-                        totalFiles: data.pagination.totalFiles || 0
+                        totalFiles: data.pagination.totalFiles || 0,
+                        totalTimeline: data.pagination.totalTimeline || data.pagination.totalItems || 0
                     };
                 }
             }
@@ -125,10 +131,36 @@ export class ChatService {
                 }
                 files = decryptedFiles.map((file: any) => ({ ...file }));
             }
+            if(Array.isArray(timeline) && timeline.length > 0) {
+                const decryptedTimeline = [];
+                for(const item of timeline) {
+                    try {
+                        if(item.type === 'message' && !item.system) {
+                            const messageService = await this.getMessageController().getMessageService(); 
+                            const decryptedItem = await messageService.decryptMessage(chatId, item);
+                            decryptedTimeline.push(decryptedItem);
+                        } else if(item.type === 'file') {
+                            const fileService = await this.getFileController().getFileService(); 
+                            const decryptedItem = await fileService.decryptFile(chatId, item.fileData || item);
+                            decryptedTimeline.push({
+                                ...item,
+                                fileData: decryptedItem
+                            });
+                        } else {
+                            decryptedTimeline.push(item);
+                        }
+                    } catch (err) {
+                        console.error('Failed to decrypt timeline item:', err);
+                        decryptedTimeline.push(item);
+                    }
+                }
+                timeline = decryptedTimeline;
+            }
 
             return {
                 messages,
                 files,
+                timeline,
                 pagination
             };
         } catch (err) {
@@ -136,11 +168,13 @@ export class ChatService {
             return {
                 messages: [],
                 files: [],
+                timeline: [],
                 pagination: {
                     page,
                     pageSize,
                     totalMessages: 0,
                     totalFiles: 0,
+                    totalTimeline: 0,
                     totalPages: 0,
                     hasMore: false,
                     fromCache: false
@@ -155,7 +189,8 @@ export class ChatService {
         page: number
     ): Promise<{ 
         messages: any[], 
-        files: any[] 
+        files: any[],
+        timeline: any[]
     }> {
         try {
             const chatData = await this.getChatData(userId, chatId, page);
@@ -163,11 +198,13 @@ export class ChatService {
                 chatId,
                 chatData.messages,
                 chatData.files,
+                chatData.timeline,
                 page
             );
             return {
                 messages: chatData.messages || [],
-                files: chatData.files || [] 
+                files: chatData.files || [],
+                timeline: chatData.timeline || []
             }
         } catch(err) {
             console.error(`Failed to fetch chat data for ${chatId} page ${page}:`, err);
@@ -186,6 +223,7 @@ export class ChatService {
     ): Promise<{
         messages: any[],
         files: any[],
+        timeline: any[],
         fromCache: boolean
     }> {
         this.cacheServiceClient.selectChat(chatId);
@@ -193,7 +231,12 @@ export class ChatService {
 
         if(!forceRefresh && this.isDataLoaded(chatId, page)) {
             const cachedData = await this.getCachedData(chatId);
-            return { ...cachedData, fromCache: true }
+            return { 
+                messages: cachedData?.messages || [],
+                files: cachedData?.files || [],
+                timeline: cachedData?.timeline || [],
+                fromCache: true 
+            }
         }
         if(this.cacheServiceClient.pendingRequests.has(cacheKey)) {
             return this.cacheServiceClient.pendingRequests.get(cacheKey);
@@ -203,7 +246,11 @@ export class ChatService {
         this.cacheServiceClient.pendingRequests.set(cacheKey, reqPromise);
         try {
             const data = await reqPromise;
-            return { ...data, fromCache: false }
+            return { 
+                ...data, 
+                timeline: data.timeline || [],
+                fromCache: false 
+            }
         } finally {
             this.cacheServiceClient.pendingRequests.delete(cacheKey);
         }
@@ -216,13 +263,15 @@ export class ChatService {
         chatId: string,
         messages: any[],
         files: any[],
+        timeline: any[],
         page: number = 0
     ): void {
         if(!this.cacheServiceClient.cache.has(chatId)) {
             this.cacheServiceClient.init(
                 chatId,
-                messages.length +
-                (page * this.cacheServiceClient.config.pageSize)
+                messages.length + (page * this.cacheServiceClient.config.pageSize),
+                files.length + (page * this.cacheServiceClient.config.pageSize),
+                timeline.length + (page * this.cacheServiceClient.config.pageSize)
             );
 
             const data = this.cacheServiceClient.cache.get(chatId)!;
@@ -275,21 +324,52 @@ export class ChatService {
                 }
             });
 
+            /* Timeline */
+            if(Array.isArray(timeline)) {
+                const sortedTimeline = timeline.sort((a, b) => {
+                    const tA = a.timestamp || a.createdAt || 0;
+                    const tB = b.timestamp || b.createdAt || 0;
+                    return tA - tB;
+                });
+
+                const timelineStartIndex = page * this.cacheServiceClient.config.pageSize;
+                sortedTimeline.forEach((item, i) => {
+                    const id = item.id || item.messageId;
+                    if(!data.timeline.has(id)) {
+                        data.timeline.set(id, item);
+                        const insertIndex = timelineStartIndex + i;
+                        if(insertIndex >= data.timelineOrder.length) {
+                            while(data.timelineOrder.length < insertIndex) {
+                                data.timelineOrder.push('');
+                            }
+                            data.timelineOrder.push(id);
+                        } else {
+                            data.timelineOrder[insertIndex] = id;
+                        }
+                    }
+                });
+            }
+
             const time = Date.now();
             data.messageOrder = data.messageOrder.filter(id => id && id !== '');
             data.fileOrder = data.fileOrder.filter(id => id && id !== '');
+            data.timelineOrder = data.timelineOrder.filter(id => id && id !== '');
             data.loadedPages.add(page);
             data.loadedFilePages.add(page);
+            data.loadedTimelinePages.add(page);
             data.lastAccessTime = time;
             data.lastUpdated = time;
             
             const receivedFullPage = messages.length === this.cacheServiceClient.config.pageSize;
             const receivedFullFilePage = files.length === this.cacheServiceClient.config.pageSize;
+            const receivedFullTimelinePage = timeline.length === this.cacheServiceClient.config.pageSize;
             data.hasMore = receivedFullPage;
             data.hasMoreFiles = receivedFullFilePage;
+            data.hasMoreTimeline = receivedFullTimelinePage;
             data.totalMessagesCount = Math.max(data.totalMessagesCount, data.messageOrder.length);
             data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
-            data.isFullyLoaded = !data.hasMore && !data.hasMoreFiles;
+            data.totalTimelineCount = Math.max(data.totalTimelineCount, data.timelineOrder.length);
+            data.isFullyLoaded = !data.hasMore && !data.hasMoreFiles && !data.hasMoreTimeline;
         }
     }
 
@@ -298,7 +378,10 @@ export class ChatService {
      */
     public isDataLoaded(chatId: string, page: number): boolean {
         const data = this.cacheServiceClient.cache.get(chatId);
-        return !!data && data.loadedPages.has(page) && data.loadedFilePages.has(page);
+        return !!data && 
+            data.loadedPages.has(page) && 
+            data.loadedFilePages.has(page) && 
+            data.loadedTimelinePages.has(page);
     }
 
     /**

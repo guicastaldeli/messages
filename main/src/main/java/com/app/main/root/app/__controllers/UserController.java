@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.app.main.root.app._service.ServiceManager;
-import com.app.main.root.app._types._User;
+import com.app.main.root.app._types.User;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -25,7 +25,7 @@ public class UserController {
     @GetMapping("/all")
     public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
         try {
-            List<_User> users = serviceManager.getUserService().getAllUsers();
+            List<User> users = serviceManager.getUserService().getAllUsers();
             List<Map<String, Object>> userList = users.stream()
                 .map(user -> {
                     Map<String, Object> map = new HashMap<>();
@@ -49,7 +49,7 @@ public class UserController {
     @GetMapping("/online")
     public ResponseEntity<List<Map<String, Object>>> getOnlineUsers() {
         try {
-            List<_User> allUsers = serviceManager.getUserService().getAllUsers();
+            List<User> allUsers = serviceManager.getUserService().getAllUsers();
             List<Map<String, Object>> onlineUsers = allUsers.stream()
                 .filter(user -> serviceManager.getUserService().getSessionByUserId(user.getId()) != null)
                 .map(user -> {
@@ -74,7 +74,7 @@ public class UserController {
     @GetMapping("/email/{email}")
     public ResponseEntity<Map<String, Object>> getUserByEmail(@PathVariable String email) {
         try {
-            _User user = serviceManager.getUserService().getUserByEmail(email);
+            User user = serviceManager.getUserService().getUserByEmail(email);
             if(user != null) {
                 return ResponseEntity.ok(Map.of(
                     "exists", true,
@@ -100,7 +100,7 @@ public class UserController {
     @GetMapping("/username/{username}")
     public ResponseEntity<Map<String, Object>> getUserByUsername(@PathVariable String username) {
         try {
-            _User user = serviceManager.getUserService().getUserByUsername(username);
+            User user = serviceManager.getUserService().getUserByUsername(username);
             if(user != null) {
                 return ResponseEntity.ok(Map.of(
                     "exists", true,

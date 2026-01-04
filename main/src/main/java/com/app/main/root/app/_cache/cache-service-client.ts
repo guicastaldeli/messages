@@ -11,15 +11,20 @@ export interface CacheConfig {
 export interface CacheData {
     messages: Map<string, any>;
     files: Map<string, any>;
+    timeline: Map<string, any>;
     messageOrder: string[];
     fileOrder: string[];
+    timelineOrder: string[];
     loadedPages: Set<number>;
     loadedFilePages: Set<number>;
+    loadedTimelinePages: Set<number>;
     totalMessagesCount: number;
     totalFilesCount: number;
+    totalTimelineCount: number;
     lastAccessTime: number;
     hasMore: boolean;
     hasMoreFiles: boolean;
+    hasMoreTimeline: boolean;
     isFullyLoaded: boolean;
     lastUpdated: number;
 }
@@ -57,22 +62,28 @@ export class CacheServiceClient {
     public init(
         chatId: string, 
         totalMessagesCount: number = 0,
-        totalFilesCount: number = 0
+        totalFilesCount: number = 0,
+        totalTimelineCount: number = 0
     ): void {
         const time = Date.now();
         if(!this.cache.has(chatId)) {
             this.cache.set(chatId, {
                 messages: new Map(),
                 files: new Map(),
+                timeline: new Map(),
                 messageOrder: [],
                 fileOrder: [],
+                timelineOrder: [],
                 loadedPages: new Set(),
                 loadedFilePages: new Set(),
+                loadedTimelinePages: new Set(),
                 totalMessagesCount,
                 totalFilesCount,
+                totalTimelineCount,
                 lastAccessTime: time,
                 hasMore: totalMessagesCount > this.config.pageSize,
                 hasMoreFiles: totalFilesCount > this.config.pageSize,
+                hasMoreTimeline: totalTimelineCount > this.config.pageSize,
                 isFullyLoaded: false,
                 lastUpdated: time
             });
@@ -129,6 +140,7 @@ export class CacheServiceClient {
         
         let removedCount = 0;
         const validMessageIds: string[] = [];
+        const validTimelineIds: string[] = [];
         
         cacheData.messageOrder.forEach(messageId => {
             const message = cacheData.messages.get(messageId);
@@ -152,10 +164,34 @@ export class CacheServiceClient {
             }
         });
 
+        cacheData.timelineOrder.forEach(timelineId => {
+            const timelineItem = cacheData.timeline.get(timelineId);
+            
+            if(!timelineItem) {
+                console.warn(`[validateCache] Timeline item ${timelineId} in order but not in map`);
+                return;
+            }
+            
+            const timelineChatId = timelineItem.chatId;
+            
+            if(timelineChatId && timelineChatId !== chatId) {
+                console.warn(`[validateCache] Removing timeline item ${timelineId} from ${chatId} - belongs to ${timelineChatId}`);
+                cacheData.timeline.delete(timelineId);
+                removedCount++;
+            } else {
+                if(!timelineItem.chatId) {
+                    timelineItem.chatId = chatId;
+                }
+                validTimelineIds.push(timelineId);
+            }
+        });
+
         cacheData.messageOrder = validMessageIds;
+        cacheData.timelineOrder = validTimelineIds;
+        
         if(removedCount > 0) {
-            console.log(`[validateCache] Cleaned ${removedCount} invalid messages from ${chatId}`);
-            console.log(`[validateCache] ${cacheData.messages.size} valid messages remain`);
+            console.log(`[validateCache] Cleaned ${removedCount} invalid items from ${chatId}`);
+            console.log(`[validateCache] ${cacheData.messages.size} valid messages, ${cacheData.timeline.size} valid timeline items remain`);
         }
     }
 

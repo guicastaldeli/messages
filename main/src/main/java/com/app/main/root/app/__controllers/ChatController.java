@@ -37,6 +37,10 @@ public class ChatController {
             if(data == null) {
                 data = new HashMap<>();
             }
+
+            if(data.get("timeline") == null) {
+                data.put("timeline", new ArrayList<>());
+            }
             if(data.get("messages") == null) {
                 data.put("messages", new ArrayList<>());
             }

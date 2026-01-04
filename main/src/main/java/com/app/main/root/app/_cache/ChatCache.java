@@ -1,12 +1,12 @@
 package com.app.main.root.app._cache;
-import com.app.main.root.app._types._Message;
+import com.app.main.root.app._types.Message;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.*;
 
 public class ChatCache {
     private Map<String, ChatCache> chatCacheMap = new ConcurrentHashMap<>();
-    public final Map<String, List<_Message>> cachedPages = new ConcurrentHashMap<>();
+    public final Map<String, List<Message>> cachedPages = new ConcurrentHashMap<>();
     public final Set<Integer> loadedPages = ConcurrentHashMap.newKeySet();
 
     public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -27,7 +27,7 @@ public class ChatCache {
         return lock.writeLock();
     }
 
-    public List<_Message> getCachedMessages(String chatId, int page) {
+    public List<Message> getCachedMessages(String chatId, int page) {
         ChatCache cache = chatCacheMap.get(chatId);
         if(cache == null) return null;
 
@@ -40,7 +40,7 @@ public class ChatCache {
         }
     }
 
-    public void cacheMessages(String chatId, int page, List<_Message> messages) {
+    public void cacheMessages(String chatId, int page, List<Message> messages) {
         ChatCache cache = chatCacheMap.computeIfAbsent(chatId, k -> new ChatCache(0, chatCacheMap));
         cache.writeLock().lock();
 

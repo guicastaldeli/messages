@@ -27,7 +27,7 @@ export class SessionManager {
     public static readonly USER_INFO_KEY = "USER_INFO";
     public static readonly REMEMBER_USER = "REMEMBER_USER";
     public static readonly SESSION_STATUS_KEY = "SESSION_STATUS";
-    public static readonly LOCAL_STORAGE_KEY = 'DRIVE_SESSION_DATA';
+    public static readonly LOCAL_STORAGE_KEY = 'MESSAGES_SESSION_DATA';
 
     public static setDate(rememberUser: boolean): SessionDate {
         const now = Date.now();

@@ -1,7 +1,7 @@
 package com.app.main.root.app._types;
 import java.sql.Timestamp;
 
-public class _User {
+public class User {
     private String id;
     private String username;
     private String email;

@@ -1,7 +1,7 @@
 package com.app.main.root.app._types;
 import java.sql.Timestamp;
 
-public class _RecentChat {
+public class RecentChat {
     private String chatId;
     private Timestamp lastMessageTime;
     private String lastMessage;

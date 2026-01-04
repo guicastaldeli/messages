@@ -1,5 +1,5 @@
 package com.app.main.root.app._cache;
-import com.app.main.root.app._types._Message;
+import com.app.main.root.app._types.Message;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,7 +41,7 @@ public class CacheService {
     public Map<String, Object> getCachedChatData(String userId, String chatId, int page) {
         Map<String, Object> chatData = new HashMap<>();
 
-        List<_Message> cachedMessages = chatCache.getCachedMessages(chatId, page);
+        List<Message> cachedMessages = chatCache.getCachedMessages(chatId, page);
         if(cachedMessages != null) {
             chatData.put("messages", cachedMessages);
             chatData.put("messagesFromCache", true);
@@ -59,7 +59,7 @@ public class CacheService {
         String userId,
         String chatId,
         int page,
-        List<_Message> messages,
+        List<Message> messages,
         List<Map<String, Object>> files
     ) {
         if(messages != null) {

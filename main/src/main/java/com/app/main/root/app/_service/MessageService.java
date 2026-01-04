@@ -4,8 +4,8 @@ import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
 import com.app.main.root.app._cache.CacheService;
 import com.app.main.root.app._cache.ChatCache;
-import com.app.main.root.app._types._Message;
-import com.app.main.root.app._types._RecentChat;
+import com.app.main.root.app._types.Message;
+import com.app.main.root.app._types.RecentChat;
 import com.app.main.root.app.main.chat.messages.MessageLog;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app.__controllers.UserController;
@@ -147,10 +147,10 @@ public class MessageService {
     *** Message by Chat Id
     ** 
     */
-    public List<_Message> getMessagesByChatId(String chatId, int page, int pageSize) throws SQLException {
+    public List<Message> getMessagesByChatId(String chatId, int page, int pageSize) throws SQLException {
         ChatCache chatCache = cacheService.getChatCache();
         if(chatCache != null) {
-            List<_Message> cachedMessages = cacheService.getChatCache().getCachedMessages(chatId, page);
+            List<Message> cachedMessages = cacheService.getChatCache().getCachedMessages(chatId, page);
             if(cachedMessages != null) {
                 //System.out.println("Returning cached messages for chat " + chatId + " page " + page);
                 return cachedMessages;
@@ -163,7 +163,7 @@ public class MessageService {
         }
         
         String query = CommandQueryManager.GET_MESSAGES_BY_CHAT_ID.get();
-        List<_Message> messages = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
 
         try(
             Connection conn = getConnection();
@@ -185,9 +185,9 @@ public class MessageService {
         return messages;
     }
 
-    public List<_Message> getAllMessagesByChatId() throws SQLException {
+    public List<Message> getAllMessagesByChatId() throws SQLException {
         String query = CommandQueryManager.GET_ALL_MESSAGES_BY_CHAT_ID.get();
-        List<_Message> messages = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
 
         try(
             Connection conn = getConnection();
@@ -223,9 +223,9 @@ public class MessageService {
     *** Recent Chats
     ** 
     */
-    public List<_RecentChat> getRecentChats(String userId, int limit, int offset) throws SQLException {
+    public List<RecentChat> getRecentChats(String userId, int limit, int offset) throws SQLException {
         String query = CommandQueryManager.GET_RECENT_CHATS.get();
-        List<_RecentChat> recentChats = new ArrayList<>();
+        List<RecentChat> recentChats = new ArrayList<>();
         int actualLimit = Math.max(1, limit);
 
         try(
@@ -264,7 +264,7 @@ public class MessageService {
                         chatName = getDirectChatName(chatId, userId);
                     }
 
-                    _RecentChat chat = new _RecentChat();
+                    RecentChat chat = new RecentChat();
                     chat.setChatId(chatId);
                     chat.setLastMessageTime(lastMessageTime);
                     chat.setLastMessage(lastMessage);
@@ -281,7 +281,7 @@ public class MessageService {
 
     public Map<String, Object> getRecentChatsPages(String userId, int page, int pageSize) throws SQLException {
         int offset = page * pageSize;
-        List<_RecentChat> chats = getRecentChats(userId, pageSize, offset);
+        List<RecentChat> chats = getRecentChats(userId, pageSize, offset);
         int totalChats = getRecentChatsCount(userId);
         int totalPages = (int) Math.ceil((double) totalChats / pageSize);
 
@@ -315,9 +315,9 @@ public class MessageService {
     /*
     * Messages by User Id 
     */
-    public List<_Message> getMessagesByUserId(String userId) throws SQLException {
+    public List<Message> getMessagesByUserId(String userId) throws SQLException {
         String query = CommandQueryManager.GET_MESSAGES_BY_USER_ID.get();
-        List<_Message> messages = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
 
         try(
             Connection conn = getConnection();
@@ -338,13 +338,13 @@ public class MessageService {
     * Messages Pages 
     */
     public Map<String, Object> getMessagesPage(String chatId, int page, int pageSize) throws SQLException {
-        List<_Message> messages = getMessagesByChatId(chatId, page, pageSize);
-        List<_Message> systemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
+        List<Message> messages = getMessagesByChatId(chatId, page, pageSize);
+        List<Message> systemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
 
-        List<_Message> allMessages = new ArrayList<>();
+        List<Message> allMessages = new ArrayList<>();
         allMessages.addAll(messages);
         allMessages.addAll(systemMessages);
-        allMessages.sort(Comparator.comparing(_Message::getCreatedAt));
+        allMessages.sort(Comparator.comparing(Message::getCreatedAt));
 
         int totalCount = getMessageCountByChatId(chatId) + systemMessages.size();
         int totalPages = (int) Math.ceil((double) totalCount / pageSize);
@@ -363,9 +363,9 @@ public class MessageService {
     /*
     * Get All Messages 
     */
-    public List<_Message> getAllMessages() throws SQLException {
+    public List<Message> getAllMessages() throws SQLException {
         String query = CommandQueryManager.GET_ALL_MESSAGES.get();
-        List<_Message> messages = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
 
         try(
             Connection conn = getConnection();
@@ -529,8 +529,8 @@ public class MessageService {
     ***
     **
     */
-    public _Message mapMessageFromResultSet(ResultSet rs) throws SQLException {
-        _Message message = new _Message();
+    public Message mapMessageFromResultSet(ResultSet rs) throws SQLException {
+        Message message = new Message();
         message.setId(rs.getInt("id"));
         message.setChatId(rs.getString("chat_id"));
         message.setSenderId(rs.getString("sender_id"));
@@ -552,8 +552,8 @@ public class MessageService {
         return message;
     }
 
-    private _RecentChat mapRecentChatFromResultSet(ResultSet rs) throws SQLException {
-        _RecentChat chat = new _RecentChat();
+    private RecentChat mapRecentChatFromResultSet(ResultSet rs) throws SQLException {
+        RecentChat chat = new RecentChat();
         chat.setChatId(rs.getString("chat_id"));
         chat.setLastMessageTime(rs.getTimestamp("last_message_time"));
         chat.setLastMessage(rs.getString("last_message"));
