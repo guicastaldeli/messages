@@ -110,7 +110,7 @@ export class ChatService {
                         } else {
                             decryptedMessages.push(message);
                         }
-                    } catch (err) {
+                    } catch(err) {
                         console.error('Failed to decrypt message:', err);
                         decryptedMessages.push(message);
                     }
@@ -119,42 +119,97 @@ export class ChatService {
             }
             if(Array.isArray(files) && files.length > 0) {
                 const decryptedFiles = [];
-                for(const file of files) {
-                    try {
-                        const fileService = await this.getFileController().getFileService(); 
-                        const decryptedFile = await fileService.decryptFile(chatId, file);
-                        decryptedFiles.push(decryptedFile);
-                    } catch (err) {
-                        console.error('Failed to decrypt file:', err);
-                        decryptedFiles.push(file);
+                const chunkSize = 5;
+                for(let i = 0; i < files.length; i += chunkSize) {
+                    const chunk = files.slice(i, i + chunkSize);
+                    const chunkPromises = chunk.map(async (file) => {
+                        try {
+                            const fileService = await this.getFileController().getFileService(); 
+                            const decryptedFile = await fileService.decryptFile(chatId, file);
+                            return decryptedFile;
+                        } catch(err) {
+                            console.error('Failed to decrypt file:', err);
+                            return file; 
+                        }
+                    });
+                    
+                    const chunkResults = await Promise.all(chunkPromises);
+                    decryptedFiles.push(...chunkResults);
+                    
+                    if(i + chunkSize < files.length) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
                     }
                 }
                 files = decryptedFiles.map((file: any) => ({ ...file }));
             }
             if(Array.isArray(timeline) && timeline.length > 0) {
                 const decryptedTimeline = [];
-                for(const item of timeline) {
+                
+                const messageItems = timeline.filter(item => item.type === 'message' && !item.system);
+                const fileItems = timeline.filter(item => item.type === 'file');
+                const otherItems = timeline.filter(item => 
+                    (item.type === 'message' && item.system) || 
+                    (item.type !== 'message' && item.type !== 'file')
+                );
+                
+                for(const item of messageItems) {
                     try {
-                        if(item.type === 'message' && !item.system) {
-                            const messageService = await this.getMessageController().getMessageService(); 
-                            const decryptedItem = await messageService.decryptMessage(chatId, item);
-                            decryptedTimeline.push(decryptedItem);
-                        } else if(item.type === 'file') {
-                            const fileService = await this.getFileController().getFileService(); 
-                            const decryptedItem = await fileService.decryptFile(chatId, item.fileData || item);
-                            decryptedTimeline.push({
-                                ...item,
-                                fileData: decryptedItem
-                            });
-                        } else {
-                            decryptedTimeline.push(item);
-                        }
-                    } catch (err) {
-                        console.error('Failed to decrypt timeline item:', err);
-                        decryptedTimeline.push(item);
+                        const messageService = await this.getMessageController().getMessageService();
+                        const decryptedItem = await messageService.decryptMessage(chatId, item);
+                        decryptedTimeline.push(decryptedItem);
+                    } catch(err) {
+                        console.error('Failed to decrypt timeline message:', err);
+                        decryptedTimeline.push({
+                            ...item,
+                            content: '[Decryption failed]',
+                            hasDecryptionError: true
+                        });
                     }
                 }
-                timeline = decryptedTimeline;
+                
+                if(fileItems.length > 0) {
+                    const chunkSize = 3;
+                    for(let i = 0; i < fileItems.length; i += chunkSize) {
+                        const chunk = fileItems.slice(i, i + chunkSize);
+                        
+                        const chunkPromises = chunk.map(async (item) => {
+                            try {
+                                const fileService = await this.getFileController().getFileService();
+                                const fileDataToDecrypt = item.fileData || item;
+                                const decryptedFile = await fileService.decryptFile(chatId, fileDataToDecrypt);
+                                const decryptedFileItem = decryptedFile[0];
+                                
+                                return {
+                                    ...item,
+                                    fileData: decryptedFile,
+                                    hasDecryptionError: decryptedFileItem.hasDecryptionError || false
+                                }
+                            } catch(err: any) {
+                                console.error('Failed to decrypt timeline file:', err);
+                                return {
+                                    ...item,
+                                    hasDecryptionError: true,
+                                    decryptionError: err.message
+                                }
+                            }
+                        });
+                        
+                        const chunkResults = await Promise.all(chunkPromises);
+                        decryptedTimeline.push(...chunkResults);
+                        
+                        if(i + chunkSize < fileItems.length) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    }
+                }
+                
+                decryptedTimeline.push(...otherItems);
+
+                timeline = decryptedTimeline.sort((a, b) => {
+                    const timeA = a.timestamp || a.createdAt || 0;
+                    const timeB = b.timestamp || b.createdAt || 0;
+                    return timeA - timeB;
+                });
             }
 
             return {
@@ -163,7 +218,7 @@ export class ChatService {
                 timeline,
                 pagination
             };
-        } catch (err) {
+        } catch(err) {
             console.error(`Failed to fetch chat data for ${chatId}:`, err);
             return {
                 messages: [],
@@ -180,6 +235,23 @@ export class ChatService {
                     fromCache: false
                 }
             };
+        }
+    }
+
+    private async clearCache(): Promise<void> {
+        try {
+            const cacheService = await this.getCacheServiceClient();
+            // Clear oldest cache entries
+            const cacheEntries = Array.from(cacheService.cache.entries());
+            if (cacheEntries.length > 10) { // Keep only 10 most recent chats
+                cacheEntries.sort((a, b) => b[1].lastAccessTime - a[1].lastAccessTime);
+                const toRemove = cacheEntries.slice(10);
+                toRemove.forEach(([chatId]) => {
+                    cacheService.cache.delete(chatId);
+                });
+            }
+        } catch(error) {
+            console.error('Error clearing cache:', error);
         }
     }
 
@@ -397,7 +469,7 @@ export class ChatService {
             }
             
             return cacheData;
-        } catch (error) {
+        } catch(error) {
             console.error(`Error getting cached data for ${chatId}:`, error);
             return null;
         }

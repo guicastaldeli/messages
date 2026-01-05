@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class EventList {
@@ -33,6 +34,9 @@ public class EventList {
     private final SimpMessagingTemplate messagingTemplate;
     @Autowired @Lazy private SecureMessageService secureMessageService;
     @Autowired @Lazy private KeyManagerService keyManagerService;
+
+    private final Map<String, Long> activeDecryptionRequests = new ConcurrentHashMap<>();
+    private final Object decryptionLock = new Object();
 
     public EventList(
         ServiceManager serviceManager,
@@ -473,15 +477,66 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
-                    System.out.println(payload);
+                    String chatId = (String) payloadData.get("chatId");
+                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String username = (String) payloadData.get("username");
+                    
                     eventTracker.track(
-                        "file",
+                        "FILE_MESSAGE",
                         payloadData,
                         EventDirection.RECEIVED,
                         sessionId,
-                        "client"
+                        userId
                     );
+
+                    boolean isGroupChat = chatId != null && chatId.startsWith("group_");
+                    boolean isDirectChat = chatId != null && chatId.startsWith("direct_");
+                    
+                    Map<String, Object> fileMessage = new HashMap<>();
+                    fileMessage.put("chatId", chatId);
+                    fileMessage.put("messageId", payloadData.get("messageId"));
+                    fileMessage.put("userId", userId);
+                    fileMessage.put("senderId", userId);
+                    fileMessage.put("username", username);
+                    fileMessage.put("content", payloadData.get("content"));
+                    fileMessage.put("type", "file");
+                    fileMessage.put("timestamp", System.currentTimeMillis());
+                    fileMessage.put("fileData", payloadData.get("fileData"));
+                    
+                    Map<String, Object> routingMetadata = new HashMap<>();
+                    routingMetadata.put("messageType", isGroupChat ? "FILE_MESSAGE" : "DIRECT_FILE_MESSAGE");
+                    routingMetadata.put("type", "file");
+                    routingMetadata.put("sessionId", sessionId);
+                    routingMetadata.put("userId", userId);
+                    routingMetadata.put("priority", "NORMAL");
+                    routingMetadata.put("isDirect", isDirectChat);
+                    routingMetadata.put("isGroup", isGroupChat);
+                    fileMessage.put("routingMetadata", routingMetadata);
+                    
+                    if(isGroupChat) {
+                        String destination = "/user/queue/messages/group/" + chatId;
+                        List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(chatId);
+                        
+                        for(User member : groupMembers) {
+                            String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
+                            if(memberSessionId != null) {
+                                socketMethods.send(memberSessionId, destination, fileMessage);
+                            }
+                        }
+                    } else if(isDirectChat) {
+                        String destination = "/user/queue/messages/direct/" + chatId;
+                        socketMethods.send(sessionId, destination, fileMessage);
+                        
+                        String recipientId = (String) payloadData.get("targetUserId");
+                        if(recipientId != null) {
+                            String recipientSession = serviceManager.getUserService().getSessionByUserId(recipientId);
+                            if(recipientSession != null) {
+                                socketMethods.send(recipientSession, destination, fileMessage);
+                            }
+                        }
+                    }
+                    
+                    return Collections.emptyMap();
                 } catch(Exception err) {
                     err.printStackTrace();
                     eventTracker.track(
@@ -496,9 +551,8 @@ public class EventList {
                     error.put("error", "FILE_MESSAGE_FAILED");
                     error.put("message", err.getMessage());
                     socketMethods.send(sessionId, "/queue/file-message-err", error);
+                    return Collections.emptyMap();
                 }
-                
-                return Collections.emptyMap();
             },
             "/queue/messages",
             false
@@ -553,94 +607,169 @@ public class EventList {
         /* Get Decrypted Files */
         configs.put("get-decrypted-files", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
+                synchronized (decryptionLock) {
+                    Long requestTime = activeDecryptionRequests.get(sessionId);
+                    if(requestTime != null) {
+                        long currentTime = System.currentTimeMillis();
+                        if(currentTime - requestTime < 30000) {
+                            return Collections.emptyMap();
+                        } else {
+                            activeDecryptionRequests.remove(sessionId);
+                        }
+                    }
+                    
+                    activeDecryptionRequests.put(sessionId, System.currentTimeMillis());
+                }
+                
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
-                    List<Map<String, Object>> fileMaps = (List<Map<String, Object>>) data.get("files");
+                    Object filesObj = data.get("files");
                     String chatId = (String) data.get("chatId");
                     String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     List<Map<String, Object>> processedFiles = new ArrayList<>();
+                    
+                    List<Map<String, Object>> fileMaps = new ArrayList<>();
+                    if(filesObj instanceof List) {
+                        fileMaps = (List<Map<String, Object>>) filesObj;
+                    } else if(filesObj instanceof Map) {
+                        fileMaps.add((Map<String, Object>) filesObj);
+                        System.out.println("Converted single file object to list");
+                    } else {
+                        System.err.println("Unexpected files type: " + (filesObj != null ? filesObj.getClass().getName() : "null"));
+                        Map<String, Object> errRes = new HashMap<>();
+                        errRes.put("error", "INVALID_FILES_FORMAT");
+                        errRes.put("message", "Files must be an array or object");
+                        errRes.put("success", false);
+                        socketMethods.send(sessionId, "/queue/decrypted-files-err", errRes);
+                        return Collections.emptyMap();
+                    }
+                    
+                    int maxFilesPerRequest = 3;
+                    if(fileMaps.size() > maxFilesPerRequest) {
+                        System.out.println("Limiting files from " + fileMaps.size() + " to " + maxFilesPerRequest);
+                        fileMaps = fileMaps.subList(0, maxFilesPerRequest);
+                    }
+                    
+                    int processedCount = 0;
+                    int totalFiles = fileMaps.size();
+                    
+                    System.out.println("Starting file decryption for " + totalFiles + " files for session " + sessionId);
                     
                     for(Map<String, Object> fileMap : fileMaps) {
                         try {
                             Map<String, Object> processedFile = new HashMap<>(fileMap);
                             
                             String fileId = (String) fileMap.get("fileId");
+                            if(fileId == null) {
+                                fileId = (String) fileMap.get("file_id");
+                            }
+                            if(fileId == null) {
+                                fileId = (String) fileMap.get("id");
+                            }
+                            
                             String originalFileName = (String) fileMap.get("originalFileName");
+                            if(originalFileName == null) {
+                                originalFileName = (String) fileMap.get("original_file_name");
+                            }
                             
                             Boolean isDecrypted = (Boolean) fileMap.get("isDecrypted");
                             if(isDecrypted != null && isDecrypted) {
-                                System.out.println("DEBUG: File " + fileId + " is already decrypted");
                                 processedFiles.add(processedFile);
+                                processedCount++;
                                 continue;
                             }
                             
                             if(originalFileName == null || originalFileName.isEmpty()) {
-                                System.out.println("DEBUG: File " + fileId + " has no originalFileName - checking database for metadata");
-                                
-                                File fileInfo = serviceManager.getFileService().getFileInfo(fileId, currentUserId);
-                                if(fileInfo != null && fileInfo.getOriginalFileName() != null) {
-                                    processedFile.put("originalFileName", fileInfo.getOriginalFileName());
-                                    processedFile.put("isDecrypted", true);
-                                    processedFiles.add(processedFile);
-                                    continue;
-                                } else {
-                                    processedFile.put("isDecrypted", true);
-                                    processedFile.put("decryptionError", "File metadata incomplete");
-                                    processedFiles.add(processedFile);
-                                    continue;
-                                }
+                                processedFile.put("decryptionError", "Missing original filename");
+                                processedFiles.add(processedFile);
+                                processedCount++;
+                                continue;
                             }
                             
                             if(fileId == null) {
-                                System.err.println("File ID is null!");
+                                processedFile.put("decryptionError", "Missing file ID");
                                 processedFiles.add(processedFile);
+                                processedCount++;
+                                continue;
+                            }
+                            
+                            Runtime runtime = Runtime.getRuntime();
+                            long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+                            long maxMemory = runtime.maxMemory();
+                            double memoryUsage = (double) usedMemory / maxMemory;
+                            
+                            if(memoryUsage > 0.7) {
+                                System.out.println("High memory usage (" + (memoryUsage * 100) + "%), skipping file: " + originalFileName);
+                                processedFile.put("decryptionError", "Server memory limit exceeded");
+                                processedFiles.add(processedFile);
+                                processedCount++;
                                 continue;
                             }
                             
                             byte[] encryptedBytes = serviceManager.getFileService().getEncryptedFileContent(fileId, currentUserId);
                             if(encryptedBytes == null || encryptedBytes.length == 0) {
-                                System.err.println("No encrypted content found for file: " + fileId);
-                                processedFile.put("isDecrypted", true);
-                                processedFile.put("decryptionError", "No encrypted content available");
+                                processedFile.put("decryptionError", "No encrypted content found");
                                 processedFiles.add(processedFile);
+                                processedCount++;
+                                continue;
+                            }
+                            
+                            if(encryptedBytes.length > 1024 * 1024) {
+                                System.out.println("File too large: " + originalFileName + " (" + (encryptedBytes.length / 1024 / 1024) + "MB)");
+                                processedFile.put("decryptionError", "File too large for decryption: " + (encryptedBytes.length / 1024 / 1024) + "MB");
+                                processedFiles.add(processedFile);
+                                processedCount++;
                                 continue;
                             }
                             
                             byte[] encryptionKey = keyManagerService.retrieveKey(fileId, currentUserId);
                             if(encryptionKey == null) {
-                                System.err.println("No encryption key found for file: " + fileId);
                                 processedFile.put("decryptionError", "Encryption key not found");
                                 processedFiles.add(processedFile);
+                                processedCount++;
                                 continue;
                             }
                             
                             FileEncoderWrapper fileEncoder = new FileEncoderWrapper();
                             try {
                                 fileEncoder.initEncoder(encryptionKey, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
-
-                                byte[] decryptedBytes = fileEncoder.decrypt(encryptedBytes);
-                                if(decryptedBytes == null) {
+                                
+                                if(encryptedBytes.length < 28) {
+                                    processedFile.put("decryptionError", "Encrypted data too small");
                                     processedFiles.add(processedFile);
+                                    processedCount++;
                                     continue;
                                 }
                                 
-                                String base64Decrypted = Base64.getEncoder().encodeToString(decryptedBytes);
-                                processedFile.put("content", base64Decrypted);
-                                processedFile.put("isDecrypted", true);
-                                processedFile.put("originalSize", decryptedBytes.length);
-                                processedFile.put("originalFileName", originalFileName);
+                                byte[] decryptedBytes = fileEncoder.decrypt(encryptedBytes);
+                                if(decryptedBytes == null) {
+                                    processedFile.put("decryptionError", "Decryption returned null");
+                                    processedFiles.add(processedFile);
+                                    processedCount++;
+                                    continue;
+                                }
                                 
+                                processedFile.put("content", decryptedBytes);
+                                processedFile.put("isDecrypted", true);
+                                processedFile.put("decryptedSize", decryptedBytes.length);
+                                System.out.println("Successfully decrypted file: " + originalFileName + " (" + decryptedBytes.length + " bytes)");
                             } finally {
                                 fileEncoder.cleanup();
                             }
                             
                             processedFiles.add(processedFile);
+                            processedCount++;
+                            
+                            System.gc();
+                            Thread.sleep(1000);
                         } catch (Exception fileErr) {
                             System.err.println("Error decrypting file: " + fileErr.getMessage());
                             fileErr.printStackTrace();
                             Map<String, Object> errorFile = new HashMap<>(fileMap);
                             errorFile.put("decryptionError", fileErr.getMessage());
+                            errorFile.put("isDecrypted", false);
                             processedFiles.add(errorFile);
+                            processedCount++;
                         }
                     }
                     
@@ -648,10 +777,15 @@ public class EventList {
                     response.put("files", processedFiles);
                     response.put("count", processedFiles.size());
                     response.put("success", true);
+                    response.put("processedCount", processedCount);
+                    response.put("totalFiles", totalFiles);
+                    response.put("limited", fileMaps.size() < totalFiles);
+                    
+                    System.out.println("File decryption completed for session " + sessionId + ": " + processedCount + "/" + totalFiles + " files processed");
                     
                     eventTracker.track(
                         "get-decrypted-files",
-                        Map.of("count", processedFiles.size(), "chatId", chatId),
+                        Map.of("count", processedFiles.size(), "chatId", chatId, "processedCount", processedCount),
                         EventDirection.SENT,
                         sessionId,
                         "system"
@@ -675,6 +809,10 @@ public class EventList {
                     
                     socketMethods.send(sessionId, "/queue/decrypted-files-err", errRes);
                     return Collections.emptyMap();
+                } finally {
+                    synchronized (decryptionLock) {
+                        activeDecryptionRequests.remove(sessionId);
+                    }
                 }
             },
             "/queue/decrypted-files-scss",

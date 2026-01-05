@@ -1,6 +1,13 @@
 import { SocketClientConnect } from "../../socket-client-connect";
 import { ChatService } from "../chat-service";
 
+export interface DecryptedFile {
+    hasDecryptionError?: boolean;
+    decryptionError?: string;
+    isDecrypted?: boolean;
+    [key: string]: any;
+}
+
 export class FileServiceClient {
     private url: string | undefined;
     private chatService: ChatService
@@ -56,7 +63,11 @@ export class FileServiceClient {
     /**
      * Decrypt Files
      */
-    public async decryptFile(chatId: string, fileData: any): Promise<any> {
+    public async decryptFile(chatId: string, fileDataArray: any[]): Promise<DecryptedFile[]> {
+        if(!fileDataArray || fileDataArray.length === 0) {
+            return [];
+        }
+
         return new Promise(async (resolve, reject) => {
             const successDestination = '/queue/decrypted-files-scss';
             const errorDestination = '/queue/decrypted-files-err';
@@ -64,17 +75,44 @@ export class FileServiceClient {
             const handleSuccess = (response: any) => {
                 this.socketClient.offDestination(successDestination, handleSuccess);
                 this.socketClient.offDestination(errorDestination, handleError);
-                if(response.files && response.files.length > 0) {
-                    resolve(response.files[0]);
+                
+                if(response.success === false) {
+                    reject(new Error(response.message || response.error || 'Batch decryption failed'));
+                    return;
+                }
+                
+                if(response.files && Array.isArray(response.files)) {
+                    const decryptedFiles = response.files.map((file: any) => {
+                        if(file.decryptionError || file.isDecrypted === false) {
+                            return {
+                                ...file,
+                                hasDecryptionError: true
+                            };
+                        }
+                        return file;
+                    });
+                    
+                    resolve(decryptedFiles);
                 } else {
-                    reject(new Error('No decrypted files returned'));
+                    const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
+                    resolve(safeArray.map((file: any) => ({
+                        ...file,
+                        hasDecryptionError: true,
+                        decryptionError: 'Invalid batch response structure'
+                    })));
                 }
             };
 
             const handleError = (error: any) => {
                 this.socketClient.offDestination(successDestination, handleSuccess);
                 this.socketClient.offDestination(errorDestination, handleError);
-                reject(new Error(error.message || 'Failed to decrypt file'));
+                console.error('Batch file decryption error:', error);
+                
+                resolve(fileDataArray.map(file => ({
+                    ...file,
+                    hasDecryptionError: true,
+                    decryptionError: error.message || 'Batch decryption failed'
+                })));
             };
 
             try {
@@ -82,8 +120,8 @@ export class FileServiceClient {
                 this.socketClient.onDestination(errorDestination, handleError);
                 
                 const payload = { 
-                    files: [fileData],
-                    chatId: String(fileData.chatId || chatId)
+                    files: fileDataArray,
+                    chatId: String(chatId)
                 };
 
                 await this.socketClient.sendToDestination(
@@ -91,14 +129,32 @@ export class FileServiceClient {
                     payload,
                     successDestination
                 );
+                
+                setTimeout(() => {
+                    this.socketClient.offDestination(successDestination, handleSuccess);
+                    this.socketClient.offDestination(errorDestination, handleError);
+                    console.warn('Batch decryption request timed out');
+                    
+                    resolve(fileDataArray.map(file => ({
+                        ...file,
+                        hasDecryptionError: true,
+                        decryptionError: 'Batch decryption timed out'
+                    })));
+                }, 45000);
+                
             } catch (err) {
                 this.socketClient.offDestination(successDestination, handleSuccess);
                 this.socketClient.offDestination(errorDestination, handleError);
-                reject(err);
+                console.error('Failed to send batch decryption request:', err);
+                
+                resolve(fileDataArray.map(file => ({
+                    ...file,
+                    hasDecryptionError: true,
+                    decryptionError: 'Failed to send batch request'
+                })));
             }
         });
     }
-
 
     /**
      * Upload File
@@ -428,7 +484,7 @@ export class FileServiceClient {
             if(contentType && contentType.includes('application/json')) {
                 const data = await res.json();
                 console.log(`Files count response:`, data);
-                if (typeof data === 'number') {
+                if(typeof data === 'number') {
                     count = data;
                 } else {
                     count = data.total || data.count || data.totalFiles || data.total_count || 0;

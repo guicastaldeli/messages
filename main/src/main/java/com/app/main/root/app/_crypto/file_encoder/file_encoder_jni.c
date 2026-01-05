@@ -154,8 +154,11 @@ Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_decryptData
 ) {    
     EncoderContext *ctx = (EncoderContext*)(intptr_t)handle;
     if(!ctx) {
-        (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/IllegalArgumentException"), 
-                        "Invalid encoder context");
+        (*env)->ThrowNew(
+            env, 
+            (*env)->FindClass(env, "java/lang/IllegalArgumentException"), 
+            "Invalid encoder context"
+        );
         return NULL;
     }
     
@@ -165,24 +168,33 @@ Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_decryptData
     int result = getByteArray(env, inputArray, &inputData, &inputLen);
     if(result != ENCODER_SUCCESS) {
         if(inputData) free(inputData);
-        (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/IllegalArgumentException"), 
-                        "Failed to get input data");
+        (*env)->ThrowNew(
+            env, 
+            (*env)->FindClass(env, "java/lang/IllegalArgumentException"), 
+            "Failed to get input data"
+        );
         return NULL;
     }
     
     size_t maxOutputLen = inputLen - ctx->ivLength - ctx->tagLength;
     if(maxOutputLen <= 0) {
         free(inputData);
-        (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/IllegalArgumentException"), 
-                        "Input data too small for decryption");
+        (*env)->ThrowNew(
+            env, 
+            (*env)->FindClass(env, "java/lang/IllegalArgumentException"), 
+            "Input data too small for decryption"
+        );
         return NULL;
     }
     
     uint8_t *outputData = (uint8_t*)malloc(maxOutputLen);
     if(!outputData) {
         free(inputData);
-        (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/OutOfMemoryError"), 
-                        "Failed to allocate output buffer");
+        (*env)->ThrowNew(
+            env, 
+            (*env)->FindClass(env, "java/lang/OutOfMemoryError"), 
+            "Failed to allocate output buffer"
+        );
         return NULL;
     }
     
@@ -192,8 +204,11 @@ Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_decryptData
     
     if(result != ENCODER_SUCCESS) {
         free(outputData);
-        (*env)->ThrowNew(env, (*env)->FindClass(env, "java/lang/IllegalArgumentException"), 
-                        "Decryption failed");
+        (*env)->ThrowNew(
+            env, 
+            (*env)->FindClass(env, "java/lang/IllegalArgumentException"), 
+            "Decryption failed"
+        );
         return NULL;
     }
     
