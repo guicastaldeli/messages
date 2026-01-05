@@ -473,66 +473,15 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    String chatId = (String) payloadData.get("chatId");
-                    String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
-                    String username = (String) payloadData.get("username");
-                    
+                    messageAnalyzer.organizeAndRoute(sessionId, payloadData);
+                    System.out.println(payload);
                     eventTracker.track(
-                        "FILE_MESSAGE",
+                        "file",
                         payloadData,
                         EventDirection.RECEIVED,
                         sessionId,
-                        userId
+                        "client"
                     );
-
-                    boolean isGroupChat = chatId != null && chatId.startsWith("group_");
-                    boolean isDirectChat = chatId != null && chatId.startsWith("direct_");
-                    
-                    Map<String, Object> fileMessage = new HashMap<>();
-                    fileMessage.put("chatId", chatId);
-                    fileMessage.put("messageId", payloadData.get("messageId"));
-                    fileMessage.put("userId", userId);
-                    fileMessage.put("senderId", userId);
-                    fileMessage.put("username", username);
-                    fileMessage.put("content", payloadData.get("content"));
-                    fileMessage.put("type", "file");
-                    fileMessage.put("timestamp", System.currentTimeMillis());
-                    fileMessage.put("fileData", payloadData.get("fileData"));
-                    
-                    Map<String, Object> routingMetadata = new HashMap<>();
-                    routingMetadata.put("messageType", isGroupChat ? "FILE_MESSAGE" : "DIRECT_FILE_MESSAGE");
-                    routingMetadata.put("type", "file");
-                    routingMetadata.put("sessionId", sessionId);
-                    routingMetadata.put("userId", userId);
-                    routingMetadata.put("priority", "NORMAL");
-                    routingMetadata.put("isDirect", isDirectChat);
-                    routingMetadata.put("isGroup", isGroupChat);
-                    fileMessage.put("routingMetadata", routingMetadata);
-                    
-                    if(isGroupChat) {
-                        String destination = "/user/queue/messages/group/" + chatId;
-                        List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(chatId);
-                        
-                        for(User member : groupMembers) {
-                            String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
-                            if(memberSessionId != null) {
-                                socketMethods.send(memberSessionId, destination, fileMessage);
-                            }
-                        }
-                    } else if(isDirectChat) {
-                        String destination = "/user/queue/messages/direct/" + chatId;
-                        socketMethods.send(sessionId, destination, fileMessage);
-                        
-                        String recipientId = (String) payloadData.get("targetUserId");
-                        if(recipientId != null) {
-                            String recipientSession = serviceManager.getUserService().getSessionByUserId(recipientId);
-                            if(recipientSession != null) {
-                                socketMethods.send(recipientSession, destination, fileMessage);
-                            }
-                        }
-                    }
-                    
-                    return Collections.emptyMap();
                 } catch(Exception err) {
                     err.printStackTrace();
                     eventTracker.track(
@@ -547,10 +496,11 @@ public class EventList {
                     error.put("error", "FILE_MESSAGE_FAILED");
                     error.put("message", err.getMessage());
                     socketMethods.send(sessionId, "/queue/file-message-err", error);
-                    return Collections.emptyMap();
                 }
+                
+                return Collections.emptyMap();
             },
-            "",
+            "/queue/messages",
             false
         ));
         /* Get Decrypted Messages */

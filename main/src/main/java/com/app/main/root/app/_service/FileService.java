@@ -3,6 +3,7 @@ import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DbManager;
 import com.app.main.root.app._types.File;
 import com.app.main.root.app.file_compressor.WrapperFileCompressor;
+import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app._cache.CacheService;
 import com.app.main.root.app._crypto.file_encoder.FileEncoderWrapper;
 import com.app.main.root.app._crypto.file_encoder.KeyManagerService;
@@ -12,6 +13,8 @@ import com.app.main.root.app._data.MimeToDb;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -23,10 +26,12 @@ public class FileService {
     private final Map<String, JdbcTemplate> jdbcTemplates;
     private final DbManager dbManager;
     private final ServiceManager serviceManager;
+    private final CacheService cacheService;
+    private final MessageTracker messageTracker;
+    private final SimpMessagingTemplate messagingTemplate;
     private FileEncoderWrapper fileEncoderWrapper;
     private KeyManagerService keyManagerService;
     private WrapperFileCompressor fileCompressor;
-    private final CacheService cacheService;
 
     private FileUploader fileUploader;
     private FileDownloader fileDownloader;
@@ -44,20 +49,27 @@ public class FileService {
         Map<String, JdbcTemplate> jdbcTemplates,
         @Lazy ServiceManager serviceManager,
         @Lazy DbManager dbManager,
-        CacheService cacheService
+        CacheService cacheService,
+        MessageTracker messageTracker,
+        SimpMessagingTemplate messagingTemplate
     ) {
         this.jdbcTemplates = jdbcTemplates;
         this.serviceManager = serviceManager;
         this.dbManager = dbManager;
         this.cacheService = cacheService;
+        this.messageTracker = messageTracker;
+        this.messagingTemplate = messagingTemplate;
         this.fileCompressor = new WrapperFileCompressor();
         this.fileEncoderWrapper = new FileEncoderWrapper();
         this.keyManagerService = new KeyManagerService(jdbcTemplates);
         this.fileUploader = new FileUploader(
             this, 
             jdbcTemplates, 
+            serviceManager,
             fileEncoderWrapper, 
-            keyManagerService
+            keyManagerService,
+            messageTracker,
+            messagingTemplate
         );
         this.fileDownloader = new FileDownloader(
             this, 

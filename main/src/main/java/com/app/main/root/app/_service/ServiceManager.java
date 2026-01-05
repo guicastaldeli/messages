@@ -1,6 +1,7 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._db.DbService;
 import com.app.main.root.app._auth.TokenService;
+import com.app.main.root.app._cache.CacheService;
 import com.app.main.root.app._crypto.file_encoder.KeyManagerService;
 import com.app.main.root.app.main.email_service.EmailService;
 import org.springframework.context.annotation.Lazy;
@@ -25,6 +26,7 @@ public class ServiceManager {
     private final CookieService cookieService;
     private final FileService fileService;
     private final KeyManagerService keyManagerService;
+    private final CacheService cacheService;
 
     public ServiceManager(
         DbService dbService,
@@ -41,7 +43,8 @@ public class ServiceManager {
         @Lazy TokenService tokenService,
         @Lazy CookieService cookieService,
         @Lazy FileService fileService,
-        @Lazy KeyManagerService keyManagerService
+        @Lazy KeyManagerService keyManagerService,
+        @Lazy CacheService cacheService
     ) {
         this.dbService = dbService;
         this.messageService = messageService;
@@ -58,6 +61,7 @@ public class ServiceManager {
         this.cookieService = cookieService;
         this.fileService = fileService;
         this.keyManagerService = keyManagerService;
+        this.cacheService = cacheService;
     }
 
     /**
@@ -163,5 +167,12 @@ public class ServiceManager {
      */
     public KeyManagerService getKeyManagerService() {
         return keyManagerService;
+    }
+
+    /**
+     * Cache Service
+     */
+    public CacheService getCacheService() {
+        return cacheService;
     }
 }

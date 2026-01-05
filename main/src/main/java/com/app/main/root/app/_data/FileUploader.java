@@ -3,9 +3,12 @@ import com.app.main.root.app._crypto.file_encoder.FileEncoderWrapper;
 import com.app.main.root.app._crypto.file_encoder.KeyManagerService;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._service.FileService;
+import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app.file_compressor.WithCompressionResult;
 import com.app.main.root.app.file_compressor.WrapperFileCompressor;
+import com.app.main.root.app.main.chat.messages.MessageTracker;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,8 +20,11 @@ import java.util.UUID;
 public class FileUploader {
     private final FileService fileService;
     private final Map<String, JdbcTemplate> jdbcTemplates;
+    private final ServiceManager serviceManager;
     private final FileEncoderWrapper fileEncoderWrapper;
     private final KeyManagerService keyManagerService;
+    private final MessageTracker messageTracker;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private String fileId;
     private String fileName;
@@ -33,13 +39,19 @@ public class FileUploader {
     public FileUploader(
         FileService fileService, 
         Map<String, JdbcTemplate> jdbcTemplates,
+        ServiceManager serviceManager,
         FileEncoderWrapper fileEncoderWrapper,
-        KeyManagerService keyManagerService
+        KeyManagerService keyManagerService,
+        MessageTracker messageTracker,
+        SimpMessagingTemplate messagingTemplate  
     ) {
         this.fileService = fileService;
         this.jdbcTemplates = jdbcTemplates;
+        this.serviceManager = serviceManager;
         this.fileEncoderWrapper = fileEncoderWrapper;
         this.keyManagerService = keyManagerService;
+        this.messageTracker = messageTracker;
+        this.messagingTemplate = messagingTemplate;
     } 
 
     /**
@@ -48,7 +60,7 @@ public class FileUploader {
     public FileUploader upload(
         String userId,
         MultipartFile file,
-        String parentFolderId
+        String chatId
     ) throws SQLException {
         try {            
             if(fileEncoderWrapper == null) {
@@ -77,7 +89,7 @@ public class FileUploader {
             System.out.println("  mimeType: " + mimeType);
             System.out.println("  fileType: " + fileType);
             System.out.println("  targetDb: " + targetDb);
-            System.out.println("  parentFolderId: " + parentFolderId);
+            System.out.println("  chatId: " + chatId);
             System.out.println("  uploadedAt: " + uploadedAt);
             
             JdbcTemplate metadataTemplate = jdbcTemplates.get("files_metadata");
@@ -176,7 +188,7 @@ public class FileUploader {
                 mimeType,
                 fileType, 
                 targetDb,
-                parentFolderId,
+                chatId,
                 uploadedAt,
                 iv,
                 tag
@@ -186,6 +198,10 @@ public class FileUploader {
                 userId, 
                 encryptionKey
             );
+
+            if(serviceManager.getCacheService() != null) {
+                serviceManager.getCacheService().getFileCache().invalidateFileCache(userId, chatId);
+            }
     
             FileUploader res = this;
             res.setFileId(fileId);

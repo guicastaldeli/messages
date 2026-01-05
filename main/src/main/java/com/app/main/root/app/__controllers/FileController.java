@@ -38,6 +38,8 @@ public class FileController {
                     chatId
                 );
 
+                cacheService.getFileCache().invalidateFileCache(userId, chatId);
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "fileId", res.getFileId(),
