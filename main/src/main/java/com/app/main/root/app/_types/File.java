@@ -1,4 +1,5 @@
 package com.app.main.root.app._types;
+import java.sql.Timestamp;
 
 public class File {
     private String fileId;
@@ -9,7 +10,7 @@ public class File {
     private String mimeType;
     private String fileType;
     private String chatId;
-    private Long uploadedAt;
+    private Timestamp uploadedAt;
     private Long lastModified;
     private byte[] iv;
     private byte[] tag;
@@ -97,10 +98,10 @@ public class File {
     /**
      * Uploaded At
      */
-    public void setUploadedAt(Long uploadedAt) {
+    public void setUploadedAt(Timestamp uploadedAt) {
         this.uploadedAt = uploadedAt;
     }
-    public Object getUploadedAt() {
+    public Timestamp getUploadedAt() {
         return uploadedAt;
     }
 

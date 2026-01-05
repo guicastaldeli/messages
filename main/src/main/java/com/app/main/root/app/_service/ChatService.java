@@ -227,36 +227,9 @@ public class ChatService {
                 timelineItem.put("chatId", file.getChatId());
                 timelineItem.put("userId", userId);
 
-                Object uploadedAt = file.getUploadedAt();
-                long timestamp;
-                String createdAtStr;                
-                if(uploadedAt instanceof Timestamp) {
-                    Timestamp ts = (Timestamp) uploadedAt;
-                    timestamp = ts.getTime();
-                    createdAtStr = ts.toString();
-                } else if(uploadedAt instanceof String) {
-                    try {
-                        Timestamp ts = Timestamp.valueOf((String) uploadedAt);
-                        timestamp = ts.getTime();
-                        createdAtStr = ts.toString();
-                    } catch(Exception e) {
-                        try {
-                            LocalDateTime dateTime = LocalDateTime.parse(
-                                (String) uploadedAt, 
-                                DateTimeFormatter.ISO_LOCAL_DATE_TIME
-                            );
-                            Timestamp ts = Timestamp.valueOf(dateTime);
-                            timestamp = ts.getTime();
-                            createdAtStr = ts.toString();
-                        } catch(Exception e2) {
-                            timestamp = System.currentTimeMillis();
-                            createdAtStr = new Timestamp(timestamp).toString();
-                        }
-                    }
-                } else {
-                    timestamp = System.currentTimeMillis();
-                    createdAtStr = new Timestamp(timestamp).toString();
-                }
+                Timestamp uploadedAt = file.getUploadedAt();
+                long timestamp = uploadedAt != null ? uploadedAt.getTime() : System.currentTimeMillis();
+                String createdAtStr = new Timestamp(timestamp).toString();
                 
                 timelineItem.put("timestamp", timestamp);
                 timelineItem.put("createdAt", createdAtStr);
@@ -264,11 +237,9 @@ public class ChatService {
             }
 
             timeline.sort((a, b) -> {
-                Long timeA = (Long) a.get("timestamp");
-                Long timeB = (Long) b.get("timestamp");
-                if(timeA == null) timeA = 0L;
-                if(timeB == null) timeB = 0L;
-                return timeA.compareTo(timeB);
+                Long timeA = getTimestampItem(a);
+                Long timeB = getTimestampItem(b);
+                return timeB.compareTo(timeA);
             });
 
             int totalItems = timeline.size();
@@ -306,6 +277,21 @@ public class ChatService {
         }
         
         return chatData;
+    }
+
+    private Long getTimestampItem(Map<String, Object> item) {
+        Object timestamp = item.get("timestamp");
+        if(timestamp instanceof Long) return (Long) timestamp;
+        if(timestamp instanceof Timestamp) return ((Timestamp) timestamp).getTime();
+        if(timestamp instanceof Integer) return ((Integer) timestamp).longValue();
+        if(timestamp instanceof String) {
+            try {
+                return Timestamp.valueOf((String) timestamp).getTime();
+            } catch (Exception e) {
+                return 0L;
+            }
+        }
+        return 0L;
     }
 
     private Timestamp getTimestamp(Object timestampObj) {

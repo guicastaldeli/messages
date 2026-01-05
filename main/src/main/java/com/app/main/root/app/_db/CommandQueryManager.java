@@ -233,9 +233,10 @@ public enum CommandQueryManager {
                 sender_id,
                 content,
                 message_type,
-                username
+                username,
+                created_at
             )        
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
         """
     ),
     GET_MESSAGES_BY_CHAT_ID(

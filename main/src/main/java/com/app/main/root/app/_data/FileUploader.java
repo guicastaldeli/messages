@@ -6,14 +6,13 @@ import com.app.main.root.app._service.FileService;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app.file_compressor.WithCompressionResult;
 import com.app.main.root.app.file_compressor.WrapperFileCompressor;
-import com.app.main.root.app.main.chat.messages.MessageTracker;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Timestamp;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,8 +22,6 @@ public class FileUploader {
     private final ServiceManager serviceManager;
     private final FileEncoderWrapper fileEncoderWrapper;
     private final KeyManagerService keyManagerService;
-    private final MessageTracker messageTracker;
-    private final SimpMessagingTemplate messagingTemplate;
 
     private String fileId;
     private String fileName;
@@ -33,7 +30,7 @@ public class FileUploader {
     private String mimeType;
     private String fileType;
     private String database;
-    private LocalDateTime uploadedAt;
+    private Timestamp uploadedAt;
     private boolean compressed;
 
     public FileUploader(
@@ -41,17 +38,13 @@ public class FileUploader {
         Map<String, JdbcTemplate> jdbcTemplates,
         ServiceManager serviceManager,
         FileEncoderWrapper fileEncoderWrapper,
-        KeyManagerService keyManagerService,
-        MessageTracker messageTracker,
-        SimpMessagingTemplate messagingTemplate  
+        KeyManagerService keyManagerService
     ) {
         this.fileService = fileService;
         this.jdbcTemplates = jdbcTemplates;
         this.serviceManager = serviceManager;
         this.fileEncoderWrapper = fileEncoderWrapper;
         this.keyManagerService = keyManagerService;
-        this.messageTracker = messageTracker;
-        this.messagingTemplate = messagingTemplate;
     } 
 
     /**
@@ -76,7 +69,9 @@ public class FileUploader {
             String originalFileName = file.getOriginalFilename();
             String mimeType = file.getContentType();
             long fileSize = file.getSize();
-            LocalDateTime uploadedAt = LocalDateTime.now();
+            
+            Instant now = Instant.now();
+            Timestamp uploadedAt = Timestamp.from(now);
             
             String fileType = getFileType(mimeType);
             String targetDb = fileService.getDatabaseForMimeType(mimeType);
@@ -211,7 +206,7 @@ public class FileUploader {
             res.setMimeType(mimeType);
             res.setFileType(fileType);
             res.setDatabase(targetDb);
-            res.setUploadedAt(LocalDateTime.now());
+            res.setUploadedAt(uploadedAt);
             return res;
         } catch(IOException err) {
             err.printStackTrace();
@@ -362,10 +357,10 @@ public class FileUploader {
     /**
      * Uploaded At
      */
-    public void setUploadedAt(LocalDateTime date) {
+    public void setUploadedAt(Timestamp date) {
         this.uploadedAt = date;
     }
-    public LocalDateTime getUploadedAt() {
+    public Timestamp getUploadedAt() {
         return uploadedAt;
     }
 }

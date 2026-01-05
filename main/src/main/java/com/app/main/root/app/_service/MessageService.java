@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.time.Instant;
 
 @Component
 public class MessageService {
@@ -103,11 +104,15 @@ public class MessageService {
                 finalContent = content;
             }
 
+            Instant now = Instant.now();
+            Timestamp createdAt = Timestamp.from(now);
+
             stmt.setString(1, chatId);
             stmt.setString(2, senderId);
             stmt.setBytes(3, messageContent);
             stmt.setString(4, fType);
             stmt.setString(5, username);
+            stmt.setTimestamp(6, createdAt);
 
             int affectedRows = stmt.executeUpdate();
             if(affectedRows > 0) {

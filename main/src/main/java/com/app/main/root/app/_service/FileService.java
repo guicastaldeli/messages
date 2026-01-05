@@ -3,7 +3,6 @@ import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DbManager;
 import com.app.main.root.app._types.File;
 import com.app.main.root.app.file_compressor.WrapperFileCompressor;
-import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app._cache.CacheService;
 import com.app.main.root.app._crypto.file_encoder.FileEncoderWrapper;
 import com.app.main.root.app._crypto.file_encoder.KeyManagerService;
@@ -13,13 +12,14 @@ import com.app.main.root.app._data.MimeToDb;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.sql.*;
+import java.sql.Date;
 
 @Service
 public class FileService {
@@ -27,8 +27,6 @@ public class FileService {
     private final DbManager dbManager;
     private final ServiceManager serviceManager;
     private final CacheService cacheService;
-    private final MessageTracker messageTracker;
-    private final SimpMessagingTemplate messagingTemplate;
     private FileEncoderWrapper fileEncoderWrapper;
     private KeyManagerService keyManagerService;
     private WrapperFileCompressor fileCompressor;
@@ -49,16 +47,12 @@ public class FileService {
         Map<String, JdbcTemplate> jdbcTemplates,
         @Lazy ServiceManager serviceManager,
         @Lazy DbManager dbManager,
-        CacheService cacheService,
-        MessageTracker messageTracker,
-        SimpMessagingTemplate messagingTemplate
+        CacheService cacheService
     ) {
         this.jdbcTemplates = jdbcTemplates;
         this.serviceManager = serviceManager;
         this.dbManager = dbManager;
         this.cacheService = cacheService;
-        this.messageTracker = messageTracker;
-        this.messagingTemplate = messagingTemplate;
         this.fileCompressor = new WrapperFileCompressor();
         this.fileEncoderWrapper = new FileEncoderWrapper();
         this.keyManagerService = new KeyManagerService(jdbcTemplates);
@@ -67,9 +61,7 @@ public class FileService {
             jdbcTemplates, 
             serviceManager,
             fileEncoderWrapper, 
-            keyManagerService,
-            messageTracker,
-            messagingTemplate
+            keyManagerService
         );
         this.fileDownloader = new FileDownloader(
             this, 
@@ -486,7 +478,7 @@ public class FileService {
             file.setMimeType((String) row.get("mime_type"));
             file.setFileType((String) row.get("file_type"));
             file.setChatId((String) row.get("chat_id"));
-            file.setUploadedAt(convertToLong(row.get("uploaded_at")));
+            convertToTimestamp(file, row.get("uploaded_at"));
             file.setLastModified(convertToLong(row.get("last_modified")));
             file.setIv((byte[]) row.get("iv"));
             file.setTag((byte[]) row.get("tag"));
@@ -494,6 +486,30 @@ public class FileService {
             files.add(file);
         }
         return files;
+    }
+
+    private Timestamp convertToTimestamp(File file, Object obj) {
+        Timestamp timestamp = null;
+        
+        if(obj instanceof Timestamp) {
+            timestamp = (Timestamp) obj;
+        } else if(obj instanceof Date) {
+            Date sqlDate = (Date) obj;
+            timestamp = new Timestamp(sqlDate.getTime());
+        } else if(obj instanceof String) {
+            try {
+                timestamp = Timestamp.valueOf((String) obj);
+            } catch (Exception e) {
+                timestamp = new Timestamp(System.currentTimeMillis());
+            }
+        } else if(obj instanceof Long) {
+            timestamp = new Timestamp((Long) obj);
+        } else {
+            timestamp = new Timestamp(System.currentTimeMillis());
+        }
+        
+        file.setUploadedAt(timestamp);
+        return timestamp;
     }
 
     private Long convertToLong(Object obj) {
@@ -540,4 +556,39 @@ public class FileService {
 
         return null;
     }
+
+    public long extractTimestamp(File file) {
+        Object uploadedAt = file.getUploadedAt();
+        
+        if(uploadedAt instanceof Timestamp) {
+            return ((Timestamp) uploadedAt).getTime();
+        } else if(uploadedAt instanceof Long) {
+            return (Long) uploadedAt;
+        } else if(uploadedAt instanceof String) {
+            try {
+                return Timestamp.valueOf((String) uploadedAt).getTime();
+            } catch(Exception e1) {
+                try {
+                    LocalDateTime dateTime = LocalDateTime.parse(
+                        (String) uploadedAt, 
+                        DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                    );
+                    return Timestamp.valueOf(dateTime).getTime();
+                } catch(Exception e2) {
+                    try {
+                        return Long.parseLong((String) uploadedAt);
+                    } catch(Exception e3) {
+                        return System.currentTimeMillis();
+                    }
+                }
+            }
+        } else if(uploadedAt instanceof Integer) {
+            return ((Integer) uploadedAt).longValue();
+        } else if(uploadedAt instanceof Date) {
+            return ((Date) uploadedAt).getTime();
+        }
+        
+        return System.currentTimeMillis();
+    }
+
 }
