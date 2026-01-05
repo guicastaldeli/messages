@@ -55,6 +55,10 @@ int encryptData(
         return ENCODER_ERROR_INVALID_PARAM;
     }
 
+    if(generateIV(ctx) != ENCODER_SUCCESS) {
+        return ENCODER_ERROR_CRYPTO;
+    }
+
     const EVP_CIPHER* cipher = getCipher(ctx->algo);
     EVP_CIPHER_CTX* encryptCtx = EVP_CIPHER_CTX_new();
     if(!encryptCtx) return ENCODER_ERROR_MEMORY;
@@ -105,6 +109,7 @@ int encryptData(
     }
 
     memcpy(output + *outputLength, ctx->tag, ctx->tagLength);
+    memcpy(output, ctx->iv, ctx->ivLength);
     *outputLength += ctx->tagLength;
 
     EVP_CIPHER_CTX_free(encryptCtx);
@@ -122,16 +127,33 @@ int decryptData(
     size_t* outputLength
 ) {
     if(!ctx || !input || !output || !outputLength) {
+        printf("Invalid parameters in decryptData\n");
+        return ENCODER_ERROR_INVALID_PARAM;
+    }
+    
+    if(inputLength <= ctx->ivLength + ctx->tagLength) {
+        printf("Input too short for decryption: %zu bytes, need %zu bytes\n", 
+               inputLength, ctx->ivLength + ctx->tagLength + 1);
         return ENCODER_ERROR_INVALID_PARAM;
     }
 
-    size_t ciphertextLength = inputLength - ctx->tagLength;
-    const uint8_t* ciphertext = input;
-    const uint8_t* tag = input + ciphertextLength;
+    const uint8_t* iv = input;
+    const uint8_t* encryptedData = input + ctx->ivLength;
+    size_t encryptedDataLength = inputLength - ctx->ivLength - ctx->tagLength;
+    const uint8_t* tag = encryptedData + encryptedDataLength;
+    memcpy(ctx->iv, iv, ctx->ivLength);
 
     const EVP_CIPHER* cipher = getCipher(ctx->algo);
+    if(!cipher) {
+        printf("Failed to get cipher for algorithm: %d\n", ctx->algo);
+        return ENCODER_ERROR_CRYPTO;
+    }
+
     EVP_CIPHER_CTX* decryptCtx = EVP_CIPHER_CTX_new();
-    if(!decryptCtx) return ENCODER_ERROR_MEMORY;
+    if(!decryptCtx) {
+        printf("Failed to create decryption context\n");
+        return ENCODER_ERROR_MEMORY;
+    }
 
     if(EVP_DecryptInit_ex(
         decryptCtx,
@@ -140,6 +162,7 @@ int decryptData(
         ctx->key,
         ctx->iv
     ) != 1) {
+        printf("Failed to initialize decryption\n");
         EVP_CIPHER_CTX_free(decryptCtx);
         return ENCODER_ERROR_CRYPTO;
     }
@@ -150,34 +173,40 @@ int decryptData(
         ctx->tagLength,
         (void*)tag
     ) != 1) {
+        printf("ERROR: Failed to set authentication tag\n");
         EVP_CIPHER_CTX_free(decryptCtx);
         return ENCODER_ERROR_CRYPTO;
     }
 
     int outLen = 0;
+    
     if(EVP_DecryptUpdate(
         decryptCtx,
         output,
         &outLen,
-        ciphertext,
-        ciphertextLength
+        encryptedData,
+        encryptedDataLength
     ) != 1) {
+        printf("Failed to process ciphertext\n");
         EVP_CIPHER_CTX_free(decryptCtx);
         return ENCODER_ERROR_CRYPTO;
     }
     *outputLength = outLen;
 
     int finalLen = 0;
+    
     if(EVP_DecryptFinal_ex(
         decryptCtx,
         output + outLen,
         &finalLen
     ) != 1) {
+        printf("Failed to finalize decryption - authentication failed\n");
         EVP_CIPHER_CTX_free(decryptCtx);
         return ENCODER_ERROR_CRYPTO;
     }
 
     *outputLength += finalLen;
+    
     EVP_CIPHER_CTX_free(decryptCtx);
     return ENCODER_SUCCESS;
 }

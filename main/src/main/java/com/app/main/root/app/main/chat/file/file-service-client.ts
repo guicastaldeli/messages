@@ -94,9 +94,10 @@ export class FileServiceClient {
         chatId: string
     ): Promise<any> {
         const formData = new FormData();
-            formData.append('file', file);
-            formData.append('userId', userId);
-            formData.append('chatId', chatId);
+        formData.append('file', file);
+        formData.append('userId', userId);
+        formData.append('senderId', userId);
+        formData.append('chatId', chatId);
 
         try {
             const res = await fetch(

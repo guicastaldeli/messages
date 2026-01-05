@@ -366,6 +366,7 @@ public enum CommandQueryManager {
         """
             SELECT
                 file_id, 
+                user_id,
                 original_filename, 
                 file_size, 
                 mime_type,

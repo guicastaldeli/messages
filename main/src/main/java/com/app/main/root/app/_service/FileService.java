@@ -408,6 +408,29 @@ public class FileService {
         }
     }
 
+    public File getFileInfo(String fileId, String userId) {
+        JdbcTemplate metadataTemplate = jdbcTemplates.get(METADATA_DB);
+        if(metadataTemplate == null) return null;
+
+        String query = CommandQueryManager.GET_FILE_INFO.get();
+        try {
+            List<Map<String, Object>> rows = metadataTemplate.queryForList(
+                query,
+                fileId,
+                userId
+            );
+            
+            if(rows.isEmpty()) {
+                return null;
+            }
+            
+            return convertToFileList(rows).get(0);
+        } catch (Exception err) {
+            System.err.println("Error getting file info for " + fileId + ": " + err.getMessage());
+            return null;
+        }
+    }
+
     private List<File> convertToFileList(List<Map<String, Object>> rows) {
         List<File> files = new ArrayList<>();
         for(Map<String, Object> row : rows) {
@@ -444,7 +467,7 @@ public class FileService {
             }
             
             file.setFileId((String) row.get("file_id"));
-            file.setSenderId((String) row.get("sender_id"));
+            file.setSenderId((String) row.get("user_id"));
             file.setOriginalFileName((String) row.get("original_filename"));
             file.setFileSize(fileSize);
             file.setMimeType((String) row.get("mime_type"));

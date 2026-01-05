@@ -22,6 +22,7 @@ public class FileUploader {
 
     private String fileId;
     private String fileName;
+    private String senderId;
     private long size;
     private String mimeType;
     private String fileType;
@@ -208,6 +209,7 @@ public class FileUploader {
     
             FileUploader res = this;
             res.setFileId(fileId);
+            res.setSenderId(userId);
             res.setFileName(originalFileName);
             res.setSize(fileSize);
             res.setMimeType(mimeType);
@@ -291,7 +293,9 @@ public class FileUploader {
         return rand;
     }
 
-    /* File Id */
+    /**
+     * File Id
+     */
     public void setFileId(String id) {
         this.fileId = id;
     }
@@ -299,7 +303,9 @@ public class FileUploader {
         return fileId;
     }
 
-    /* File Name */
+    /**
+     * File Name
+     */
     public void setFileName(String name) {
         this.fileName = name;
     }
@@ -307,7 +313,19 @@ public class FileUploader {
         return fileName;
     }
 
-    /* Size */
+    /**
+     * Sender Id
+     */
+    public void setSenderId(String senderId) {
+        this.senderId = senderId;
+    }
+    public String getSenderId() {
+        return senderId;
+    }
+
+    /**
+     * Size
+     */
     public void setSize(long size) {
         this.size = size;
     }
@@ -315,7 +333,9 @@ public class FileUploader {
         return size;
     }
 
-    /* Mime Type */
+    /**
+     * Mime Type
+     */
     public void setMimeType(String type) {
         this.mimeType = type;
     }
@@ -323,7 +343,9 @@ public class FileUploader {
         return mimeType;
     }
 
-    /* File Type */
+    /**
+     * File Type
+     */
     public void setFileType(String type) {
         this.fileType = type;
     }
@@ -331,7 +353,9 @@ public class FileUploader {
         return fileType;
     }
 
-    /* Database */
+    /**
+     * Database
+     */
     public void setDatabase(String db) {
         this.database = db;
     }
@@ -339,7 +363,9 @@ public class FileUploader {
         return database;
     }
 
-    /* Uploaded At */
+    /**
+     * Uploaded At
+     */
     public void setUploadedAt(LocalDateTime date) {
         this.uploadedAt = date;
     }

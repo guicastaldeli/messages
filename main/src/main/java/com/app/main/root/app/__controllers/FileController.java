@@ -42,6 +42,7 @@ public class FileController {
                 "success", true,
                 "fileId", res.getFileId(),
                 "filename", res.getFileName(),
+                "senderId", res.getSenderId(),
                 "size", res.getSize(),
                 "mimeType", res.getMimeType(),
                 "fileType", res.getFileType(),
