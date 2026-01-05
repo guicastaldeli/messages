@@ -183,7 +183,6 @@ public class ChatService {
             }
             
             List<Map<String, Object>> timeline = new ArrayList<>();
-            
             if(messages != null) {
                 for(Message msg : messages) {
                     if(chatId.equals(msg.getChatId())) {
@@ -269,7 +268,7 @@ public class ChatService {
                 Long timeB = (Long) b.get("timestamp");
                 if(timeA == null) timeA = 0L;
                 if(timeB == null) timeB = 0L;
-                return timeB.compareTo(timeA);
+                return timeA.compareTo(timeB);
             });
 
             int totalItems = timeline.size();

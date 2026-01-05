@@ -614,21 +614,33 @@ public class EventList {
                         try {
                             Map<String, Object> processedFile = new HashMap<>(fileMap);
                             
+                            String fileId = (String) fileMap.get("fileId");
+                            String originalFileName = (String) fileMap.get("originalFileName");
+                            
                             Boolean isDecrypted = (Boolean) fileMap.get("isDecrypted");
-                            String originalFileNameFromMap = (String) fileMap.get("originalFileName");
-                    
                             if(isDecrypted != null && isDecrypted) {
-                                processedFiles.add(processedFile);
-                                continue;
-                            }
-                            if(originalFileNameFromMap != null && !originalFileNameFromMap.isEmpty()) {
-                                processedFile.put("isDecrypted", true);
-                                processedFile.put("originalFileName", originalFileNameFromMap);
+                                System.out.println("DEBUG: File " + fileId + " is already decrypted");
                                 processedFiles.add(processedFile);
                                 continue;
                             }
                             
-                            String fileId = (String) fileMap.get("fileId");
+                            if(originalFileName == null || originalFileName.isEmpty()) {
+                                System.out.println("DEBUG: File " + fileId + " has no originalFileName - checking database for metadata");
+                                
+                                File fileInfo = serviceManager.getFileService().getFileInfo(fileId, currentUserId);
+                                if(fileInfo != null && fileInfo.getOriginalFileName() != null) {
+                                    processedFile.put("originalFileName", fileInfo.getOriginalFileName());
+                                    processedFile.put("isDecrypted", true);
+                                    processedFiles.add(processedFile);
+                                    continue;
+                                } else {
+                                    processedFile.put("isDecrypted", true);
+                                    processedFile.put("decryptionError", "File metadata incomplete");
+                                    processedFiles.add(processedFile);
+                                    continue;
+                                }
+                            }
+                            
                             if(fileId == null) {
                                 System.err.println("File ID is null!");
                                 processedFiles.add(processedFile);
@@ -658,8 +670,6 @@ public class EventList {
 
                                 byte[] decryptedBytes = fileEncoder.decrypt(encryptedBytes);
                                 if(decryptedBytes == null) {
-                                    System.err.println("Failed to decrypt file: " + fileId);
-                                    processedFile.put("decryptionError", "Decryption failed");
                                     processedFiles.add(processedFile);
                                     continue;
                                 }
@@ -668,10 +678,8 @@ public class EventList {
                                 processedFile.put("content", base64Decrypted);
                                 processedFile.put("isDecrypted", true);
                                 processedFile.put("originalSize", decryptedBytes.length);
+                                processedFile.put("originalFileName", originalFileName);
                                 
-                                if(originalFileNameFromMap != null) {
-                                    processedFile.put("originalFileName", originalFileNameFromMap);
-                                }
                             } finally {
                                 fileEncoder.cleanup();
                             }
@@ -1444,5 +1452,13 @@ public class EventList {
         if(obj instanceof Integer) return ((Integer) obj).longValue();
         if(obj instanceof Number) return ((Number) obj).longValue();
         return null;
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
     }
 }

@@ -101,7 +101,7 @@ public enum CommandQueryManager {
         """
     ),
     UPDATE_GROUP_LAST_MESSAGE(
-        "UPDATE groups SET last_message = ?, last_sender = ?, last_message_time = ? WHERE id = ?"
+        "UPDATE groups SET last_message = ?, last_sender = ?, last_ctime = ? WHERE id = ?"
     ),
     EXEC_INDEX_GROUP_INVITE_CODE(
         "CREATE INDEX IF NOT EXISTS idx_group_invite_code ON group_invite_codes(group_id, invite_code)"
@@ -344,8 +344,10 @@ public enum CommandQueryManager {
                 file_type,
                 database_name,
                 chat_id,
-                uploaded_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                uploaded_at,
+                iv,
+                tag
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
     ),
     DOWNLOAD_FILE(
@@ -425,7 +427,9 @@ public enum CommandQueryManager {
                 chat_id,
                 database_name,
                 uploaded_at,
-                last_modified
+                last_modified,
+                iv,
+                tag
             FROM files_metadata
             WHERE file_id = ? AND user_id = ? AND is_deleted = FALSE     
         """

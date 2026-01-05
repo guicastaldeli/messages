@@ -12,6 +12,10 @@ import com.app.main.root.app._data.MimeToDb;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @Service
@@ -373,6 +377,12 @@ public class FileService {
      */
     public byte[] getEncryptedFileContent(String fileId, String userId) {
         try {
+            File fileInfo = getFileInfo(fileId, userId);
+            if(fileInfo == null) {
+                System.err.println("File info not found for: " + fileId);
+                return null;
+            }
+
             String dbName = findFileDatabase(userId, null, fileId);
             if(dbName == null) {
                 System.err.println("Could not find database for file: " + fileId);
@@ -396,6 +406,19 @@ public class FileService {
                     fileId
                 );
                 
+                if(encryptedContent == null) {
+                    System.err.println("No encrypted content found for file: " + fileId);
+                    return null;
+                }
+                
+                System.out.println("DEBUG: Encrypted content retrieved:");
+                System.out.println("  Total length: " + encryptedContent.length);
+                
+                if(encryptedContent.length > 28) {
+                    System.out.println("  First 12 bytes (IV): " + bytesToHex(Arrays.copyOf(encryptedContent, 12)));
+                    System.out.println("  Last 16 bytes (tag): " + bytesToHex(Arrays.copyOfRange(encryptedContent, encryptedContent.length-16, encryptedContent.length)));
+                }
+                
                 return encryptedContent;
             } catch (Exception err) {
                 System.err.println("Error retrieving encrypted content for file " + fileId + ": " + err.getMessage());
@@ -406,6 +429,14 @@ public class FileService {
             err.printStackTrace();
             return null;
         }
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
     }
 
     public File getFileInfo(String fileId, String userId) {
@@ -436,48 +467,65 @@ public class FileService {
         for(Map<String, Object> row : rows) {
             File file = new File();
             
-            Object fileSizeObj = row.get("file_size");
-            Long fileSize = null;
-            if(fileSizeObj != null) {
-                if(fileSizeObj instanceof Integer) {
-                    fileSize = ((Integer) fileSizeObj).longValue();
-                } else if(fileSizeObj instanceof Long) {
-                    fileSize = (Long) fileSizeObj;
-                }
-            }
-            
-            Object uploadedAtObj = row.get("uploaded_at");
-            Long uploadedAt = null;
-            if(uploadedAtObj != null) {
-                if(uploadedAtObj instanceof Integer) {
-                    uploadedAt = ((Integer) uploadedAtObj).longValue();
-                } else if(uploadedAtObj instanceof Long) {
-                    uploadedAt = (Long) uploadedAtObj;
-                }
-            }
-            
-            Object lastModifiedObj = row.get("last_modified");
-            Long lastModified = null;
-            if(lastModifiedObj != null) {
-                if(lastModifiedObj instanceof Integer) {
-                    lastModified = ((Integer) lastModifiedObj).longValue();
-                } else if(lastModifiedObj instanceof Long) {
-                    lastModified = (Long) lastModifiedObj;
-                }
-            }
-            
             file.setFileId((String) row.get("file_id"));
             file.setSenderId((String) row.get("user_id"));
             file.setOriginalFileName((String) row.get("original_filename"));
-            file.setFileSize(fileSize);
+            file.setFileSize(convertToLong(row.get("file_size")));
             file.setMimeType((String) row.get("mime_type"));
             file.setFileType((String) row.get("file_type"));
             file.setChatId((String) row.get("chat_id"));
-            file.setUploadedAt(uploadedAt);
-            file.setLastModified(lastModified);
+            file.setUploadedAt(convertToLong(row.get("uploaded_at")));
+            file.setLastModified(convertToLong(row.get("last_modified")));
+            file.setIv((byte[]) row.get("iv"));
+            file.setTag((byte[]) row.get("tag"));
             
             files.add(file);
         }
         return files;
+    }
+
+    private Long convertToLong(Object obj) {
+        if(obj == null) return null;
+        if(obj instanceof Long) return (Long) obj;
+        if(obj instanceof Integer) return ((Integer) obj).longValue();
+        if(obj instanceof Number) return ((Number) obj).longValue();
+        if(obj instanceof String) {
+            String str = (String) obj;
+            try {
+                return Long.parseLong(str);
+            } catch(NumberFormatException e1) {
+                try {
+                    if(str.contains("T")) {
+                        try {
+                            LocalDateTime dateTime = LocalDateTime.parse(str);
+                            return dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                        } catch(DateTimeParseException e2) {
+                            str = str.substring(0, str.indexOf('.'));
+                            LocalDateTime dateTime = LocalDateTime.parse(str);
+                            return dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                        }
+                    } else {
+                        String pattern = "yyyy- dd HH:mm:ss";
+
+                        try {
+                            LocalDateTime dateTime = LocalDateTime.parse(str, DateTimeFormatter.ofPattern(pattern));
+                            return dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                        } catch(DateTimeParseException e3) {
+                            if(str.contains(".")) {
+                                String[] parts = str.split("\\.");
+                                String datePart = parts[0];
+                                LocalDateTime dateTime = LocalDateTime.parse(datePart, DateTimeFormatter.ofPattern(pattern));
+                                return dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                            }
+                        }
+                    }
+                } catch (Exception err) {
+                    System.err.println("Failed to parse timestamp string: " + str + " - " + err.getMessage());
+                    return null;
+                }
+            }
+        }
+
+        return null;
     }
 }

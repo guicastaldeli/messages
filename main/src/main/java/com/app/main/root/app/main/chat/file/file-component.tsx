@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageProps } from '../messages/message-item';
 import { Item } from './file-item';
+import { UserColorGenerator } from '@/app/_utils/UserColorGenerator';
 
 export interface FileMessageProps extends MessageProps {
     fileData: Item;
@@ -28,7 +29,7 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
     onPreview
 }) => {
     const isSelf = direction === 'self';
-    const selfColor = '#4a90e2';
+    const selfColor = UserColorGenerator.getColor('softBlue')?.value;
 
     const getMessageColor = () => {
         if(isSelf) return { backgroundColor: selfColor };

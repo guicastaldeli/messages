@@ -2,14 +2,17 @@ package com.app.main.root.app._types;
 
 public class File {
     private String fileId;
+    private String messageId;
     private String senderId;
     private String originalFileName;
     private Long fileSize;
     private String mimeType;
     private String fileType;
     private String chatId;
-    private Object uploadedAt;
-    private Object lastModified;
+    private Long uploadedAt;
+    private Long lastModified;
+    private byte[] iv;
+    private byte[] tag;
 
     /**
      * File Id
@@ -19,6 +22,16 @@ public class File {
     }
     public String getFileId() {
         return fileId;
+    }
+
+    /**
+     * Message Id
+     */
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
+    }
+    public String getMessageId() {
+        return messageId;
     }
 
     /**
@@ -84,7 +97,7 @@ public class File {
     /**
      * Uploaded At
      */
-    public void setUploadedAt(Object uploadedAt) {
+    public void setUploadedAt(Long uploadedAt) {
         this.uploadedAt = uploadedAt;
     }
     public Object getUploadedAt() {
@@ -94,10 +107,30 @@ public class File {
     /**
      * Last Modified
      */
-    public void setLastModified(Object lastModified) {
+    public void setLastModified(Long lastModified) {
         this.lastModified = lastModified;
     }
     public Object getLastModified() {
         return lastModified;
+    }
+
+    /**
+     * Iv
+     */
+    public byte[] getIv() {
+        return iv;
+    }
+    public void setIv(byte[] iv) {
+        this.iv = iv;
+    }
+    
+    /**
+     * Tag
+     */
+    public byte[] getTag() {
+        return tag;
+    }
+    public void setTag(byte[] tag) {
+        this.tag = tag;
     }
 }

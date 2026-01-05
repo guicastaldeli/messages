@@ -165,7 +165,13 @@ Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_decryptData
         return NULL;
     }
     
-    uint8_t *outputData = (uint8_t*)malloc(inputLen - ctx->tagLength);
+    size_t maxOutputLen = inputLen - ctx->ivLength - ctx->tagLength;
+    if(maxOutputLen <= 0) {
+        free(inputData);
+        return NULL;
+    }
+    
+    uint8_t *outputData = (uint8_t*)malloc(maxOutputLen);
     if(!outputData) {
         free(inputData);
         return NULL;
@@ -366,6 +372,26 @@ Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_setIV(
     free(ivData);
 }
 
+JNIEXPORT jbyteArray JNICALL 
+Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_getTag(
+    JNIEnv *env, 
+    jobject obj, 
+    jlong handle
+) {
+    EncoderContext *ctx = (EncoderContext*)(intptr_t)handle;
+    if(!ctx || !ctx->tag) {
+        return NULL;
+    }
+    
+    jbyteArray resultArray = (*env)->NewByteArray(env, ctx->tagLength);
+    if(resultArray == NULL) {
+        return NULL;
+    }
+    
+    (*env)->SetByteArrayRegion(env, resultArray, 0, ctx->tagLength, (jbyte*)ctx->tag);
+    return resultArray;
+}
+
 static JNINativeMethod methods[] = {
     { "init", "([BI)J", (void*)Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_init },
     { "cleanup", "(J)V", (void*)Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_cleanup },
@@ -377,7 +403,8 @@ static JNINativeMethod methods[] = {
     { "deriveKey", "(Ljava/lang/String;[BI)[B", (void*)Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_deriveKey },
     { "getEncryptedSize", "(II)I", (void*)Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_getEncryptedSize },
     { "getIV", "(J)[B", (void*)Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_getIV },
-    { "setIV", "(J[B)V", (void*)Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_setIV }
+    { "setIV", "(J[B)V", (void*)Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_setIV },
+    { "getTag", "(J)[B", (void*)Java_com_app_main_root_app__1crypto_file_1encoder_FileEncoderWrapper_getTag }
 };
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {

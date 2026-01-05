@@ -12,5 +12,7 @@ CREATE TABLE IF NOT EXISTS files_metadata(
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN DEFAULT FALSE,
     version INTEGER DEFAULT 1,
-    thumbnail_path TEXT
+    thumbnail_path TEXT,
+    iv BLOB,
+    tag BLOB
 );

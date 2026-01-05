@@ -92,14 +92,8 @@ public class FileUploader {
             }
 
             byte[] fileBytes = file.getBytes();
-            System.out.println("DEBUG: Compression check:");
-            System.out.println("  File size: " + fileSize + " bytes");
-            System.out.println("  File size: " + (fileSize / 1024.0) + " KB");
-            System.out.println("  MIME type: " + mimeType);
-
             int compressionType = 0;
             boolean shouldCompress = fileService.shouldCompress(fileSize, mimeType);
-            System.out.println("  shouldCompress result: " + shouldCompress);
             if(shouldCompress) {
                 try {
                     System.out.println("DEBUG: Starting compression...");
@@ -116,12 +110,6 @@ public class FileUploader {
                         
                         long compressedSize = fileBytes.length;
                         double ratio = (double) compressedSize / fileSize;
-                        
-                        System.out.println("DEBUG: Streaming compression result:");
-                        System.out.println("  Original size: " + fileSize);
-                        System.out.println("  Compressed size: " + compressedSize);
-                        System.out.println("  Compression type: " + compressionType);
-                        System.out.println("  Ratio: " + (ratio * 100) + "%");
                         
                         if(compressionType == 10 && ratio < 0.95) {
                             this.compressed = true;
@@ -142,12 +130,6 @@ public class FileUploader {
                         
                         long compressedSize = compressedData.length;
                         double ratio = (double) compressedSize / fileSize;
-                        
-                        System.out.println("DEBUG: Normal compression result:");
-                        System.out.println("  Original size: " + fileSize);
-                        System.out.println("  Compressed size: " + compressedSize);
-                        System.out.println("  Compression type: " + compressionType);
-                        System.out.println("  Ratio: " + (ratio * 100) + "%");
                         
                         if(compressionType > 0 && ratio < 0.95) {
                             fileBytes = compressedData;
@@ -175,8 +157,11 @@ public class FileUploader {
             byte[] encryptionKey = FileEncoderWrapper.generateKey(32);
             fileEncoderWrapper.initEncoder(encryptionKey, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
 
-            byte[] iv = fileEncoderWrapper.generateIV();
             byte[] encryptedContent = fileEncoderWrapper.encrypt(fileBytes);
+            insertFileContent(targetDb, fileId, encryptedContent, mimeType);
+            
+            byte[] iv = fileEncoderWrapper.generateIV();
+            byte[] tag = fileEncoderWrapper.getTag();
 
             byte[] ivEncrypted = new byte[iv.length + encryptedContent.length];
             System.arraycopy(iv, 0, ivEncrypted, 0, iv.length);
@@ -192,20 +177,15 @@ public class FileUploader {
                 fileType, 
                 targetDb,
                 parentFolderId,
-                uploadedAt
+                uploadedAt,
+                iv,
+                tag
             );
-            insertFileContent(
-                targetDb, 
+            keyManagerService.storeKey(
                 fileId, 
-                ivEncrypted, 
-                mimeType
+                userId, 
+                encryptionKey
             );
-            keyManagerService.storeKey(fileId, userId, encryptionKey);
-            
-            /*
-            generateThumbnail(targetDb, fileId, fileBytes, mimeType);
-            extractDocMetadata(targetDb, fileId, fileBytes, mimeType);
-            */
     
             FileUploader res = this;
             res.setFileId(fileId);

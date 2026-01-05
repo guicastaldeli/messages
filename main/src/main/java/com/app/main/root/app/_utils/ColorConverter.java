@@ -9,7 +9,7 @@ import java.util.Map;
 public class ColorConverter {
     public static final Map<String, String> ansiColorsList = new HashMap<>();
     static {
-        // Basic colors
+        //Basic colors
         ansiColorsList.put("black", "\u001B[30m");
         ansiColorsList.put("red", "\u001B[31m");
         ansiColorsList.put("green", "\u001B[32m");
@@ -20,7 +20,7 @@ public class ColorConverter {
         ansiColorsList.put("white", "\u001B[37m");
         ansiColorsList.put("orange", "\u001B[38;5;208m");
         
-        // Bright colors
+        //Bright colors
         ansiColorsList.put("brightBlack", "\u001B[90m");
         ansiColorsList.put("brightRed", "\u001B[91m");
         ansiColorsList.put("brightGreen", "\u001B[92m");
@@ -30,7 +30,7 @@ public class ColorConverter {
         ansiColorsList.put("brightCyan", "\u001B[96m");
         ansiColorsList.put("brightWhite", "\u001B[97m");
         
-        // Background colors
+        //Background colors
         ansiColorsList.put("bgBlack", "\u001B[40m");
         ansiColorsList.put("bgRed", "\u001B[41m");
         ansiColorsList.put("bgGreen", "\u001B[42m");
@@ -40,7 +40,7 @@ public class ColorConverter {
         ansiColorsList.put("bgCyan", "\u001B[46m");
         ansiColorsList.put("bgWhite", "\u001B[47m");
         
-        // Styles
+        //Styles
         ansiColorsList.put("bold", "\u001B[1m");
         ansiColorsList.put("dim", "\u001B[2m");
         ansiColorsList.put("italic", "\u001B[3m");
@@ -48,8 +48,8 @@ public class ColorConverter {
         ansiColorsList.put("blink", "\u001B[5m");
         ansiColorsList.put("reverse", "\u001B[7m");
         ansiColorsList.put("hidden", "\u001B[8m");
-        
-        // Reset
+    
+        //Reset
         ansiColorsList.put("reset", "\u001B[0m");
     }
 

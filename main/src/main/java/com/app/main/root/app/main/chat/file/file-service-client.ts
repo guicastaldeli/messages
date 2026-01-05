@@ -35,6 +35,21 @@ export class FileServiceClient {
             data.fileOrder.push(fileId);
             data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
             data.lastUpdated = Date.now();
+            
+            const timelineId = `file_${fileId}`;
+            if(!data.timeline.has(timelineId)) {
+                const timelineItem = {
+                    id: timelineId,
+                    type: 'file',
+                    fileId: fileId,
+                    chatId: chatId,
+                    timestamp: fileData.uploadedAt || fileData.timestamp || Date.now(),
+                    data: fileData
+                };
+                data.timeline.set(timelineId, timelineItem);
+                data.timelineOrder.push(timelineId);
+                data.totalTimelineCount = Math.max(data.totalTimelineCount, data.timelineOrder.length);
+            }
         }
     }
     
@@ -394,31 +409,42 @@ export class FileServiceClient {
     /**
      * Get Count By Chat Id
      */
-    /**
- * Get Count By Chat Id
- */
-public async getFilesCountByChatId(chatId: string, userId: string): Promise<number> {
-    try {
-        const params = new URLSearchParams({
-            userId: userId,
-            chatId: chatId
-        });
+    public async getFilesCountByChatId(chatId: string, userId: string): Promise<number> {
+        try {
+            const params = new URLSearchParams({
+                userId: userId,
+                chatId: chatId
+            });
 
-        const url = `${this.url}/api/files/count?${params.toString()}`;
-        console.log(`Fetching files count from: ${url}`);
-        
-        const res = await fetch(url);
-        if(!res.ok) throw new Error(`Failed to fetch files count: ${res.status}`);
-        
-        const data = await res.json();
-        const count = data.total || data.count || 0;
-        console.log(`Files count response:`, data);
-        return count;
-    } catch(err) {
-        console.error(`Error fetching files count for chat ${chatId}:`, err);
-        throw err;
+            const url = `${this.url}/api/files/count?${params.toString()}`;
+            console.log(`Fetching files count from: ${url}`);
+            
+            const res = await fetch(url);
+            if(!res.ok) throw new Error(`Failed to fetch files count: ${res.status}`);
+            
+            const contentType = res.headers.get('content-type');
+            let count = 0;
+            
+            if(contentType && contentType.includes('application/json')) {
+                const data = await res.json();
+                console.log(`Files count response:`, data);
+                if (typeof data === 'number') {
+                    count = data;
+                } else {
+                    count = data.total || data.count || data.totalFiles || data.total_count || 0;
+                }
+            } else {
+                const text = await res.text();
+                count = parseInt(text) || 0;
+            }
+            
+            console.log(`Parsed files count: ${count}`);
+            return count;
+        } catch(err) {
+            console.error(`Error fetching files count for chat ${chatId}:`, err);
+            throw err;
+        }
     }
-}
 
     /**
      * Get Recent Files Count

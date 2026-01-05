@@ -3,6 +3,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 public class FileEncoderWrapper {
     private static final String DLL_PATH = "src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/";
@@ -88,13 +89,20 @@ public class FileEncoderWrapper {
     private native byte[] getIV(long handle);
     public native void setIV(long handle, byte[] iv);
 
+    public byte[] getTag() {
+        synchronized(lock) {
+            if(nativePtr == 0) {
+                throw new IllegalStateException("Encoder not initialized");
+            }
+            return getTag(nativePtr);
+        }
+    }
+    private native byte[] getTag(long handle);
+
     public FileEncoderWrapper() {
         Runtime.getRuntime().addShutdownHook(new Thread(this::destroy));
     }
     
-    /**
-     * Init w key
-     */
     public void initEncoder(byte[] key, EncryptionAlgorithm algorithm) {
         if(nativePtr != 0) {
             cleanup();
@@ -102,9 +110,6 @@ public class FileEncoderWrapper {
         nativePtr = init(key, algorithm.getValue());
     }
     
-    /**
-     * Init w password
-     */
     public void initEncoder(String password, byte[] salt, EncryptionAlgorithm algorithm) {
         if(nativePtr != 0) {
             cleanup();
@@ -147,23 +152,36 @@ public class FileEncoderWrapper {
     private native int getEncryptedSize(int inputSize, int algorithm);
     
     /**
-     * Encrypt data in memory
+     * Encrypt
      */
     public byte[] encrypt(byte[] data) {
-        if(nativePtr == 0) {
-            throw new IllegalStateException("Encoder not initialized");
+        synchronized(lock) {
+            if(nativePtr == 0) {
+                throw new IllegalStateException("Encoder not initialized");
+            }
+            
+            byte[] result = encryptData(nativePtr, data);
+            if(result != null) {
+                System.out.println("Encrypted data length: " + result.length);
+                System.out.println("First 12 bytes (IV): " + bytesToHex(Arrays.copyOf(result, 12)));
+                System.out.println("Last 16 bytes (tag): " + bytesToHex(Arrays.copyOfRange(result, result.length-16, result.length)));
+            } else {
+                System.err.println("Encryption failed - returned null");
+            }
+            
+            return result;
         }
-        return encryptData(nativePtr, data);
     }
-    
-    /**
-     * Decrypt data in memory
-     */
+
     public byte[] decrypt(byte[] encryptedData) {
-        if(nativePtr == 0) {
-            throw new IllegalStateException("Encoder not initialized");
+        synchronized(lock) {
+            if(nativePtr == 0) {
+                throw new IllegalStateException("Encoder not initialized");
+            }
+            
+            byte[] result = decryptData(nativePtr, encryptedData);
+            return result;
         }
-        return decryptData(nativePtr, encryptedData);
     }
     
     /**
@@ -234,5 +252,13 @@ public class FileEncoderWrapper {
         } finally {
             super.finalize();
         }
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
     }
 }
