@@ -142,66 +142,82 @@ export class ChatController {
     }
 
     public async renderAllCachedMessages(chatId: string): Promise<void> {
-    const cacheData = await this.chatService.getCachedData(chatId);
-    if(!cacheData) {
-        console.log(`No cache data found for chat ${chatId}`);
-        return;
-    }
-
-    const cacheService = await this.chatService.getCacheServiceClient();
-    cacheService.validateCache(chatId);
-
-    const container = await this.getContainer();
-    if(!container) {
-        console.error('Container not found');
-        return;
-    }
-
-    const existingMessageIds = new Set<string>();
-    const orphanedMessageIds: string[] = [];
-    
-    this.messageRoots.forEach((messageId: any) => {
-        const element = container.querySelector(`[data-message-id="${messageId}"]`);
-        if(element) {
-            existingMessageIds.add(messageId);
-        } else {
-            orphanedMessageIds.push(messageId);
+        console.log('Rendering cached messages for:', chatId);
+        
+        const cacheData = await this.chatService.getCachedData(chatId);
+        if(!cacheData) {
+            console.log(`No cache data found for chat ${chatId}`);
+            return;
         }
-    });
 
-    if(orphanedMessageIds.length > 0) {
-        orphanedMessageIds.forEach(messageId => {
-            const root = this.messageRoots.get(messageId);
-            if(root) {
-                try {
-                    root.unmount();
-                } catch (error) {
-                    console.error(`Failed to unmount orphaned root ${messageId}:`, error);
-                }
-                this.messageRoots.delete(messageId);
+        const cacheService = await this.chatService.getCacheServiceClient();
+        cacheService.validateCache(chatId);
+
+        const container = await this.getContainer();
+        if(!container) {
+            console.error('Container not found');
+            return;
+        }
+
+        const existingMessageIds = new Set<string>();
+        const orphanedMessageIds: string[] = [];
+        
+        this.messageRoots.forEach((root, messageId) => {
+            const element = container.querySelector(`[data-message-id="${messageId}"]`);
+            if(element) {
+                existingMessageIds.add(messageId);
+            } else {
+                orphanedMessageIds.push(messageId);
             }
         });
-    }
 
-    // USE THE TIMELINE DIRECTLY - it already has messages and files mixed together
-    const allTimelineItems = Array.from(cacheData.timeline.values() as any[])
-        .sort((a, b) => {
-            const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
-            const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
-            return timeA - timeB;
+        if(orphanedMessageIds.length > 0) {
+            console.log(`Cleaning up ${orphanedMessageIds.length} orphaned message roots`);
+            orphanedMessageIds.forEach(messageId => {
+                const root = this.messageRoots.get(messageId);
+                if(root) {
+                    try {
+                        root.unmount();
+                    } catch (error) {
+                        console.error(`Failed to unmount orphaned root ${messageId}:`, error);
+                    }
+                    this.messageRoots.delete(messageId);
+                }
+            });
+        }
+
+        const timelineMap = cacheData.timeline;
+        if(!timelineMap || !(timelineMap instanceof Map)) {
+            console.error('Timeline is not a Map:', timelineMap);
+            return;
+        }
+
+        const allTimelineItems = Array.from(timelineMap.values())
+            .sort((a: any, b: any) => {
+                const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
+                const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
+                return timeA - timeB;
+            });
+        
+        console.log(`Found ${allTimelineItems.length} timeline items in cache`);
+        
+        const itemsToRender = allTimelineItems.filter((item: any) => {
+            const itemId = item.messageId || item.id;
+            return !existingMessageIds.has(itemId);
         });
-    
-    // Filter out already rendered items
-    const itemsToRender = allTimelineItems.filter(item => {
-        const itemId = item.messageId || item.id;
-        return !existingMessageIds.has(itemId);
-    });
-    
-    // Render all timeline items (messages and files)
-    for(const item of itemsToRender) {
-        await this.messageElementRenderer.renderElement(item);
+        
+        console.log(`Rendering ${itemsToRender.length} new items`);
+        
+        for(const item of itemsToRender) {
+            try {
+                await this.messageElementRenderer.renderElement(item);
+            } catch (error) {
+                console.error('Failed to render timeline item:', item.id || item.messageId, error);
+            }
+        }
+        
+        console.log('Finished rendering cached messages');
     }
-}
 
     /**
      * Setup Message Handling
@@ -282,7 +298,10 @@ export class ChatController {
         this.chunkRenderer.reset();
 
         const cacheService = await this.chatService.getCacheServiceClient(); 
-        if(!cacheService.isChatCached(chatId)) {
+        const isCached = cacheService.isChatCached(chatId);
+        const isDataLoaded = this.chatService.isDataLoaded(chatId, 0);
+        
+        if(!isCached) {
             cacheService.init(chatId);
         }
 
@@ -297,8 +316,15 @@ export class ChatController {
                 await this.loadHistory(chatId, sessionData.userId);
             }
         } else {
-            await this.loadHistory(chatId, userIdToUse);
+            if(!isDataLoaded || !isCached) {
+                console.log(`Loading history for ${chatId} (cached: ${isCached}, loaded: ${isDataLoaded})`);
+                await this.loadHistory(chatId, userIdToUse);
+            } else {
+                console.log(`Using cached data for ${chatId}, rendering from cache`);
+                await this.renderAllCachedMessages(chatId);
+            }
         }
+        
         await this.chunkRenderer.setupScrollHandler(userIdToUse || this.userId);
         
         setTimeout(() => {

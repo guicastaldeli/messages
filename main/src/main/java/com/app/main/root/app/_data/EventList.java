@@ -596,7 +596,7 @@ public class EventList {
                     err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
                     errRes.put("error", "LOAD_DECRYPTED_MESSAGES_FAILED");
-                    errRes.put("message", err.getMessage());
+                    errRes.put("message", err.getMessage() != null ? err.getMessage() : "Unknown error");
                     socketMethods.send(sessionId, "/queue/decrypted-messages-err", errRes);
                     return Collections.emptyMap();
                 }

@@ -302,18 +302,49 @@ export class ChatService {
         const cacheKey = `${chatId}_${userId}_${page}`;
 
         if(!forceRefresh && this.isDataLoaded(chatId, page)) {
+            console.log(`Returning cached data for ${chatId} page ${page}`);
             const cachedData = await this.getCachedData(chatId);
-            return { 
-                messages: cachedData?.messages || [],
-                files: cachedData?.files || [],
-                timeline: cachedData?.timeline || [],
-                fromCache: true 
+            
+            if(cachedData) {
+                const messages = Array.from(cachedData.messages.values());
+                const files = Array.from(cachedData.files.values());
+                const timeline = Array.from(cachedData.timeline.values());
+                
+                console.log(`Cache contains: ${messages.length} messages, ${files.length} files, ${timeline.length} timeline items`);
+                
+                const sortedMessages = messages.sort((a: any, b: any) => {
+                    const timeA = a.timestamp || a.createdAt || 0;
+                    const timeB = b.timestamp || b.createdAt || 0;
+                    return timeA - timeB;
+                });
+                
+                const sortedFiles = files.sort((a: any, b: any) => {
+                    const timeA = a.timestamp || a.createdAt || 0;
+                    const timeB = b.timestamp || b.createdAt || 0;
+                    return timeA - timeB;
+                });
+                
+                const sortedTimeline = timeline.sort((a: any, b: any) => {
+                    const timeA = a.timestamp || a.createdAt || 0;
+                    const timeB = b.timestamp || b.createdAt || 0;
+                    return timeA - timeB;
+                });
+                
+                return { 
+                    messages: sortedMessages,
+                    files: sortedFiles,
+                    timeline: sortedTimeline,
+                    fromCache: true 
+                };
             }
         }
+        
         if(this.cacheServiceClient.pendingRequests.has(cacheKey)) {
+            console.log(`Waiting for pending request for ${chatId} page ${page}`);
             return this.cacheServiceClient.pendingRequests.get(cacheKey);
         }
 
+        console.log(`Fetching fresh data for ${chatId} page ${page}`);
         const reqPromise = this.fetchAndCacheData(chatId, userId, page);
         this.cacheServiceClient.pendingRequests.set(cacheKey, reqPromise);
         try {
@@ -339,110 +370,148 @@ export class ChatService {
         page: number = 0
     ): void {
         if(!this.cacheServiceClient.cache.has(chatId)) {
+            console.log(`Initializing cache for ${chatId}`);
             this.cacheServiceClient.init(
                 chatId,
                 messages.length + (page * this.cacheServiceClient.config.pageSize),
                 files.length + (page * this.cacheServiceClient.config.pageSize),
                 timeline.length + (page * this.cacheServiceClient.config.pageSize)
             );
-
-            const data = this.cacheServiceClient.cache.get(chatId)!;
-
-            /* Messages */
-            const sortedMessages = messages.sort((a, b) => {
-                const tA = a.timestamp || a.createdAt || 0;
-                const tB = b.timestamp || b.createdAt || 0;
-                return tA - tB;
-            });
-
-            const startIndex = page * this.cacheServiceClient.config.pageSize;
-            sortedMessages.forEach((m, i) => {
-                const id = m.id || m.messageId;
-                if(!data.messages.has(id)) {
-                    data.messages.set(id, m);
-                    const insertIndex = startIndex + i;
-                    if(insertIndex >= data.messageOrder.length) {
-                        while(data.messageOrder.length < insertIndex) {
-                            data.messageOrder.push('');
-                        }
-                        data.messageOrder.push(id);
-                    } else {
-                        data.messageOrder[insertIndex] = id;
-                    }
-                }
-            });
-
-            /* Files */
-            const sortedFiles = Array.isArray(files) ? files.sort((a, b) => {
-                const tA = a.timestamp || a.createdAt || 0;
-                const tB = b.timestamp || b.createdAt || 0;
-                return tA - tB;
-            }) : [];
-
-            const fileStartIndex = page * this.cacheServiceClient.config.pageSize;
-            sortedFiles.forEach((f, i) => {
-                const fileId = f.file_id || f.id;
-                if(!data.files.has(fileId)) {
-                    data.files.set(fileId, f);
-                    const insertIndex = fileStartIndex + i;
-                    if(insertIndex >= data.fileOrder.length) {
-                        while(data.fileOrder.length < insertIndex) {
-                            data.fileOrder.push('');
-                        }
-                        data.fileOrder.push(fileId);
-                    } else {
-                        data.fileOrder[insertIndex] = fileId;
-                    }
-                }
-            });
-
-            /* Timeline */
-            if(Array.isArray(timeline)) {
-                const sortedTimeline = timeline.sort((a, b) => {
-                    const tA = a.timestamp || a.createdAt || 0;
-                    const tB = b.timestamp || b.createdAt || 0;
-                    return tA - tB;
-                });
-
-                const timelineStartIndex = page * this.cacheServiceClient.config.pageSize;
-                sortedTimeline.forEach((item, i) => {
-                    const id = item.id || item.messageId;
-                    if(!data.timeline.has(id)) {
-                        data.timeline.set(id, item);
-                        const insertIndex = timelineStartIndex + i;
-                        if(insertIndex >= data.timelineOrder.length) {
-                            while(data.timelineOrder.length < insertIndex) {
-                                data.timelineOrder.push('');
-                            }
-                            data.timelineOrder.push(id);
-                        } else {
-                            data.timelineOrder[insertIndex] = id;
-                        }
-                    }
-                });
-            }
-
-            const time = Date.now();
-            data.messageOrder = data.messageOrder.filter(id => id && id !== '');
-            data.fileOrder = data.fileOrder.filter(id => id && id !== '');
-            data.timelineOrder = data.timelineOrder.filter(id => id && id !== '');
-            data.loadedPages.add(page);
-            data.loadedFilePages.add(page);
-            data.loadedTimelinePages.add(page);
-            data.lastAccessTime = time;
-            data.lastUpdated = time;
-            
-            const receivedFullPage = messages.length === this.cacheServiceClient.config.pageSize;
-            const receivedFullFilePage = files.length === this.cacheServiceClient.config.pageSize;
-            const receivedFullTimelinePage = timeline.length === this.cacheServiceClient.config.pageSize;
-            data.hasMore = receivedFullPage;
-            data.hasMoreFiles = receivedFullFilePage;
-            data.hasMoreTimeline = receivedFullTimelinePage;
-            data.totalMessagesCount = Math.max(data.totalMessagesCount, data.messageOrder.length);
-            data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
-            data.totalTimelineCount = Math.max(data.totalTimelineCount, data.timelineOrder.length);
-            data.isFullyLoaded = !data.hasMore && !data.hasMoreFiles && !data.hasMoreTimeline;
         }
+
+        const data = this.cacheServiceClient.cache.get(chatId);
+        if(!data) {
+            console.error(`Failed to get cache data for ${chatId} after initialization`);
+            return;
+        }
+
+        console.log(`Adding page ${page} data to cache for ${chatId}: ${messages.length} messages, ${files.length} files, ${timeline.length} timeline items`);
+
+        /* Messages */
+        const sortedMessages = messages.sort((a, b) => {
+            const tA = a.timestamp || a.createdAt || 0;
+            const tB = b.timestamp || b.createdAt || 0;
+            return tA - tB;
+        });
+
+        const startIndex = page * this.cacheServiceClient.config.pageSize;
+        sortedMessages.forEach((m, i) => {
+            const id = m.id || m.messageId;
+            if(!data.messages.has(id)) {
+                data.messages.set(id, m);
+                const insertIndex = startIndex + i;
+                if(insertIndex >= data.messageOrder.length) {
+                    while(data.messageOrder.length < insertIndex) {
+                        data.messageOrder.push('');
+                    }
+                    data.messageOrder.push(id);
+                } else {
+                    data.messageOrder[insertIndex] = id;
+                }
+            }
+        });
+
+        /* Files */
+        const sortedFiles = Array.isArray(files) ? files.sort((a, b) => {
+            const tA = a.timestamp || a.createdAt || 0;
+            const tB = b.timestamp || b.createdAt || 0;
+            return tA - tB;
+        }) : [];
+
+        const fileStartIndex = page * this.cacheServiceClient.config.pageSize;
+        sortedFiles.forEach((f, i) => {
+            const fileId = 
+                f.fileId || 
+                f.file_id || 
+                f.id || 
+                (f.fileData && 
+                    (f.fileData.fileId || 
+                        f.fileData.file_id || 
+                        f.fileData.id
+                    )
+                );
+            
+            if(!fileId) {
+                console.warn('File missing ID, skipping:', f);
+                return;
+            }
+            
+            if(!data.files.has(fileId)) {
+                data.files.set(fileId, f);
+                const insertIndex = fileStartIndex + i;
+                if(insertIndex >= data.fileOrder.length) {
+                    while(data.fileOrder.length < insertIndex) {
+                        data.fileOrder.push('');
+                    }
+                    data.fileOrder.push(fileId);
+                } else {
+                    data.fileOrder[insertIndex] = fileId;
+                }
+            }
+        });
+
+        /* Timeline */
+        if(Array.isArray(timeline)) {
+            const sortedTimeline = timeline.sort((a, b) => {
+                const tA = a.timestamp || a.createdAt || 0;
+                const tB = b.timestamp || b.createdAt || 0;
+                return tA - tB;
+            });
+
+            const timelineStartIndex = page * this.cacheServiceClient.config.pageSize;
+            sortedTimeline.forEach((item, i) => {
+                const id = 
+                    item.id || 
+                    item.messageId || 
+                    (item.type === 'file' && 
+                        item.fileData && 
+                        (item.fileData.fileId || item.fileData.file_id)
+                    );
+                
+                if(!id) {
+                    console.warn('Timeline item missing ID, skipping:', item);
+                    return;
+                }
+                
+                if(!data.timeline.has(id)) {
+                    data.timeline.set(id, item);
+                    const insertIndex = timelineStartIndex + i;
+                    if(insertIndex >= data.timelineOrder.length) {
+                        while(data.timelineOrder.length < insertIndex) {
+                            data.timelineOrder.push('');
+                        }
+                        data.timelineOrder.push(id);
+                    } else {
+                        data.timelineOrder[insertIndex] = id;
+                    }
+                }
+            });
+        }
+
+        const time = Date.now();
+        data.messageOrder = data.messageOrder.filter(id => id && id !== '');
+        data.fileOrder = data.fileOrder.filter(id => id && id !== '');
+        data.timelineOrder = data.timelineOrder.filter(id => id && id !== '');
+        
+        data.loadedPages.add(page);
+        data.loadedFilePages.add(page);
+        data.loadedTimelinePages.add(page);
+        
+        data.lastAccessTime = time;
+        data.lastUpdated = time;
+        
+        const receivedFullPage = messages.length === this.cacheServiceClient.config.pageSize;
+        const receivedFullFilePage = files.length === this.cacheServiceClient.config.pageSize;
+        const receivedFullTimelinePage = timeline.length === this.cacheServiceClient.config.pageSize;
+        data.hasMore = receivedFullPage;
+        data.hasMoreFiles = receivedFullFilePage;
+        data.hasMoreTimeline = receivedFullTimelinePage;
+        data.totalMessagesCount = Math.max(data.totalMessagesCount, data.messageOrder.length);
+        data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
+        data.totalTimelineCount = Math.max(data.totalTimelineCount, data.timelineOrder.length);
+        data.isFullyLoaded = !data.hasMore && !data.hasMoreFiles && !data.hasMoreTimeline;
+        
+        console.log(`Cache updated for ${chatId}: loaded pages: ${Array.from(data.loadedPages)}, messages: ${data.messageOrder.length}, files: ${data.fileOrder.length}, timeline: ${data.timelineOrder.length}`);
     }
 
     /**
