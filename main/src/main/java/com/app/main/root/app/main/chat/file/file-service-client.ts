@@ -134,7 +134,6 @@ export class FileServiceClient {
                 setTimeout(() => {
                     this.socketClient.offDestination(successDestination, handleSuccess);
                     this.socketClient.offDestination(errorDestination, handleError);
-                    console.warn('Batch decryption request timed out');
                     
                     const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
                     resolve(safeArray.map(file => ({

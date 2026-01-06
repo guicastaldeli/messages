@@ -17,10 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
-import java.time.format.DateTimeFormatter;
-import java.time.LocalDateTime;
-import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 @Component
 public class EventList {
@@ -961,7 +959,6 @@ public class EventList {
                     String creator = (String) groupData.get("creator");
                     String creatorId = (String) groupData.get("creatorId");
                     String groupName = (String) groupData.get("groupName");
-                    String creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
                     Map<String, Object> creationResult = serviceManager.getGroupService()
                         .createGroup(id, groupName, creatorId, creator, sessionId);
@@ -974,7 +971,7 @@ public class EventList {
                     newGroup.put("creator", creator);
                     newGroup.put("creatorId", creatorId);
                     newGroup.put("members", creationResult.get("members"));
-                    newGroup.put("createdAt", creationDate);
+                    newGroup.put("createdAt", creationResult.get("createdAt")); // Use actual timestamp
                     newGroup.put("sessionId", sessionId);
                     newGroup.put("verificationResult", creationResult.get("verificationStatus"));
 
@@ -990,11 +987,20 @@ public class EventList {
                         "group-creation-scss",
                         newGroup
                     );
-                    serviceManager.getGroupService().sendCreationMessage(
+                    
+                    Map<String, Object> systemMessageData = new HashMap<>();
+                    systemMessageData.put("groupName", groupName);
+                    systemMessageData.put("creator", creator);
+                    systemMessageData.put("creatorId", creatorId);
+                    systemMessageData.put("groupId", id);
+                    systemMessageData.put("timestamp", creationResult.get("createdAt"));
+                    
+                    serviceManager.getSystemMessageService().createAndSaveMessage(
+                        "GROUP_CREATED", 
+                        systemMessageData, 
                         sessionId, 
-                        id, 
-                        groupName, 
-                        creator
+                        sessionId,
+                        id
                     );
                     
                     return Collections.emptyMap();
@@ -1230,28 +1236,27 @@ public class EventList {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
                             Map<String, Object> systemMessageData = new HashMap<>();
-                            systemMessageData.put("userId", userId);
+                            systemMessageData.put("groupName", groupInfo.get("name"));
                             systemMessageData.put("username", username);
-                            systemMessageData.put("inviterUserId", inviterUserId);
+                            systemMessageData.put("userId", userId);
                             systemMessageData.put("inviterUsername", inviterUsername);
-                            systemMessageData.put("targetSessionid", memberSessionId);
-                            systemMessageData.put("isAboutCurrentUser", memberSessionId.equals(sessionId));
-
-                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
-                                "USER_ADDED_GROUP", 
-                                systemMessageData, 
-                                sessionId, 
-                                memberSessionId,
-                                groupId
-                            );
-                            systemMessage.put("groupId", groupId);
+                            systemMessageData.put("inviterUserId", inviterUserId);
+                            systemMessageData.put("timestamp", time);
+                            
+                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService()
+                                .createAndSaveMessage(
+                                    "USER_ADDED_GROUP",
+                                    systemMessageData, 
+                                    sessionId, 
+                                    memberSessionId,
+                                    groupId
+                                );
                             systemMessage.put("chatId", groupId);
-                            systemMessage.put("chatType", "GROUP");
-                            systemMessage.put("addedBy", inviterUsername);
+                            systemMessage.put("groupId", groupId);
+                            systemMessage.put("id", groupId);
                             
                             String destination = "/user/queue/messages/group/" + groupId;
-                            socketMethods.send(sessionId, destination, systemMessage);
-                            messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
+                            socketMethods.send(memberSessionId, destination, systemMessage);
                         }
                     }
                     return Collections.emptyMap();
@@ -1316,28 +1321,27 @@ public class EventList {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
                             Map<String, Object> systemMessageData = new HashMap<>();
-                            data.put("userId", userId);
-                            data.put("username", username);
-                            data.put("inviterUserId", inviterUserId);
-                            data.put("inviterUsername", inviterUsername);
-                            data.put("targetSessionid", memberSessionId);
-                            data.put("isAboutCurrentUser", memberSessionId.equals(sessionId));
+                            systemMessageData.put("username", username);
+                            systemMessageData.put("userId", userId);
+                            systemMessageData.put("inviterUsername", inviterUsername);
+                            systemMessageData.put("inviterUserId", inviterUserId);
+                            systemMessageData.put("groupName", groupInfo.get("name"));
+                            systemMessageData.put("timestamp", time);
 
                             Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
-                                "USER_REMOVED_GROUP", 
+                                "USER_REMOVED_GROUP",
                                 systemMessageData, 
                                 sessionId, 
                                 memberSessionId,
                                 groupId
                             );
-                            systemMessage.put("groupId", groupId);
+                            
                             systemMessage.put("chatId", groupId);
-                            systemMessage.put("chatType", "GROUP");
-                            systemMessage.put("removedBy", inviterUsername);
+                            systemMessage.put("groupId", groupId);
+                            systemMessage.put("id", groupId);
                             
                             String destination = "/user/queue/messages/group/" + groupId;
-                            socketMethods.send(sessionId, destination, systemMessage);
-                            messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
+                            socketMethods.send(memberSessionId, destination, systemMessage);
                         }
                     }
                     return Collections.emptyMap();

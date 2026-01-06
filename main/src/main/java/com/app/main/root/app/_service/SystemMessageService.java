@@ -10,6 +10,8 @@ import com.app.main.root.app.main.chat.messages.MessageTracker;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,9 +42,9 @@ public class SystemMessageService {
         return dataSourceService.setDb("system-messages").getConnection();
     }
 
-    /*
-    * Save Message 
-    */
+    /**
+     * Save Message 
+     */
     public int saveMessage(
         String groupId,
         String content,
@@ -72,9 +74,9 @@ public class SystemMessageService {
         }
     }
 
-    /*
-    * Messages By Group 
-    */
+    /**
+     * Messages By Group 
+     */
     public List<Message> getMessagesByGroup(String groupId) throws SQLException {
         String query = CommandQueryManager.GET_SYSTEM_MESSAGES_BY_GROUP.get();
         List<Message> messages = new ArrayList<>();
@@ -95,9 +97,9 @@ public class SystemMessageService {
         return messages;
     }
 
-    /*
-    * Map Messages ResultSet
-    */
+    /**
+     * Map Messages
+     */
     private Message mapMessagesFromResultSet(ResultSet rs) throws SQLException {
         Message message = new Message();
         message.setId(rs.getInt("id"));
@@ -111,9 +113,9 @@ public class SystemMessageService {
         return message;
     }
 
-    /*
-    * Get Template
-    */
+    /**
+     * Get Template
+     */
     private String getTemplate(String eventType) {
         try {
             CommandSystemMessageList message = CommandSystemMessageList.valueOf(eventType);
@@ -124,9 +126,9 @@ public class SystemMessageService {
         }
     }
 
-    /*
-    * Set Content
-    */
+    /**
+     * Set Content
+     */
     public String setContent(
         String template,
         Map<String, Object> data,
@@ -136,11 +138,20 @@ public class SystemMessageService {
         String username = (String) data.get("username");
         String groupName = (String) data.get("groupName");
         String inviterUsername = (String) data.get("inviterUsername");
-        boolean isInviterCurrentUser = messagePerspectiveDetector.isInviterCurrentUser(data, targetSessionId);
+        String inviterUserId = (String) data.get("inviterUserId");
+        String userId = (String) data.get("userId");
+        String currentUserId = serviceManager.getUserService().getUserIdBySession(targetSessionId);
+        
+        boolean isInviterCurrentUser = 
+            currentUserId != null && 
+            inviterUserId != null && 
+            currentUserId.equals(inviterUserId);
+        boolean isAboutCurrentUser = 
+            currentUserId != null && 
+            userId != null && 
+            currentUserId.equals(userId);
 
         String content = template;
-        boolean isAboutCurrentUser = messagePerspectiveDetector.isAboutCurrentUser(data, targetSessionId);
-
         String finalUsername = username != null ? username : "Unknown";
         String finalInviterUsername = inviterUsername != null ? inviterUsername : "Unknown";
 
@@ -149,6 +160,7 @@ public class SystemMessageService {
         } else {
             content = content.replace("{username}", finalUsername);
         }
+        
         if(isInviterCurrentUser) {
             content = content.replace("{inviterUsername}", "You");
         } else {
@@ -159,16 +171,60 @@ public class SystemMessageService {
         return content;
     }
 
-    /*
-    * Create Message 
-    */
+    private Timestamp getGroupCreationTime(String groupId) throws SQLException {
+        String query = CommandQueryManager.GROUP_CREATION_DATE.get();
+        
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, groupId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getTimestamp("created_at");
+                }
+            }
+        }
+        
+        return new Timestamp(System.currentTimeMillis());
+    }
+
+    /**
+     * Create Message 
+     */
     public Map<String, Object> createMessage(
         String eventType,
         Map<String, Object> data,
         String currentSessionId,
         String targetSessionId
     ) {
-        long time = System.currentTimeMillis();
+        long time;
+        Instant instant;
+        
+        if ("GROUP_CREATED".equals(eventType) && data.containsKey("groupId")) {
+            String groupId = (String) data.get("groupId");
+            try {
+                Timestamp groupCreationTime = getGroupCreationTime(groupId);
+                time = groupCreationTime.getTime();
+                instant = groupCreationTime.toInstant();
+            } catch (SQLException e) {
+                instant = Instant.now();
+                time = instant.toEpochMilli();
+            }
+        } else {
+            Object timestampObj = data.get("timestamp");
+            if (timestampObj instanceof Long) {
+                time = (Long) timestampObj;
+                instant = Instant.ofEpochMilli(time);
+            } else if (timestampObj instanceof Timestamp) {
+                time = ((Timestamp) timestampObj).getTime();
+                instant = ((Timestamp) timestampObj).toInstant();
+            } else {
+                instant = Instant.now();
+                time = instant.toEpochMilli();
+            }
+        }
+        
         String template = getTemplate(eventType);
         String content = setContent(
             template,
@@ -188,6 +244,8 @@ public class SystemMessageService {
         systemMessage.put("targetSessionId", targetSessionId);
         systemMessage.put("originalData", data);
         systemMessage.put("isCurrentUser", systemMessage.get("isCurrentUser"));
+        systemMessage.put("createdAt", instant.toString());
+        
         return systemMessage;
     }
 
@@ -204,9 +262,9 @@ public class SystemMessageService {
         return message;
     }
 
-    /*
-    * Create and Save 
-    */
+    /**
+     * Create and Save 
+     */
     public Map<String, Object> createAndSaveMessage(
         String eventType,
         Map<String, Object> data,
@@ -222,35 +280,45 @@ public class SystemMessageService {
                 currentSessionId, 
                 targetSessionId
             );
+            
+            message.put("chatId", groupId);
+            message.put("groupId", groupId);
+            message.put("id", groupId);
+            message.put("messageId", id);
+            
             int saveMessage = saveMessage(
                 groupId,
                 message.get("content").toString(),
                 eventType
             );
+            
             track(
                 String.valueOf(saveMessage),
                 message.get("content").toString(),
                 groupId,
                 eventType
             );
-            message.put("messageId", id);
             message.put("id", saveMessage);
 
             return message;
         } catch(SQLException err) {
             System.err.println("Failed to save system message" + err.getMessage());
-            return createMessageWithPerspective(
+            Map<String, Object> errorMessage = createMessageWithPerspective(
                 eventType, 
                 data, 
                 currentSessionId, 
                 targetSessionId
             );
+            errorMessage.put("chatId", groupId);
+            errorMessage.put("groupId", groupId);
+            errorMessage.put("id", groupId);
+            return errorMessage;
         }
     }
 
-    /*
-    * Track 
-    */
+    /**
+     * Track
+     */
     public void track(
         String messageId,
         String content,
@@ -268,9 +336,9 @@ public class SystemMessageService {
         );
     }
 
-    /*
-    * Payload 
-    */
+    /**
+     * Payload 
+     */
     public Map<String, Object> payload(
         String type, 
         Map<String, Object> payload,
@@ -296,13 +364,11 @@ public class SystemMessageService {
         return message;
     }
 
-    /*
-    **
-    ***
-    *** Perpspective
-    ***
-    **
-    */
+    /**
+     * 
+     * Perpspective
+     * 
+     */
     private Map<String, Object> createPerspectiveMap(MessagePerspectiveResult result) {
         Map<String, Object> map = new HashMap<>();
         map.put("direction", result.getDirection());

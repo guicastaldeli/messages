@@ -200,6 +200,10 @@ export class ChatManager {
             timestamp, 
             isCurrentUser 
         } = event.detail;
+        if (!chatId) {
+        console.error('chatId is undefined in handleLastMessage', event.detail);
+        return;
+    }
 
         const systemMessage = this.isSystemMessage(event.detail);
         const formattedMessage = this.formattedMessage(
@@ -313,6 +317,10 @@ export class ChatManager {
         sender: string,
         isSystem: boolean
     ): void {
+        if (!id) {
+        console.error('chatId is undefined in setLastMessage', { id, userId, messageId, content, sender, isSystem });
+        return;
+    }
         this.updateLastMessage(
             id,
             userId,
@@ -360,6 +368,10 @@ export class ChatManager {
         sender: string,
         isSystem: boolean
     ): void {
+        if (!id) {
+        console.error('chatId is undefined in updateLastMessage', { id, userId, messageId, content, sender, isSystem });
+        return;
+    }
         const time = new Date().toISOString();
         const updateEvent = new CustomEvent('last-message-updated', {
             detail: {

@@ -510,23 +510,62 @@ export class ChatController {
      * Handle Chat Message
      */
     private async handleChatMessage(data: any): Promise<void> {
-    const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
-    const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
-    const isSystemMessage = messageType.includes('SYSTEM');
-    const isFileMessage = data.type === 'file' || data.fileData;
-    
-    console.log('Handling message:', {
+        const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
+        const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
+        const isSystemMessage = messageType.includes('SYSTEM');
+        const isFileMessage = data.type === 'file' || data.fileData;
+        console.log('Handling message:', {
         messageId: data.messageId,
         type: messageType,
         isFileMessage,
-        isSystemMessage
+        isSystemMessage,
+        chatId: data.chatId,
+        dataKeys: Object.keys(data)
     });
-    
-    if(isSystemMessage) {
-        const systemKey = `${data.event}_${data.content}_${data.timestamp}`;
-        if(this.lastSystemMessageKeys.has(systemKey)) return;
-        this.lastSystemMessageKeys.add(systemKey);
-        await this.messageElementRenderer.setMessage(data, analysis);
+        
+        if(isSystemMessage) {
+            const systemKey = `${data.event}_${data.content}_${data.timestamp}`;
+            if(this.lastSystemMessageKeys.has(systemKey)) return;
+            this.lastSystemMessageKeys.add(systemKey);
+            await this.messageElementRenderer.setMessage(data, analysis);
+            this.chatManager.setLastMessage(
+                data.chatId,
+                data.userId || this.userId,
+                data.messageId || data.id,
+                data.content,
+                data.username,
+                data.isSystem
+            );
+        }
+
+        const lastMessageId = this.lastMessageIds.get(messageType);
+        if(!isFileMessage && data.messageId === lastMessageId) return;
+
+        this.lastMessageIds.set(messageType, data.messageId);
+        const perspective = data._perspective;
+        const direction = perspective?.direction || analysis.direction;
+
+        if(data.chatId && data.chatId.startsWith('direct_') && direction !== 'self') {
+            const currentCount = this.chatStateManager.getMessageCount(data.chatId);
+            if(currentCount === 0) {
+                this.chatStateManager.incrementMessageCount(data.chatId); 
+            } else {
+                this.chatStateManager.updateMessageCount(data.chatId, currentCount + 1);
+            }
+        }
+
+        if(isFileMessage) {
+            await this.messageElementRenderer.renderFileMessage(
+                {
+                    ...data,
+                    _perspective: perspective
+                },
+                await this.getContainer()
+            );
+        } else {
+            await this.messageElementRenderer.setMessage(data, { ...analysis, direction });
+        }
+        
         this.chatManager.setLastMessage(
             data.chatId,
             data.userId,
@@ -536,45 +575,6 @@ export class ChatController {
             data.isSystem
         );
     }
-
-    // FIX: Only apply duplicate check for non-file messages
-    const lastMessageId = this.lastMessageIds.get(messageType);
-    if(!isFileMessage && data.messageId === lastMessageId) return;
-
-    this.lastMessageIds.set(messageType, data.messageId);
-    const perspective = data._perspective;
-    const direction = perspective?.direction || analysis.direction;
-
-    if(data.chatId && data.chatId.startsWith('direct_') && direction !== 'self') {
-        const currentCount = this.chatStateManager.getMessageCount(data.chatId);
-        if(currentCount === 0) {
-            this.chatStateManager.incrementMessageCount(data.chatId); 
-        } else {
-            this.chatStateManager.updateMessageCount(data.chatId, currentCount + 1);
-        }
-    }
-
-    if(isFileMessage) {
-        await this.messageElementRenderer.renderFileMessage(
-            {
-                ...data,
-                _perspective: perspective
-            },
-            await this.getContainer()
-        );
-    } else {
-        await this.messageElementRenderer.setMessage(data, { ...analysis, direction });
-    }
-    
-    this.chatManager.setLastMessage(
-        data.chatId,
-        data.userId,
-        data.messageId,
-        data.content,
-        data.username,
-        data.isSystem
-    );
-}
 
     /**
      * Send File Message

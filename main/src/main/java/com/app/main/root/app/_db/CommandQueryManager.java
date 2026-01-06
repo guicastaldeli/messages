@@ -31,6 +31,9 @@ public enum CommandQueryManager {
     CREATE_GROUP(
         "INSERT INTO groups (id, name, creator_id) VALUES (?, ?, ?)"
     ),
+    GROUP_CREATION_DATE(
+        "SELECT created_at FROM groups WHERE id = ?"
+    ),
     ADD_USER_TO_GROUP(
         "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)"
     ),
