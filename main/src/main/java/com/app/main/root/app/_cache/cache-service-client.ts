@@ -205,4 +205,20 @@ export class CacheServiceClient {
         });
         console.log('[validateAllCaches] Cache validation complete');
     }
+
+    public clearChatCache(chatId: string): void {
+        if(this.cache.has(chatId)) {
+            this.cache.delete(chatId);
+            console.log(`Cache cleared for chat: ${chatId}`);
+        }
+        
+        const keysToDelete = Array.from(this.pendingRequests.keys())
+            .filter(key => key.startsWith(`${chatId}_`));
+        
+        keysToDelete.forEach(key => {
+            this.pendingRequests.delete(key);
+        });
+        
+        console.log(`Cleared ${keysToDelete.length} pending requests for ${chatId}`);
+    }
 }

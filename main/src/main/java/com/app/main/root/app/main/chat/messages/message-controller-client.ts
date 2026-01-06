@@ -192,20 +192,56 @@ export class MessageControllerClient {
         });
     }
 
+    public async getRecentMessages(userId: string): Promise<any[]> {
+        try {
+            const res = await this.messageService.getRecentMessages(userId);
+            const chatsArray = res.chats || (Array.isArray(res) ? res : []);
+            
+            const cacheService = await this.chatService.getCacheServiceClient();
+            const validChats = chatsArray.filter((chat: any) => {
+                const chatId = chat.id || chat.chatId || chat.groupId;
+                return chatId && cacheService.cache.has(chatId);
+            });
+            
+            console.log(`Filtered recent chats: ${validChats.length} valid out of ${chatsArray.length} total`);
+            
+            return validChats;
+        } catch(err) {
+            console.error('Failed to get recent chats', err);
+            return [];
+        }
+    }
+
     /**
      * Init Cache
      */
     public async initCache(userId: string): Promise<void> {
         try {
-            const recentChats = await this.messageService.getRecentMessages(userId);
-            const chats = recentChats.chats || [];
-            const preloadPromises = chats.map((chat: any) =>
-                this.preloadData(userId, chat.id || chat.chatId)
-            );
+            const recentChats = await this.getRecentMessages(userId);
+            console.log(`Found ${recentChats.length} recent chats`);
+            
+            const cacheService = await this.chatService.getCacheServiceClient();
+            const validChats = recentChats.filter(chat => {
+                const chatId = chat.id || chat.chatId || chat.groupId;
+                return cacheService.cache.has(chatId);
+            });
+            
+            console.log(`Preloading data for ${validChats.length} valid chats`);
+            
+            const preloadPromises = validChats.map(async (chat) => {
+                const chatId = chat.id || chat.chatId || chat.groupId;
+                try {
+                    await this.preloadData(chatId, userId);
+                } catch(err) {
+                    console.error(`Failed to preload ${chatId}:`, err);
+                }
+            });
+            
             await Promise.all(preloadPromises);
+            console.log('Cache initialization completed');
         } catch(err) {
-            console.log('Cache initialization failed: ', err);
-            throw err;
+            console.error('Cache initialization failed:', err);
+            throw new Error('Failed to initialize cache');
         }
     }
 
@@ -220,6 +256,10 @@ export class MessageControllerClient {
             ]);
 
             const cacheService = await this.chatService.getCacheServiceClient();
+            if(!cacheService.cache.has(chatId)) {
+                console.log(`Skipping preload for exited group: ${chatId}`);
+                return;
+            }
             if(!cacheService.cache.has(chatId)) {
                 cacheService.init(chatId, countData);
             }

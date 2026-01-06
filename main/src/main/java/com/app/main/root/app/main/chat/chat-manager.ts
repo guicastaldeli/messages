@@ -118,6 +118,39 @@ export class ChatManager {
 
         this.updateChatList();
     }
+    
+    private handleChatItemRemoved = (event: CustomEvent): void => {
+        const { id, groupId, reason } = event.detail;
+        const chatIdToRemove = id || groupId;
+        
+        if(!chatIdToRemove) {
+            console.error('No chat ID provided in chat-item-removed event');
+            return;
+        }
+
+        console.log(`Removing chat ${chatIdToRemove} from list, reason: ${reason}`);
+        
+        this.setState((prevState: State) => {
+            const updatedChatList = prevState.chatList.filter(chat => 
+                chat.id !== chatIdToRemove && 
+                chat.chatId !== chatIdToRemove && 
+                chat.groupId !== chatIdToRemove
+            );
+            
+            return { chatList: updatedChatList };
+        }, () => {
+            this.chatList = this.chatList.filter(chat => 
+                chat.id !== chatIdToRemove && 
+                chat.chatId !== chatIdToRemove && 
+                chat.groupId !== chatIdToRemove
+            );
+            
+            this.updateChatList();
+            if(this.updateCallback) {
+                this.updateCallback([...this.chatList]);
+            }
+        });
+    }
 
     /**
      * Load Chats
@@ -126,29 +159,35 @@ export class ChatManager {
         try {
             const handleChatItemAdded = (event: CustomEvent) => {
                 this.handleChatItemAdded(event);
-            };
+            }
+
+            const handleChatItemRemoved = (event: CustomEvent) => {
+                this.handleChatItemRemoved(event);
+            }
 
             const handleStreamComplete = (event: CustomEvent) => {
                 console.log('Chats streaming completed:', event.detail);
                 window.removeEventListener('chat-item-added', handleChatItemAdded as EventListener);
+                window.removeEventListener('chat-item-removed', handleChatItemRemoved as EventListener);
                 window.removeEventListener('chat-item-streamed', handleChatItemAdded as EventListener);
                 window.removeEventListener('chat-activated', this.handleChatActivated as EventListener);
                 window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);
                 window.removeEventListener('chats-stream-complete', handleStreamComplete as EventListener);
                 window.removeEventListener('chats-stream-error', handleStreamError as EventListener);
-            };
-
+            }
             const handleStreamError = (event: CustomEvent) => {
                 console.error('Chats streaming error:', event.detail.error);
                 window.removeEventListener('chat-item-added', handleChatItemAdded as EventListener);
+                window.removeEventListener('chat-item-removed', handleChatItemRemoved as EventListener);
                 window.removeEventListener('chat-item-streamed', handleChatItemAdded as EventListener);
                 window.removeEventListener('chat-activated', this.handleChatActivated as EventListener);
                 window.removeEventListener('last-message-updated', this.handleLastMessage as EventListener);
                 window.removeEventListener('chats-stream-complete', handleStreamComplete as EventListener);
                 window.removeEventListener('chats-stream-error', handleStreamError as EventListener);
-            };
+            }
 
             window.addEventListener('chat-item-added', handleChatItemAdded as EventListener);
+            window.addEventListener('chat-item-removed', handleChatItemRemoved as EventListener);
             window.addEventListener('chat-item-streamed', handleChatItemAdded as EventListener);
             window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
             window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
@@ -201,9 +240,9 @@ export class ChatManager {
             isCurrentUser 
         } = event.detail;
         if(!chatId) {
-        console.error('chatId is undefined in handleLastMessage', event.detail);
-        return;
-    }
+            console.error('chatId is undefined in handleLastMessage', event.detail);
+            return;
+        }
 
         const systemMessage = this.isSystemMessage(event.detail);
         const formattedMessage = this.formattedMessage(
@@ -384,18 +423,39 @@ export class ChatManager {
         try {
             const res = await this.chatService.getChatData(userId, chatId, 0);
             const messages = res.messages || [];
-            if(messages && messages.length > 0) {
-                const sortedMessages = messages.sort((a, b) => {
-                    return parseInt(b.id) - parseInt(a.id);
-                });
+            const timeline = res.timeline || [];
+            
+            console.log(`lastMessage check for ${chatId}:`, {
+                messages: messages.length,
+                timeline: timeline.length,
+                systemMessages: timeline.filter(m => m.isSystem || m.type === 'system').length
+            });
+            
+            const allContent = [...messages, ...timeline];
 
-                const lastMsg = sortedMessages[0];
+            if(allContent.length > 0) {
+                const sortedContent = allContent.sort((a, b) => {
+                    const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
+                    const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
+                    return timeB - timeA;
+                });
+                
+                const lastItem = sortedContent[0];
+                
+                console.log(`Last item for ${chatId}:`, {
+                    content: lastItem.content,
+                    sender: lastItem.sender,
+                    type: lastItem.type,
+                    isSystem: lastItem.isSystem,
+                    timestamp: lastItem.timestamp
+                });
+                
                 return {
-                    content: lastMsg.content,
-                    currentUserId: lastMsg.sender || lastMsg.senderId,
-                    sender: lastMsg.sender || lastMsg.senderId,
-                    isSystem: lastMsg.isSystem || false
-                }
+                    content: lastItem.content || `Shared file: ${lastItem.fileData?.originalFileName}` || 'System message',
+                    currentUserId: lastItem.sender || lastItem.senderId || userId,
+                    sender: lastItem.sender || lastItem.senderId || 'System',
+                    isSystem: lastItem.isSystem || lastItem.type === 'system'
+                };
             }
         } catch(err) {
             console.error('Failed to get recent messages', err);
@@ -483,14 +543,12 @@ export class ChatManager {
         const isDirect = chatId.startsWith('direct_');
         let formattedMessage;
 
-        if(isDirect) {
-            if(systemMessage) {
-                formattedMessage = lastMessage;
-            } else {
-                formattedMessage = lastMessage;
-            }
+        if(systemMessage) {
+            formattedMessage = lastMessage;
+        } else if(lastMessage.includes('Shared file:')) {
+            formattedMessage = lastMessage;
         } else {
-            if(systemMessage) {
+            if(isDirect) {
                 formattedMessage = lastMessage;
             } else {
                 formattedMessage = isCurrentUser 

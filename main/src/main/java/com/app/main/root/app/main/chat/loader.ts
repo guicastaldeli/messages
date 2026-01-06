@@ -130,8 +130,21 @@ export class Loader {
 
     private async chatHasMessages(userId: string, chatId: string): Promise<boolean> {
         try {
-            const lastMessage = await this.chatManager.lastMessage(userId, chatId);
-            return !!lastMessage;
+            const chatData = await this.chatService.getData(chatId, userId, 0);
+            const hasTimelineItems = chatData.timeline && chatData.timeline.length > 0;
+            const hasRegularMessages = chatData.messages && chatData.messages.length > 0;
+            const hasFiles = chatData.files && chatData.files.length > 0;
+            
+            console.log(`Chat ${chatId} content check:`, {
+                timeline: chatData.timeline?.length || 0,
+                messages: chatData.messages?.length || 0,
+                files: chatData.files?.length || 0,
+                hasTimelineItems,
+                hasRegularMessages,
+                hasFiles
+            });
+            
+            return hasTimelineItems || hasRegularMessages || hasFiles;
         } catch(err) {
             console.error('Failed to check if chat has messages:', err);
             return false;
@@ -140,29 +153,56 @@ export class Loader {
 
     private async setLastMessage(userId: string, chat: any): Promise<string> {
         const chatId = chat.id;
-        const lastMessageData = await this.chatManager.lastMessage(userId, chatId);
-        if(!lastMessageData) return 'Err';
-        const formattedMessage = this.chatManager.formattedMessage(
-            chatId,
-            lastMessageData.content,
-            lastMessageData.sender,
-            chatId,
-            lastMessageData.isSystem
-        );
+        try {
+            const chatData = await this.chatService.getData(chatId, userId, 0);
+            
+            const timeline = chatData.timeline || [];
+            const sortedTimeline = timeline.sort((a: any, b: any) => {
+                const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
+                const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
+                return timeB - timeA;
+            });
+            
+            if (sortedTimeline.length > 0) {
+                const lastItem = sortedTimeline[0];
+                
+                if (lastItem.type === 'file') {
+                    return `Shared file: ${lastItem.fileData?.originalFileName || 'file'}`;
+                } else if (lastItem.type === 'system' || lastItem.isSystem) {
+                    return lastItem.content || 'System message';
+                } else {
+                    return lastItem.content || 'Message';
+                }
+            }
+            
+            const lastMessageData = await this.chatManager.lastMessage(userId, chatId);
+            if(!lastMessageData) return 'No messages yet';
+            
+            const formattedMessage = this.chatManager.formattedMessage(
+                chatId,
+                lastMessageData.content,
+                lastMessageData.sender,
+                chatId,
+                lastMessageData.isSystem
+            );
 
-        if(chat.type === 'DIRECT') {
-            return formattedMessage; 
-        } else {
-            return this.chatManager.formattedLastMessage(formattedMessage);
+            if(chat.type === 'DIRECT') {
+                return formattedMessage; 
+            } else {
+                return this.chatManager.formattedLastMessage(formattedMessage);
+            }
+        } catch(err) {
+            console.error('Failed to get last message:', err);
+            return 'Error loading messages';
         }
     }
 
     private async setChatState(chat: any, userId: string): Promise<boolean> {
         const chatId = chat.id;
-        const type = chat.type;
-        const hasMessages = await this.chatHasMessages(userId, chatId);
-        this.chatStateManager.initChatState(chatId, hasMessages ? 1 : 0);
-        if(!hasMessages) return false;
+        
+        const hasContent = await this.chatHasMessages(userId, chatId);
+        this.chatStateManager.initChatState(chatId, hasContent ? 1 : 0);
+        
         return true;
     }
 }

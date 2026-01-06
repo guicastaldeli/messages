@@ -1,5 +1,5 @@
 import "@/app/main/__styles/styles.css"
-import React, { useState } from 'react';
+import React from 'react';
 import { Component, createRef } from 'react';
 import { ChatController } from '../../chat-controller';
 import { GroupManager } from './group-manager';
@@ -15,6 +15,7 @@ export interface Props {
     groupId?: any;
     groupName?: string;
     mode: 'create' | 'join' | 'chat';
+    dataGroupLayout?: string;
 }
 
 interface State {
@@ -32,6 +33,7 @@ interface State {
     }
     messagesLoaded: boolean;
     showMembersInterface: boolean;
+    activatedGroups: Set<string>;
 }
 
 export class GroupLayout extends Component<Props, State> {
@@ -61,7 +63,8 @@ export class GroupLayout extends Component<Props, State> {
                 groupName: ''
             },
             messagesLoaded: false,
-            showMembersInterface: false
+            showMembersInterface: false,
+            activatedGroups: new Set()
         }
     }
 
@@ -69,10 +72,7 @@ export class GroupLayout extends Component<Props, State> {
         this.groupManager.dashboard?.setStateChange((state: any) => {
             this.setState({ managerState: state });
         });
-        window.addEventListener('group-creation-complete', this.handleGroupActivation as EventListener);
-        window.addEventListener('group-activated', this.handleGroupActivation as EventListener);
-        window.addEventListener('group-join-complete', this.handleGroupActivation as EventListener);
-        window.addEventListener('group-exit-complete', this.handleGroupExit as EventListener);
+        
         if(this.props.mode === 'chat' && this.props.groupId) {
             this.loadMessages(this.props.groupId);
         }
@@ -85,13 +85,6 @@ export class GroupLayout extends Component<Props, State> {
         ) {
             this.loadMessages(this.props.groupId);
         }
-    }
-
-    componentWillUnmount(): void {
-        window.removeEventListener('group-creation-complete', this.handleGroupActivation as EventListener);
-        window.removeEventListener('group-activated', this.handleGroupActivation as EventListener);
-        window.removeEventListener('group-join-complete', this.handleGroupActivation as EventListener);
-        window.removeEventListener('group-exit-complete', this.handleGroupExit as EventListener);
     }
 
     private loadMessages = async (groupId: string): Promise<void> => {
@@ -109,32 +102,9 @@ export class GroupLayout extends Component<Props, State> {
         }
     }
 
-    handleGroupActivation = (event: CustomEvent) => {
-        const data = event.detail;
-        this.groupManager.currentGroupId = data.id || data.groupId;
-        this.groupManager.dashboard?.updateState({
-            showCreationForm: false,
-            showJoinForm: false,
-            showGroup: true,
-            hideGroup: false,
-            groupName: data.name
-        });
-        this.setState({
-            managerState: {
-                showCreationForm: false,
-                showJoinForm: false,
-                showGroup: true,
-                hideGroup: false,
-                groupName: data.name
-            }
-        });
-        if(data.id || data.groupId) {
-            this.loadMessages(data.id || data.groupid);
-        }
-        console.log('Group activated:', data.name, 'ID:', this.groupManager.currentGroupId);
-    }
-
-    /* Create */
+    /**
+     * Handle Create
+     */
     handleCreate = async () => {
         const groupName = this.nameInputRef.current?.value || '';
         if(!groupName.trim()) {
@@ -150,7 +120,6 @@ export class GroupLayout extends Component<Props, State> {
 
         try {
             await this.groupManager.create(groupName);
-
             setTimeout(() => {
                 if(this.state.isLoading && !this.state.creationComplete) {
                     this.setState({
@@ -165,7 +134,9 @@ export class GroupLayout extends Component<Props, State> {
         }
     }
 
-    /* Join Group Success */
+    /**
+     * Handle Join Success
+     */
     handleJoinSuccess = (data: any) => {
         this.groupManager.currentGroupId = data.groupId;
         this.groupManager.currentGroupName = data.name;
@@ -203,8 +174,19 @@ export class GroupLayout extends Component<Props, State> {
         });
     }
 
-    /* Exit */
-    handleGroupExit = () => {
+    /**
+     * Handle Group Exit
+     */
+    handleGroupExit = (e: CustomEvent) => {
+        const data = e.detail;
+        const groupId = data.id || data.groupId;
+
+        this.setState(prevState => {
+            const newActivatedGroups = new Set(prevState.activatedGroups);
+            newActivatedGroups.delete(groupId);
+            return { activatedGroups: newActivatedGroups };
+        });
+
         this.groupManager.dashboard?.updateState({
             showCreationForm: false,
             showJoinForm: false,
@@ -235,7 +217,9 @@ export class GroupLayout extends Component<Props, State> {
         }
     }
 
-    /* Back */
+    /**
+     * Handle Back
+     */
     handleBack = () => {
         this.groupManager.dashboard?.updateState({
             showCreationForm: false,
@@ -250,7 +234,9 @@ export class GroupLayout extends Component<Props, State> {
         }
     }
 
-    /* Generated Link Handler */
+    /**
+     * Handle Generate Invite Link
+     */
     handleGenerateInviteLink = async () => {
         if(!this.groupManager.currentGroupId) {
             console.error('No active group selected!')
@@ -267,7 +253,9 @@ export class GroupLayout extends Component<Props, State> {
         }
     }
 
-    /* Members Interface */
+    /**
+     * Members Interface
+     */
     handleShowMembersInterface = async () => {
         this.setState({ showMembersInterface: true });
     }
@@ -276,6 +264,9 @@ export class GroupLayout extends Component<Props, State> {
         this.setState({ showMembersInterface: false });
     }
 
+    /**
+     * Handle File Upload
+     */
     handleFileUpload = async (): Promise<void> => {
         this.fileUploaderRef.current?.triggerFileInput();
     }
@@ -298,7 +289,6 @@ export class GroupLayout extends Component<Props, State> {
         console.log('File shared in chat:', fileData);
     }
 
-    /* Render */
     render() {
         const { isLoading, error, showMembersInterface } = this.state;
         const { 

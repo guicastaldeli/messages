@@ -298,9 +298,19 @@ export class ChatService {
         timeline: any[],
         fromCache: boolean
     }> {
+        const cacheService = await this.getCacheServiceClient();
+        if (!cacheService.cache.has(chatId)) {
+            console.log(`Skipping fetch for exited group: ${chatId}`);
+            return { 
+                messages: [], 
+                files: [], 
+                timeline: [], 
+                fromCache: false 
+            };
+        }
+
         this.cacheServiceClient.selectChat(chatId);
         const cacheKey = `${chatId}_${userId}_${page}`;
-
         if(!this.cacheServiceClient.cache.has(chatId)) {
             console.log(`Initializing cache for ${chatId} before first fetch`);
             this.cacheServiceClient.init(chatId, 0, 0, 0);
@@ -595,6 +605,24 @@ export class ChatService {
             succssDestination: '/queue/chat-data-stream',
             errDestination: '/queue/chat-data-stream-err'
         });
+    }
+
+    public async clearChatCache(chatId: string): Promise<void> {
+        try {
+            const cacheService = await this.getCacheServiceClient();
+            cacheService.cache.delete(chatId);
+            
+            const keysToDelete = Array.from(cacheService.pendingRequests.keys())
+                .filter(key => key.startsWith(`${chatId}_`));
+            
+            keysToDelete.forEach(key => {
+                cacheService.pendingRequests.delete(key);
+            });
+            
+            console.log(`Cleared cache for chat: ${chatId}`);
+        } catch(error) {
+            console.error(`Error clearing cache for ${chatId}:`, error);
+        }
     }
 
     /**

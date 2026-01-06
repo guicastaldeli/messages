@@ -70,19 +70,6 @@ export class Dashboard extends Component<Props, State> {
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
         this.setState({ userId });
         this.props.chatManager.getUserData(sessionId, userId, username);
-        //console.log(sessionId, userId,'username:', username)
-    }
-
-    public updateChatList(chatList: any[]): void {
-        this.setState({ chatList });
-        if(this.props.onChatListUpdate) {
-            this.props.onChatListUpdate(chatList);
-        }
-        
-        const event = new CustomEvent('chat-list-updated', {
-            detail: { chatList }
-        });
-        window.dispatchEvent(event);
     }
 
     /**
@@ -141,8 +128,20 @@ export class Dashboard extends Component<Props, State> {
     }
 
     /**
-     * Handle Chat List Update
+     *  Chat List Update
      */
+    public updateChatList(chatList: any[]): void {
+        this.setState({ chatList });
+        if(this.props.onChatListUpdate) {
+            this.props.onChatListUpdate(chatList);
+        }
+        
+        const event = new CustomEvent('chat-list-updated', {
+            detail: { chatList }
+        });
+        window.dispatchEvent(event);
+    }
+
     private handleChatListUpdated = (event: CustomEvent): void => {
         const { chatList } = event.detail;
 
@@ -471,7 +470,7 @@ export class Dashboard extends Component<Props, State> {
 
                     return (
                         <>
-                            
+                            {loadingOverlay}
                             {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
                                     <div className="sidebar">
@@ -548,7 +547,9 @@ export class Dashboard extends Component<Props, State> {
                                                     <div className="chat-info">
                                                         <div id="chat-name">{chat.name}</div>
                                                         <div id="chat-preview">
-                                                            {chat.lastMessage}
+                                                            {typeof chat.lastMessage === 'object' 
+                                                                ? chat.lastMessage.content 
+                                                                : chat.lastMessage}
                                                         </div>
                                                     </div>
                                                 </li>

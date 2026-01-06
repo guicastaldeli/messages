@@ -127,13 +127,18 @@ export class GroupManager {
         const chatEvent = new CustomEvent('chat-item-added', { detail: chatItem });
         window.dispatchEvent(chatEvent);
 
-        /* Creation Complete Event */
-        const creationEvent = new CustomEvent('group-creation-complete', { detail: eventData }); 
-        window.dispatchEvent(creationEvent);
-
         /* Activation Event */
         const chatActivationEvent = new CustomEvent('group-activated', { detail: eventData });
         window.dispatchEvent(chatActivationEvent);
+
+        setTimeout(async () => {
+            try {
+                await this.chatController.loadHistory(this.currentGroupId, this.userId!, 0);
+                console.log('Initial messages loaded for new group');
+            } catch(err) {
+                console.error('Failed to load initial messages:', err);
+            }
+        }, 50);
 
         if(this.onCreateSuccess) this.onCreateSuccess(data);
     }
@@ -326,12 +331,17 @@ export class GroupManager {
         window.dispatchEvent(chatEvent);
 
         /* Activated Event */
-        const chatActivationEvent = new CustomEvent('chat-activated', { detail: data }); 
+        const chatActivationEvent = new CustomEvent('group-activated', { detail: data }); 
         window.dispatchEvent(chatActivationEvent);
 
-        /* Join Complete */
-        const joinEvent = new CustomEvent('group-join-complete', { detail: data });
-        window.dispatchEvent(joinEvent);
+        setTimeout(async () => {
+            try {
+                await this.chatController.loadHistory(this.currentGroupId, this.userId!, 0);
+                console.log('Initial messages loaded for joined group');
+            } catch(err) {
+                console.error('Failed to load initial messages:', err);
+            }
+        }, 50);
 
         if(this.onJoinSuccess) this.onJoinSuccess(data);
     }
@@ -394,11 +404,13 @@ export class GroupManager {
     private renderGroupAfterJoin(data: Data): void {
         if(!this.container) return;
         if(!this.dashboard) return;
-        if(this.root) {
-            this.root.unmount();
-            this.root = null;
+        
+        const existingGroupLayout = document.querySelector('[data-group-layout]');
+        if(existingGroupLayout) {
+            console.log('GroupLayout already exists, skipping duplicate creation');
+            return;
         }
-
+        
         const content = React.createElement(GroupLayout, {
             chatController: this.chatController,
             groupManager: this,
@@ -406,6 +418,10 @@ export class GroupManager {
         });
 
         this.root = createRoot(this.container);
+        
+
+        this.container.setAttribute('data-group-layout', 'true');
+        
         this.root.render(content);
         this.currentGroupId = data.id;
         this.currentGroupName = data.name;
@@ -422,9 +438,6 @@ export class GroupManager {
             'GROUP',
             data.members || [this.userId]
         );
-
-        const event = new CustomEvent('group-join-complete', { detail: data });
-        window.dispatchEvent(event);
     }
 
     /* Join Method */
@@ -492,45 +505,53 @@ export class GroupManager {
      * 
      */
     private async handleGroupExitScss(data: any): Promise<void> {
-    const exitedGroupId = data.id;
-    console.log('handleGroupExitScss called for group:', exitedGroupId);
-    
-    if(this.currentGroupId === exitedGroupId) {
-        this.currentGroupId = '';
-        this.currentGroupName = '';
-    }
-
-    if(this.dashboard) {
-        this.dashboard.updateState({
-            showCreationForm: false,
-            showJoinForm: false,
-            showGroup: false,
-            hideGroup: true,
-            groupName: ''
-        });
-    }
-
-    const removeEvent = new CustomEvent('chat-item-removed', {
-        detail: {
-            id: exitedGroupId,
-            groupId: exitedGroupId,
-            reason: 'group-exit'
+        const exitedGroupId = data.id;
+        console.log('handleGroupExitScss called for group:', exitedGroupId);
+        
+        if(this.currentGroupId === exitedGroupId) {
+            this.currentGroupId = '';
+            this.currentGroupName = '';
         }
-    });
-    console.log('Dispatching chat-item-removed event');
-    window.dispatchEvent(removeEvent);
 
-    const exitEvent = new CustomEvent('group-exit-complete', { detail: data });
-    window.dispatchEvent(exitEvent);
+        if(this.dashboard) {
+            this.dashboard.updateState({
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: false,
+                hideGroup: true,
+                groupName: ''
+            });
+        }
 
-    if(this.root) {
-        this.root.unmount();
-        this.root = null;
+        const removeEvent = new CustomEvent('chat-item-removed', {
+            detail: {
+                id: exitedGroupId,
+                groupId: exitedGroupId,
+                reason: 'group-exit'
+            }
+        });
+        console.log('Dispatching chat-item-removed event');
+        window.dispatchEvent(removeEvent);
+
+        const exitEvent = new CustomEvent('group-exit-complete', { detail: data });
+        window.dispatchEvent(exitEvent);
+
+        try {
+            const cacheService = await this.chatController.chatService.getCacheServiceClient();
+            cacheService.clearChatCache(exitedGroupId);
+            console.log(`Cleared cache for exited group: ${exitedGroupId}`);
+        } catch(err) {
+            console.error(`Failed to clear cache for ${exitedGroupId}:`, err);
+        }
+
+        if(this.root) {
+            this.root.unmount();
+            this.root = null;
+        }
+        if(this.onExitSuccess) {
+            this.onExitSuccess(data);
+        }
     }
-    if(this.onExitSuccess) {
-        this.onExitSuccess(data);
-    }
-}
 
     /* Exit Method */
     public async exitGroup(groupId?: string): Promise<any> {

@@ -151,6 +151,12 @@ export class ChatController {
 
     public async renderAllCachedMessages(chatId: string): Promise<void> {
         console.log('Rendering cached messages for:', chatId);
+
+        const cacheService = await this.chatService.getCacheServiceClient();
+        if (!cacheService.isChatCached(chatId)) {
+            console.log(`Skipping render for exited group: ${chatId}`);
+            return;
+        }
         
         const cacheData = await this.chatService.getCachedData(chatId);
         if(!cacheData) {
@@ -168,9 +174,7 @@ export class ChatController {
             return;
         }
 
-        const cacheService = await this.chatService.getCacheServiceClient();
         cacheService.validateCache(chatId);
-
         const container = await this.getContainer();
         if(!container) {
             console.error('Container not found');
@@ -344,11 +348,10 @@ export class ChatController {
                 await this.loadHistory(chatId, sessionData.userId);
             }
         } else {
-            if(!isDataLoaded || !isCached) {
-                console.log(`Loading history for ${chatId} (cached: ${isCached}, loaded: ${isDataLoaded})`);
+            const isNewGroup = !isCached || !isDataLoaded;
+            if(isNewGroup || !isDataLoaded) {
                 await this.loadHistory(chatId, userIdToUse);
             } else {
-                console.log(`Using cached data for ${chatId}, rendering from cache`);
                 await this.renderAllCachedMessages(chatId);
             }
         }
@@ -567,18 +570,17 @@ export class ChatController {
             console.error('Failed to update cache:', err);
         }
         
-        if(isSystemMessage) {
+        if(isSystemMessage || isFileMessage) {
             const systemKey = `${data.event}_${data.content}_${data.timestamp}`;
             if(this.lastSystemMessageKeys.has(systemKey)) return;
             this.lastSystemMessageKeys.add(systemKey);
-            await this.messageElementRenderer.setMessage(data, analysis);
             this.chatManager.setLastMessage(
                 data.chatId,
                 data.userId || this.userId,
                 data.messageId || data.id,
                 data.content,
-                data.username,
-                data.isSystem
+                data.username || 'System',
+                isSystemMessage
             );
         }
 
@@ -783,6 +785,12 @@ export class ChatController {
         this.isLoadingHistory = true;
 
         try {
+            const cacheService = await this.chatService.getCacheServiceClient();
+            if (!cacheService.isChatCached(chatId)) {
+                console.log(`Skipping history load for exited group: ${chatId}`);
+                return;
+            }
+
             const chatData = await this.getChatData(chatId, userId, page);
             const timeline = chatData.timeline || [];
             
@@ -791,7 +799,6 @@ export class ChatController {
             await this.messageElementRenderer.renderHistory(timeline);
             
             if(page > this.currentPage) this.currentPage = page;
-            const cacheService = await this.chatService.getCacheServiceClient();
             const cacheData = cacheService.getCacheData(chatId);
             if(cacheData) cacheData.loadedPages.add(page);
         } catch(err) {
