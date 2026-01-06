@@ -301,6 +301,11 @@ export class ChatService {
         this.cacheServiceClient.selectChat(chatId);
         const cacheKey = `${chatId}_${userId}_${page}`;
 
+        if(!this.cacheServiceClient.cache.has(chatId)) {
+            console.log(`Initializing cache for ${chatId} before first fetch`);
+            this.cacheServiceClient.init(chatId, 0, 0, 0);
+        }
+
         if(!forceRefresh && this.isDataLoaded(chatId, page)) {
             console.log(`Returning cached data for ${chatId} page ${page}`);
             const cachedData = await this.getCachedData(chatId);

@@ -13,6 +13,7 @@ import { ChatStateManager } from '../chat/chat-state-manager';
 import { ChatService } from './chat-service';
 import { Item } from './file/file-item';
 import { SessionManager } from '../_session/session-manager';
+import { AddToCache } from './add-to-cache';
 
 export class ChatController {
     private queueManager: QueueManager;
@@ -25,6 +26,8 @@ export class ChatController {
     private chunkRenderer: ChunkRenderer;
     private chatStateManager = ChatStateManager.getIntance();
     private apiClientController: ApiClientController;
+    private addToCache!: AddToCache;
+
     public dashboard: any;
     
     private registeredMessageHandlers: RegisteredMessageHandlers;
@@ -71,10 +74,15 @@ export class ChatController {
 
     public async init(): Promise<void> {
         if(typeof document === 'undefined') return;
+
         this.appEl = document.querySelector<HTMLDivElement>('.app');
         this.messageElementRenderer.setApp(this.appEl!);
+
         this.setupMessageHandling();
         await this.socketClient.connect();
+
+        const cacheService = await this.chatService.getCacheServiceClient();
+        this.addToCache = new AddToCache(cacheService);
     }
 
     public async getChatData(
@@ -147,6 +155,16 @@ export class ChatController {
         const cacheData = await this.chatService.getCachedData(chatId);
         if(!cacheData) {
             console.log(`No cache data found for chat ${chatId}`);
+            return;
+        }
+
+        const hasTimelineData = cacheData.timeline && cacheData.timeline.size > 0;
+        const hasMessageData = cacheData.messages && cacheData.messages.size > 0;
+        
+        console.log(`Cache check: timeline=${hasTimelineData}, messages=${hasMessageData}`);
+        
+        if(!hasTimelineData && !hasMessageData) {
+            console.log(`No timeline or message data in cache for ${chatId}`);
             return;
         }
 
@@ -301,6 +319,16 @@ export class ChatController {
         const isCached = cacheService.isChatCached(chatId);
         const isDataLoaded = this.chatService.isDataLoaded(chatId, 0);
         
+        if(isCached) {
+            const cacheData = cacheService.getCacheData(chatId);
+            console.log(`Cache state for ${chatId}:`, {
+                messages: cacheData?.messages?.size || 0,
+                timeline: cacheData?.timeline?.size || 0,
+                files: cacheData?.files?.size || 0,
+                messageOrder: cacheData?.messageOrder?.length || 0,
+                timelineOrder: cacheData?.timelineOrder?.length || 0
+            });
+        }
         if(!isCached) {
             cacheService.init(chatId);
         }
@@ -479,6 +507,8 @@ export class ChatController {
                     timestamp: time,
                     isTemp: false
                 }
+
+                await this.addToCache.addMessage(chatId, messageToCache);
                 await this.chatService.getMessageController().addMessage(chatId, messageToCache);
             } catch(err) {
                 console.error('Failed to save message :(', err);
@@ -491,6 +521,8 @@ export class ChatController {
                     timestamp: time,
                     isTemp: true
                 }
+                
+                await this.addToCache.addMessage(chatId, messageToCache);
                 await this.chatService.getMessageController().addMessage(chatId, messageToCache);
             }
             if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
@@ -522,6 +554,18 @@ export class ChatController {
             chatId: data.chatId,
             dataKeys: Object.keys(data)
         });
+
+        try {
+            if(isSystemMessage) {
+                await this.addToCache.addSystemMessage(data.chatId, data);
+            } else if(isFileMessage) {
+                await this.addToCache.addFile(data.chatId, data);
+            } else {
+                await this.addToCache.addMessage(data.chatId, data);
+            }
+        } catch(err) {
+            console.error('Failed to update cache:', err);
+        }
         
         if(isSystemMessage) {
             const systemKey = `${data.event}_${data.content}_${data.timestamp}`;
@@ -579,7 +623,6 @@ export class ChatController {
     /**
      * Send File Message
      */
-    //REMINDER FIX THE PERSPECTIVE!
     public async sendFileMessage(file: Item): Promise<boolean> {
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
@@ -662,7 +705,8 @@ export class ChatController {
                     type: 'file',
                     fileData: file
                 };
-                
+
+                await this.addToCache.addFile(chatId, fileToCache);
                 await fileService.addFile(chatId, fileToCache);
             } catch(err) {
                 console.error('Failed to cache file :(', err);
@@ -680,6 +724,8 @@ export class ChatController {
                     type: 'file',
                     fileData: file
                 };
+
+                await this.addToCache.addFile(chatId, fileToCache);
                 await fileService.addFile(chatId, fileToCache);
             }
             

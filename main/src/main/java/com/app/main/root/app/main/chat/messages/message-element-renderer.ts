@@ -22,43 +22,54 @@ export class MessageElementRenderer {
      * Render History
      */
     public async renderHistory(timeline: any[]): Promise<void> {
-        if(!this.app) throw new Error('App Element not found');
-        if(timeline.length === 0) return;
+    if(!this.app) throw new Error('App Element not found');
+    if(timeline.length === 0) return;
 
-        const container = await this.chatController.getContainer();
-        if(!container) return;
+    const container = await this.chatController.getContainer();
+    if(!container) return;
 
-        this.lastScrollTop = container.scrollTop;
-        this.lastScrollHeight = container.scrollHeight;
+    this.lastScrollTop = container.scrollTop;
+    this.lastScrollHeight = container.scrollHeight;
 
-        const existingMessageIds = new Set();
-        const messageElements = container.querySelectorAll('[data-message-id]');
-        messageElements.forEach(el => {
-            const messageId = el.getAttribute('data-message-id');
-            if(messageId) existingMessageIds.add(messageId);
-        });
+    const existingMessageIds = new Set();
+    const messageElements = container.querySelectorAll('[data-message-id]');
+    messageElements.forEach(el => {
+        const messageId = el.getAttribute('data-message-id');
+        if(messageId) existingMessageIds.add(messageId);
+    });
 
-        this.chatController.messageRoots.forEach((_, messageId) => {
-            existingMessageIds.add(messageId);
-        });
+    this.chatController.messageRoots.forEach((_, messageId) => {
+        existingMessageIds.add(messageId);
+    });
 
-        const sortedTimeline = timeline.sort((a, b) => {
-            const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
-            const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
-            return timeB - timeA;
-        });
+    // FIX: Sort in ASCENDING order (oldest first) to match insertion logic
+    const sortedTimeline = timeline.sort((a, b) => {
+        const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
+        const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
+        return timeA - timeB; // ← Changed from timeB - timeA to timeA - timeB
+    });
 
-        const newItems = sortedTimeline.filter(item => {
-            const id = item.id || item.messageId;
-            return !existingMessageIds.has(id);
-        });
-        if(newItems.length === 0) return;
-        for(const item of newItems) {
-            await this.renderElement(item);
-        }
-        
-        this.restoreScrollPos(container);
+    const newItems = sortedTimeline.filter(item => {
+        const id = item.id || item.messageId;
+        return !existingMessageIds.has(id);
+    });
+    
+    console.log(`Rendering ${newItems.length} new timeline items`);
+    console.log('Timeline items:', newItems.map(item => ({
+        id: item.id || item.messageId,
+        type: item.type,
+        isSystem: item.isSystem,
+        timestamp: item.timestamp,
+        content: item.content?.substring(0, 50) + '...'
+    })));
+    
+    if(newItems.length === 0) return;
+    for(const item of newItems) {
+        await this.renderElement(item);
     }
+    
+    this.restoreScrollPos(container);
+}
 
     private restoreScrollPos(container: HTMLDivElement): void {
         setTimeout(() => {
