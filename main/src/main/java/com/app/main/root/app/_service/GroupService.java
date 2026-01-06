@@ -4,7 +4,6 @@ import com.app.main.root.app._types.Group;
 import com.app.main.root.app.EventTracker;
 import com.app.main.root.app.EventLog.EventDirection;
 import com.app.main.root.app._crypto.message_encoder.PreKeyBundle;
-import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._data.MemberVerifier;
 import com.app.main.root.app._db.CommandQueryManager;
 import com.app.main.root.app._db.DataSourceService;
@@ -150,9 +149,9 @@ public class GroupService {
         return result;
     }
 
-    /*
-    * Add User 
-    */
+    /**
+     * Add User
+     */
     public boolean addUserToGroup(String groupId, String userId, String username) throws SQLException {
         String query = CommandQueryManager.ADD_USER_TO_GROUP.get();
         boolean added = false;
@@ -291,9 +290,9 @@ public class GroupService {
         return sessions != null ? new HashSet<>(sessions) : new HashSet<>();
     }
     
-    /*
-    * Send to Group 
-    */
+    /**
+     * Send to Group 
+     */
     public void sendToGroup(String groupId, String event, Object data) {
         try {
             Set<String> sessions = groupSessions.get(groupId);
@@ -357,9 +356,9 @@ public class GroupService {
         return sessionGroups != null && sessionGroups.contains(groupId);
     }
 
-    /*
-    * Parser 
-    */
+    /**
+     * Parse Data
+     */
     public Map<String, Object> parseData(Object data) throws Exception {
         if(data instanceof Map) {
             return (Map<String, Object>) data;
@@ -371,9 +370,9 @@ public class GroupService {
         }
     }
 
-    /*
-    * Get Group Info 
-    */
+    /**
+     * Get Group Info 
+     */
     public Map<String, Object> getGroupInfo(String id) throws SQLException {
         String groupQuery = CommandQueryManager.GET_GROUP_INFO.get();
         String membersQuery = CommandQueryManager.GET_GROUP_INFO_MEMBERS.get();
@@ -433,9 +432,9 @@ public class GroupService {
         return false;
     }
 
-    /*
-    * Remove from Group 
-    */
+    /**
+     * Remove from Group 
+     */
     public boolean removeUserFromGroup(String groupId, String userId) throws SQLException {
         String query = CommandQueryManager.REMOVE_USER_FROM_GROUP.get();
         boolean removed = false;
@@ -486,9 +485,9 @@ public class GroupService {
         return removed;
     }
 
-    /*
-    * Remove from Group Mapping 
-    */
+    /**
+     * Remove from Group Mapping
+     */
     public void removeUserFromGroupMapping(String userId, String groupId) {
         Set<String> userGroupSet = userGroups.get(userId);
         if(userGroupSet != null) {
@@ -507,9 +506,9 @@ public class GroupService {
         }
     }
 
-    /*
-    * Remove from All Groups 
-    */
+    /**
+     * Remove from All Groups 
+     */
     public void removeUserFromAllGroups(String userId) {
         Set<String> userGroupSet = userGroups.get(userId);
         if(userGroupSet != null) {
@@ -520,9 +519,9 @@ public class GroupService {
         userGroups.remove(userId);
     }
 
-    /*
-    * Update Sessions for User 
-    */
+    /**
+     * Update Sessions for User 
+     */
     public void updateGroupSessionsUser(String userId, String sessionId) {
         Set<String> userGroupSet = userGroups.get(userId);
         if(userGroupSet != null) {
@@ -532,9 +531,9 @@ public class GroupService {
         }
     }
 
-    /*
-    * Update Last Message
-    */
+    /**
+     * Update Last Message
+     */
     public void updateLastMessage(
         String groupId,
         String lastMessage,
@@ -577,78 +576,45 @@ public class GroupService {
         }
     }
 
-    /*
-    * Creation Message 
-    */
-    public void sendCreationMessage(String sessionId, String id, String groupName, String creator) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(2000);
-                    String destination = "/user/queue/messages/group/" + id;
-                                
-                    Map<String, Object> systemMessageData = new HashMap<>();
-                    systemMessageData.put("groupId", id);
-                    systemMessageData.put("chatId", id);
-                    systemMessageData.put("groupName", groupName);
-                    systemMessageData.put("username", creator);
-    
-                    serviceManager.getSystemMessageService().setContent(
-                        CommandSystemMessageList.GROUP_CREATED.get(), 
-                        systemMessageData, 
-                        sessionId, 
-                        sessionId
-                    );
-                    Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
-                        "GROUP_CREATED", 
-                        systemMessageData, 
-                        sessionId, 
-                        sessionId,
-                        id
-                    );
-                    systemMessage.put("groupId", id);
-                    systemMessage.put("chatId", id);
-                    systemMessage.put("chatType", "GROUP");
-                    systemMessage.put("isSystem", true);
-    
-                    Object systemMessagePayload = serviceManager.getSystemMessageService().payload(
-                        "GROUP_CREATED", 
-                        systemMessage, 
-                        id, 
-                        id
-                    );
-    
-                    try {
-                        messageRouter.routeMessage(sessionId, systemMessagePayload, systemMessage, new String[]{"GROUP"});
-                        socketMethods.send(sessionId, destination, systemMessagePayload);
-                    } catch(Exception err) {
-                        System.err.println("Failed to route system message" + err.getMessage());
-                        socketMethods.send(sessionId, destination, systemMessagePayload);
-                    }
-                } catch(InterruptedException err) {
-                    Thread.currentThread().interrupt();
-                } catch(Exception err) {
-                    System.err.println("Error in system message thread" + err.getMessage()); 
-                }
+    /**
+     * Creation Message 
+     */
+    public void sendCreationMessage(String sessionId, String id, String groupName, String creator) throws SQLException {
+        List<User> members = getGroupMembers(id);
+        try {
+            Thread.sleep(1000);
+        } catch(InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        for(User member : members) {
+            String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
+            if(memberSessionId != null && serviceManager.getUserService().isSessionActive(memberSessionId)) {
+                Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
+                    "GROUP_CREATED", 
+                    Map.of("groupName", groupName, "creator", creator), 
+                    sessionId, 
+                    memberSessionId,
+                    id
+                );
+                
+                String destination = "/user/queue/messages/group/" + id;
+                socketMethods.send(memberSessionId, destination, systemMessage);
             }
-        }).start();
+        }
     }
 
-    /*
-    **
-    ***
-    *** Routes
-    ***
-    **
-    */
+    /**
+     * 
+     * Routes
+     * 
+     */
     public void handleGroupRoutes(RouteContext context) {
         handleGroupRoute(context);
         handleGroupSelfRoute(context);
         handleGroupOthersRoute(context);
     }
 
-    /* Group */
     private void handleGroupRoute(RouteContext context) {
         String chatId = (String) context.message.get("chatId");
         if(chatId != null && chatId.startsWith("group_")) {
@@ -676,13 +642,11 @@ public class GroupService {
         }
     }
 
-    /*
-    **
-    ***
-    *** Perspective
-    ***
-    **
-    */
+    /**
+     * 
+     * Perspective
+     * 
+     */
     private void handleGroupSelfRoute(RouteContext context) {
         String chatId = (String) context.message.get("chatId");
         context.targetSessions.add(context.sessionId);
@@ -702,13 +666,11 @@ public class GroupService {
         }
     }
 
-    /*
-    **
-    ***
-    *** Maps
-    ***
-    **
-    */
+    /**
+     * 
+     * Maps
+     * 
+     */
     private Group mapGroupFromResultSet(ResultSet rs) throws SQLException {
         Group group = new Group();
         group.setId(rs.getString("id"));
@@ -726,9 +688,9 @@ public class GroupService {
         return user;
     }
 
-    /*
-    * Invite Codes 
-    */
+    /**
+     * Get Invite Codes 
+     */
     public InviteCodeManager getInviteCodes() {
         return inviteCodeManager;
     }

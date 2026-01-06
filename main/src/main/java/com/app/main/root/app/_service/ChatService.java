@@ -151,8 +151,13 @@ public class ChatService {
         
         try {
             List<Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
+            List<Message> systemMessages = new ArrayList<>();
+            if(chatId.startsWith("group_")) {
+                systemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
+            }
+            
+            List<Message> validatedMessages = new ArrayList<>();
             if(messages != null) {
-                List<Message> validatedMessages = new ArrayList<>();
                 for(Message msg : messages) {
                     if(chatId.equals(msg.getChatId())) {
                         validatedMessages.add(msg);
@@ -162,10 +167,12 @@ public class ChatService {
                             " but belongs to chat " + msg.getChatId());
                     }
                 }
-                chatData.put("messages", validatedMessages);
-            } else {
-                chatData.put("messages", new ArrayList<>());
             }
+
+            List<Message> allMessages = new ArrayList<>();
+            allMessages.addAll(validatedMessages);
+            allMessages.addAll(systemMessages);
+            chatData.put("messages", allMessages);
             
             List<File> files = serviceManager.getFileService().getFilesByChatId(userId, chatId, page, pageSize);
             if(files != null) {
@@ -183,39 +190,19 @@ public class ChatService {
             }
             
             List<Map<String, Object>> timeline = new ArrayList<>();
-            if(messages != null) {
-                for(Message msg : messages) {
-                    if(chatId.equals(msg.getChatId())) {
-                        Map<String, Object> timelineItem = new HashMap<>();
-                        timelineItem.put("type", "message");
-                        timelineItem.put("id", msg.getId());
-                        timelineItem.put("messageId", msg.getId());
-                        timelineItem.put("content", msg.getContent());
-                        timelineItem.put("contentBytes", msg.getContentBytes());
-                        timelineItem.put("senderId", msg.getSenderId());
-                        timelineItem.put("chatId", msg.getChatId());
-                        
-                        Timestamp createdAt = msg.getCreatedAt();
-                        long timestamp;
-                        String createdAtStr;
-                        if(createdAt != null) {
-                            timestamp = createdAt.getTime();
-                            createdAtStr = createdAt.toString();
-                        } else {
-                            timestamp = System.currentTimeMillis();
-                            createdAtStr = new Timestamp(timestamp).toString();
-                        }
-                        
-                        timelineItem.put("createdAt", createdAtStr);
-                        timelineItem.put("timestamp", timestamp);
-                        timelineItem.put("messageType", msg.getMessageType());
-                        timelineItem.put("username", msg.getUsername());
-                        timelineItem.put("isSystem", msg.isSystem());
-                        
-                        timeline.add(timelineItem);
-                    }
+            for(Message msg : validatedMessages) {
+                if(chatId.equals(msg.getChatId())) {
+                    Map<String, Object> timelineItem = createTimelineItemMessage(msg, "message");
+                    timeline.add(timelineItem);
                 }
             }
+            for(Message sysMsg : systemMessages) {
+                if(chatId.equals(sysMsg.getChatId())) {
+                    Map<String, Object> timelineItem = createTimelineItemMessage(sysMsg, "system");
+                    timeline.add(timelineItem);
+                }
+            }
+
             for(File file : files) {
                 Map<String, Object> timelineItem = new HashMap<>();
                 timelineItem.put("type", "file");
@@ -277,6 +264,39 @@ public class ChatService {
         }
         
         return chatData;
+    }
+
+    /**
+     * Create Timeline Item Message
+     */
+    private Map<String, Object> createTimelineItemMessage(Message msg, String type) {
+        Map<String, Object> timelineItem = new HashMap<>();
+        timelineItem.put("type", type);
+        timelineItem.put("id", msg.getId());
+        timelineItem.put("messageId", msg.getId());
+        timelineItem.put("content", msg.getContent());
+        timelineItem.put("contentBytes", msg.getContentBytes());
+        timelineItem.put("senderId", msg.getSenderId());
+        timelineItem.put("chatId", msg.getChatId());
+        
+        Timestamp createdAt = msg.getCreatedAt();
+        long timestamp;
+        String createdAtStr;
+        if(createdAt != null) {
+            timestamp = createdAt.getTime();
+            createdAtStr = createdAt.toString();
+        } else {
+            timestamp = System.currentTimeMillis();
+            createdAtStr = new Timestamp(timestamp).toString();
+        }
+        
+        timelineItem.put("createdAt", createdAtStr);
+        timelineItem.put("timestamp", timestamp);
+        timelineItem.put("messageType", msg.getMessageType());
+        timelineItem.put("username", msg.getUsername());
+        timelineItem.put("isSystem", msg.isSystem());
+        
+        return timelineItem;
     }
 
     private Long getTimestampItem(Map<String, Object> item) {

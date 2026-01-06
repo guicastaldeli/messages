@@ -108,7 +108,8 @@ export class FileServiceClient {
                 this.socketClient.offDestination(errorDestination, handleError);
                 console.error('Batch file decryption error:', error);
                 
-                resolve(fileDataArray.map(file => ({
+                const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
+                resolve(safeArray.map(file => ({
                     ...file,
                     hasDecryptionError: true,
                     decryptionError: error.message || 'Batch decryption failed'
@@ -135,7 +136,8 @@ export class FileServiceClient {
                     this.socketClient.offDestination(errorDestination, handleError);
                     console.warn('Batch decryption request timed out');
                     
-                    resolve(fileDataArray.map(file => ({
+                    const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
+                    resolve(safeArray.map(file => ({
                         ...file,
                         hasDecryptionError: true,
                         decryptionError: 'Batch decryption timed out'
@@ -147,7 +149,8 @@ export class FileServiceClient {
                 this.socketClient.offDestination(errorDestination, handleError);
                 console.error('Failed to send batch decryption request:', err);
                 
-                resolve(fileDataArray.map(file => ({
+                const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
+                resolve(safeArray.map(file => ({
                     ...file,
                     hasDecryptionError: true,
                     decryptionError: 'Failed to send batch request'
