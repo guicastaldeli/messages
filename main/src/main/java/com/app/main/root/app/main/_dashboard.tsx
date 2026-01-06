@@ -197,11 +197,6 @@ export class Dashboard extends Component<Props, State> {
             if(this.groupContainerRef.current && this.props.chatManager.getGroupManager()) {
                 this.props.chatManager.getGroupManager().container = this.groupContainerRef.current;
             }
-            if(this.state.activeChat) {
-                setTimeout(() => {
-                    this.handleChatSelect(this.state.activeChat);
-                }, 100);
-            }
         }
 
         if(userId) {
@@ -300,42 +295,40 @@ export class Dashboard extends Component<Props, State> {
                 type: chatType
             };
             
-            this.setState({ activeChat: null }, () => {
-                this.setState({ activeChat: activeChatData }, () => {
-                    localStorage.setItem('active-chat', JSON.stringify(activeChatData));
-                    
-                    this.updateState({
-                        showCreationForm: false,
-                        showJoinForm: false,
-                        showGroup: chatType === 'GROUP',
-                        hideGroup: false,
-                        groupName: chat.name || chat.contactUsername || 'Chat'
-                    });
-
-                    if(chatType === 'GROUP') {
-                        if(this.props.chatManager.getGroupManager()) {
-                            this.props.chatManager.getGroupManager().container = this.groupContainerRef.current!;
-                        }
-                    } else if(chatType === 'DIRECT') {
-                        if(this.props.chatManager.getDirectManager()) {
-                            this.props.chatManager.getDirectManager().container = this.directContainerRef.current!;
-                        }
-                    }
-
-                    this.props.chatController.setCurrentChat(
-                        chatId,
-                        chatType,
-                        chat.members || []
-                    );
-
-                    const event = new CustomEvent('chat-activated', {
-                        detail: {
-                            chat: activeChatData,
-                            shouldRender: true
-                        }
-                    });
-                    window.dispatchEvent(event);
+            this.setState({ activeChat: activeChatData }, () => {
+                localStorage.setItem('active-chat', JSON.stringify(activeChatData));
+                
+                this.updateState({
+                    showCreationForm: false,
+                    showJoinForm: false,
+                    showGroup: chatType === 'GROUP',
+                    hideGroup: false,
+                    groupName: chat.name || chat.contactUsername || 'Chat'
                 });
+
+                if(chatType === 'GROUP') {
+                    if(this.props.chatManager.getGroupManager()) {
+                        this.props.chatManager.getGroupManager().container = this.groupContainerRef.current!;
+                    }
+                } else if(chatType === 'DIRECT') {
+                    if(this.props.chatManager.getDirectManager()) {
+                        this.props.chatManager.getDirectManager().container = this.directContainerRef.current!;
+                    }
+                }
+
+                this.props.chatController.setCurrentChat(
+                    chatId,
+                    chatType,
+                    chat.members || []
+                );
+
+                const event = new CustomEvent('chat-activated', {
+                    detail: {
+                        chat: activeChatData,
+                        shouldRender: true
+                    }
+                });
+                window.dispatchEvent(event);
             });
         } catch(err) {
             console.error('Error loading chat history:', err);

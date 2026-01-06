@@ -33,7 +33,7 @@ interface State {
 export class ChatManager {
     private apiClientController: ApiClientController;
     private socketClient: SocketClientConnect;
-    private dashboard: Dashboard;
+    public dashboard: Dashboard;
 
     private chatList: any[] = [];
     private activeChat: any = null;
@@ -69,6 +69,7 @@ export class ChatManager {
         this.directManager = new DirectManager(
             socketClient,
             chatController,
+            this,
             chatService
         );
         this.groupManager = new GroupManager(
@@ -509,22 +510,30 @@ export class ChatManager {
         if(shouldRender && this.updateCallback) this.updateCallback([...this.chatList])
     }
 
-    /* Set Container */
+    /**
+     * Set Container
+     */
     public setContainer(container: HTMLElement): void {
         this.container = container;
+
         const directManager = this.getDirectManager();
-        if(directManager) directManager.container = container;
+        if(directManager) directManager.setContainer(container);
+
         const groupManager = this.getGroupManager();
         if(groupManager) groupManager.container = container;
     }
 
-    /* Set Dashboard */
+    /**
+     * Set Dashboard
+     */
     public setDashboard(instance: Dashboard): void {
         const groupManager = this.getGroupManager();
         if(groupManager) groupManager.dashboard = instance;
     }
 
-    /* Set Username */
+    /**
+     * Set Username
+     */
     public setUsername(username: string): void {
         const groupManager = this.getGroupManager();
         if(groupManager) groupManager.username = username;

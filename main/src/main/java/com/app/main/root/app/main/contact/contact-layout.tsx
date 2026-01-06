@@ -210,6 +210,7 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
     }
 
     const handleContactClick = (contact: any) => {
+        console.log('ContactLayout: Contact clicked', contact);
         const event = new CustomEvent('contact-clicked', {
             detail: {
                 contactId: contact.id,

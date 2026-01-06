@@ -54,45 +54,55 @@ export class AddToCache {
      * Add File
      */
     public async addFile(chatId: string, data: any): Promise<void> {
-        try {
-            const cacheData = this.cacheService.getCacheData(chatId);
-            
-            if(!cacheData) {
-                console.log(`Cache not found for ${chatId}, initializing`);
-                this.cacheService.init(chatId);
-                return;
-            }
-            
-            const fileId = data.fileId || data.id;
-            if(!fileId) {
-                console.error('File data missing ID:', data);
-                return;
-            }
-            
-            if(!cacheData.files.has(fileId)) {
-                cacheData.files.set(fileId, data);
-                cacheData.fileOrder.push(fileId);
-                cacheData.totalFilesCount++;
-            }
-            if(!cacheData.timeline.has(fileId)) {
-                const timelineItem = {
-                    ...data,
-                    type: 'file',
-                    isSystem: false
-                };
-                cacheData.timeline.set(fileId, timelineItem);
-                cacheData.timelineOrder.push(fileId);
-                cacheData.totalTimelineCount++;
-            }
-    
-            cacheData.lastAccessTime = Date.now();
-            cacheData.lastUpdated = Date.now();
-            
-            console.log(`Updated cache for ${chatId} with file ${fileId}`);
-            
-        } catch(err) {
-            console.error(`Failed to update cache for ${chatId}:`, err);
+        if(!this.cacheService.isChatCached(chatId)) {
+            console.log(`Skipping cache update for exited group: ${chatId}`);
+            return;
         }
+
+        const cacheData = this.cacheService.getCacheData(chatId);
+        if(!cacheData) {
+            console.error(`No cache data found for chat ${chatId}`);
+            return;
+        }
+
+        const fileId = 
+            data.fileId || 
+            data.id || 
+            data.fileData?.fileId || 
+            data.fileData?.id ||
+            data.messageId;
+        if(!fileId) {
+            console.error('File data missing ID:', data);
+            return;
+        }
+
+        const fileData = {
+            ...(data.fileData || data),
+            fileId: fileId,
+            id: fileId
+        };
+
+        const fileEntry = {
+            id: fileId,
+            fileId: fileId,
+            messageId: data.messageId || fileId,
+            userId: data.userId || data.senderId,
+            senderId: data.senderId || data.userId,
+            username: data.username,
+            chatId: chatId,
+            timestamp: data.timestamp || Date.now(),
+            type: 'file',
+            fileData: fileData,
+            direction: data.direction
+        };
+        cacheData.files.set(fileId, fileEntry);
+        
+        if(!cacheData.timelineOrder.includes(fileId)) {
+            cacheData.timelineOrder.push(fileId);
+        }
+        cacheData.timeline.set(fileId, fileEntry);
+        
+        console.log(`Updated cache for ${chatId} with file ${fileId}`);
     }
 
     /**

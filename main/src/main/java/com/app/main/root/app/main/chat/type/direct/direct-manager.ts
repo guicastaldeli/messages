@@ -1,16 +1,16 @@
-import React from "react";
 import { SocketClientConnect } from "../../../socket-client-connect";
 import { ChatController } from "../../chat-controller";
 import { chatState } from "../../chat-state-service";
-import { DirectLayout } from "./direct-layout";
-import { createRoot, Root } from "react-dom/client";
+import { Root } from "react-dom/client";
 import { ChatStateManager } from "../../chat-state-manager";
 import { ChatService } from "../../chat-service";
+import { ChatManager } from "../../chat-manager";
 
 export class DirectManager {
     private socketClient: SocketClientConnect;
-    private chatController: ChatController;
+    public chatController: ChatController;
     private chatService: ChatService;
+    private chatManager: ChatManager;
     private chatStateManager = ChatStateManager.getIntance();
 
     public currentChatId: string = '';
@@ -25,11 +25,15 @@ export class DirectManager {
     constructor(
         socketClient: SocketClientConnect,
         chatController: ChatController,
-        chatService: ChatService
+        chatManager: ChatManager,
+        chatService: ChatService,
+        container?: HTMLElement
     ) {
         this.socketClient = socketClient;
         this.chatController = chatController;
         this.chatService = chatService;
+        this.chatManager = chatManager;
+        this.container = container!;
         this.setupEventListeners();
     }
 
@@ -45,57 +49,75 @@ export class DirectManager {
         console.log('Direct chat activated:', chatId);
     }
 
-    /*
-    ** User Data
-    */
+    public setContainer(container: HTMLElement): void {
+        this.container = container;
+        console.log('DirectManager: Container set', container);
+    }
+
+    /**
+     * User Data
+     */
     public async getUserData(sessionId: string, userId: string): Promise<void> {
         this.socketId = sessionId;
         this.userId = userId;
     }
 
-    /*
-    ** Open Chat
-    */
+    /**
+     * Open Chat
+     */
     public async openChat(contactId: string, contactUsername: string): Promise<void> {
-        if(!this.container || !(this.container instanceof HTMLElement)) return;
-
-        const chatId = await this.getChatId(contactId);
-        this.currentParticipant = { id: contactId, username: contactUsername }
-        this.currentChatId = chatId;
-
-        const openEvent = new CustomEvent('direct-chat-opened', {
-            detail: { chatId, contactId, contactUsername }
-        });
-        window.dispatchEvent(openEvent);
-
-        chatState.setType('DIRECT');
-        await this.chatController.setCurrentChat(
-            chatId,
-            'DIRECT',
-            [this.userId, contactId]
-        );
-
-        const chatEvent = new CustomEvent('direct-activated', {
-            detail: {
-                chatId: chatId,
-                participant: this.currentParticipant,
-                userInitiated: true
-            }
-        });
-        window.dispatchEvent(chatEvent);
-
-        const content = React.createElement(DirectLayout, {
-            chatController: this.chatController,
-            directManager: this
-        });
+        console.log('openChat called', { contactId, contactUsername });
         
-        if(!this.root) this.root = createRoot(this.container);
-        this.root.render(content);
+        try {
+            const chatId = await this.getChatId(contactId);
+            console.log('Got chat ID:', chatId);
+            
+            this.currentParticipant = { id: contactId, username: contactUsername };
+            this.currentChatId = chatId;
+
+            const activeChatData = {
+                id: chatId,
+                name: contactUsername,
+                type: 'DIRECT' as const,
+                contactId: contactId,
+                contactUsername: contactUsername
+            };
+
+            localStorage.setItem('active-chat', JSON.stringify(activeChatData));
+            chatState.setType('DIRECT');
+            const chatEvent = new CustomEvent('chat-activated', {
+                detail: {
+                    chat: activeChatData,
+                    shouldRender: true
+                }
+            });
+            window.dispatchEvent(chatEvent);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            await this.chatController.setCurrentChat(
+                chatId,
+                'DIRECT',
+                [this.userId, contactId]
+            );
+
+            const directEvent = new CustomEvent('direct-activated', {
+                detail: {
+                    chatId: chatId,
+                    participant: this.currentParticipant,
+                    userInitiated: true
+                }
+            });
+            window.dispatchEvent(directEvent);
+            
+            console.log('Chat opened successfully');
+        } catch (error) {
+            console.error('Failed to open chat:', error);
+        }
     }
 
-    /*
-    ** Last Message
-    */
+    /**
+     * Last Message
+     */
     public async lastMessage(id: string): Promise<string> {
         try {
             const res = await this.chatService.getChatData(this.userId, id);
@@ -111,41 +133,52 @@ export class DirectManager {
         return '';
     }
 
-    /*
-    ** Chat Id
-    */
+    /**
+     * Chat Id
+     */
     private async getChatId(contactId: string): Promise<string> {        
         return new Promise(async (res, rej) => {
             const resDestination = '/queue/direct-chat-id-scss';
 
+            let hasResolved = false;
+
             const handle = (data: any) => {
+                console.log('Received chatId response', data);
+                if(hasResolved) return;
+                hasResolved = true;
+                this.socketClient.offDestination(resDestination, handle);
+                
                 if(data && data.chatId) {
-                    this.socketClient.offDestination(resDestination, handle);
+                    console.log('Got chatId:', data.chatId);
                     res(data.chatId);
                 } else {
-                    this.socketClient.offDestination(resDestination, handle);
                     rej(new Error('Invalid chat id response'));
                 }
-            }
-
-            await this.socketClient.onDestination(resDestination, handle);
-            this.socketClient.sendToDestination('/app/get-direct-chat-id', {
-                contactId: contactId
-            }).then(sucss => {
-                if(!sucss) {
+            };
+            try {
+                await this.socketClient.onDestination(resDestination, handle);
+                const success = await this.socketClient.sendToDestination('/app/get-direct-chat-id', {
+                    contactId: contactId
+                });
+                
+                if(!success) {
+                    if(hasResolved) return;
+                    hasResolved = true;
                     this.socketClient.offDestination(resDestination, handle);
                     rej(new Error('Failed to send chat id request'));
                 }
-            }).catch(err => {
+            } catch(err) {
+                if(hasResolved) return;
+                hasResolved = true;
                 this.socketClient.offDestination(resDestination, handle);
                 rej(err);
-            });
+            }
         });
     }
 
-    /*
-    ** Create Item
-    */
+    /**
+     * Create Item
+     */
     public createItem(chatId: string): void {
         const currentCount = this.chatStateManager.getMessageCount(chatId);
         if(currentCount === 0) {
