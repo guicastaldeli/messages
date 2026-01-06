@@ -200,7 +200,7 @@ export class ChatManager {
             timestamp, 
             isCurrentUser 
         } = event.detail;
-        if (!chatId) {
+        if(!chatId) {
         console.error('chatId is undefined in handleLastMessage', event.detail);
         return;
     }
@@ -242,9 +242,22 @@ export class ChatManager {
         const now = new Date(timestamp);
         
         this.setState((prevState: State) => {
-            const chatIndex = prevState.chatList.findIndex(chat => chat.id === id);
+            const chatIndex = prevState.chatList.findIndex(chat => 
+                chat.id === id || chat.chatId === id || chat.groupId === id
+            );
+            
             if(chatIndex === -1) {
-                return prevState;
+                const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
+                const newItem: Item = {
+                    id: id,
+                    name: sender,
+                    type: chatType,
+                    lastMessage: this.formattedLastMessage(lastMessage),
+                    timestamp: now
+                };
+                return { 
+                    chatList: [newItem, ...prevState.chatList] 
+                };
             }
 
             const updatedChatList = [...prevState.chatList];
@@ -258,12 +271,43 @@ export class ChatManager {
                 lastMessageSender: sender,
                 lastMessageTime: timestamp,
                 timestamp: now
-            }
+            };
 
             updatedChatList.splice(chatIndex, 1);
             updatedChatList.unshift(updatedChat);
-            return { chatList: updatedChatList }
+            return { chatList: updatedChatList };
+        }, () => {
+            this.updateChatList();
+            if(this.updateCallback) {
+                this.updateCallback([...this.chatList]);
+            }
         });
+        
+        const chatIndex = this.chatList.findIndex(chat => 
+            chat.id === id || chat.chatId === id || chat.groupId === id
+        );
+        if(chatIndex !== -1) {
+            const updatedChat = {
+                ...this.chatList[chatIndex],
+                userId: userId,
+                messageId: messageId,
+                lastMessage: this.formattedLastMessage(lastMessage),
+                lastMessageSender: sender,
+                lastMessageTime: timestamp,
+                timestamp: now
+            };
+            this.chatList.splice(chatIndex, 1);
+            this.chatList.unshift(updatedChat);
+        } else {
+            const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
+            this.chatList.unshift({
+                id: id,
+                name: sender,
+                type: chatType,
+                lastMessage: this.formattedLastMessage(lastMessage),
+                timestamp: now
+            });
+        }
     }
 
     private ensureChatExists(
@@ -317,7 +361,7 @@ export class ChatManager {
         sender: string,
         isSystem: boolean
     ): void {
-        if (!id) {
+        if(!id) {
         console.error('chatId is undefined in setLastMessage', { id, userId, messageId, content, sender, isSystem });
         return;
     }
@@ -368,7 +412,7 @@ export class ChatManager {
         sender: string,
         isSystem: boolean
     ): void {
-        if (!id) {
+        if(!id) {
         console.error('chatId is undefined in updateLastMessage', { id, userId, messageId, content, sender, isSystem });
         return;
     }
@@ -468,8 +512,10 @@ export class ChatManager {
      */
     private isSystemMessage(message: any): boolean {
         if(message.isSystem === true) return true;
-        if(message.messageId.includes('sys_')) return true;
+        if(message.messageId?.includes('sys_')) return true;
         if(message.type === 'SYSTEM') return true;
+        if(message.messageType?.includes('SYSTEM')) return true;
+        if(message.event?.includes('SYSTEM') || message.event?.endsWith('_EVENT')) return true;
         return false;
     }
 

@@ -515,13 +515,13 @@ export class ChatController {
         const isSystemMessage = messageType.includes('SYSTEM');
         const isFileMessage = data.type === 'file' || data.fileData;
         console.log('Handling message:', {
-        messageId: data.messageId,
-        type: messageType,
-        isFileMessage,
-        isSystemMessage,
-        chatId: data.chatId,
-        dataKeys: Object.keys(data)
-    });
+            messageId: data.messageId,
+            type: messageType,
+            isFileMessage,
+            isSystemMessage,
+            chatId: data.chatId,
+            dataKeys: Object.keys(data)
+        });
         
         if(isSystemMessage) {
             const systemKey = `${data.event}_${data.content}_${data.timestamp}`;

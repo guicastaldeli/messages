@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import java.util.concurrent.ConcurrentHashMap;
+import java.sql.Timestamp;
 import java.util.*;
 
 @Component
@@ -963,6 +964,16 @@ public class EventList {
                     Map<String, Object> creationResult = serviceManager.getGroupService()
                         .createGroup(id, groupName, creatorId, creator, sessionId);
 
+                    Object createdAtObj = creationResult.get("createdAt");
+                    long creationTime;
+                    if(createdAtObj instanceof Timestamp) {
+                        creationTime = ((Timestamp) createdAtObj).getTime();
+                    } else if(createdAtObj instanceof Long) {
+                        creationTime = (Long) createdAtObj;
+                    } else {
+                        creationTime = System.currentTimeMillis();
+                    }
+
                     Map<String, Object> newGroup = new HashMap<>();
                     newGroup.put("id", id);
                     newGroup.put("chatId", id);
@@ -971,7 +982,7 @@ public class EventList {
                     newGroup.put("creator", creator);
                     newGroup.put("creatorId", creatorId);
                     newGroup.put("members", creationResult.get("members"));
-                    newGroup.put("createdAt", creationResult.get("createdAt")); // Use actual timestamp
+                    newGroup.put("createdAt", creationResult.get("createdAt"));
                     newGroup.put("sessionId", sessionId);
                     newGroup.put("verificationResult", creationResult.get("verificationStatus"));
 
@@ -993,7 +1004,7 @@ public class EventList {
                     systemMessageData.put("creator", creator);
                     systemMessageData.put("creatorId", creatorId);
                     systemMessageData.put("groupId", id);
-                    systemMessageData.put("timestamp", creationResult.get("createdAt"));
+                    systemMessageData.put("timestamp", creationTime);
                     
                     serviceManager.getSystemMessageService().createAndSaveMessage(
                         "GROUP_CREATED", 
@@ -1060,9 +1071,12 @@ public class EventList {
                     for(User member : groupMembers) {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
+                            Map<String, Object> systemMessageData = new HashMap<>(data);
+                            systemMessageData.put("timestamp", time);
+                            
                             Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
                                 "USER_JOINED_GROUP", 
-                                data, 
+                                systemMessageData, 
                                 sessionId, 
                                 memberSessionId,
                                 groupId
@@ -1070,6 +1084,8 @@ public class EventList {
                             systemMessage.put("groupId", groupId);
                             systemMessage.put("chatId", groupId);
                             systemMessage.put("chatType", "GROUP");
+                            systemMessage.put("timestamp", time);
+
                             data.put("userId", userId);
                             data.put("username", username);
                             data.put("targetSessionid", memberSessionId);
@@ -1157,9 +1173,12 @@ public class EventList {
                     for(User member : groupMembers) {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
+                            Map<String, Object> systemMessageData = new HashMap<>(data);
+                            systemMessageData.put("timestamp", time);
+                            
                             Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
                                 "USER_LEFT_GROUP", 
-                                data, 
+                                systemMessageData,
                                 sessionId, 
                                 memberSessionId,
                                 groupId
@@ -1167,12 +1186,14 @@ public class EventList {
                             systemMessage.put("groupId", groupId);
                             systemMessage.put("chatId", groupId);
                             systemMessage.put("chatType", "GROUP");
+                            systemMessage.put("timestamp", time);
 
                             String destination = "/user/queue/messages/group/" + groupId;
                             socketMethods.send(sessionId, destination, systemMessage);
                             messageRouter.routeMessage(sessionId, payload, systemMessage, new String[]{"GROUP"});
                         }
                     }
+
                     return Collections.emptyMap();
                 } catch(Exception err) {
                     System.out.println("ERROR in exit-group: " + err.getMessage());

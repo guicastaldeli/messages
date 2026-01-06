@@ -46,33 +46,35 @@ public class SystemMessageService {
      * Save Message 
      */
     public int saveMessage(
-        String groupId,
-        String content,
-        String messageType
-    ) throws SQLException {
-        String query = CommandQueryManager.SAVE_SYSTEM_MESSAGE.get();
-        int keys = Statement.RETURN_GENERATED_KEYS;
+    String groupId,
+    String content,
+    String messageType,
+    Timestamp createdAt  // ← ADD THIS PARAMETER
+) throws SQLException {
+    String query = CommandQueryManager.SAVE_SYSTEM_MESSAGE.get();
+    int keys = Statement.RETURN_GENERATED_KEYS;
 
-        try (
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query, keys);
-        ) {
-            stmt.setString(1, groupId);
-            stmt.setString(2, content);
-            stmt.setString(3, messageType);
+    try (
+        Connection conn = getConnection();
+        PreparedStatement stmt = conn.prepareStatement(query, keys);
+    ) {
+        stmt.setString(1, groupId);
+        stmt.setString(2, content);
+        stmt.setString(3, messageType);
+        stmt.setTimestamp(4, createdAt);  // ← ADD THIS LINE
 
-            int affectedRows = stmt.executeUpdate();
-            if(affectedRows > 0) {
-                try(ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                    if(generatedKeys.next()) {
-                        return generatedKeys.getInt(1);
-                    }
+        int affectedRows = stmt.executeUpdate();
+        if(affectedRows > 0) {
+            try(ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if(generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
                 }
             }
-
-            return -1;
         }
+
+        return -1;
     }
+}
 
     /**
      * Messages By Group 
@@ -107,7 +109,10 @@ public class SystemMessageService {
         message.setSenderId("system");
         message.setContent(rs.getString("content"));
         message.setMessageType(rs.getString("message_type"));
-        message.setCreatedAt(rs.getTimestamp("created_at"));
+        
+        Timestamp createdAt = rs.getTimestamp("created_at");
+        message.setCreatedAt(createdAt);
+        
         message.setUsername(null);
         message.setSystem(true);
         return message;
@@ -193,61 +198,52 @@ public class SystemMessageService {
      * Create Message 
      */
     public Map<String, Object> createMessage(
-        String eventType,
-        Map<String, Object> data,
-        String currentSessionId,
-        String targetSessionId
-    ) {
-        long time;
-        Instant instant;
-        
-        if ("GROUP_CREATED".equals(eventType) && data.containsKey("groupId")) {
-            String groupId = (String) data.get("groupId");
-            try {
-                Timestamp groupCreationTime = getGroupCreationTime(groupId);
-                time = groupCreationTime.getTime();
-                instant = groupCreationTime.toInstant();
-            } catch (SQLException e) {
-                instant = Instant.now();
-                time = instant.toEpochMilli();
-            }
-        } else {
-            Object timestampObj = data.get("timestamp");
-            if (timestampObj instanceof Long) {
-                time = (Long) timestampObj;
-                instant = Instant.ofEpochMilli(time);
-            } else if (timestampObj instanceof Timestamp) {
-                time = ((Timestamp) timestampObj).getTime();
-                instant = ((Timestamp) timestampObj).toInstant();
-            } else {
-                instant = Instant.now();
-                time = instant.toEpochMilli();
-            }
-        }
-        
-        String template = getTemplate(eventType);
-        String content = setContent(
-            template,
-            data,
-            currentSessionId,
-            targetSessionId
-        );
-
-        Map<String, Object> systemMessage = new HashMap<>();
-        systemMessage.put("type", "SYSTEM");
-        systemMessage.put("messageType", eventType);
-        systemMessage.put("event", eventType);
-        systemMessage.put("content", content);
-        systemMessage.put("timestamp", time);
-        systemMessage.put("isSystem", true);
-        systemMessage.put("sessionId", currentSessionId);
-        systemMessage.put("targetSessionId", targetSessionId);
-        systemMessage.put("originalData", data);
-        systemMessage.put("isCurrentUser", systemMessage.get("isCurrentUser"));
-        systemMessage.put("createdAt", instant.toString());
-        
-        return systemMessage;
+    String eventType,
+    Map<String, Object> data,
+    String currentSessionId,
+    String targetSessionId
+) {
+    // Use event timestamp from data if available
+    Instant eventInstant;
+    Object eventTimestamp = data.get("timestamp");
+    
+    if(eventTimestamp instanceof Long) {
+        // Use provided timestamp
+        eventInstant = Instant.ofEpochMilli((Long) eventTimestamp);
+    } else if(eventTimestamp instanceof Timestamp) {
+        // Use provided timestamp
+        eventInstant = ((Timestamp) eventTimestamp).toInstant();
+    } else {
+        // No timestamp provided - use current time
+        eventInstant = Instant.now();
     }
+    
+    long time = eventInstant.toEpochMilli();
+    String template = getTemplate(eventType);
+    String content = setContent(
+        template,
+        data,
+        currentSessionId,
+        targetSessionId
+    );
+
+    Map<String, Object> systemMessage = new HashMap<>();
+    systemMessage.put("type", "SYSTEM");
+    systemMessage.put("messageType", eventType);
+    systemMessage.put("event", eventType);
+    systemMessage.put("content", content);
+    systemMessage.put("timestamp", time);
+    systemMessage.put("isSystem", true);
+    systemMessage.put("sessionId", currentSessionId);
+    systemMessage.put("targetSessionId", targetSessionId);
+    systemMessage.put("originalData", data);
+    systemMessage.put("isCurrentUser", systemMessage.get("isCurrentUser"));
+    
+    Timestamp timestamp = Timestamp.from(eventInstant);
+    systemMessage.put("createdAt", timestamp.toString());
+    
+    return systemMessage;
+}
 
     public Map<String, Object> createMessageWithPerspective(
         String eventType,
@@ -266,55 +262,68 @@ public class SystemMessageService {
      * Create and Save 
      */
     public Map<String, Object> createAndSaveMessage(
-        String eventType,
-        Map<String, Object> data,
-        String currentSessionId,
-        String targetSessionId,
-        String groupId
-    ) {
-        try {
-            String id = "sys_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
-            Map<String, Object> message = createMessageWithPerspective(
-                eventType, 
-                data, 
-                currentSessionId, 
-                targetSessionId
-            );
-            
-            message.put("chatId", groupId);
-            message.put("groupId", groupId);
-            message.put("id", groupId);
-            message.put("messageId", id);
-            
-            int saveMessage = saveMessage(
-                groupId,
-                message.get("content").toString(),
-                eventType
-            );
-            
-            track(
-                String.valueOf(saveMessage),
-                message.get("content").toString(),
-                groupId,
-                eventType
-            );
-            message.put("id", saveMessage);
-
-            return message;
-        } catch(SQLException err) {
-            System.err.println("Failed to save system message" + err.getMessage());
-            Map<String, Object> errorMessage = createMessageWithPerspective(
-                eventType, 
-                data, 
-                currentSessionId, 
-                targetSessionId
-            );
-            errorMessage.put("chatId", groupId);
-            errorMessage.put("groupId", groupId);
-            errorMessage.put("id", groupId);
-            return errorMessage;
+    String eventType,
+    Map<String, Object> data,
+    String currentSessionId,
+    String targetSessionId,
+    String groupId
+) {
+    try {
+        String id = "sys_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+        Map<String, Object> message = createMessageWithPerspective(
+            eventType, 
+            data, 
+            currentSessionId, 
+            targetSessionId
+        );
+        
+        message.put("chatId", groupId);
+        message.put("groupId", groupId);
+        message.put("id", groupId);
+        message.put("messageId", id);
+        
+        // Extract the timestamp from the message
+        Object timestampObj = message.get("timestamp");
+        Timestamp createdAt;
+        if(timestampObj instanceof Long) {
+            createdAt = new Timestamp((Long) timestampObj);
+        } else if(timestampObj instanceof Timestamp) {
+            createdAt = (Timestamp) timestampObj;
+        } else {
+            createdAt = new Timestamp(System.currentTimeMillis());
         }
+        
+        // Pass the timestamp to saveMessage
+        int saveMessage = saveMessage(
+            groupId,
+            message.get("content").toString(),
+            eventType,
+            createdAt  // ← PASS THE TIMESTAMP HERE
+        );
+        
+        track(
+            String.valueOf(saveMessage),
+            message.get("content").toString(),
+            groupId,
+            eventType
+        );
+        message.put("id", saveMessage);
+
+        return message;
+    } catch(SQLException err) {
+        System.err.println("Failed to save system message" + err.getMessage());
+        Map<String, Object> errorMessage = createMessageWithPerspective(
+            eventType, 
+            data, 
+            currentSessionId, 
+            targetSessionId
+        );
+        errorMessage.put("chatId", groupId);
+        errorMessage.put("groupId", groupId);
+        errorMessage.put("id", groupId);
+        return errorMessage;
     }
+}
 
     /**
      * Track

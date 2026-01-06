@@ -577,10 +577,32 @@ public class GroupService {
     }
 
     /**
-     * Creation Message 
+     * Creation Message
      */
+    private Timestamp getGroupCreationTime(String groupId) throws SQLException {
+        String query = CommandQueryManager.GROUP_CREATION_DATE.get();
+        
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, groupId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getTimestamp("created_at");
+                }
+            }
+        }
+        
+        return new Timestamp(System.currentTimeMillis());
+    }
+    
     public void sendCreationMessage(String sessionId, String id, String groupName, String creator) throws SQLException {
         List<User> members = getGroupMembers(id);
+        
+        Timestamp groupCreationTime = getGroupCreationTime(id);
+        long baseTime = groupCreationTime.getTime();
+        
         try {
             Thread.sleep(1000);
         } catch(InterruptedException e) {
@@ -590,9 +612,14 @@ public class GroupService {
         for(User member : members) {
             String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
             if(memberSessionId != null && serviceManager.getUserService().isSessionActive(memberSessionId)) {
+                Map<String, Object> groupCreatedData = new HashMap<>();
+                groupCreatedData.put("groupName", groupName);
+                groupCreatedData.put("creator", creator);
+                groupCreatedData.put("timestamp", baseTime);
+                
                 Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
                     "GROUP_CREATED", 
-                    Map.of("groupName", groupName, "creator", creator), 
+                    groupCreatedData,
                     sessionId, 
                     memberSessionId,
                     id
