@@ -286,18 +286,6 @@ export class ChatController {
         if(!chatId || !chatType) return;
 
         if(this.currentChatId && this.currentChatId !== chatId) {
-            setTimeout(() => {
-                this.messageRoots.forEach((root, messageId) => {
-                    try {
-                        root.unmount();
-                    } catch(error) {
-                        console.error(`Failed to unmount ${messageId}:`, error);
-                    }
-                });
-                this.messageRoots.clear();
-            }, 0);
-            
-            this.container = null;
             if(this.scrollHandler) {
                 const oldContainer = document.querySelector<HTMLDivElement>('.chat-screen .messages');
                 if(oldContainer) {
@@ -305,6 +293,8 @@ export class ChatController {
                 }
                 this.scrollHandler = null;
             }
+            
+            this.container = null;
         }
 
         const context = this.chatRegistry.getContext(chatType, members || [], chatId);
@@ -357,7 +347,6 @@ export class ChatController {
         }
         
         await this.chunkRenderer.setupScrollHandler(userIdToUse || this.userId);
-        
         setTimeout(() => {
             if(container) {
                 container.scrollTop = container.scrollHeight;
