@@ -98,9 +98,9 @@ public class UserController {
     * Username
     */
     @GetMapping("/username/{username}")
-    public ResponseEntity<Map<String, Object>> getUserByUsername(@PathVariable String username) {
+    public ResponseEntity<Map<String, Object>> getUserIdByUsername(@PathVariable String username) {
         try {
-            User user = serviceManager.getUserService().getUserByUsername(username);
+            User user = serviceManager.getUserService().getUserIdByUsername(username);
             if(user != null) {
                 return ResponseEntity.ok(Map.of(
                     "exists", true,

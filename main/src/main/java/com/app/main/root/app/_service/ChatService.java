@@ -1,7 +1,10 @@
 package com.app.main.root.app._service;
 import com.app.main.root.app._crypto.message_encoder.ChatDecryptionService;
+import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._types.File;
 import com.app.main.root.app._types.Message;
+import com.app.main.root.app._types.User;
+
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.SQLException;
@@ -152,8 +155,30 @@ public class ChatService {
         try {
             List<Message> messages = serviceManager.getMessageService().getMessagesByChatId(chatId, page, pageSize);
             List<Message> systemMessages = new ArrayList<>();
+            
             if(chatId.startsWith("group_")) {
-                systemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
+                List<Message> rawSystemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
+                
+                for(Message rawMsg : rawSystemMessages) {
+                    Message personalizedMsg = new Message();
+                    personalizedMsg.setId(rawMsg.getId());
+                    personalizedMsg.setChatId(rawMsg.getChatId());
+                    personalizedMsg.setSenderId(rawMsg.getSenderId());
+                    personalizedMsg.setMessageType(rawMsg.getMessageType());
+                    personalizedMsg.setCreatedAt(rawMsg.getCreatedAt());
+                    personalizedMsg.setUsername(rawMsg.getUsername());
+                    personalizedMsg.setSystem(true);
+                    
+                    String originalContent = rawMsg.getContent();
+                    String personalizedContent = reapplyPerspective(
+                        originalContent, 
+                        rawMsg.getMessageType(), 
+                        userId
+                    );
+                    
+                    personalizedMsg.setContent(personalizedContent);
+                    systemMessages.add(personalizedMsg);
+                }
             }
             
             List<Message> validatedMessages = new ArrayList<>();
@@ -203,24 +228,26 @@ public class ChatService {
                 }
             }
 
-            for(File file : files) {
-                Map<String, Object> timelineItem = new HashMap<>();
-                timelineItem.put("type", "file");
-                timelineItem.put("id", "file_" + file.getFileId());
-                timelineItem.put("senderId", file.getSenderId());
-                timelineItem.put("messageId", "file_" + file.getFileId());
-                timelineItem.put("fileData", file);
-                timelineItem.put("content", file.getOriginalFileName());
-                timelineItem.put("chatId", file.getChatId());
-                timelineItem.put("userId", userId);
+            if(files != null) {
+                for(File file : files) {
+                    Map<String, Object> timelineItem = new HashMap<>();
+                    timelineItem.put("type", "file");
+                    timelineItem.put("id", "file_" + file.getFileId());
+                    timelineItem.put("senderId", file.getSenderId());
+                    timelineItem.put("messageId", "file_" + file.getFileId());
+                    timelineItem.put("fileData", file);
+                    timelineItem.put("content", file.getOriginalFileName());
+                    timelineItem.put("chatId", file.getChatId());
+                    timelineItem.put("userId", userId);
 
-                Timestamp uploadedAt = file.getUploadedAt();
-                long timestamp = uploadedAt != null ? uploadedAt.getTime() : System.currentTimeMillis();
-                String createdAtStr = new Timestamp(timestamp).toString();
-                
-                timelineItem.put("timestamp", timestamp);
-                timelineItem.put("createdAt", createdAtStr);
-                timeline.add(timelineItem);
+                    Timestamp uploadedAt = file.getUploadedAt();
+                    long timestamp = uploadedAt != null ? uploadedAt.getTime() : System.currentTimeMillis();
+                    String createdAtStr = new Timestamp(timestamp).toString();
+                    
+                    timelineItem.put("timestamp", timestamp);
+                    timelineItem.put("createdAt", createdAtStr);
+                    timeline.add(timelineItem);
+                }
             }
 
             timeline.sort((a, b) -> {
@@ -238,14 +265,14 @@ public class ChatService {
 
             chatData.put("timeline", timeline);
             chatData.put("messages", messages != null ? messages : new ArrayList<>());
-            chatData.put("files", files);
+            chatData.put("files", files != null ? files : new ArrayList<>());
             
             Map<String, Object> pagination = new HashMap<>();
             pagination.put("page", page);
             pagination.put("pageSize", pageSize);
             pagination.put("hasMore", timeline.size() > endIndex);
             pagination.put("totalItems", timeline.size());
-            pagination.put("totalFiles", files.size());
+            pagination.put("totalFiles", files != null ? files.size() : 0);
             chatData.put("pagination", pagination);
         } catch(SecurityException e) {
             throw e;
@@ -343,5 +370,116 @@ public class ChatService {
         } catch(Exception err) {
             return new Timestamp(System.currentTimeMillis());
         }
+    }
+
+    private String reapplyPerspective(String content, String messageType, String userId) {
+        if(content == null || userId == null || messageType == null) {
+            return content;
+        }
+        
+        try {
+            String targetUsername = serviceManager.getUserService().getUsernameByUserId(userId);
+            if(targetUsername == null) return content;
+            
+            String originalTemplate = getOriginalTemplate(messageType);
+            if(originalTemplate == null) return content;
+            
+            Map<String, String> extractedParams = extractParametersFromContent(content, originalTemplate);
+            return applyPerspectiveLogic(content, extractedParams, userId, targetUsername);
+        } catch(Exception e) {
+            System.err.println("Error reapplying perspective: " + e.getMessage());
+            e.printStackTrace();
+            return content;
+        }
+    }
+
+    private String getOriginalTemplate(String messageType) {
+        try {
+            CommandSystemMessageList templateEnum = CommandSystemMessageList.valueOf(messageType);
+            return templateEnum.get();
+        } catch(IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private Map<String, String> extractParametersFromContent(String content, String template) {
+        Map<String, String> params = new HashMap<>();
+        
+        String[] templateParts = template.split("\\{([^}]+)\\}");
+        for(int i = 0; i < templateParts.length; i++) {
+            String templatePart = templateParts[i].trim();
+            if(!templatePart.isEmpty()) {
+                int startIndex = content.indexOf(templatePart);
+                if(startIndex != -1 && i < templateParts.length - 1) {
+                    int nextPartIndex = content.indexOf(templateParts[i + 1], startIndex + templatePart.length());
+                    if(nextPartIndex != -1) {
+                        String paramValue = content.substring(
+                            startIndex + templatePart.length(), 
+                            nextPartIndex
+                        ).trim();
+                        if(i < templateParts.length - 1) {
+                            String paramName = extractParamName(template, templatePart);
+                            if(paramName != null) {
+                                params.put(paramName, paramValue);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return params;
+    }
+
+    private String extractParamName(String template, String precedingText) {
+        int paramStart = template.indexOf(precedingText) + precedingText.length();
+        if(paramStart < template.length() && template.charAt(paramStart) == '{') {
+            int paramEnd = template.indexOf('}', paramStart);
+            if(paramEnd != -1) {
+                return template.substring(paramStart + 1, paramEnd);
+            }
+        }
+        return null;
+    }
+
+    private String applyPerspectiveLogic(String content, Map<String, String> params, String userId, String targetUsername) {
+        String result = content;
+        
+        for(Map.Entry<String, String> entry : params.entrySet()) {
+            String paramName = entry.getKey();
+            String paramValue = entry.getValue();
+            
+            if(isValueReferringToCurrentUser(paramValue, userId)) {
+                if(paramName.contains("username") || paramName.contains("Username")) {
+                    result = result.replace(paramValue, "You");
+                } else if(paramName.contains("inviter") || paramName.contains("Inviter")) {
+                    result = result.replace(paramValue, "You");
+                }
+            }
+        }
+        
+        return result;
+    }
+
+    private boolean isValueReferringToCurrentUser(String paramValue, String userId) {
+        if(paramValue == null) return false;
+        
+        try {
+            String usernameFromValue = paramValue.trim();
+            String actualUsername = serviceManager.getUserService().getUsernameByUserId(userId);
+            if(usernameFromValue.equals(actualUsername)) {
+                return true;
+            }
+            
+            User userFromValue = serviceManager.getUserService().getUserIdByUsername(usernameFromValue);
+            if(userFromValue != null && userId.equals(userFromValue.getId())) {
+                return true;
+            }
+            
+        } catch(Exception e) {
+            return false;
+        }
+        
+        return false;
     }
 }

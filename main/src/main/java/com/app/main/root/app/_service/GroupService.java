@@ -256,10 +256,30 @@ public class GroupService {
                         user.setUsername(username != null ? username : "Unknown");
                     } catch(Exception err) {
                         err.printStackTrace();
-                        user.setUsername("Unknown **");
+                        user.setUsername("Unknown");
                     }
                     members.add(user);
                 }
+            }
+        }
+
+        Map<String, Object> groupInfo = getGroupInfo(groupId);
+        String creatorId = (String) groupInfo.get("creatorId");
+        
+        if(creatorId != null) {
+            boolean creatorInList = members.stream()
+                .anyMatch(member -> creatorId.equals(member.getId()));
+            
+            if(!creatorInList) {
+                User creator = new User();
+                creator.setId(creatorId);
+                try {
+                    String creatorUsername = serviceManager.getUserService().getUsernameByUserId(creatorId);
+                    creator.setUsername(creatorUsername != null ? creatorUsername : "Creator");
+                } catch(Exception err) {
+                    creator.setUsername("Creator");
+                }
+                members.add(creator);
             }
         }
 
@@ -406,12 +426,32 @@ public class GroupService {
                     members.add(member);
                 }
             }
+            
+            String creatorId = (String) info.get("creatorId");
+            if(creatorId != null) {
+                boolean creatorInMembers = members.stream()
+                    .anyMatch(member -> creatorId.equals(member.get("id")));
+                
+                if(!creatorInMembers) {
+                    Map<String, String> creatorMember = new HashMap<>();
+                    creatorMember.put("id", creatorId);
+                    try {
+                        String creatorUsername = serviceManager.getUserService().getUsernameByUserId(creatorId);
+                        creatorMember.put("username", creatorUsername != null ? creatorUsername : "Creator");
+                    } catch(Exception err) {
+                        creatorMember.put("username", "Creator");
+                    }
+                    members.add(creatorMember);
+                }
+            }
+            
             info.put("members", members);
             info.put("memberCount", members.size());
         }
 
         return info;
     }
+
 
     public boolean isUserGroupMember(String id, String userId) throws SQLException {
         String query = CommandQueryManager.IS_GROUP_MEMBER.get();

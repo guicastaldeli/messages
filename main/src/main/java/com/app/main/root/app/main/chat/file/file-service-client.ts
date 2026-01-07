@@ -27,44 +27,68 @@ export class FileServiceClient {
      * Add File
      */
     public async addFile(chatId: string, fileData: any): Promise<void> {
-        const cacheService = await this.chatService.getCacheServiceClient();
-        const data = cacheService.cache.get(chatId);
+    const cacheService = await this.chatService.getCacheServiceClient();
+    const data = cacheService.cache.get(chatId);
+    
+    if(!data) {
+        console.warn(`Cache not initialized for chat ${chatId}`);
+        return;
+    }
+    
+    // Handle corrupted file structure like {0: {actualFileData}}
+    let actualFileData = fileData;
+    if(fileData && fileData['0']) {
+        console.warn('Found corrupted file structure, extracting actual file data');
+        actualFileData = fileData['0'];
+    }
+    
+    const fileId = actualFileData.file_id || actualFileData.fileId || actualFileData.id;
+    
+    // Validate file data before adding to cache
+    if(!fileId || !actualFileData.originalFileName) {
+        console.error('Invalid file data, skipping:', actualFileData);
+        return;
+    }
+    
+    if(!data.files.has(fileId)) {
+        data.files.set(fileId, actualFileData);
+        data.fileOrder.push(fileId);
+        data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
+        data.lastUpdated = Date.now();
         
-        if(!data) {
-            console.warn(`Cache not initialized for chat ${chatId}`);
-            return;
-        }
-        
-        const fileId = fileData.file_id || fileData.fileId || fileData.id;
-        
-        if(!data.files.has(fileId)) {
-            data.files.set(fileId, fileData);
-            data.fileOrder.push(fileId);
-            data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
-            data.lastUpdated = Date.now();
-            
-            const timelineId = `file_${fileId}`;
-            if(!data.timeline.has(timelineId)) {
-                const timelineItem = {
-                    id: timelineId,
-                    type: 'file',
-                    fileId: fileId,
-                    chatId: chatId,
-                    timestamp: fileData.uploadedAt || fileData.timestamp || Date.now(),
-                    data: fileData
-                };
-                data.timeline.set(timelineId, timelineItem);
-                data.timelineOrder.push(timelineId);
-                data.totalTimelineCount = Math.max(data.totalTimelineCount, data.timelineOrder.length);
-            }
+        const timelineId = `file_${fileId}`;
+        if(!data.timeline.has(timelineId)) {
+            const timelineItem = {
+                id: timelineId,
+                type: 'file',
+                fileId: fileId,
+                chatId: chatId,
+                timestamp: actualFileData.uploadedAt || actualFileData.timestamp || Date.now(),
+                data: actualFileData
+            };
+            data.timeline.set(timelineId, timelineItem);
+            data.timelineOrder.push(timelineId);
+            data.totalTimelineCount = Math.max(data.totalTimelineCount, data.timelineOrder.length);
         }
     }
+}
     
     /**
      * Decrypt Files
      */
     public async decryptFile(chatId: string, fileDataArray: any[]): Promise<DecryptedFile[]> {
         if(!fileDataArray || fileDataArray.length === 0) {
+            return [];
+        }
+
+
+        const validFiles = fileDataArray.filter(file => {
+            const fileId = file.file_id || file.fileId || file.id;
+            return fileId && file.originalFileName;
+        });
+
+        if(validFiles.length === 0) {
+            console.warn('No valid files to decrypt');
             return [];
         }
 
@@ -82,24 +106,35 @@ export class FileServiceClient {
                 }
                 
                 if(response.files && Array.isArray(response.files)) {
-                    const decryptedFiles = response.files.map((file: any) => {
+                    const decryptedFiles = response.files.map((file: any, index: number) => {
+                        const originalFile = validFiles[index];
+                        if(!originalFile) {
+                            console.warn('Missing original file for index:', index);
+                            return null;
+                        }
+
                         if(file.decryptionError || file.isDecrypted === false) {
                             return {
-                                ...file,
-                                hasDecryptionError: true
+                                ...originalFile,
+                                hasDecryptionError: true,
+                                decryptionError: file.decryptionError || 'Decryption failed'
                             };
                         }
+                        
+                        const fileId = file.file_id || file.fileId || file.id;
+                        if(!fileId || !file.originalFileName) {
+                            console.warn('Invalid decrypted file structure:', file);
+                            return {
+                                ...originalFile,
+                                hasDecryptionError: true,
+                                decryptionError: 'Invalid file structure after decryption'
+                            };
+                        }
+                        
                         return file;
-                    });
+                    }).filter(Boolean);
                     
                     resolve(decryptedFiles);
-                } else {
-                    const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
-                    resolve(safeArray.map((file: any) => ({
-                        ...file,
-                        hasDecryptionError: true,
-                        decryptionError: 'Invalid batch response structure'
-                    })));
                 }
             };
 
@@ -108,8 +143,7 @@ export class FileServiceClient {
                 this.socketClient.offDestination(errorDestination, handleError);
                 console.error('Batch file decryption error:', error);
                 
-                const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
-                resolve(safeArray.map(file => ({
+                resolve(validFiles.map(file => ({
                     ...file,
                     hasDecryptionError: true,
                     decryptionError: error.message || 'Batch decryption failed'
@@ -121,7 +155,7 @@ export class FileServiceClient {
                 this.socketClient.onDestination(errorDestination, handleError);
                 
                 const payload = { 
-                    files: fileDataArray,
+                    files: validFiles,
                     chatId: String(chatId)
                 };
 
@@ -135,8 +169,7 @@ export class FileServiceClient {
                     this.socketClient.offDestination(successDestination, handleSuccess);
                     this.socketClient.offDestination(errorDestination, handleError);
                     
-                    const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
-                    resolve(safeArray.map(file => ({
+                    resolve(validFiles.map(file => ({
                         ...file,
                         hasDecryptionError: true,
                         decryptionError: 'Batch decryption timed out'
@@ -148,8 +181,7 @@ export class FileServiceClient {
                 this.socketClient.offDestination(errorDestination, handleError);
                 console.error('Failed to send batch decryption request:', err);
                 
-                const safeArray = Array.isArray(fileDataArray) ? fileDataArray : [fileDataArray];
-                resolve(safeArray.map(file => ({
+                resolve(validFiles.map(file => ({
                     ...file,
                     hasDecryptionError: true,
                     decryptionError: 'Failed to send batch request'

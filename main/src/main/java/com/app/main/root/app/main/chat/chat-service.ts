@@ -63,7 +63,6 @@ export class ChatService {
 
             const resData = await res.json();
             console.log("Unified API response:", resData);
-            
             if(resData.success === false) {
                 throw new Error(resData.error || 'Failed to fetch chat data');
             }
@@ -83,21 +82,31 @@ export class ChatService {
             };
 
             if(resData.data) {
-                const data = resData.data;
-                messages = Array.isArray(data.messages) ? data.messages : [];
-                files = Array.isArray(data.files) ? data.files : [];
-                timeline = Array.isArray(data.timeline) ? data.timeline : [];
-                
-                if(data.pagination) {
-                    pagination = {
-                        ...pagination,
-                        ...data.pagination,
-                        totalMessages: data.pagination.totalMessages || data.pagination.total || 0,
-                        totalFiles: data.pagination.totalFiles || 0,
-                        totalTimeline: data.pagination.totalTimeline || data.pagination.totalItems || 0
-                    };
+            const data = resData.data;
+            messages = Array.isArray(data.messages) ? data.messages : [];
+            files = Array.isArray(data.files) ? data.files : [];
+            timeline = Array.isArray(data.timeline) ? data.timeline : [];
+            
+            // FIX: Ensure files are included for newly added users
+            if(files.length === 0 && timeline.length > 0) {
+                // Extract files from timeline
+                const timelineFiles = timeline.filter((item: any) => item.type === 'file');
+                if(timelineFiles.length > 0) {
+                    console.log(`Extracting ${timelineFiles.length} files from timeline`);
+                    files = timelineFiles.map((item: any) => item.fileData || item);
                 }
             }
+            
+            if(data.pagination) {
+                pagination = {
+                    ...pagination,
+                    ...data.pagination,
+                    totalMessages: data.pagination.totalMessages || data.pagination.total || 0,
+                    totalFiles: data.pagination.totalFiles || files.length, // Use actual files count
+                    totalTimeline: data.pagination.totalTimeline || data.pagination.totalItems || 0
+                };
+            }
+        }
 
             /* Messages */
             if(Array.isArray(messages) && messages.length > 0) {
@@ -120,7 +129,6 @@ export class ChatService {
             }
             /* Files */
             if(Array.isArray(files) && files.length > 0) {
-                console.log(`Decrypting ${files.length} files for ${chatId}`);
                 const decryptedFiles = [];
                 const chunkSize = 5;
                 for(let i = 0; i < files.length; i += chunkSize) {
@@ -128,8 +136,9 @@ export class ChatService {
                     const chunkPromises = chunk.map(async (file) => {
                         try {
                             const fileService = await this.getFileController().getFileService(); 
-                            const decryptedFile = await fileService.decryptFile(chatId, file);
-                            return decryptedFile;
+                            const fileArray = Array.isArray(file) ? file : [file];
+                            const decryptedFileArray = await fileService.decryptFile(chatId, fileArray);
+                            return decryptedFileArray && decryptedFileArray.length > 0 ? decryptedFileArray[0] : file;
                         } catch(err) {
                             console.error('Failed to decrypt file:', err);
                             return file; 
@@ -171,7 +180,7 @@ export class ChatService {
                             timestamp: new Date(file.uploadedAt || file.createdAt || Date.now()).getTime(),
                             createdAt: file.uploadedAt || file.createdAt,
                             fileData: file,
-                            content: `Shared file: ${file.originalFileName}`
+                            content: file.originalFileName
                         };
                         timeline.push(timelineItem);
                     }
@@ -224,21 +233,37 @@ export class ChatService {
                                     hasFileData: !!item.fileData
                                 });
                                 
-                                const decryptedFile = await fileService.decryptFile(chatId, fileDataToDecrypt);
-                                const decryptedFileItem = decryptedFile[0];
+                                const fileArray = Array.isArray(fileDataToDecrypt) ? fileDataToDecrypt : [fileDataToDecrypt];
+                                const decryptedFiles = await fileService.decryptFile(chatId, fileArray);
+                                if(!decryptedFiles || decryptedFiles.length === 0) {
+                                    console.warn('decryptFile returned no results for file:', fileDataToDecrypt.fileId);
+                                    return {
+                                        ...item,
+                                        hasDecryptionError: true,
+                                        decryptionError: 'Decryption returned no results'
+                                    };
+                                }
+                                
+                                const decryptedFileItem = decryptedFiles[0];
+                                let finalFileData = decryptedFileItem;
+                                if(decryptedFileItem && decryptedFileItem['0']) {
+                                    console.warn('Found corrupted file structure in decrypted result, extracting actual file data');
+                                    finalFileData = decryptedFileItem['0'];
+                                }
                                 
                                 return {
                                     ...item,
-                                    fileData: decryptedFile,
-                                    hasDecryptionError: decryptedFileItem.hasDecryptionError || false
-                                }
+                                    fileData: finalFileData,
+                                    hasDecryptionError: finalFileData.hasDecryptionError || false,
+                                    decryptionError: finalFileData.decryptionError
+                                };
                             } catch(err: any) {
                                 console.error('Failed to decrypt timeline file:', err);
                                 return {
                                     ...item,
                                     hasDecryptionError: true,
                                     decryptionError: err.message
-                                }
+                                };
                             }
                         });
                         

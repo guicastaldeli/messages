@@ -7,9 +7,9 @@ public class User {
     private String email;
     private Timestamp createdAt;
 
-    /*
-    * ID 
-    */
+    /**
+     * Id
+     */
     public void setId(String id) {
         this.id = id;
     }
@@ -17,9 +17,9 @@ public class User {
         return id;
     }
 
-    /*
-    * Username 
-    */
+    /**
+     * Username
+     */
     public void setUsername(String username) {
         this.username = username;
     }
@@ -27,9 +27,9 @@ public class User {
         return username;
     }
 
-    /*
-    * Email 
-    */
+    /**
+     * Email 
+     */
     public void setEmail(String email) {
         this.email = email;
     }
@@ -37,9 +37,9 @@ public class User {
         return email;
     }
 
-    /*
-    * Created At 
-    */
+    /**
+     * Created At 
+     */
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }

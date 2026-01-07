@@ -48,7 +48,7 @@ class AuthRoutes:
                         detail="User with this email already exists!"
                     )
                 
-                usernameCheck = await self.userService.getUserByUsername(data.get("username", ""))
+                usernameCheck = await self.userService.getUserIdByUsername(data.get("username", ""))
                 if(usernameCheck.get("exists", False)):
                     raise HTTPException(
                         status_code=400, 

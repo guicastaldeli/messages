@@ -50,7 +50,6 @@ public class MessagePerspectiveDetector {
     ) {
         String userId = (String) data.get("userId");
         String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
-        System.out.println(currentUserId + userId);
         
         return (currentUserId != null && currentUserId.equals(userId)) ||
                 Boolean.TRUE.equals(data.get("isAboutCurrentUser"));

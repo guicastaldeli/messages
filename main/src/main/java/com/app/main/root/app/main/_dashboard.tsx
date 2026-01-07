@@ -463,7 +463,7 @@ export class Dashboard extends Component<Props, State> {
 
                     return (
                         <>
-                            
+                            {loadingOverlay}
                             {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
                                     <div className="sidebar">

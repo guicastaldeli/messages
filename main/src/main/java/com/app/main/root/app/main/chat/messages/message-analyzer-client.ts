@@ -130,17 +130,11 @@ export class MessageAnalyzerClient {
     public determineRoutes(context: Context): string[] {
         const routes: string[] = [];
 
-        if(context.isDirect) {
-            routes.push('DIRECT');
-        }
-        if(context.isGroup) {
-            routes.push('GROUP');
-        }
-        if(context.isSystem) {
-            routes.push('SYSTEM');
-        }
-
+        if(context.isDirect) routes.push('DIRECT');
+        if(context.isGroup) routes.push('GROUP');
+        if(context.isSystem) routes.push('SYSTEM');
         routes.push('CHAT');
+        
         return routes;
     }
 

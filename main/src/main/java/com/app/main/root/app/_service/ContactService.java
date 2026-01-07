@@ -30,16 +30,15 @@ public class ContactService {
         return dataSourceService.setDb("user").getConnection();
     }
 
-    /*
-    * Send Contact Request 
-    */
+    /**
+     * Send Contact Request 
+     */
     public Map<String, Object> sendContactRequest(String fromUserId, String toUsername) throws SQLException {
-        User toUser = serviceManager.getUserService().getUserByUsername(toUsername);
+        User toUser = serviceManager.getUserService().getUserIdByUsername(toUsername);
         if(toUser == null) throw new IllegalArgumentException("User not found");
         if(fromUserId.equals(toUser.getId())) throw new IllegalArgumentException("Cannot add yourself");
         if(isContact(fromUserId, toUser.getId())) throw new IllegalArgumentException("User is already in your contacts");
 
-        //Check Request
         String crQuery = CommandQueryManager.CHECK_CONTACT_PENDING_REQUEST.get();
         try(
             Connection conn = getConnection();
@@ -54,7 +53,6 @@ public class ContactService {
             }
         }
 
-        //Insert Request
         String requestId = "contact_req_" + System.currentTimeMillis() + 
             "_" + UUID.randomUUID().toString().substring(0, 12);
         String irQuery = CommandQueryManager.ADD_CONTACT_REQUEST.get();
@@ -68,7 +66,6 @@ public class ContactService {
             stmt.executeUpdate();
         }
 
-        //Notify Target User
         String toUserSession = serviceManager.getUserService().getSessionByUserId(toUser.getId());
         long time = System.currentTimeMillis();
 
@@ -84,7 +81,6 @@ public class ContactService {
             serviceManager.getUserService().sendMessageToUser(toUserSession, "contact-request", notification);
         }
 
-        //Result
         Map<String, Object> result = new HashMap<>();
         result.put("requestId", requestId);
         result.put("toUserId", toUser.getId());
@@ -93,9 +89,9 @@ public class ContactService {
         return result;
     }
 
-    /*
-    * Response Contact Request 
-    */
+    /**
+     * Response Contact Request 
+     */
     public Map<String, Object> responseContactRequest(String requestId, String userId, boolean accept) throws SQLException {
         String status = accept ? "accepted" : "rejected";
 
@@ -154,9 +150,9 @@ public class ContactService {
         }
     }
 
-    /*
-    * Add Contact 
-    */
+    /**
+     * Add Contact
+     */
     private void addContact(Connection conn, String userId, String contactId) throws SQLException {
         String contactEntryId = 
             "contact_" + System.currentTimeMillis() + "_" + 
@@ -171,9 +167,9 @@ public class ContactService {
         }
     }
 
-    /*
-    * Is Contact 
-    */
+    /**
+     * Is Contact 
+     */
     public boolean isContact(String userId, String contactId) throws SQLException {
         String query = CommandQueryManager.IS_CONTACT.get();
         try(
@@ -188,9 +184,9 @@ public class ContactService {
         }
     }
 
-    /*
-    * Remove Contact 
-    */
+    /**
+     * Remove Contact 
+     */
     public boolean removeContact(String userId, String contactId) throws SQLException {
         String query = CommandQueryManager.REMOVE_CONTACT.get();
         try(Connection conn = getConnection()) {
@@ -222,11 +218,11 @@ public class ContactService {
         }
     }
 
-    /*
-    **
-    *** Get Contacts
-    ** 
-    */
+    /**
+     * 
+     * Get Contacts
+     * 
+     */
     public List<Map<String, Object>> getContacts(String userId) throws SQLException {
         String query = CommandQueryManager.GET_CONTACTS.get();
         List<Map<String, Object>> contacts = new ArrayList<>();
@@ -255,11 +251,11 @@ public class ContactService {
         return contacts;
     }
 
-    /*
-    **
-    *** Get Pending Contacts
-    ** 
-    */
+    /**
+     * 
+     * Get Pending Contacts
+     * 
+     */
     public List<Map<String, Object>> getPendingContactRequests(String userId) throws SQLException {
         String query = CommandQueryManager.GET_PENDING_CONTACTS.get();
         List<Map<String, Object>> requests = new ArrayList<>();
@@ -284,11 +280,11 @@ public class ContactService {
         return requests;
     }
 
-    /*
-    **
-    *** Notifications
-    ** 
-    */
+    /**
+     * 
+     * Notifications
+     * 
+     */
     private void notifyContactAdded(String fUserId, String sUserId) {
         String[] userIds = { fUserId, sUserId };
         long time = System.currentTimeMillis();

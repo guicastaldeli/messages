@@ -88,7 +88,6 @@ public class UserService {
             try(ResultSet rs = stmt.executeQuery()) {
                 if(rs.next()) {
                     User user = mapUserFromResultSet(rs);
-                    System.out.println("User found: " + user.getUsername());
                     return user;
                 } else {
                     System.out.println("ERROR: No user found with ID: " + id);
@@ -101,7 +100,7 @@ public class UserService {
     /**
      * Get User by Username
      */
-    public User getUserByUsername(String username) throws SQLException {
+    public User getUserIdByUsername(String username) throws SQLException {
         String query = CommandQueryManager.GET_USER_BY_USERNAME.get();
 
         try(
@@ -327,7 +326,7 @@ public class UserService {
      * Username Taken
      */
     public boolean isUsernameTaken(String username) throws SQLException {
-        return getUserByUsername(username) != null;
+        return getUserIdByUsername(username) != null;
     }
 
     /**

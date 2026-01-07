@@ -120,7 +120,6 @@ export class FileControllerClient {
      * Preload Data
      */
     public async preloadData(userId: string, chatId: string): Promise<void> {
-        console.log("PRELOAD DATA FILES")
         try {
             let actualChatId = chatId;
             if(chatId && chatId.startsWith('{')) {
@@ -147,34 +146,44 @@ export class FileControllerClient {
             cacheData.files.clear();
             cacheData.fileOrder = [];
             
-            pageData.files.forEach((file: any) => {
-                const id = file.id || file.fileId;
-                const fileChatId = file.chatId;
+            const filesArray = Array.isArray(pageData.files) 
+                ? pageData.files 
+                : Object.values(pageData.files || {});
+            
+            console.log(`Found ${filesArray.length} files in chat data for ${actualChatId}`);
+            
+            filesArray.forEach((file: any) => {
+                const actualFile = file.fileId ? file : (file[0] || file);
+                
+                const id = actualFile.id || actualFile.fileId;
+                console.log("file debug", actualFile.id, actualFile.fileId, actualFile);
+                const fileChatId = actualFile.chatId;
                 
                 if(!id) {
-                    console.warn(`[preloadData] File missing ID, skipping`);
+                    console.warn(`[preloadData] File missing ID, skipping`, actualFile);
                     return;
                 }
                 if(fileChatId && fileChatId !== actualChatId) {
                     console.warn(`[preloadData] Skipping file ${id} - belongs to ${fileChatId}, not ${actualChatId}`);
                     return;
                 }
-                if(!file.chatId) {
-                    file.chatId = actualChatId;
+                if(!actualFile.chatId) {
+                    actualFile.chatId = actualChatId;
                 }
                 
-                cacheData.files.set(id, file);
+                cacheData.files.set(id, actualFile);
                 cacheData.fileOrder.push(id);
             });
             
+            const actualFileCount = cacheData.fileOrder.length;
             cacheData.loadedFilePages.add(0);
-            cacheData.totalFilesCount = countData;
+            cacheData.totalFilesCount = Math.max(countData, actualFileCount);
             cacheData.lastAccessTime = Date.now();
-            cacheData.hasMoreFiles = pageData.pagination.hasMore;
+            cacheData.hasMoreFiles = pageData.pagination.hasMore || actualFileCount > 0;
             cacheData.isFullyLoaded = !cacheData.hasMoreFiles;
             cacheData.lastUpdated = Date.now();
             
-            console.log(`Preloaded ${cacheData.fileOrder.length} files for chat ${actualChatId}`);
+            console.log(`Preloaded ${cacheData.fileOrder.length} files for chat ${actualChatId}, API count: ${countData}`);
         } catch(err) {
             console.error(`Preload for ${chatId} failed`, err);
         }

@@ -31,6 +31,6 @@ class UserRoutes:
         @self.router.get("/api/users/username/{username}")
         async def checkUserByUsername(username: str):
             try:
-                return await self.userService.getUserByUsername(username)
+                return await self.userService.getUserIdByUsername(username)
             except HTTPException:
                 return { "exists": False, "user": None }

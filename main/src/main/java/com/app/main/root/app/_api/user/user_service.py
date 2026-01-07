@@ -19,7 +19,7 @@ class UserService:
         return await self._request("GET", f"{self.base_url}/api/users/email/{email}")
     
     ## Get User by Username
-    async def getUserByUsername(self, username: str) -> Dict:
+    async def getUserIdByUsername(self, username: str) -> Dict:
         return await self._request("GET", f"{self.base_url}/api/users/username/{username}")
     
     async def _request(self, method: str, url: str, json=None) -> Dict:

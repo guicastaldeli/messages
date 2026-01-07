@@ -605,6 +605,7 @@ public class EventList {
             "/queue/decrypted-messages-scss",
             false
         ));
+        /* Decrypt Files */
         configs.put("get-decrypted-files", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 try {
@@ -620,52 +621,79 @@ public class EventList {
                         fileMaps.add((Map<String, Object>) filesObj);
                     }
                     
-                    int maxFilesPerRequest = 3;
-                    final List<Map<String, Object>> finalFileMaps;
-                    if(fileMaps.size() > maxFilesPerRequest) {
-                        finalFileMaps = new ArrayList<>(fileMaps.subList(0, maxFilesPerRequest));
-                    } else {
-                        finalFileMaps = new ArrayList<>(fileMaps);
+                    if(fileMaps.isEmpty()) {
+                        System.out.println("[DECRYPT] No files to decrypt, sending empty response");
+                        Map<String, Object> emptyResponse = new HashMap<>();
+                        emptyResponse.put("files", new ArrayList<>());
+                        emptyResponse.put("count", 0);
+                        emptyResponse.put("success", true);
+                        emptyResponse.put("chatId", chatId);
+                        emptyResponse.put("message", "No files to decrypt");
+                        socketMethods.send(sessionId, "/queue/decrypted-files-result", emptyResponse);
+                        
+                        Map<String, Object> res = new HashMap<>();
+                        res.put("status", "completed");
+                        res.put("fileCount", 0);
+                        return res;
                     }
                     
+                    int maxFilesPerRequest = 3;
+                    final List<Map<String, Object>> finalFileMaps = fileMaps.size() > maxFilesPerRequest 
+                        ? new ArrayList<>(fileMaps.subList(0, maxFilesPerRequest))
+                        : new ArrayList<>(fileMaps);
+                    
                     CompletableFuture.runAsync(() -> {
+                        List<Map<String, Object>> processedFiles = new ArrayList<>();
                         try {
-                            List<Map<String, Object>> processedFiles = new ArrayList<>();
-                            
                             for(int i = 0; i < finalFileMaps.size(); i++) {
                                 Map<String, Object> fileMap = finalFileMaps.get(i);
+                                FileEncoderWrapper encoder = null;
                                 try {
                                     Map<String, Object> processedFile = new HashMap<>(fileMap);
                                     
                                     String fileId = (String) fileMap.get("fileId");
                                     if(fileId == null) fileId = (String) fileMap.get("file_id");
                                     if(fileId == null) fileId = (String) fileMap.get("id");
+                                    if(fileId == null) {
+                                        System.err.println("[DECRYPT] ERROR: No file ID found in file map. Keys: " + fileMap.keySet());
+                                        processedFile.put("isDecrypted", false);
+                                        processedFile.put("decryptionError", "Missing file ID - available keys: " + fileMap.keySet());
+                                        processedFiles.add(processedFile);
+                                        continue;
+                                    }
                                     
-                                    if(fileId != null) {
-                                        byte[] encryptedContent = serviceManager.getFileService().getEncryptedFileContent(fileId, currentUserId);
-                                        if(encryptedContent != null) {
-                                            FileEncoderWrapper encoder = serviceManager.getFileService().fileEncoderWrapper;
-                                            
-                                            byte[] key = serviceManager.getKeyManagerService().retrieveKey(fileId, currentUserId);
-                                            encoder.initEncoder(key, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
-                                            
-                                            byte[] decryptedContent = encoder.decrypt(encryptedContent);
-                                            if(decryptedContent != null) {
-                                                processedFile.put("decryptedContent", decryptedContent);
-                                                processedFile.put("isDecrypted", true);
-                                                processedFile.put("fileSize", decryptedContent.length);
-                                                processedFile.put("fileName", fileMap.get("fileName"));
-                                            } else {
-                                                processedFile.put("isDecrypted", false);
-                                                processedFile.put("decryptionError", "Decryption returned null");
-                                            }
-                                        } else {
-                                            processedFile.put("isDecrypted", false);
-                                            processedFile.put("decryptionError", "File content not found");
-                                        }
+                                    byte[] encryptedContent = serviceManager.getFileService().getEncryptedFileContent(fileId, currentUserId);
+                                    if(encryptedContent == null) {
+                                        System.err.println("[DECRYPT] ERROR: Encrypted content is null for file: " + fileId);
+                                        processedFile.put("isDecrypted", false);
+                                        processedFile.put("decryptionError", "File content not found in database");
+                                        processedFiles.add(processedFile);
+                                        continue;
+                                    }
+                                    
+                                    byte[] key = serviceManager.getKeyManagerService().retrieveKey(fileId, currentUserId);
+                                    if(key == null) {
+                                        System.err.println("[DECRYPT] ERROR: Encryption key is null for file: " + fileId);
+                                        processedFile.put("isDecrypted", false);
+                                        processedFile.put("decryptionError", "Encryption key not found");
+                                        processedFiles.add(processedFile);
+                                        continue;
+                                    }
+
+                                    encoder = new FileEncoderWrapper();
+                                    encoder.initEncoder(key, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
+                                    
+                                    System.out.println("[DECRYPT] Starting decryption...");
+                                    byte[] decryptedContent = encoder.decrypt(encryptedContent);
+                                    
+                                    if(decryptedContent != null) {
+                                        processedFile.put("decryptedContent", decryptedContent);
+                                        processedFile.put("isDecrypted", true);
+                                        processedFile.put("fileSize", decryptedContent.length);
+                                        processedFile.put("fileName", fileMap.get("fileName"));
                                     } else {
                                         processedFile.put("isDecrypted", false);
-                                        processedFile.put("decryptionError", "Missing file ID");
+                                        processedFile.put("decryptionError", "Decryption returned null");
                                     }
                                     processedFiles.add(processedFile);
                                     
@@ -674,13 +702,22 @@ public class EventList {
                                     progress.put("fileId", fileId);
                                     progress.put("processed", i + 1);
                                     progress.put("total", finalFileMaps.size());
-                                    socketMethods.send(sessionId, "/queue/file-decryption-progress", progress);
-                                    
+                                    progress.put("success", decryptedContent != null);
+                                    socketMethods.send(sessionId, "/queue/file-decryption-progress", progress);    
                                 } catch(Exception fileErr) {
+                                    fileErr.printStackTrace();
                                     Map<String, Object> errorFile = new HashMap<>(fileMap);
                                     errorFile.put("decryptionError", fileErr.getMessage());
                                     errorFile.put("isDecrypted", false);
                                     processedFiles.add(errorFile);
+                                } finally {
+                                    if(encoder != null) {
+                                        try {
+                                            encoder.cleanup();
+                                        } catch(Exception cleanupErr) {
+                                            System.err.println("[DECRYPT] Error cleaning up encoder: " + cleanupErr.getMessage());
+                                        }
+                                    }
                                 }
                             }
                             
@@ -689,28 +726,42 @@ public class EventList {
                             finalResponse.put("count", processedFiles.size());
                             finalResponse.put("success", true);
                             finalResponse.put("chatId", chatId);
-                            
-                            socketMethods.send(sessionId, "/queue/decrypted-files-result", finalResponse);
-                            
+                            socketMethods.send(sessionId, "/queue/decrypted-files-result", finalResponse);   
                         } catch(Exception err) {
+                            System.err.println("[DECRYPT] FATAL ERROR in async processing: " + err.getMessage());
+                            err.printStackTrace();
+                            
                             Map<String, Object> errorResponse = new HashMap<>();
                             errorResponse.put("error", "ASYNC_PROCESSING_FAILED");
                             errorResponse.put("message", err.getMessage());
                             errorResponse.put("success", false);
+                            errorResponse.put("processedCount", processedFiles.size());
+                            errorResponse.put("files", processedFiles);
                             socketMethods.send(sessionId, "/queue/decrypted-files-err", errorResponse);
                         }
+                    }).exceptionally(throwable -> {
+                        throwable.printStackTrace();
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("error", "COMPLETABLE_FUTURE_FAILED");
+                        errorResponse.put("message", throwable.getMessage());
+                        errorResponse.put("success", false);
+                        socketMethods.send(sessionId, "/queue/decrypted-files-err", errorResponse);
+                        return null;
                     });
                     
-                    Map<String, Object> immediateResponse = new HashMap<>();
-                    immediateResponse.put("status", "processing");
-                    immediateResponse.put("message", "File decryption started asynchronously");
-                    immediateResponse.put("fileCount", finalFileMaps.size());
-                    return immediateResponse;
+                    Map<String, Object> res = new HashMap<>();
+                    res.put("status", "processing");
+                    res.put("message", "File decryption started async");
+                    res.put("fileCount", finalFileMaps.size());
+                    return res;
                 } catch(Exception err) {
-                    System.err.println("Error starting async file processing: " + err.getMessage());
+                    err.printStackTrace();
+                    
                     Map<String, Object> errorResponse = new HashMap<>();
                     errorResponse.put("status", "error");
                     errorResponse.put("message", err.getMessage());
+                    errorResponse.put("error", "INITIALIZATION_FAILED");
+                    socketMethods.send(sessionId, "/queue/decrypted-files-err", errorResponse);
                     return errorResponse;
                 }
             },
@@ -1115,18 +1166,26 @@ public class EventList {
                     long time = System.currentTimeMillis();
                     Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
                     String userId = (String) data.get("userId");
-                    String username = (String) data.get("username");
                     String groupId = (String) data.get("groupId");
 
                     String inviterUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     String inviterUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
-
-                    Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
-                    List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    if (inviterUsername == null || inviterUsername.startsWith("user_")) {
+                        inviterUsername = serviceManager.getUserService().getUsernameByUserId(inviterUserId);
+                    }
                     
+                    String username = serviceManager.getUserService().getUsernameByUserId(userId);
+                    if (username == null || username.trim().isEmpty()) {
+                        username = (String) data.get("username");
+                        System.err.println("WARNING: Could not lookup username for added user: " + userId);
+                    }
+                    
+                    Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
                     if(groupId == null) throw new Exception("Group Id is required!");
                     if(userId == null) throw new Exception("User Id is required!");
-                    if(username == null || username.trim().isEmpty()) throw new Exception("Username is required!");
+                    if(username == null || username.trim().isEmpty()) {
+                        throw new Exception("Added user's username is required! Got: " + username);
+                    }
 
                     boolean success = serviceManager.getGroupService().addUserToGroup(groupId, userId, username);
                     if(!success) throw new Exception("Failed to add user to group :(");
@@ -1152,34 +1211,67 @@ public class EventList {
                     res.put("addedBy", inviterUsername);
                     serviceManager.getUserService().sendMessageToUser(sessionId, "add-user-group-scss", res);
 
-                    /* System Message */
-                    for(User member : groupMembers) {
-                        String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
-                        if(memberSessionId != null) {
-                            Map<String, Object> systemMessageData = new HashMap<>();
-                            systemMessageData.put("groupName", groupInfo.get("name"));
-                            systemMessageData.put("username", username);
-                            systemMessageData.put("userId", userId);
-                            systemMessageData.put("inviterUsername", inviterUsername);
-                            systemMessageData.put("inviterUserId", inviterUserId);
-                            systemMessageData.put("timestamp", time);
-                            
-                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService()
-                                .createAndSaveMessage(
-                                    "USER_ADDED_GROUP",
-                                    systemMessageData, 
-                                    sessionId, 
-                                    memberSessionId,
-                                    groupId
-                                );
-                            systemMessage.put("chatId", groupId);
-                            systemMessage.put("groupId", groupId);
-                            systemMessage.put("id", groupId);
-                            
-                            String destination = "/user/queue/messages/group/" + groupId;
-                            socketMethods.send(memberSessionId, destination, systemMessage);
+                    /* System Message Data */
+                    Map<String, Object> systemMessageData = new HashMap<>();
+                    systemMessageData.put("groupName", groupInfo.get("name"));
+                    systemMessageData.put("username", username);
+                    systemMessageData.put("userId", userId);
+                    systemMessageData.put("inviterUsername", inviterUsername);
+                    systemMessageData.put("inviterUserId", inviterUserId);
+                    systemMessageData.put("timestamp", time);
+                    
+                    List<User> updatedGroupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
+                    String neutralSessionForSave = null;
+                    for(User member : updatedGroupMembers) {
+                        String memberId = member.getId();
+                        if(!memberId.equals(inviterUserId) && !memberId.equals(userId)) {
+                            String memberSession = serviceManager.getUserService().getSessionByUserId(memberId);
+                            if(memberSession != null) {
+                                neutralSessionForSave = memberSession;
+                                break;
+                            }
                         }
                     }
+                    if(neutralSessionForSave == null) {
+                        neutralSessionForSave = sessionId;
+                    }
+                    
+                    Map<String, Object> savedMessage = serviceManager.getSystemMessageService()
+                        .createAndSaveMessage(
+                            "USER_ADDED_GROUP",
+                            systemMessageData, 
+                            "__NEUTRAL__",
+                            "__NEUTRAL__",
+                            groupId
+                        );
+                    Integer savedMessageId = (Integer) savedMessage.get("id");
+
+                    Set<String> allRecipientSessions = new HashSet<>();
+                    for(User member : updatedGroupMembers) {
+                        String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
+                        if(memberSessionId != null) {
+                            allRecipientSessions.add(memberSessionId);
+                        }
+                    }
+                    
+                    String destination = "/user/queue/messages/group/" + groupId;
+                    for(String memberSessionId : allRecipientSessions) {
+                        Map<String, Object> memberSpecificData = new HashMap<>(systemMessageData);
+                        Map<String, Object> personalizedMessage = serviceManager.getSystemMessageService()
+                            .createMessageWithPerspective(
+                                "USER_ADDED_GROUP",
+                                memberSpecificData, 
+                                sessionId,
+                                memberSessionId 
+                            );
+                        personalizedMessage.put("id", savedMessageId);
+                        personalizedMessage.put("messageId", savedMessageId);
+                        personalizedMessage.put("chatId", groupId);
+                        personalizedMessage.put("groupId", groupId);
+                        
+                        socketMethods.send(memberSessionId, destination, personalizedMessage);
+                    }
+                    
                     return Collections.emptyMap();
                 } catch(Exception err) {
                     err.printStackTrace();
@@ -1200,18 +1292,35 @@ public class EventList {
                     long time = System.currentTimeMillis();
                     Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
                     String userId = (String) data.get("userId");
-                    String username = (String) data.get("username");
                     String groupId = (String) data.get("groupId");
 
+                    String username = serviceManager.getUserService().getUsernameByUserId(userId);
+                    if(username == null) {
+                        username = (String) data.get("username");
+                        System.err.println("WARNING: Could not lookup username for removed user: " + userId);
+                    }
+
                     String inviterUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    
                     String inviterUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
+                    if(inviterUsername == null || inviterUsername.startsWith("user_")) {
+                        System.err.println("ERROR: inviterUsername looks like a user ID: " + inviterUsername);
+                        inviterUsername = serviceManager.getUserService().getUsernameByUserId(inviterUserId);
+                    }
+                    
+                    if(username == null || username.startsWith("user_")) {
+                        System.err.println("ERROR: username looks like a user ID: " + username);
+                        username = serviceManager.getUserService().getUsernameByUserId(userId);
+                    }
 
                     Map<String, Object> groupInfo = serviceManager.getGroupService().getGroupInfo(groupId);
                     List<User> groupMembers = serviceManager.getGroupService().getGroupMembers(groupId);
                     
                     if(groupId == null) throw new Exception("Group Id is required!");
                     if(userId == null) throw new Exception("User Id is required!");
-                    if(username == null || username.trim().isEmpty()) throw new Exception("Username is required!");
+                    if(username == null || username.trim().isEmpty()) {
+                        throw new Exception("Username is required! Got: " + username);
+                    }
 
                     boolean success = serviceManager.getGroupService().removeUserFromGroup(groupId, userId);
                     if(!success) throw new Exception("Failed to remove user of group :(");
@@ -1237,34 +1346,61 @@ public class EventList {
                     res.put("removedBy", inviterUsername);
                     serviceManager.getUserService().sendMessageToUser(sessionId, "remove-user-group-scss", res);
 
-                    /* System Message */
+                    /* System Message Data */
+                    Map<String, Object> systemMessageData = new HashMap<>();
+                    systemMessageData.put("username", username);
+                    systemMessageData.put("userId", userId);
+                    systemMessageData.put("inviterUsername", inviterUsername);
+                    systemMessageData.put("inviterUserId", inviterUserId);
+                    systemMessageData.put("groupName", groupInfo.get("name"));
+                    systemMessageData.put("timestamp", time);
+
+                    String neutralSessionForSave = null;
+                    for(User member : groupMembers) {
+                        String memberId = member.getId();
+                        if(!memberId.equals(inviterUserId) && !memberId.equals(userId)) {
+                            String memberSession = serviceManager.getUserService().getSessionByUserId(memberId);
+                            if(memberSession != null) {
+                                neutralSessionForSave = memberSession;
+                                break;
+                            }
+                        }
+                    }
+                    if(neutralSessionForSave == null) {
+                        neutralSessionForSave = sessionId;
+                    }
+
+                    Map<String, Object> savedMessage = serviceManager.getSystemMessageService()
+                        .createAndSaveMessage(
+                            "USER_REMOVED_GROUP",
+                            systemMessageData, 
+                            "__NEUTRAL__",
+                            "__NEUTRAL__",
+                            groupId
+                        );
+                    Integer savedMessageId = (Integer) savedMessage.get("id");
+                    String destination = "/user/queue/messages/group/" + groupId;
+
                     for(User member : groupMembers) {
                         String memberSessionId = serviceManager.getUserService().getSessionByUserId(member.getId());
                         if(memberSessionId != null) {
-                            Map<String, Object> systemMessageData = new HashMap<>();
-                            systemMessageData.put("username", username);
-                            systemMessageData.put("userId", userId);
-                            systemMessageData.put("inviterUsername", inviterUsername);
-                            systemMessageData.put("inviterUserId", inviterUserId);
-                            systemMessageData.put("groupName", groupInfo.get("name"));
-                            systemMessageData.put("timestamp", time);
-
-                            Map<String, Object> systemMessage = serviceManager.getSystemMessageService().createAndSaveMessage(
-                                "USER_REMOVED_GROUP",
-                                systemMessageData, 
-                                sessionId, 
-                                memberSessionId,
-                                groupId
-                            );
+                            Map<String, Object> memberSpecificData = new HashMap<>(systemMessageData);
+                            Map<String, Object> personalizedMessage = serviceManager.getSystemMessageService()
+                                .createMessageWithPerspective(
+                                    "USER_REMOVED_GROUP",
+                                    memberSpecificData, 
+                                    sessionId,  
+                                    memberSessionId
+                                );
+                            personalizedMessage.put("id", savedMessageId);
+                            personalizedMessage.put("messageId", savedMessageId);
+                            personalizedMessage.put("chatId", groupId);
+                            personalizedMessage.put("groupId", groupId);
                             
-                            systemMessage.put("chatId", groupId);
-                            systemMessage.put("groupId", groupId);
-                            systemMessage.put("id", groupId);
-                            
-                            String destination = "/user/queue/messages/group/" + groupId;
-                            socketMethods.send(memberSessionId, destination, systemMessage);
+                            socketMethods.send(memberSessionId, destination, personalizedMessage);
                         }
                     }
+                    
                     return Collections.emptyMap();
                 } catch(Exception err) {
                     err.printStackTrace();

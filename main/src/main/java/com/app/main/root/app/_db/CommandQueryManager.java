@@ -391,6 +391,14 @@ public enum CommandQueryManager {
             LIMIT ? OFFSET ?     
         """
     ),
+    GET_FILES(
+        """
+            SELECT * FROM files_metadata 
+            WHERE chat_id = ? 
+            ORDER BY uploaded_at DESC 
+            LIMIT ? OFFSET ?
+        """
+    ),
     GET_FILE_SIZE(
         "SELECT SUM(file_size) as total FROM files_metadata WHERE user_id = ? AND is_deleted = FALSE"
     ),

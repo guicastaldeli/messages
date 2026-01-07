@@ -175,12 +175,16 @@ export class MessageElementRenderer {
             data.type === 'SYSTEM' ||
             data.isSystem === true;
         if(isSystemMessage) {
+            const analyzer = this.chatController.getAnalyzer();
+            const perspective = analyzer.getPerspective().calculateClientPerspective(data);
+            
             await this.setMessage({
                 ...data,
                 isSystem: true,
-                direction: 'other'
+                direction: perspective.direction,
+                _perspective: perspective
             }, {
-                direction: 'other',
+                direction: perspective.direction,
                 messageType: data.messageType || 'SYSTEM',
                 priority: 'NORMAL',
                 metadata: {},
@@ -189,9 +193,7 @@ export class MessageElementRenderer {
                     isGroup: true,
                     isSystem: true
                 },
-                perspective: {
-                    showUsername: false
-                }
+                perspective: perspective
             } as unknown as Analysis);
             return;
         }
@@ -248,6 +250,21 @@ export class MessageElementRenderer {
                         );
                     }
 
+                    let fileData = messageData.fileData || messageData;
+                    if(Array.isArray(fileData) && fileData.length > 0) {
+                        fileData = fileData[0];
+                    }
+                    if(Array.isArray(fileData) || !fileData) {
+                        fileData = {
+                            fileType: 'other',
+                            mimeType: '',
+                            originalFileName: messageData.content || 'Unknown file',
+                            fileSize: 0
+                        };
+                    }
+                    
+                    console.log('Rendering file message with fileData:', fileData);
+
                     const messageProps = {
                         username: perspective.showUsername,
                         userId: this.chatController.userId,
@@ -270,7 +287,7 @@ export class MessageElementRenderer {
                         userColor: userColor?.value,
                         chatType: currentChat?.type,
                         currentUserId: this.chatController.userId,
-                        fileData: messageData.fileData || messageData
+                        fileData: fileData
                     };
 
                     const messageDiv = document.createElement('div');
