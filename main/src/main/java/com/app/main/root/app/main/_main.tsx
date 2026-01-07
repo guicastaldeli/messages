@@ -299,6 +299,9 @@ export class Main extends Component<any, State> {
                         alert('Session error: ' + err.message);
                     }
                 });
+                console.log('ChatManager created:', !!this.chatManager);
+                console.log('State chatManager:', this.state.chatManager);
+                console.log('Dashboard loading state:', this.state.isLoading);
                 return;
             }
 
@@ -361,11 +364,27 @@ export class Main extends Component<any, State> {
                     if(typeof localStorage !== 'undefined') {
                         localStorage.setItem('LAST_SOCKET_ID', socketId);
                     }
+
+                    this.chatManager = new ChatManager(
+                        this.chatService,
+                        this.socketClientConnect,
+                        this.chatController,
+                        this.apiClientController,
+                        null as any,
+                        this.appContainerRef.current,
+                        authData.username,
+                        this.setState.bind(this)
+                    );
+
+                    this.chatController.setChatManager(this.chatManager);
+                    this.chatManager.loadChats(authData.userId);
                     
                     this.setState({ 
                         username: authData.username,
                         userId: authData.userId,
-                        sessionId: authData.sessionId
+                        sessionId: authData.sessionId,
+                        chatManager: this.chatManager,
+                        isLoading: false
                     }, async () => {
                         try {
                             const data = {
@@ -382,7 +401,6 @@ export class Main extends Component<any, State> {
                             
                             const cacheService = await this.chatService.getCacheServiceClient();
                             await cacheService.initCache(authData.userId);
-                            //await this.cachePreloader.startPreloading(authData.userId);
                             
                             if(this.dashboardInstance) {
                                 await this.dashboardInstance.getUserData(

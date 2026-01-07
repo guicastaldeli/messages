@@ -102,10 +102,6 @@ export class MessageServiceClient {
     /**
      * Recent Chats
      */
-    // ...existing code...
-    /**
-     * Recent Chats
-     */
     public async getRecentMessages(
         userId: string,
         page: number = 0,

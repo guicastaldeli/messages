@@ -89,7 +89,7 @@ public class FileService {
                 page * pageSize
             );
             
-            System.out.println("Found " + rows.size() + " files for chat " + chatId);
+            //System.out.println("Found " + rows.size() + " files for chat " + chatId);
             return convertToFileList(rows);
         } catch(Exception e) {
             System.err.println("Error getting files for chat " + chatId + ": " + e.getMessage());

@@ -27,51 +27,48 @@ export class FileServiceClient {
      * Add File
      */
     public async addFile(chatId: string, fileData: any): Promise<void> {
-    const cacheService = await this.chatService.getCacheServiceClient();
-    const data = cacheService.cache.get(chatId);
-    
-    if(!data) {
-        console.warn(`Cache not initialized for chat ${chatId}`);
-        return;
-    }
-    
-    // Handle corrupted file structure like {0: {actualFileData}}
-    let actualFileData = fileData;
-    if(fileData && fileData['0']) {
-        console.warn('Found corrupted file structure, extracting actual file data');
-        actualFileData = fileData['0'];
-    }
-    
-    const fileId = actualFileData.file_id || actualFileData.fileId || actualFileData.id;
-    
-    // Validate file data before adding to cache
-    if(!fileId || !actualFileData.originalFileName) {
-        console.error('Invalid file data, skipping:', actualFileData);
-        return;
-    }
-    
-    if(!data.files.has(fileId)) {
-        data.files.set(fileId, actualFileData);
-        data.fileOrder.push(fileId);
-        data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
-        data.lastUpdated = Date.now();
+        const cacheService = await this.chatService.getCacheServiceClient();
+        const data = cacheService.cache.get(chatId);
         
-        const timelineId = `file_${fileId}`;
-        if(!data.timeline.has(timelineId)) {
-            const timelineItem = {
-                id: timelineId,
-                type: 'file',
-                fileId: fileId,
-                chatId: chatId,
-                timestamp: actualFileData.uploadedAt || actualFileData.timestamp || Date.now(),
-                data: actualFileData
-            };
-            data.timeline.set(timelineId, timelineItem);
-            data.timelineOrder.push(timelineId);
-            data.totalTimelineCount = Math.max(data.totalTimelineCount, data.timelineOrder.length);
+        if(!data) {
+            console.warn(`Cache not initialized for chat ${chatId}`);
+            return;
+        }
+        
+        let actualFileData = fileData;
+        if(fileData && fileData['0']) {
+            console.warn('Found corrupted file structure, extracting actual file data');
+            actualFileData = fileData['0'];
+        }
+        
+        const fileId = actualFileData.file_id || actualFileData.fileId || actualFileData.id;
+        if(!fileId || !actualFileData.originalFileName) {
+            console.error('Invalid file data, skipping:', actualFileData);
+            return;
+        }
+        
+        if(!data.files.has(fileId)) {
+            data.files.set(fileId, actualFileData);
+            data.fileOrder.push(fileId);
+            data.totalFilesCount = Math.max(data.totalFilesCount, data.fileOrder.length);
+            data.lastUpdated = Date.now();
+            
+            const timelineId = `file_${fileId}`;
+            if(!data.timeline.has(timelineId)) {
+                const timelineItem = {
+                    id: timelineId,
+                    type: 'file',
+                    fileId: fileId,
+                    chatId: chatId,
+                    timestamp: actualFileData.uploadedAt || actualFileData.timestamp || Date.now(),
+                    data: actualFileData
+                };
+                data.timeline.set(timelineId, timelineItem);
+                data.timelineOrder.push(timelineId);
+                data.totalTimelineCount = Math.max(data.totalTimelineCount, data.timelineOrder.length);
+            }
         }
     }
-}
     
     /**
      * Decrypt Files

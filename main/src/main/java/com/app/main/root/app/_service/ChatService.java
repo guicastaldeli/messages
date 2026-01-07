@@ -372,6 +372,11 @@ public class ChatService {
         }
     }
 
+    /**
+     * 
+     * Perspective
+     * 
+     */
     private String reapplyPerspective(String content, String messageType, String userId) {
         if(content == null || userId == null || messageType == null) {
             return content;

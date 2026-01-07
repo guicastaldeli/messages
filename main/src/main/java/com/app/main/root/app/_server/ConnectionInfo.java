@@ -127,6 +127,8 @@ public class ConnectionInfo {
      */
     @Override
     public String toString() {
+        return "";
+        /*
         return String.format(
             """
                 ConnectionInfo{
@@ -163,5 +165,6 @@ public class ConnectionInfo {
             isConnected,
             getFormattedDuration()
         );
+        */
     }
 }

@@ -244,6 +244,7 @@ export class Dashboard extends Component<Props, State> {
 
     private async loadData(): Promise<void> {
         try {
+            this.setState({ isLoading: true }); 
             await this.props.main.loadData(this.state.userId!);
 
             this.contactService = new ContactServiceClient({

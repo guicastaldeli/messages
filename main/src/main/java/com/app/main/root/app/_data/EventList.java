@@ -610,159 +610,126 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
-                    Object filesObj = data.get("files");
+                    List<Map<String, Object>> fileMaps = (List<Map<String, Object>>) data.get("files");
                     String chatId = (String) data.get("chatId");
                     String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    List<Map<String, Object>> processedFiles = new ArrayList<>();
                     
-                    final List<Map<String, Object>> fileMaps = new ArrayList<>();
-                    if(filesObj instanceof List) {
-                        fileMaps.addAll((List<Map<String, Object>>) filesObj);
-                    } else if(filesObj instanceof Map) {
-                        fileMaps.add((Map<String, Object>) filesObj);
-                    }
-                    
-                    if(fileMaps.isEmpty()) {
-                        System.out.println("[DECRYPT] No files to decrypt, sending empty response");
-                        Map<String, Object> emptyResponse = new HashMap<>();
-                        emptyResponse.put("files", new ArrayList<>());
-                        emptyResponse.put("count", 0);
-                        emptyResponse.put("success", true);
-                        emptyResponse.put("chatId", chatId);
-                        emptyResponse.put("message", "No files to decrypt");
-                        socketMethods.send(sessionId, "/queue/decrypted-files-result", emptyResponse);
-                        
-                        Map<String, Object> res = new HashMap<>();
-                        res.put("status", "completed");
-                        res.put("fileCount", 0);
-                        return res;
-                    }
-                    
-                    int maxFilesPerRequest = 3;
-                    final List<Map<String, Object>> finalFileMaps = fileMaps.size() > maxFilesPerRequest 
-                        ? new ArrayList<>(fileMaps.subList(0, maxFilesPerRequest))
-                        : new ArrayList<>(fileMaps);
-                    
-                    CompletableFuture.runAsync(() -> {
-                        List<Map<String, Object>> processedFiles = new ArrayList<>();
+                    for(Map<String, Object> fileMap : fileMaps) {
                         try {
-                            for(int i = 0; i < finalFileMaps.size(); i++) {
-                                Map<String, Object> fileMap = finalFileMaps.get(i);
-                                FileEncoderWrapper encoder = null;
-                                try {
-                                    Map<String, Object> processedFile = new HashMap<>(fileMap);
-                                    
-                                    String fileId = (String) fileMap.get("fileId");
-                                    if(fileId == null) fileId = (String) fileMap.get("file_id");
-                                    if(fileId == null) fileId = (String) fileMap.get("id");
-                                    if(fileId == null) {
-                                        System.err.println("[DECRYPT] ERROR: No file ID found in file map. Keys: " + fileMap.keySet());
-                                        processedFile.put("isDecrypted", false);
-                                        processedFile.put("decryptionError", "Missing file ID - available keys: " + fileMap.keySet());
-                                        processedFiles.add(processedFile);
-                                        continue;
-                                    }
-                                    
-                                    byte[] encryptedContent = serviceManager.getFileService().getEncryptedFileContent(fileId, currentUserId);
-                                    if(encryptedContent == null) {
-                                        System.err.println("[DECRYPT] ERROR: Encrypted content is null for file: " + fileId);
-                                        processedFile.put("isDecrypted", false);
-                                        processedFile.put("decryptionError", "File content not found in database");
-                                        processedFiles.add(processedFile);
-                                        continue;
-                                    }
-                                    
-                                    byte[] key = serviceManager.getKeyManagerService().retrieveKey(fileId, currentUserId);
-                                    if(key == null) {
-                                        System.err.println("[DECRYPT] ERROR: Encryption key is null for file: " + fileId);
-                                        processedFile.put("isDecrypted", false);
-                                        processedFile.put("decryptionError", "Encryption key not found");
-                                        processedFiles.add(processedFile);
-                                        continue;
-                                    }
-
-                                    encoder = new FileEncoderWrapper();
-                                    encoder.initEncoder(key, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
-                                    
-                                    System.out.println("[DECRYPT] Starting decryption...");
-                                    byte[] decryptedContent = encoder.decrypt(encryptedContent);
-                                    
-                                    if(decryptedContent != null) {
-                                        processedFile.put("decryptedContent", decryptedContent);
-                                        processedFile.put("isDecrypted", true);
-                                        processedFile.put("fileSize", decryptedContent.length);
-                                        processedFile.put("fileName", fileMap.get("fileName"));
-                                    } else {
-                                        processedFile.put("isDecrypted", false);
-                                        processedFile.put("decryptionError", "Decryption returned null");
-                                    }
+                            Map<String, Object> processedFile = new HashMap<>(fileMap);
+                            
+                            String fileId = (String) fileMap.get("fileId");
+                            String originalFileName = (String) fileMap.get("originalFileName");
+                            
+                            Boolean isDecrypted = (Boolean) fileMap.get("isDecrypted");
+                            if(isDecrypted != null && isDecrypted) {
+                                System.out.println("DEBUG: File " + fileId + " is already decrypted");
+                                processedFiles.add(processedFile);
+                                continue;
+                            }
+                            
+                            if(originalFileName == null || originalFileName.isEmpty()) {
+                                System.out.println("DEBUG: File " + fileId + " has no originalFileName - checking database for metadata");
+                                
+                                File fileInfo = serviceManager.getFileService().getFileInfo(fileId, currentUserId);
+                                if(fileInfo != null && fileInfo.getOriginalFileName() != null) {
+                                    processedFile.put("originalFileName", fileInfo.getOriginalFileName());
+                                    processedFile.put("isDecrypted", true);
                                     processedFiles.add(processedFile);
-                                    
-                                    Map<String, Object> progress = new HashMap<>();
-                                    progress.put("type", "DECRYPTION_PROGRESS");
-                                    progress.put("fileId", fileId);
-                                    progress.put("processed", i + 1);
-                                    progress.put("total", finalFileMaps.size());
-                                    progress.put("success", decryptedContent != null);
-                                    socketMethods.send(sessionId, "/queue/file-decryption-progress", progress);    
-                                } catch(Exception fileErr) {
-                                    fileErr.printStackTrace();
-                                    Map<String, Object> errorFile = new HashMap<>(fileMap);
-                                    errorFile.put("decryptionError", fileErr.getMessage());
-                                    errorFile.put("isDecrypted", false);
-                                    processedFiles.add(errorFile);
-                                } finally {
-                                    if(encoder != null) {
-                                        try {
-                                            encoder.cleanup();
-                                        } catch(Exception cleanupErr) {
-                                            System.err.println("[DECRYPT] Error cleaning up encoder: " + cleanupErr.getMessage());
-                                        }
-                                    }
+                                    continue;
+                                } else {
+                                    processedFile.put("isDecrypted", true);
+                                    processedFile.put("decryptionError", "File metadata incomplete");
+                                    processedFiles.add(processedFile);
+                                    continue;
                                 }
                             }
                             
-                            Map<String, Object> finalResponse = new HashMap<>();
-                            finalResponse.put("files", processedFiles);
-                            finalResponse.put("count", processedFiles.size());
-                            finalResponse.put("success", true);
-                            finalResponse.put("chatId", chatId);
-                            socketMethods.send(sessionId, "/queue/decrypted-files-result", finalResponse);   
-                        } catch(Exception err) {
-                            System.err.println("[DECRYPT] FATAL ERROR in async processing: " + err.getMessage());
-                            err.printStackTrace();
+                            if(fileId == null) {
+                                System.err.println("File ID is null!");
+                                processedFiles.add(processedFile);
+                                continue;
+                            }
                             
-                            Map<String, Object> errorResponse = new HashMap<>();
-                            errorResponse.put("error", "ASYNC_PROCESSING_FAILED");
-                            errorResponse.put("message", err.getMessage());
-                            errorResponse.put("success", false);
-                            errorResponse.put("processedCount", processedFiles.size());
-                            errorResponse.put("files", processedFiles);
-                            socketMethods.send(sessionId, "/queue/decrypted-files-err", errorResponse);
+                            byte[] encryptedBytes = serviceManager.getFileService().getEncryptedFileContent(fileId, currentUserId);
+                            if(encryptedBytes == null || encryptedBytes.length == 0) {
+                                System.err.println("No encrypted content found for file: " + fileId);
+                                processedFile.put("isDecrypted", true);
+                                processedFile.put("decryptionError", "No encrypted content available");
+                                processedFiles.add(processedFile);
+                                continue;
+                            }
+                            
+                            byte[] encryptionKey = keyManagerService.retrieveKey(fileId, currentUserId);
+                            if(encryptionKey == null) {
+                                System.err.println("No encryption key found for file: " + fileId);
+                                processedFile.put("decryptionError", "Encryption key not found");
+                                processedFiles.add(processedFile);
+                                continue;
+                            }
+                            
+                            FileEncoderWrapper fileEncoder = new FileEncoderWrapper();
+                            try {
+                                fileEncoder.initEncoder(encryptionKey, FileEncoderWrapper.EncryptionAlgorithm.AES_256_GCM);
+
+                                byte[] decryptedBytes = fileEncoder.decrypt(encryptedBytes);
+                                if(decryptedBytes == null) {
+                                    processedFiles.add(processedFile);
+                                    continue;
+                                }
+                                
+                                String base64Decrypted = Base64.getEncoder().encodeToString(decryptedBytes);
+                                processedFile.put("content", base64Decrypted);
+                                processedFile.put("isDecrypted", true);
+                                processedFile.put("originalSize", decryptedBytes.length);
+                                processedFile.put("originalFileName", originalFileName);
+                                
+                            } finally {
+                                fileEncoder.cleanup();
+                            }
+                            
+                            processedFiles.add(processedFile);
+                        } catch (Exception fileErr) {
+                            System.err.println("Error decrypting file: " + fileErr.getMessage());
+                            fileErr.printStackTrace();
+                            Map<String, Object> errorFile = new HashMap<>(fileMap);
+                            errorFile.put("decryptionError", fileErr.getMessage());
+                            processedFiles.add(errorFile);
                         }
-                    }).exceptionally(throwable -> {
-                        throwable.printStackTrace();
-                        Map<String, Object> errorResponse = new HashMap<>();
-                        errorResponse.put("error", "COMPLETABLE_FUTURE_FAILED");
-                        errorResponse.put("message", throwable.getMessage());
-                        errorResponse.put("success", false);
-                        socketMethods.send(sessionId, "/queue/decrypted-files-err", errorResponse);
-                        return null;
-                    });
+                    }
                     
-                    Map<String, Object> res = new HashMap<>();
-                    res.put("status", "processing");
-                    res.put("message", "File decryption started async");
-                    res.put("fileCount", finalFileMaps.size());
-                    return res;
-                } catch(Exception err) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("files", processedFiles);
+                    response.put("count", processedFiles.size());
+                    response.put("success", true);
+                    
+                    eventTracker.track(
+                        "get-decrypted-files",
+                        Map.of("count", processedFiles.size(), "chatId", chatId),
+                        EventDirection.SENT,
+                        sessionId,
+                        "system"
+                    );
+                    
+                    return response;
+                } catch (Exception err) {
                     err.printStackTrace();
+                    Map<String, Object> errRes = new HashMap<>();
+                    errRes.put("error", "LOAD_DECRYPTED_FILES_FAILED");
+                    errRes.put("message", err.getMessage() != null ? err.getMessage() : "Unknown error");
+                    errRes.put("success", false);
                     
-                    Map<String, Object> errorResponse = new HashMap<>();
-                    errorResponse.put("status", "error");
-                    errorResponse.put("message", err.getMessage());
-                    errorResponse.put("error", "INITIALIZATION_FAILED");
-                    socketMethods.send(sessionId, "/queue/decrypted-files-err", errorResponse);
-                    return errorResponse;
+                    eventTracker.track(
+                        "get-decrypted-files-error",
+                        Map.of("error", err.getMessage(), "payload", payload),
+                        EventDirection.SENT,
+                        sessionId,
+                        "system"
+                    );
+                    
+                    socketMethods.send(sessionId, "/queue/decrypted-files-err", errRes);
+                    return Collections.emptyMap();
                 }
             },
             "/queue/decrypted-files-scss",

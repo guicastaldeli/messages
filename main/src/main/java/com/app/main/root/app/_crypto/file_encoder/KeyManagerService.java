@@ -1,4 +1,5 @@
 package com.app.main.root.app._crypto.file_encoder;
+import com.app.main.root.EnvConfig;
 import com.app.main.root.app._db.CommandQueryManager;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,13 +16,14 @@ import java.security.MessageDigest;
 
 @Service
 public class KeyManagerService {
+    private static final String ENCRYPTION_MASTER_KEY = EnvConfig.get("ENCRYPTION_MASTER_KEY");
     private final Map<String, JdbcTemplate> jdbcTemplates;
     private final SecretKey masterKey;
     private static final String CIPHER_ALGO = "AES";
     private static final String CIPHER_MODE = "AES";
     private static final int KEY_SIZE = 256;
 
-    @Value("${encryption.master-key:}")
+    @Value("${encryption.master-key}")
     private String masterKeyEnv;
 
     public KeyManagerService(Map<String, JdbcTemplate> jdbcTemplates) {
@@ -36,11 +38,12 @@ public class KeyManagerService {
         try {
             String masterKeyStr = masterKeyEnv != null && !masterKeyEnv.isEmpty()
                 ? masterKeyEnv
-                : System.getenv("ENCRYPTION_MASTER_KEY");
-
+                : ENCRYPTION_MASTER_KEY;
             if(masterKeyStr == null || masterKeyStr.isEmpty()) {
                 System.err.println("No master key configured");
                 return generateMasterKey();
+            } else {
+                System.err.println("Master key FOUND!!");
             }
 
             byte[] decodedKey = Base64.getDecoder().decode(masterKeyStr);

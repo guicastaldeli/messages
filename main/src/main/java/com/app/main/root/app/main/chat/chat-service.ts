@@ -87,9 +87,7 @@ export class ChatService {
             files = Array.isArray(data.files) ? data.files : [];
             timeline = Array.isArray(data.timeline) ? data.timeline : [];
             
-            // FIX: Ensure files are included for newly added users
             if(files.length === 0 && timeline.length > 0) {
-                // Extract files from timeline
                 const timelineFiles = timeline.filter((item: any) => item.type === 'file');
                 if(timelineFiles.length > 0) {
                     console.log(`Extracting ${timelineFiles.length} files from timeline`);
@@ -218,7 +216,7 @@ export class ChatService {
 
                 if(fileItems.length > 0) {
                     console.log(`Decrypting ${fileItems.length} file items in timeline`);
-                    const chunkSize = 3;
+                    const chunkSize = 10;
                     for(let i = 0; i < fileItems.length; i += chunkSize) {
                         const chunk = fileItems.slice(i, i + chunkSize);
                         
@@ -271,7 +269,7 @@ export class ChatService {
                         decryptedTimeline.push(...chunkResults);
                         
                         if(i + chunkSize < fileItems.length) {
-                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            await new Promise(resolve => setTimeout(resolve, 100));
                         }
                     }
                 }
