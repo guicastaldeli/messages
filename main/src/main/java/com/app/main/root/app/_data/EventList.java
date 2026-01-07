@@ -622,14 +622,11 @@ public class EventList {
                             
                             Boolean isDecrypted = (Boolean) fileMap.get("isDecrypted");
                             if(isDecrypted != null && isDecrypted) {
-                                System.out.println("DEBUG: File " + fileId + " is already decrypted");
                                 processedFiles.add(processedFile);
                                 continue;
                             }
                             
                             if(originalFileName == null || originalFileName.isEmpty()) {
-                                System.out.println("DEBUG: File " + fileId + " has no originalFileName - checking database for metadata");
-                                
                                 File fileInfo = serviceManager.getFileService().getFileInfo(fileId, currentUserId);
                                 if(fileInfo != null && fileInfo.getOriginalFileName() != null) {
                                     processedFile.put("originalFileName", fileInfo.getOriginalFileName());

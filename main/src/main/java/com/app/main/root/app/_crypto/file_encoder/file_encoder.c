@@ -215,8 +215,10 @@ int decryptData(
     *outputLength += finalLen;
     
     EVP_CIPHER_CTX_free(decryptCtx);
+    /*
     printf("Decryption successful: inputLen=%zu, ivLen=%zu, tagLen=%zu, encryptedLen=%zu, outputLen=%zu\n", 
        inputLength, ctx->ivLength, ctx->tagLength, encryptedDataLength, *outputLength);
+    */
     return ENCODER_SUCCESS;
 }
 
@@ -534,7 +536,7 @@ int decryptFile(
     free(decryptedBuffer);
     EVP_CIPHER_CTX_free(decryptCtx);
 
-    printf("File decryption successful: %zu bytes decrypted\n", totalDecrypted);
+    //printf("File decryption successful: %zu bytes decrypted\n", totalDecrypted);
 
     if(totalDecrypted != header.fileSize) {
         printf("WARNING: Size mismatch! Expected %llu, got %zu\n", 

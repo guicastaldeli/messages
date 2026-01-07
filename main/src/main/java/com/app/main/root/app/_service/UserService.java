@@ -261,11 +261,7 @@ public class UserService {
                 data
             );
         } catch(Exception err) {
-            String errorMessage = err.getMessage();
-            if(errorMessage != null && 
-            !errorMessage.contains("No session") && !errorMessage.contains("not found")) {
-                System.err.println("Error sending message to session " + sessionId + ": " + errorMessage);
-            }
+            System.out.println(err);
         }
     }
 

@@ -424,20 +424,10 @@ public class FileService {
                     byte[].class,
                     fileId
                 );
-                
                 if(encryptedContent == null) {
                     System.err.println("No encrypted content found for file: " + fileId);
                     return null;
                 }
-                
-                System.out.println("DEBUG: Encrypted content retrieved:");
-                System.out.println("  Total length: " + encryptedContent.length);
-                
-                if(encryptedContent.length > 28) {
-                    System.out.println("  First 12 bytes (IV): " + bytesToHex(Arrays.copyOf(encryptedContent, 12)));
-                    System.out.println("  Last 16 bytes (tag): " + bytesToHex(Arrays.copyOfRange(encryptedContent, encryptedContent.length-16, encryptedContent.length)));
-                }
-                
                 return encryptedContent;
             } catch (Exception err) {
                 System.err.println("Error retrieving encrypted content for file " + fileId + ": " + err.getMessage());

@@ -144,7 +144,7 @@ public class KeyManagerService {
                 fileId,
                 userId
             );
-            System.out.println("Key retrieved successfully... length: " + (key != null ? key.length : "null"));
+            //System.out.println("Key retrieved successfully... length: " + (key != null ? key.length : "null"));
             return key;
         } catch(Exception err) {
             System.err.println("Error retrieving encryption key: " + err.getMessage());
