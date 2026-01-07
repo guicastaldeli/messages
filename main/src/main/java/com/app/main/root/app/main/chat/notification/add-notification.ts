@@ -1,12 +1,12 @@
-import { Data, NotificationServiceClient, Type } from "./notification-service-client"
+import { Data, Type, NotificationControllerClient } from "./notification-controller-client"
 
-export const AddNotification = (notificationService?: NotificationServiceClient) => ({
+export const AddNotification = (notificationController?: NotificationControllerClient) => ({
     /**
      * Init
      */
     get init() {
-        return async(notificationService: NotificationServiceClient) => {
-            notificationService = notificationService;
+        return async(notificationController: NotificationControllerClient) => {
+            notificationController = notificationController;
         }
     },
 
@@ -17,10 +17,10 @@ export const AddNotification = (notificationService?: NotificationServiceClient)
         return async(data: any): Promise<void> => {
             const content: Data = {
                 id: `msg_${data.messageId}_${Date.now()}`,
-                userId: notificationService!.userId,
+                userId: notificationController!.userId,
                 type: Type.MESSAGE,
-                title: notificationService!.getNotificationTitle(data),
-                message: notificationService!.formatMessagePreview(data.content),
+                title: notificationController!.getNotificationTitle(data),
+                message: notificationController!.formatMessagePreview(data.content),
                 chatId: data.chatId,
                 senderId: data.senderId,
                 senderName: data.username || data.senderName || 'Unknown',
@@ -34,8 +34,8 @@ export const AddNotification = (notificationService?: NotificationServiceClient)
                 }
             }
 
-            await notificationService!.addNotification(content);
-            notificationService!.showDesktopNotification(content);
+            await notificationController!.addNotification(content);
+            notificationController!.showDesktopNotification(content);
         }
     },
 
@@ -46,7 +46,7 @@ export const AddNotification = (notificationService?: NotificationServiceClient)
         return async(data: any): Promise<void> => {
             const content: Data = {
                 id: `file_${data.fileId}_${Date.now()}`,
-                userId: notificationService!.userId,
+                userId: notificationController!.userId,
                 type: Type.FILE,
                 title: `${data.senderName || data.username} shared a file`,
                 message: data.originalFileName || 'File shared',
@@ -63,8 +63,8 @@ export const AddNotification = (notificationService?: NotificationServiceClient)
                 }
             }
 
-            await notificationService!.addNotification(content);
-            notificationService!.showDesktopNotification(content);
+            await notificationController!.addNotification(content);
+            notificationController!.showDesktopNotification(content);
         }
     },
 
@@ -75,7 +75,7 @@ export const AddNotification = (notificationService?: NotificationServiceClient)
         return async(data: any): Promise<void> => {
             const content: Data = {
                 id: `sys_${data.event}_${Date.now()}`,
-                userId: notificationService!.userId,
+                userId: notificationController!.userId,
                 type: Type.SYSTEM,
                 title: data.title || 'System Notification',
                 message: data.message,
@@ -88,8 +88,8 @@ export const AddNotification = (notificationService?: NotificationServiceClient)
                 metadata: data.metadata
             }
 
-            await notificationService!.addNotification(content);
-            notificationService!.showDesktopNotification(content);
+            await notificationController!.addNotification(content);
+            notificationController!.showDesktopNotification(content);
         }
     }
 });

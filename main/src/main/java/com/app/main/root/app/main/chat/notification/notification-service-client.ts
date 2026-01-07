@@ -1,134 +1,113 @@
-import { SocketClientConnect } from "../../socket-client-connect";
 import { ApiClientController } from "../../_api-client/api-client-controller";
-import { AddNotification } from "./add-notification";
-
-export enum Type {
-    MESSAGE = 'MESSAGE',
-    FILE = 'FILE',
-    SYSTEM = 'SYSTEM'
-}
-    
-export interface Data {
-    id: string;
-    userId: string;
-    type: Type;
-    title: string;
-    message: string;
-    chatId: string;
-    senderId: string;
-    senderName: string;
-    timestamp: Date;
-    isRead: boolean;
-    priority: 'LOW' | 'NORMAL' | 'HIGH';
-    metadata?: any;
-}
+import { NotificationControllerClient } from "./notification-controller-client";
+import { Data } from "./notification-controller-client";
 
 export class NotificationServiceClient {
-    private socketClient: SocketClientConnect;
     private apiClientController: ApiClientController;
-    
-    private notifications: Map<string, Data> = new Map();
-    private notificationCallbacks: Set<(data: Data[]) => void> = new Set();
+    private notificationController: NotificationControllerClient;
 
-    private unreadCount: number = 0;
-    private countCallbacks: Set<(count: number) => void> = new Set();
-
-    public userId!: string;
-    public username!: string;
-
-    constructor(socketClient: SocketClientConnect, apiClientController: ApiClientController) {
-        this.socketClient = socketClient;
+    constructor(apiClientController: ApiClientController, notificationController: NotificationControllerClient) {
         this.apiClientController = apiClientController;
-    }
-
-    private async init(): Promise<void> {
-        await AddNotification().init(this);
-        await this.setupListeners();
-    }
-
-    public async getUserData(userId: string, username: string): Promise<void> {
-        this.userId = userId;
-        this.username = username;
-        await this.setupListeners();
+        this.notificationController = notificationController;
     }
 
     /**
-     * Setup Listeners
+     * Persist Notification
      */
-    private async setupListeners(): Promise<void> {
-        this.socketClient.on('/user/queue/notifications', (data: any) => {
-            this.handleIncomingNotification(data);
-        });
-        this.socketClient.on('/queue/messages', (data: any) => {
-            if(shouldAddNotification(data)) {
-                this.createNotification(data);
-            }
-        });
-        this.socketClient.on('/user/queue/notifications', (data: any) => {
-            this.handleIncomingNotification(data);
-        });
-    }
-
-    private shouldAddNotification(message: any): boolean {
-        if(message.senderId === this.userId || 
-            message.senderId === this.username
-        ) {
-            return false;
-        }
-
-        const activeChatId = this.getActiveChatId();
-        if(message.chatId === activeChatId) return false;
-    }
-
-    /**
-     * Create Notification
-     */
-    private async createNotification(data: any): Promise<void> {
-        if(!this.shouldAddNotification(data)) return;
+    public async persistNotification(data: Data): Promise<void> {
         try {
-            const messageType = this.detectMessageType(data);
-            switch(messageType) {
-                case Type.MESSAGE:
-                    await AddNotification().addMessage(data);
-                    break;
-                case Type.FILE:
-                    await AddNotification().addFile(data);
-                    break;
-                case Type.SYSTEM:
-                    await AddNotification().addSystemMessage(data);
-                    break;
-                default:
-                    console.warn('Unknown message type:', messageType, data);
-                    await AddNotification().addMessage(data);
-                    break;
+            const res = await fetch(`${this.apiClientController.getUrl()}/api/notifications`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if(!res.ok) throw new Error('Failed to get session');
+        } catch(err) {
+            console.error('Notification failed', err);
+        }
+    }
+
+    /**
+     * Load User Notification
+     */
+    public async loadUserNotification(userId: string): Promise<void> {
+        try {
+            const res = await fetch(`${this.apiClientController.getUrl()}/api/notifications/user/${userId}`);
+            if(!res.ok) throw new Error('Failed to load notifications!');
+
+            const data = await res.json();
+            if(data.success) {
+                this.notificationController.notifications.clear();
+                this.notificationController.unreadCount = 0;
+                data.notifications.forEach((d: any) => {
+                    const notification: Data = {
+                        ...d,
+                        timestamp: new Date(d.timestamp)
+                    }
+                    this.notificationController.notifications.set(notification.id, notification);
+                    if(!notification.isRead) this.notificationController.unreadCount++;
+                });
+
+                this.notificationController.updateBadgeCount();
+                this.notificationController.notifySubscribers();
             }
         } catch(err) {
-            console.log(err);
-            throw err;
+            console.error('Failed to load notifications', err);
         }
     }
 
-    private detectMessageType(data: any): string {
-        if(data._typeOverride) return data._typeOverride;
-        if(data.type) {
-            const type = String(data.type).toUpperCase();
-            for(const t in Type) {
-                if(t.includes(type)) {
-                    return type;
-                }
-            }
+    public async getServerUnreadCount(userId: string): Promise<number> {
+        try {
+        const response = await fetch(`/api/notifications/user/${userId}/unread-count`);
+        if(response.ok) {
+            const data = await response.json();
+            return data.success ? data.count : 0;
         }
+        } catch(error) {
+        console.error('Failed to get server unread count:', error);
+        }
+        return 0;
+    }
 
-        if(data.fileData || data.fileId || data.originalFileName) {
-            return Type.FILE;
+    public async updateNotificationStatus(notificationId: string, isRead: boolean): Promise<void> {
+        try {
+        const response = await fetch(`/api/notifications/${notificationId}/read`, {
+            method: 'PUT'
+        });
+            
+        if(!response.ok) {
+            throw new Error('Failed to update notification status');
         }
-        if(data.isSystem || 
-            data.event?.includes('SYSTEM') || 
-            data.messageType === 'SYSTEM'
-        ) {
-            return Type.SYSTEM;
+        } catch (error) {
+        console.error('Failed to update notification status:', error);
         }
-        
-        return Type.MESSAGE;
+    }
+
+    public async deleteNotification(notificationId: string): Promise<void> {
+        try {
+        const response = await fetch(`/api/notifications/${notificationId}`, {
+            method: 'DELETE'
+        });
+            
+        if(!response.ok) {
+            throw new Error('Failed to delete notification');
+        }
+        } catch (error) {
+        console.error('Failed to delete notification:', error);
+        }
+    }
+
+    public async markAllAsRead(): Promise<void> {
+        try {
+        const response = await fetch(`/api/notifications/user/${this.notificationController.userId}/read-all`, {
+            method: 'PUT'
+        });
+            
+        if (!response.ok) {
+            throw new Error('Failed to mark all as read');
+        }
+        } catch (error) {
+        console.error('Failed to mark all as read:', error);
+        }
     }
 }
