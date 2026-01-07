@@ -1,4 +1,4 @@
-package com.app.main.root.app._utils;
+package com.app.main.root.app.utils;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;

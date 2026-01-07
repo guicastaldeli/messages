@@ -1,5 +1,6 @@
 package com.app.main.root;
-import com.app.main.root.app._utils.ColorConverter;
+import com.app.main.root.app.utils.ColorConverter;
+
 import io.github.cdimascio.dotenv.Dotenv;
 
 public class EnvConfig {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { MessageProps } from '../messages/message-item';
 import { Item } from './file-item';
-import { UserColorGenerator } from '@/app/_utils/UserColorGenerator';
+import { UserColorGenerator } from '@/app/utils/UserColorGenerator';
 
 export interface FileMessageProps extends MessageProps {
     fileData: Item;

@@ -1,9 +1,10 @@
 package com.app.main.root.app._data;
 import com.app.main.root.app.__controllers.UserAgentParserPrediction;
-import com.app.main.root.app._utils.Context;
-import com.app.main.root.app._utils.InferenceRule;
-import com.app.main.root.app._utils.PatternAnalysis;
-import com.app.main.root.app._utils.RuleResult;
+import com.app.main.root.app.utils.Context;
+import com.app.main.root.app.utils.InferenceRule;
+import com.app.main.root.app.utils.PatternAnalysis;
+import com.app.main.root.app.utils.RuleResult;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

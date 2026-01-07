@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserColorGenerator } from "@/app/_utils/UserColorGenerator";
+import { UserColorGenerator } from "@/app/utils/UserColorGenerator";
 import { FileMessageWrapper } from '../file/file-component';
 
 export interface MessageProps {

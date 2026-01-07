@@ -2,11 +2,12 @@ package com.app.main.root.app.__controllers;
 import org.springframework.stereotype.Component;
 import com.app.main.root.app._data.UserAgentKnowledgeBase;
 import com.app.main.root.app._data.UserAgentParserRegistryData;
-import com.app.main.root.app._utils.Context;
-import com.app.main.root.app._utils.ContextualReasoner;
-import com.app.main.root.app._utils.PatternAnalysis;
-import com.app.main.root.app._utils.PatternInterfaceEngine;
-import com.app.main.root.app._utils.UserAgentParserApiClient;
+import com.app.main.root.app.utils.Context;
+import com.app.main.root.app.utils.ContextualReasoner;
+import com.app.main.root.app.utils.PatternAnalysis;
+import com.app.main.root.app.utils.PatternInterfaceEngine;
+import com.app.main.root.app.utils.UserAgentParserApiClient;
+
 import jakarta.annotation.PostConstruct;
 import java.util.*;
 

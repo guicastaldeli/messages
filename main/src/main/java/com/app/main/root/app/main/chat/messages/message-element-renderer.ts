@@ -1,5 +1,5 @@
 import ReactDOM from 'react-dom/client';
-import { UserColorGenerator } from "@/app/_utils/UserColorGenerator";
+import { UserColorGenerator } from "@/app/utils/UserColorGenerator";
 import { ChatController } from '../chat-controller';
 import { Analysis } from './message-analyzer-client';
 

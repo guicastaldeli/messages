@@ -1,4 +1,4 @@
-package com.app.main.root.app._utils;
+package com.app.main.root.app.utils;
 
 public class FunctionalInterfaces {
     @FunctionalInterface

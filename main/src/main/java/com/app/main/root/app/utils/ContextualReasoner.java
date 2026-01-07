@@ -1,4 +1,4 @@
-package com.app.main.root.app._utils;
+package com.app.main.root.app.utils;
 
 public class ContextualReasoner {
     public Context buildContext(PatternAnalysis analysis, String userAgent) {
