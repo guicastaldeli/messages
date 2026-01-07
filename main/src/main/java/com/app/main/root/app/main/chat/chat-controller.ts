@@ -26,7 +26,6 @@ export class ChatController {
     private chunkRenderer: ChunkRenderer;
     private chatStateManager = ChatStateManager.getIntance();
     private apiClientController: ApiClientController;
-    private addToCache!: AddToCache;
 
     public dashboard: any;
     
@@ -82,7 +81,7 @@ export class ChatController {
         await this.socketClient.connect();
 
         const cacheService = await this.chatService.getCacheServiceClient();
-        this.addToCache = new AddToCache(cacheService);
+        await AddToCache().init(cacheService);
     }
 
     public async getChatData(
@@ -500,7 +499,7 @@ export class ChatController {
                     isTemp: false
                 }
 
-                await this.addToCache.addMessage(chatId, messageToCache);
+                await AddToCache().addMessage(chatId, messageToCache);
                 await this.chatService.getMessageController().addMessage(chatId, messageToCache);
             } catch(err) {
                 console.error('Failed to save message :(', err);
@@ -514,7 +513,7 @@ export class ChatController {
                     isTemp: true
                 }
                 
-                await this.addToCache.addMessage(chatId, messageToCache);
+                await AddToCache().addMessage(chatId, messageToCache);
                 await this.chatService.getMessageController().addMessage(chatId, messageToCache);
             }
             if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
@@ -549,11 +548,11 @@ export class ChatController {
 
         try {
             if(isSystemMessage) {
-                await this.addToCache.addSystemMessage(data.chatId, data);
+                await AddToCache().addSystemMessage(data.chatId, data);
             } else if(isFileMessage) {
-                await this.addToCache.addFile(data.chatId, data);
+                await AddToCache().addFile(data.chatId, data);
             } else {
-                await this.addToCache.addMessage(data.chatId, data);
+                await AddToCache().addMessage(data.chatId, data);
             }
         } catch(err) {
             console.error('Failed to update cache:', err);
@@ -697,7 +696,7 @@ export class ChatController {
                     fileData: file
                 };
 
-                await this.addToCache.addFile(chatId, fileToCache);
+                await AddToCache().addFile(chatId, fileToCache);
                 await fileService.addFile(chatId, fileToCache);
             } catch(err) {
                 console.error('Failed to cache file :(', err);
@@ -716,7 +715,7 @@ export class ChatController {
                     fileData: file
                 };
 
-                await this.addToCache.addFile(chatId, fileToCache);
+                await AddToCache().addFile(chatId, fileToCache);
                 await fileService.addFile(chatId, fileToCache);
             }
             

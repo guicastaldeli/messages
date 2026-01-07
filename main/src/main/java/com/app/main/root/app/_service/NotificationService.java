@@ -102,6 +102,17 @@ public class NotificationService {
         }
     }
 
+    public void markAllAsRead(String userId) throws SQLException {
+        String query = CommandQueryManager.MARK_ALL_AS_READ.get();
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, userId);
+            stmt.executeUpdate();
+        }
+    }
+
     /**
      * Delete Notification
      */

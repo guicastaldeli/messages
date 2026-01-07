@@ -21,6 +21,7 @@ public class ServiceManager {
     private final GroupService groupService;
     private final EmailService emailService;
     private final ChatService chatService;
+    private final NotificationService notificationService;
     private final SessionService sessionService;
     private final TokenService tokenService;
     private final CookieService cookieService;
@@ -34,6 +35,7 @@ public class ServiceManager {
         @Lazy SystemMessageService systemMessageService,
         @Lazy MessagePerspectiveService messagePerspectiveService,
         @Lazy ChatService chatService,
+        @Lazy NotificationService notificationService,
         UserService userService,
         @Lazy DirectService directService,
         ContactService contactService,
@@ -51,6 +53,7 @@ public class ServiceManager {
         this.systemMessageService = systemMessageService;
         this.messagePerspectiveService = messagePerspectiveService;
         this.chatService = chatService;
+        this.notificationService = notificationService;
         this.userService = userService;
         this.contactService = contactService;
         this.directService = directService;
@@ -92,9 +95,9 @@ public class ServiceManager {
         return messagePerspectiveService;
     }
 
-    /*
-    * Chat Manager Service 
-    */
+    /**
+     * Get Chat Service
+     */
     public ChatService getChatService() {
         return chatService;
     }
@@ -104,6 +107,10 @@ public class ServiceManager {
      */
     public UserService getUserService() {
         return userService;
+    }
+
+    public NotificationService getNotificationService() {
+        return notificationService;
     }
 
     /**
