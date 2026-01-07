@@ -23,7 +23,7 @@ public class FileEncoderWrapper {
                 Files.list(directory)
                     .filter(path -> path.toString().toLowerCase().endsWith(".dll"))
                     .forEach(path -> System.out.println("  - " + path.getFileName()));
-            } catch (Exception err) {
+            } catch(Exception err) {
                 System.out.println("error directory" + err.getMessage());
             }
 
@@ -46,13 +46,13 @@ public class FileEncoderWrapper {
                 try {
                     System.load(libPath.toAbsolutePath().toString());
                     System.out.println("Successfully loaded: " + lib);
-                } catch (UnsatisfiedLinkError e) {
+                } catch(UnsatisfiedLinkError e) {
                     System.err.println("Failed to load: " + lib);
                     System.err.println("Error: " + e.getMessage());
                     throw e;
                 }
             }
-        } catch (Exception err) {
+        } catch(Exception err) {
             err.printStackTrace();
             throw new RuntimeException("Failed to load native libraries: " + err.getMessage());
         }
@@ -256,7 +256,7 @@ public class FileEncoderWrapper {
 
     private String bytesToHex(byte[] bytes) {
         StringBuilder result = new StringBuilder();
-        for (byte b : bytes) {
+        for(byte b : bytes) {
             result.append(String.format("%02x", b));
         }
         return result.toString();

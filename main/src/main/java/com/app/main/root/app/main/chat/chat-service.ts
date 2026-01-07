@@ -99,6 +99,7 @@ export class ChatService {
                 }
             }
 
+            /* Messages */
             if(Array.isArray(messages) && messages.length > 0) {
                 const decryptedMessages = [];
                 for(const message of messages) {
@@ -117,7 +118,9 @@ export class ChatService {
                 }
                 messages = decryptedMessages.map((message: any) => ({ ...message }));
             }
+            /* Files */
             if(Array.isArray(files) && files.length > 0) {
+                console.log(`Decrypting ${files.length} files for ${chatId}`);
                 const decryptedFiles = [];
                 const chunkSize = 5;
                 for(let i = 0; i < files.length; i += chunkSize) {
@@ -142,6 +145,41 @@ export class ChatService {
                 }
                 files = decryptedFiles.map((file: any) => ({ ...file }));
             }
+            if(Array.isArray(files) && files.length > 0) {
+                const timelineFileIds = new Set(
+                    timeline
+                        .filter((item: any) => item.type === 'file')
+                        .map((item: any) => item.fileData?.fileId || item.fileId || item.id)
+                );
+                
+                console.log(`Timeline has ${timelineFileIds.size} file entries, files array has ${files.length} files`);
+                
+                files.forEach(file => {
+                    const fileId = file.fileId || file.file_id || file.id;
+                    
+                    if(!timelineFileIds.has(fileId)) {
+                        console.log(`Adding missing file ${fileId} to timeline`);
+                        const timelineItem = {
+                            id: `file_${fileId}`,
+                            messageId: `file_${fileId}`,
+                            type: 'file',
+                            fileId: fileId,
+                            chatId: chatId,
+                            senderId: file.senderId,
+                            userId: file.senderId,
+                            username: file.username,
+                            timestamp: new Date(file.uploadedAt || file.createdAt || Date.now()).getTime(),
+                            createdAt: file.uploadedAt || file.createdAt,
+                            fileData: file,
+                            content: `Shared file: ${file.originalFileName}`
+                        };
+                        timeline.push(timelineItem);
+                    }
+                });
+                
+                console.log(`Timeline now has ${timeline.length} total items`);
+            }
+            /* Timeline */
             if(Array.isArray(timeline) && timeline.length > 0) {
                 const decryptedTimeline = [];
                 
@@ -151,6 +189,8 @@ export class ChatService {
                     (item.type === 'message' && item.system) || 
                     (item.type !== 'message' && item.type !== 'file')
                 );
+                
+                console.log(`Timeline breakdown: ${messageItems.length} messages, ${fileItems.length} files, ${otherItems.length} other`);
                 
                 for(const item of messageItems) {
                     try {
@@ -166,8 +206,9 @@ export class ChatService {
                         });
                     }
                 }
-                
+
                 if(fileItems.length > 0) {
+                    console.log(`Decrypting ${fileItems.length} file items in timeline`);
                     const chunkSize = 3;
                     for(let i = 0; i < fileItems.length; i += chunkSize) {
                         const chunk = fileItems.slice(i, i + chunkSize);
@@ -176,6 +217,13 @@ export class ChatService {
                             try {
                                 const fileService = await this.getFileController().getFileService();
                                 const fileDataToDecrypt = item.fileData || item;
+                                
+                                console.log('Decrypting timeline file:', {
+                                    fileId: fileDataToDecrypt.fileId,
+                                    senderId: item.senderId,
+                                    hasFileData: !!item.fileData
+                                });
+                                
                                 const decryptedFile = await fileService.decryptFile(chatId, fileDataToDecrypt);
                                 const decryptedFileItem = decryptedFile[0];
                                 
@@ -204,12 +252,13 @@ export class ChatService {
                 }
                 
                 decryptedTimeline.push(...otherItems);
-
                 timeline = decryptedTimeline.sort((a, b) => {
-                    const timeA = a.timestamp || a.createdAt || 0;
-                    const timeB = b.timestamp || b.createdAt || 0;
+                    const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
+                    const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
                     return timeA - timeB;
                 });
+                
+                console.log(`Final timeline has ${timeline.length} items after decryption`);
             }
 
             return {
@@ -235,23 +284,6 @@ export class ChatService {
                     fromCache: false
                 }
             };
-        }
-    }
-
-    private async clearCache(): Promise<void> {
-        try {
-            const cacheService = await this.getCacheServiceClient();
-            // Clear oldest cache entries
-            const cacheEntries = Array.from(cacheService.cache.entries());
-            if (cacheEntries.length > 10) { // Keep only 10 most recent chats
-                cacheEntries.sort((a, b) => b[1].lastAccessTime - a[1].lastAccessTime);
-                const toRemove = cacheEntries.slice(10);
-                toRemove.forEach(([chatId]) => {
-                    cacheService.cache.delete(chatId);
-                });
-            }
-        } catch(error) {
-            console.error('Error clearing cache:', error);
         }
     }
 
@@ -299,7 +331,7 @@ export class ChatService {
         fromCache: boolean
     }> {
         const cacheService = await this.getCacheServiceClient();
-        if (!cacheService.cache.has(chatId)) {
+        if(!cacheService.cache.has(chatId)) {
             console.log(`Skipping fetch for exited group: ${chatId}`);
             return { 
                 messages: [], 

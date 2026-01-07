@@ -1,7 +1,7 @@
+import { Root } from "react-dom/client";
 import { SocketClientConnect } from "../../../socket-client-connect";
 import { ChatController } from "../../chat-controller";
 import { chatState } from "../../chat-state-service";
-import { Root } from "react-dom/client";
 import { ChatStateManager } from "../../chat-state-manager";
 import { ChatService } from "../../chat-service";
 import { ChatManager } from "../../chat-manager";
@@ -110,7 +110,7 @@ export class DirectManager {
             window.dispatchEvent(directEvent);
             
             console.log('Chat opened successfully');
-        } catch (error) {
+        } catch(error) {
             console.error('Failed to open chat:', error);
         }
     }

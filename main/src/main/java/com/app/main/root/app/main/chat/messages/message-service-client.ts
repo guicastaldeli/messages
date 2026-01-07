@@ -78,7 +78,7 @@ export class MessageServiceClient {
                     payload,
                     succssDestination
                 );
-            } catch (err) {
+            } catch(err) {
                 this.socketClient.offDestination(succssDestination, handlesuccss);
                 this.socketClient.offDestination(errDestination, handleErr);
                 rej(err);

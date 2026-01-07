@@ -208,7 +208,7 @@ export class SessionProvider extends Component<Props, State> {
                 }
                 this.setSessionData(mergedData);
             }
-        } catch (err) {
+        } catch(err) {
             console.error('Failed to sync session with server:', err);
         } finally {
             this.setState({ isLoading: false });

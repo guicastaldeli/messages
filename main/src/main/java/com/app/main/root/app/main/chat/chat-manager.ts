@@ -198,7 +198,7 @@ export class ChatManager {
             const chatService = new ChatService(this.socketClient, this.apiClientController);
             const loader = new Loader(this.socketClient, chatService, this);
             await loader.loadChatItems(userId);
-        } catch (err) {
+        } catch(err) {
             console.error('Failed to load chats via events:', err);
         }
     }
@@ -452,7 +452,7 @@ export class ChatManager {
                 });
                 
                 return {
-                    content: lastItem.content || `Shared file: ${lastItem.fileData?.originalFileName}` || 'System message',
+                    content: lastItem.content || lastItem.fileData?.originalFileName || 'System message',
                     currentUserId: lastItem.sender || lastItem.senderId || userId,
                     sender: lastItem.sender || lastItem.senderId || 'System',
                     isSystem: lastItem.isSystem || lastItem.type === 'system'
@@ -554,7 +554,7 @@ export class ChatManager {
 
         if(systemMessage) {
             formattedMessage = lastMessage;
-        } else if(lastMessage.includes('Shared file:')) {
+        } else if(lastMessage.includes('Shared:')) {
             formattedMessage = lastMessage;
         } else {
             if(isDirect) {

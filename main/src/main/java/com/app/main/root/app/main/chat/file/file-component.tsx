@@ -40,14 +40,33 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
     const messageColor = getMessageColor();
 
     const getFileIcon = (fileType: string, mimeType: string): string => {
-        switch(fileType) {
-            case 'image': return 'IMG';
-            case 'video': return 'VID';
-            case 'document': 
-                if(mimeType.includes('pdf')) return 'DOC';
-                if(mimeType.includes('word') || mimeType.includes('document')) return 'DOC';
+        if(mimeType) {
+            if(mimeType.startsWith('image/')) return 'IMG';
+            if(mimeType.startsWith('video/')) return 'VID';
+            if(mimeType.startsWith('audio/')) return 'AUD';
+            if(mimeType.includes('pdf')) return 'DOC';
+            if(mimeType.includes('word') || mimeType.includes('document')) return 'DOC';
+            if(mimeType.includes('text')) return 'TXT';
+        }
+        switch(fileType.toLowerCase()) {
+            case 'image':
+            case 'img':
+                return 'IMG';
+            case 'video':
+            case 'vid':
+                return 'VID';
+            case 'audio':
+            case 'aud':
+                return 'AUD';
+            case 'document':
+            case 'doc':
+            case 'pdf':
+                return 'DOC';
+            case 'text':
+            case 'txt':
+                return 'TXT';
+            default:
                 return 'OTH';
-            default: return 'OTH';
         }
     };
 
@@ -95,7 +114,7 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
             
             <div className="file-message-content">
                 <div className="file-icon">
-                    {getFileIcon(fileData.fileType, fileData.mimeType)}
+                    {getFileIcon(fileData.fileType || '', fileData.mimeType || '')}
                 </div>
                 
                 <div className="file-info">

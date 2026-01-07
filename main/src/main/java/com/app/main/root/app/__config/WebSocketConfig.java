@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -35,6 +36,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             .addInterceptors(interceptor)
             .setAllowedOriginPatterns(webUrl, apiUrl)
             .withSockJS();
+    }
+
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+        registration.setSendTimeLimit(60 * 1000);
+        registration.setSendBufferSizeLimit(10 * 1024 * 1024);
+        registration.setTimeToFirstMessage(30 * 1000);
     }
 
     @Override

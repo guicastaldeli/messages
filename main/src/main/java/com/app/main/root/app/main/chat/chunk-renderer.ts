@@ -90,7 +90,7 @@ export class ChunkRenderer {
                         container.scrollTop = scrollDiff;
                     }, 100);
                 }
-            } catch (error) {
+            } catch(error) {
                 console.error(`Failed to load chunk for chat ${chatId}:`, error);
             } finally {
                 this.currentLoadingPage = -1;

@@ -291,7 +291,7 @@ export class MessageElementRenderer {
             } else {
                 await this.renderElement(messageData);
             }
-        } catch (error) {
+        } catch(error) {
             console.error('Error rendering file message:', error);
             await this.renderElement(messageData);
         }

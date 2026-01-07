@@ -11,10 +11,10 @@ __declspec(dllexport) JNIEXPORT jlong JNICALL Java_com_app_main_root_app__1crypt
     try {
         PasswordEncoder* encoder = new PasswordEncoder();
         return reinterpret_cast<jlong>(encoder);
-    } catch (const std::exception& err) {
+    } catch(const std::exception& err) {
         std::cerr << "Error creating PasswordEncoder: " << err.what() << std::endl;
         return 0;
-    } catch (...) {
+    } catch(...) {
         std::cerr << "Unknown error creating PasswordEncoder" << std::endl;
         return 0;
     }

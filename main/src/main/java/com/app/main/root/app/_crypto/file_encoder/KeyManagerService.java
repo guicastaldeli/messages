@@ -96,11 +96,11 @@ public class KeyManagerService {
                     encryptionKey
                 );
                 System.out.println("Key stored successfully. Rows affected: " + rowsAffected);
-            } catch (Exception e) {
+            } catch(Exception e) {
                 System.err.println("Error store key" + e.getMessage());
                 e.printStackTrace();
             }
-        } catch (Exception e) {
+        } catch(Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to store encryption key: " + e.getMessage(), e);
         }
@@ -111,7 +111,7 @@ public class KeyManagerService {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
             return bytesToHex(hash);
-        } catch (Exception e) {
+        } catch(Exception e) {
             System.err.println("Error generating hash: " + e.getMessage());
             return input;
         }
@@ -143,7 +143,7 @@ public class KeyManagerService {
             );
             System.out.println("Key retrieved successfully... length: " + (key != null ? key.length : "null"));
             return key;
-        } catch (Exception err) {
+        } catch(Exception err) {
             System.err.println("Error retrieving encryption key: " + err.getMessage());
             throw new RuntimeException("Failed to retrieve encryption key", err);
         }
@@ -161,7 +161,7 @@ public class KeyManagerService {
 
             template.update(query, fileId, userId);
             System.out.println("Key deleted for fileId: " + fileId);
-        } catch (Exception e) {
+        } catch(Exception e) {
             System.err.println("Error deleting encryption key: " + e.getMessage());
             throw new RuntimeException("Failed to delete encryption key", e);
         }
@@ -177,7 +177,7 @@ public class KeyManagerService {
             List<Map<String, Object>> result = template.queryForList(query, fileId, userId);
             Integer count = ((Number) result.get(0).get("count")).intValue();
             return count > 0;
-        } catch (Exception err) {
+        } catch(Exception err) {
             System.err.println("Error checking key existence: " + err.getMessage());
             return false;
         }
@@ -212,7 +212,7 @@ public class KeyManagerService {
             cipher.init(Cipher.DECRYPT_MODE, masterKey);
 
             return cipher.doFinal(encryptedBytes);
-        } catch (Exception err) {
+        } catch(Exception err) {
             throw new RuntimeException("Failed to decrypt key", err);
         }
     }
@@ -223,7 +223,7 @@ public class KeyManagerService {
             byte[] hash = md.digest(input.getBytes());
 
             return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception err) {
+        } catch(Exception err) {
             throw new RuntimeException("Failed to hash string", err);
         }
     }

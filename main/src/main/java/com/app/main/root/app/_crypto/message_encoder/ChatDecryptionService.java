@@ -13,7 +13,7 @@ public class ChatDecryptionService {
     public String decryptMessage(String chatId, byte[] encryptedContent) {
         try {
             return secureMessageService.decryptMessage(chatId, encryptedContent);
-        } catch (Exception e) {
+        } catch(Exception e) {
             return "[Encrypted Message]";
         }
     }

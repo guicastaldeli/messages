@@ -210,7 +210,7 @@ public class ChatService {
                 timelineItem.put("senderId", file.getSenderId());
                 timelineItem.put("messageId", "file_" + file.getFileId());
                 timelineItem.put("fileData", file);
-                timelineItem.put("content", "Shared file: " + file.getOriginalFileName());
+                timelineItem.put("content", file.getOriginalFileName());
                 timelineItem.put("chatId", file.getChatId());
                 timelineItem.put("userId", userId);
 
@@ -247,9 +247,9 @@ public class ChatService {
             pagination.put("totalItems", timeline.size());
             pagination.put("totalFiles", files.size());
             chatData.put("pagination", pagination);
-        } catch (SecurityException e) {
+        } catch(SecurityException e) {
             throw e;
-        } catch (Exception e) {
+        } catch(Exception e) {
             e.printStackTrace();
             chatData.put("timeline", new ArrayList<>());
             chatData.put("messages", new ArrayList<>());
@@ -307,7 +307,7 @@ public class ChatService {
         if(timestamp instanceof String) {
             try {
                 return Timestamp.valueOf((String) timestamp).getTime();
-            } catch (Exception e) {
+            } catch(Exception e) {
                 return 0L;
             }
         }

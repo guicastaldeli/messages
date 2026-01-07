@@ -524,7 +524,7 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
   (JNIEnv *env, jobject obj) {
     try {
         return messageEncoder->saveSessionsNow();
-    } catch (const std::exception& e) {
+    } catch(const std::exception& e) {
         std::cerr << "Failed to save sessions: " << e.what() << std::endl;
         return JNI_FALSE;
     }
@@ -534,7 +534,7 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
   (JNIEnv *env, jobject obj) {
     try {
         return messageEncoder->loadSessionsNow();
-    } catch (const std::exception& e) {
+    } catch(const std::exception& e) {
         std::cerr << "Failed to load sessions: " << e.what() << std::endl;
         return JNI_FALSE;
     }

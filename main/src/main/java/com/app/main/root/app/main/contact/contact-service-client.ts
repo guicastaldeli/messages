@@ -92,12 +92,12 @@ export class ContactServiceClient {
                                     try {
                                         await this.getContacts();
                                         console.log('ContactServiceClient: Second contact reload after acceptance');
-                                    } catch (error) {
+                                    } catch(error) {
                                         console.error('Error in second contact reload:', error);
                                     }
                                 }, 1000);
                                 
-                            } catch (error) {
+                            } catch(error) {
                                 console.error('Error in first contact reload:', error);
                             }
                         }, 300);

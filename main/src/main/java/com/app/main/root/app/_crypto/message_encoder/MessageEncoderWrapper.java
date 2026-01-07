@@ -34,7 +34,7 @@ public class MessageEncoderWrapper {
                 System.load(libPath.toAbsolutePath().toString());
                 System.out.println("Loaded native library: " + lib);
             }
-        } catch (Exception err) {
+        } catch(Exception err) {
             throw new RuntimeException("Failed to load native libraries: " + err.getMessage());
         }
     }

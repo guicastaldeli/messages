@@ -153,7 +153,7 @@ export class ChatController {
         console.log('Rendering cached messages for:', chatId);
 
         const cacheService = await this.chatService.getCacheServiceClient();
-        if (!cacheService.isChatCached(chatId)) {
+        if(!cacheService.isChatCached(chatId)) {
             console.log(`Skipping render for exited group: ${chatId}`);
             return;
         }
@@ -200,7 +200,7 @@ export class ChatController {
                 if(root) {
                     try {
                         root.unmount();
-                    } catch (error) {
+                    } catch(error) {
                         console.error(`Failed to unmount orphaned root ${messageId}:`, error);
                     }
                     this.messageRoots.delete(messageId);
@@ -233,7 +233,7 @@ export class ChatController {
         for(const item of itemsToRender) {
             try {
                 await this.messageElementRenderer.renderElement(item);
-            } catch (error) {
+            } catch(error) {
                 console.error('Failed to render timeline item:', item.id || item.messageId, error);
             }
         }
@@ -290,7 +290,7 @@ export class ChatController {
                 this.messageRoots.forEach((root, messageId) => {
                     try {
                         root.unmount();
-                    } catch (error) {
+                    } catch(error) {
                         console.error(`Failed to unmount ${messageId}:`, error);
                     }
                 });
@@ -644,7 +644,7 @@ export class ChatController {
             senderId: this.userId,
             senderSessionId: this.socketId,
             username: this.username,
-            content: `Shared file: ${file.originalFileName}`,
+            content: file.originalFileName,
             messageId: tempMessageId,
             targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != this.socketId),
             groupId: isGroupChat ? currentChat?.id : undefined,
@@ -737,7 +737,7 @@ export class ChatController {
                 chatId,
                 this.userId,
                 tempMessageId,
-                `Shared file: ${file.originalFileName}`,
+                file.originalFileName,
                 this.username,
                 false
             );
@@ -786,7 +786,7 @@ export class ChatController {
 
         try {
             const cacheService = await this.chatService.getCacheServiceClient();
-            if (!cacheService.isChatCached(chatId)) {
+            if(!cacheService.isChatCached(chatId)) {
                 console.log(`Skipping history load for exited group: ${chatId}`);
                 return;
             }

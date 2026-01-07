@@ -93,7 +93,7 @@ class FileRoutes:
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     url = f"{self.fileService.url}/api/files/download/{userId}/{fileId}"
                     headers = {}
-                    if ("cookie" in request.headers):
+                    if("cookie" in request.headers):
                         headers["cookie"] = request.headers["cookie"]
                     
                     serverRes = await client.get(url, headers=headers, follow_redirects=True)

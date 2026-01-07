@@ -57,7 +57,7 @@ public class SecureMessageService {
         try {
             byte[] encrypted = messageEncoder.encryptMessage(recipientId, message);
             return encrypted;
-        } catch (Exception err) {
+        } catch(Exception err) {
             System.err.println("Encryption failed for " + recipientId + ": " + err.getMessage());
             throw new RuntimeException("Encryption failed", err);
         }
@@ -80,7 +80,7 @@ public class SecureMessageService {
         try {
             String decrypted = messageEncoder.decryptMessageToString(chatId, cipherText);
             return decrypted;
-        } catch (Exception err) {
+        } catch(Exception err) {
             System.err.println("Decryption failed from " + chatId + ": " + err.getMessage());
             System.err.println("CipherText hex: " + bytesToHex(cipherText));
             throw new RuntimeException("Decryption failed", err);

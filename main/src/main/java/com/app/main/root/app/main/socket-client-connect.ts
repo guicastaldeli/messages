@@ -1,5 +1,5 @@
 import { EventDiscovery } from "./event-discovery";
-import { Client, IMessage } from '@stomp/stompjs';
+import { Client } from '@stomp/stompjs';
 import { SubscriptionManager, SubscriptionOptions } from "./subscription-manager";
 import SockJS from 'sockjs-client';
 

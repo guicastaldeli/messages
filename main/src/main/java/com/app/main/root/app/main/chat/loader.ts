@@ -163,12 +163,12 @@ export class Loader {
                 return timeB - timeA;
             });
             
-            if (sortedTimeline.length > 0) {
+            if(sortedTimeline.length > 0) {
                 const lastItem = sortedTimeline[0];
                 
-                if (lastItem.type === 'file') {
-                    return `Shared file: ${lastItem.fileData?.originalFileName || 'file'}`;
-                } else if (lastItem.type === 'system' || lastItem.isSystem) {
+                if(lastItem.type === 'file') {
+                    return lastItem.fileData?.originalFileName || 'file';
+                } else if(lastItem.type === 'system' || lastItem.isSystem) {
                     return lastItem.content || 'System message';
                 } else {
                     return lastItem.content || 'Message';

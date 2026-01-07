@@ -193,7 +193,7 @@ export class FileItem extends Component<Props, State> {
             } else {
                 throw new Error(res.error || 'Download failed');
             }
-        } catch (err: any) {
+        } catch(err: any) {
             console.error('Error downloading file:', err);
         }
     }
@@ -370,17 +370,32 @@ export class FileItem extends Component<Props, State> {
     }
 
     private getFileIcon(fileType: string, mimeType: string): string {
-        switch(fileType) {
+        if(mimeType) {
+            if(mimeType.startsWith('image/')) return 'IMG';
+            if(mimeType.startsWith('video/')) return 'VID';
+            if(mimeType.startsWith('audio/')) return 'AUD';
+            if(mimeType.includes('pdf')) return 'PDF';
+            if(mimeType.includes('word') || mimeType.includes('document')) return 'DOC';
+            if(mimeType.includes('text')) return 'TXT';
+        }
+        switch(fileType.toLowerCase()) {
             case 'image':
+            case 'img':
                 return 'IMG';
             case 'video':
+            case 'vid':
                 return 'VID';
             case 'audio':
+            case 'aud':
                 return 'AUD';
             case 'document':
-                if(mimeType.includes('pdf')) return 'PDF';
-                if(mimeType.includes('word') || mimeType.includes('document')) return 'DOC';
+            case 'doc':
                 return 'DOC';
+            case 'pdf':
+                return 'PDF';
+            case 'text':
+            case 'txt':
+                return 'TXT';
             default:
                 return 'DOC';
         }
@@ -575,7 +590,7 @@ export class FileItem extends Component<Props, State> {
             } else {
                 throw new Error(res.error || 'Failed to download file');
             }
-        } catch (err: any) {
+        } catch(err: any) {
             console.error('Error previewing file:', err);
             this.setState({
                 previewError: err.message || 'Failed to load file for preview',
@@ -798,7 +813,7 @@ export class FileItem extends Component<Props, State> {
                             try {
                                 const fileService = await this.chatService.getFileController().getFileService();
                                 await fileService.downloadFile(this.props.userId, file.fileId);
-                            } catch (err) {
+                            } catch(err) {
                                 console.error('Error downloading file:', err);
                             }
                         }}

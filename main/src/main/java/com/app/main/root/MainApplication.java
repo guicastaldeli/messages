@@ -122,7 +122,7 @@ public class MainApplication {
             try {
                 String[] beanNames = context.getBeanDefinitionNames();
                 System.err.println("\nBEAN STATUS: " + beanNames.length + " beans defined");
-            } catch (Exception err) {
+            } catch(Exception err) {
                 System.err.println("Cannot access bean definitions: " + err.getMessage());
             }
 		}

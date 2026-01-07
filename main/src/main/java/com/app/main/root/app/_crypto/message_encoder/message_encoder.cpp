@@ -156,7 +156,7 @@ void MessageEncoder::performKeyRotation(const std::string& recipientId) {
         session.messageCountReceive = 0;
         
         EC_KEY_free(newDhKey);
-    } catch (...) {
+    } catch(...) {
         EC_KEY_free(newDhKey);
         throw;
     }
@@ -307,7 +307,7 @@ bool MessageEncoder::saveKeyMaterial(const std::string& filePath) {
 
         file.close();
         return true;
-    } catch (const std::exception& err) {
+    } catch(const std::exception& err) {
         std::cerr << "Failed to save key material: " << err.what() << std::endl;
         return false;
     }
@@ -352,7 +352,7 @@ bool MessageEncoder::loadKeyMaterial(const std::string& filePath) {
 
         file.close();
         return true;
-    } catch (const std::exception& err) {
+    } catch(const std::exception& err) {
         std::cerr << "Failed to load key material: " << err.what() << std::endl;
         return false;
     }
