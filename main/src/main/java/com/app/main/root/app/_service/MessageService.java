@@ -59,9 +59,9 @@ public class MessageService {
         return dataSourceService.setDb("message").getConnection();
     }
 
-    /*
-    * Save Message Database 
-    */
+    /**
+     * Save Message
+     */
     public int saveMessage(
         String chatId,
         String senderId,
@@ -147,11 +147,131 @@ public class MessageService {
         }
     }
 
+    /**
+     * Messages by User Id 
+     */
+    public List<Message> getMessagesByUserId(String userId) throws SQLException {
+        String query = CommandQueryManager.GET_MESSAGES_BY_USER_ID.get();
+        List<Message> messages = new ArrayList<>();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, userId);
+            try(ResultSet rs = stmt.executeQuery()) {
+                while(rs.next()) {
+                    messages.add(mapMessageFromResultSet(rs));
+                }
+            }
+        }
+
+        return messages;
+    }
+
+    /**
+     * Messages Page
+     */
+    public Map<String, Object> getMessagesPage(String chatId, int page, int pageSize) throws SQLException {
+        List<Message> messages = getMessagesByChatId(chatId, page, pageSize);
+        List<Message> systemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
+
+        List<Message> allMessages = new ArrayList<>();
+        allMessages.addAll(messages);
+        allMessages.addAll(systemMessages);
+        allMessages.sort(Comparator.comparing(Message::getCreatedAt));
+
+        int totalCount = getMessageCountByChatId(chatId) + systemMessages.size();
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("messages", allMessages);
+        res.put("currentPage", page);
+        res.put("pageSize", pageSize);
+        res.put("totalMessages", totalCount);
+        res.put("totalPages", totalPages);
+        res.put("hasMore", page < totalPages - 1);
+        res.put("systemMessagescount", systemMessages.size());
+        return res;
+    }
+
     /*
-    **
-    *** Message by Chat Id
-    ** 
+    * Get All Messages 
     */
+    public List<Message> getAllMessages() throws SQLException {
+        String query = CommandQueryManager.GET_ALL_MESSAGES.get();
+        List<Message> messages = new ArrayList<>();
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet rs = stmt.executeQuery();
+        ) {
+            while(rs.next()) {
+                messages.add(mapMessageFromResultSet(rs));
+            }
+        }
+
+        return messages;
+    }
+
+    /**
+     * Get Last Messages By Chat Id 
+     */
+    public Map<String, Object> getLastMessagesByChatId(String chatId) throws SQLException {
+        String query = CommandQueryManager.GET_LAST_MESSAGE_BY_CHAT_ID.get();
+        try (
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+        ) {
+            stmt.setString(1, chatId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if(rs.next()) {
+                    Map<String, Object> lastMessage = new HashMap<>();
+                    byte[] contentBytes = rs.getBytes("content");
+                    lastMessage.put("contentBytes", contentBytes);
+                    lastMessage.put("content", "[Encrypted]");
+                    lastMessage.put("senderId", rs.getString("sender_id"));
+                    lastMessage.put("timestamp", rs.getString("timestamp"));
+                    return lastMessage;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Save System Message
+     */
+    public int saveSystemMessage(String content,String messageType) throws SQLException {
+        String query = CommandQueryManager.SAVE_MESSAGE.get();
+        int keys = Statement.RETURN_GENERATED_KEYS;
+
+        try(
+            Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query, keys);
+        ) {
+            stmt.setString(1, content);
+            stmt.setString(2, messageType);
+
+            int affectedRows = stmt.executeUpdate();
+            if(affectedRows > 0) {
+                try(ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if(generatedKeys.next()) {
+                        return generatedKeys.getInt(1);
+                    }
+                }
+            }
+
+            return -1;
+        }
+    }
+
+    /**
+     * 
+     * Message by Chat Id
+     * 
+     */
     public List<Message> getMessagesByChatId(String chatId, int page, int pageSize) throws SQLException {
         ChatCache chatCache = cacheService.getChatCache();
         if(chatCache != null) {
@@ -223,11 +343,11 @@ public class MessageService {
         return 0;
     }
 
-    /*
-    **
-    *** Recent Chats
-    ** 
-    */
+    /**
+     * 
+     * Recent Chats
+     * 
+     */
     public List<RecentChat> getRecentChats(String userId, int limit, int offset) throws SQLException {
         String query = CommandQueryManager.GET_RECENT_CHATS.get();
         List<RecentChat> recentChats = new ArrayList<>();
@@ -317,79 +437,11 @@ public class MessageService {
         return 0;
     }
 
-    /*
-    * Messages by User Id 
-    */
-    public List<Message> getMessagesByUserId(String userId) throws SQLException {
-        String query = CommandQueryManager.GET_MESSAGES_BY_USER_ID.get();
-        List<Message> messages = new ArrayList<>();
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query);
-        ) {
-            stmt.setString(1, userId);
-            try(ResultSet rs = stmt.executeQuery()) {
-                while(rs.next()) {
-                    messages.add(mapMessageFromResultSet(rs));
-                }
-            }
-        }
-
-        return messages;
-    }
-
-    /*
-    * Messages Pages 
-    */
-    public Map<String, Object> getMessagesPage(String chatId, int page, int pageSize) throws SQLException {
-        List<Message> messages = getMessagesByChatId(chatId, page, pageSize);
-        List<Message> systemMessages = serviceManager.getSystemMessageService().getMessagesByGroup(chatId);
-
-        List<Message> allMessages = new ArrayList<>();
-        allMessages.addAll(messages);
-        allMessages.addAll(systemMessages);
-        allMessages.sort(Comparator.comparing(Message::getCreatedAt));
-
-        int totalCount = getMessageCountByChatId(chatId) + systemMessages.size();
-        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
-
-        Map<String, Object> res = new HashMap<>();
-        res.put("messages", allMessages);
-        res.put("currentPage", page);
-        res.put("pageSize", pageSize);
-        res.put("totalMessages", totalCount);
-        res.put("totalPages", totalPages);
-        res.put("hasMore", page < totalPages - 1);
-        res.put("systemMessagescount", systemMessages.size());
-        return res;
-    }
-
-    /*
-    * Get All Messages 
-    */
-    public List<Message> getAllMessages() throws SQLException {
-        String query = CommandQueryManager.GET_ALL_MESSAGES.get();
-        List<Message> messages = new ArrayList<>();
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query);
-            ResultSet rs = stmt.executeQuery();
-        ) {
-            while(rs.next()) {
-                messages.add(mapMessageFromResultSet(rs));
-            }
-        }
-
-        return messages;
-    }
-
-    /*
-    **
-    *** Payload
-    **  
-    */
+    /**
+     * 
+     * Payload
+     * 
+     */
     public Map<String, Object> payload(
         String type, 
         Map<String, Object> payload,
@@ -425,13 +477,11 @@ public class MessageService {
         return message;
     }
 
-    /*
-    **
-    ***
-    *** Perspective
-    ***
-    **
-    */
+    /**
+     * 
+     * Perspective
+     * 
+     */
     public MessagePerspectiveResult createSelfPerspective(
         MessagePerspectiveResult result,
         boolean isGroup,
@@ -475,65 +525,11 @@ public class MessageService {
         return result;
     }
 
-    /*
-    * Get Last Message By Chat Id 
-    */
-    public Map<String, Object> getLastMessagesByChatId(String chatId) throws SQLException {
-        String query = CommandQueryManager.GET_LAST_MESSAGE_BY_CHAT_ID.get();
-        try (
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query);
-        ) {
-            stmt.setString(1, chatId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if(rs.next()) {
-                    Map<String, Object> lastMessage = new HashMap<>();
-                    byte[] contentBytes = rs.getBytes("content");
-                    lastMessage.put("contentBytes", contentBytes);
-                    lastMessage.put("content", "[Encrypted]");
-                    lastMessage.put("senderId", rs.getString("sender_id"));
-                    lastMessage.put("timestamp", rs.getString("timestamp"));
-                    return lastMessage;
-                }
-            }
-        }
-        return null;
-    }
-
-    private boolean isEncryptedData(byte[] bytes) {
-        if(bytes == null || bytes.length < 32) return false;
-        if(bytes.length >= 32) return true;
-        
-        int nonPrintableCount = 0;
-        for(int i = 0; i < Math.min(bytes.length, 50); i++) {
-            byte b = bytes[i];
-            if((b < 32 && b != 9 && b != 10 && b != 13) || b > 126) {
-                nonPrintableCount++;
-            }
-        }
-        return (nonPrintableCount / (double) Math.min(bytes.length, 50)) > 0.7;
-    }
-
-    private boolean isBytesEncrypted(byte[] bytes) {
-        if(bytes == null || bytes.length < 10) return false;
-        
-        int nonPrintableCount = 0;
-        for(int i = 0; i < Math.min(bytes.length, 20); i++) {
-            byte b = bytes[i];
-            if((b < 32 && b != 9 && b != 10 && b != 13) || b == 127) {
-                nonPrintableCount++;
-            }
-        }
-        return nonPrintableCount > 4;
-    }
-
-    /*
-    **
-    ***
-    *** Maps
-    ***
-    **
-    */
+    /**
+     * 
+     * Maps
+     * 
+     */
     public Message mapMessageFromResultSet(ResultSet rs) throws SQLException {
         Message message = new Message();
         message.setId(rs.getInt("id"));
@@ -568,38 +564,11 @@ public class MessageService {
         return chat;
     }
 
-    /*
-    **
-    *** Save System Message
-    ** 
-    */
-    public int saveSystemMessage(String content,String messageType) throws SQLException {
-        String query = CommandQueryManager.SAVE_MESSAGE.get();
-        int keys = Statement.RETURN_GENERATED_KEYS;
-
-        try(
-            Connection conn = getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query, keys);
-        ) {
-            stmt.setString(1, content);
-            stmt.setString(2, messageType);
-
-            int affectedRows = stmt.executeUpdate();
-            if(affectedRows > 0) {
-                try(ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                    if(generatedKeys.next()) {
-                        return generatedKeys.getInt(1);
-                    }
-                }
-            }
-
-            return -1;
-        }
-    }
-
-    /* * * * *
-    * ___ Methods with other DB Connections ___
-    */
+    /**
+     * 
+     * --- Methods with other DB Connections
+     * 
+     */
     private String getGroupName(String groupId) throws SQLException {
         String query = CommandQueryManager.GET_GROUP_NAME.get();
         DataSource db = dataSourceService.setDb("group");
@@ -652,13 +621,38 @@ public class MessageService {
         return chatId;
     }
 
-    /*
-    **
-    ***
-    *** Encryption
-    ***
-    **
-    */
+    /**
+     * 
+     * Encryption
+     * 
+     */
+    private boolean isEncryptedData(byte[] bytes) {
+        if(bytes == null || bytes.length < 32) return false;
+        if(bytes.length >= 32) return true;
+        
+        int nonPrintableCount = 0;
+        for(int i = 0; i < Math.min(bytes.length, 50); i++) {
+            byte b = bytes[i];
+            if((b < 32 && b != 9 && b != 10 && b != 13) || b > 126) {
+                nonPrintableCount++;
+            }
+        }
+        return (nonPrintableCount / (double) Math.min(bytes.length, 50)) > 0.7;
+    }
+
+    private boolean isBytesEncrypted(byte[] bytes) {
+        if(bytes == null || bytes.length < 10) return false;
+        
+        int nonPrintableCount = 0;
+        for(int i = 0; i < Math.min(bytes.length, 20); i++) {
+            byte b = bytes[i];
+            if((b < 32 && b != 9 && b != 10 && b != 13) || b == 127) {
+                nonPrintableCount++;
+            }
+        }
+        return nonPrintableCount > 4;
+    }
+
     public boolean initChatEncryption(String chatId, PreKeyBundle preKeyBundle) {
         try {
             String encriptionKey = chatId;

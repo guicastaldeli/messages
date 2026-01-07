@@ -506,6 +506,46 @@ public enum CommandQueryManager {
     ),
     KEY_EXISTS(
         "SELECT COUNT(*) as count FROM file_encryption_keys WHERE file_id = ? AND user_id = ?"
+    ),
+
+    /*
+    * ~~~ NOTIFICATIONS SERVICE ~~~ 
+    */
+    SAVE_NOTIFICATION(
+        """
+            INSER INTO notifications(
+                id,
+                user_id,
+                type,
+                title,
+                message,
+                chat_id,
+                sender_id,
+                sender_name,
+                is_read,
+                priority,
+                metadata
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+    ),
+    GET_USER_NOTIFICATIONS(
+        """
+           SELECT * FROM notifications
+           WHERE user_id = ?
+           ORDER BY created_at DESC     
+        """
+    ),
+    MARK_NOTITICATION_AS_READ(
+        "UPDATE notifications SET is_read = TRUE WHERE id = ?"
+    ),
+    DELETE_NOTIFICATION(
+        "DELETE FROM notifications WHERE id = ?"
+    ),
+    GET_UNREAD_COUNT(
+        "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = FALSE"
+    ),
+    MARK_ALL_AS_READ(
+        "UPDATE notifications SET is_read = TRUE WHERE user_id = ?"
     );
 
     /* Main */
