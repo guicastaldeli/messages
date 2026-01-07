@@ -449,6 +449,26 @@ public class EventList {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
                     messageAnalyzer.organizeAndRoute(sessionId, payloadData);
+
+                    String senderId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    String chatId = (String) payloadData.get("chatId");
+                    String recipientId = (String) payloadData.get("recipientId");
+                    if(recipientId != null && !recipientId.equals(senderId)) {
+                        Map<String, Object> notification = new HashMap<>();
+                        notification.put("id", UUID.randomUUID().toString());
+                        notification.put("userId", recipientId);
+                        notification.put("type", "MESSAGE");
+                        notification.put("title", "New message");
+                        notification.put("message", (String) payloadData.get("content"));
+                        notification.put("chatId", chatId);
+                        notification.put("senderId", senderId);
+                        notification.put("senderName", serviceManager.getUserService().getUsernameByUserId(senderId));
+                        notification.put("timestamp", System.currentTimeMillis());
+                        notification.put("isRead", false);
+                        notification.put("priority", "NORMAL");
+                        serviceManager.getNotificationService().sendNotification(senderId, notification);
+                    }
+                    
                     eventTracker.track(
                         "chat",
                         payloadData,

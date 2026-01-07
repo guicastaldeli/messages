@@ -17,6 +17,8 @@ from auth.auth_service import AuthService
 from auth.auth_routes import AuthRoutes
 from file.file_service import FileService
 from file.file_routes import FileRoutes
+from notification.notification_service import NotificationService
+from notification.notification_routes import NotificationRoutes
 from __index import router as router
 from config import config
 
@@ -28,7 +30,6 @@ class Main:
         WEB_URL = config.WEB_URL
         SERVER_URL = config.SERVER_URL
         
-        # REMOVE the CORS middleware from here
         DB_API_URL = SERVER_URL
         TIME_API_URL = SERVER_URL
         SESSION_API_URL = SERVER_URL
@@ -75,6 +76,11 @@ class Main:
         self.fileService = FileService(DB_API_URL)
         self.fileRoutes = FileRoutes(self.fileService)
         self.app.include_router(self.fileRoutes.router)
+        
+        ## Notification
+        self.notificationService = NotificationService(SERVER_URL)
+        self.notificationRoutes = NotificationRoutes(self.notificationService)
+        self.app.include_router(self.notificationRoutes.router)
         
 class NoWWWAuthenticateMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):

@@ -1,5 +1,8 @@
 package com.app.main.root.app._service;
-
+import com.app.main.root.app._data.SocketMethods;
+import com.app.main.root.app._db.CommandQueryManager;
+import com.app.main.root.app._db.DataSourceService;
+import org.springframework.stereotype.Service;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -7,17 +10,20 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.*;
 
-import org.springframework.stereotype.Service;
-
-import com.app.main.root.app._db.CommandQueryManager;
-import com.app.main.root.app._db.DataSourceService;
-
 @Service
 public class NotificationService {
+    private final SocketMethods socketMethods;
     private final DataSourceService dataSourceService;
+    private final ServiceManager serviceManager;
 
-    public NotificationService(DataSourceService dataSourceService) {
+    public NotificationService(
+        DataSourceService dataSourceService, 
+        ServiceManager serviceManager, 
+        SocketMethods socketMethods
+    ) {
         this.dataSourceService = dataSourceService;
+        this.serviceManager = serviceManager;
+        this.socketMethods = socketMethods;
     }
 
     private Connection getConnection() throws SQLException {
@@ -141,5 +147,23 @@ public class NotificationService {
             if(rs.next()) return rs.getInt(1);
         }
         return 0;
+    }
+
+    /**
+     * Send Notification
+     */
+    public void sendNotification(String userId, Map<String, Object> data) {
+        try {
+            String userSession = serviceManager.getUserService().getSessionByUserId(userId);
+            if(userSession != null) {
+                Map<String, Object> event = new HashMap<>();
+                event.put("type", "NOTIFICATION");
+                event.put("notification", data);
+                event.put("timestamp", System.currentTimeMillis());
+                socketMethods.send(userSession, "/user/queue/notifications", event);
+            }
+        } catch(Exception err) {
+            System.err.println("Failed to send notification to user " + userId + ": " + err.getMessage());
+        }
     }
 }
