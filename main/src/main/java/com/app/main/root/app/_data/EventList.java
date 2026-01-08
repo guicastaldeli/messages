@@ -448,27 +448,19 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    
-                    System.out.println("[CHAT EVENT] Handler called for session: " + sessionId);
-                    System.out.println("[CHAT EVENT] Payload keys: " + payloadData.keySet());
-                    
                     messageAnalyzer.organizeAndRoute(sessionId, payloadData);
 
                     String senderId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     String chatId = (String) payloadData.get("chatId");
                     String recipientId = (String) payloadData.get("recipientId");
                     List<String> memberIds = (List<String>) payloadData.get("memberIds");
-                    
-                    System.out.println("[CHAT EVENT] Sender: " + senderId + ", Chat: " + chatId + ", Recipient: " + recipientId);
-                    System.out.println("[CHAT EVENT] Member IDs: " + memberIds);
-                    
+
                     if(memberIds != null && !memberIds.isEmpty()) {
-                        System.out.println("[CHAT EVENT] Processing group chat with " + memberIds.size() + " members");
                         for(String memberId : memberIds) {
                             if(!memberId.equals(senderId)) {
                                 Map<String, Object> notification = new HashMap<>();
                                 notification.put("id", UUID.randomUUID().toString());
-                                notification.put("userId", memberId); // Send simple string
+                                notification.put("userId", memberId);
                                 notification.put("type", "MESSAGE");
                                 notification.put("title", "New group message");
                                 notification.put("message", (String) payloadData.get("content"));
@@ -479,13 +471,12 @@ public class EventList {
                                 notification.put("isRead", false);
                                 notification.put("priority", "NORMAL");
                                 serviceManager.getNotificationService().sendNotification(memberId, notification);
-                                System.out.println("[CHAT EVENT] Group notification sent to: " + memberId);
                             }
                         }
                     } else if(recipientId != null && !recipientId.equals(senderId)) {
                         Map<String, Object> notification = new HashMap<>();
                         notification.put("id", UUID.randomUUID().toString());
-                        notification.put("userId", recipientId); // Send simple string
+                        notification.put("userId", recipientId);
                         notification.put("type", "MESSAGE");
                         notification.put("title", "New message");
                         notification.put("message", (String) payloadData.get("content"));
@@ -496,7 +487,6 @@ public class EventList {
                         notification.put("isRead", false);
                         notification.put("priority", "NORMAL");
                         serviceManager.getNotificationService().sendNotification(recipientId, notification);
-                        System.out.println("[CHAT EVENT] Direct notification sent to: " + recipientId);
                     }
                     
                     eventTracker.track(
@@ -506,13 +496,9 @@ public class EventList {
                         sessionId,
                         "client"
                     );
-                    
-                    System.out.println("[CHAT EVENT] Event tracked successfully");
-                    
                 } catch(Exception err) {
-                    System.err.println("[CHAT EVENT ERROR] " + err.getMessage());
+                    System.err.println("Chat event err " + err.getMessage());
                     err.printStackTrace();
-                    
                     eventTracker.track(
                         "chat-error",
                         Map.of("error", err.getMessage(), "payload", payload),
@@ -531,38 +517,24 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> payloadData = (Map<String, Object>) payload;
-                    
-                    System.out.println("[NOTIFICATION EVENT] Handler called for session: " + sessionId);
-                    System.out.println("[NOTIFICATION EVENT] Payload: " + payloadData);
-                    
                     Object userIdObj = payloadData.get("userId");
                     String recipientId = null;
                     if(userIdObj instanceof Map) {
                         Map<String, Object> userMap = (Map<String, Object>) userIdObj;
                         recipientId = (String) userMap.get("id");
-                        System.out.println("[NOTIFICATION EVENT] Extracted userId from map: " + recipientId);
                     } else if(userIdObj instanceof String) {
                         recipientId = (String) userIdObj;
-                        System.out.println("[NOTIFICATION EVENT] userId is string: " + recipientId);
-                    } else {
-                        System.err.println("[NOTIFICATION EVENT] Unknown userId type: " + userIdObj.getClass());
                     }
                     
                     if(recipientId != null) {
-                        System.out.println("[NOTIFICATION EVENT] Sending notification to userId: " + recipientId);
                         messagingTemplate.convertAndSendToUser(
                             recipientId,
                             "/queue/notifications",
                             payloadData
                         );
-                        
-                        System.out.println("[NOTIFICATION EVENT] Notification sent successfully");
-                    } else {
-                        System.err.println("[NOTIFICATION EVENT] No valid recipient ID found in payload");
                     }
-                    
                 } catch(Exception err) {
-                    System.err.println("[NOTIFICATION EVENT ERROR] " + err.getMessage());
+                    System.err.println("Notification err " + err.getMessage());
                     err.printStackTrace();
                 }
 
@@ -1126,17 +1098,13 @@ public class EventList {
         configs.put("exit-group", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 try {
-                    System.out.println("DEBUG - Exit Group Request received:");
-                    System.out.println("  Session ID: " + sessionId);
-                    System.out.println("  Payload: " + payload);
-                    
                     long time = System.currentTimeMillis();
                     Map<String, Object> data = serviceManager.getGroupService().parseData(payload);
                     
                     String userId = (String) data.get("userId");
                     if(userId == null || userId.trim().isEmpty()) {
                         userId = serviceManager.getUserService().getUserIdBySession(sessionId);
-                        System.out.println("  WARNING: Using userId from session lookup: " + userId);
+                        System.out.println(" Using userId from session lookup: " + userId);
                     }
                     
                     String username = (String) data.get("username");

@@ -22,30 +22,28 @@ public class SocketMethods {
     /**
      * Send
      */
-    public void send(
-        String sessionId,
-        String destination,
-        Object data
-    ) {
+    public void send(String sessionId, String destination, Object data) {
         try {
             if(sessionId == null || sessionId.isEmpty() || sessionId.equals("unknown")) {
                 System.out.println("Invalid session ID, skipping message to: " + destination);
                 return;
             }
+            if(destination == null || destination.isEmpty()) {
+                System.out.println("Invalid destination, skipping message for session: " + sessionId);
+                return;
+            }
 
             eventTracker.track(
-                destination,
-                data,
-                EventDirection.SENT,
-                sessionId,
+                destination, 
+                data, 
+                EventDirection.SENT, 
+                sessionId, 
                 "system"
             );
-            messagingTemplate.convertAndSend(
-                destination,
-                data
-            );
+            messagingTemplate.convertAndSend(destination, data);
         } catch(Exception err) {
             System.err.println("Error sending message to " + destination + ": " + err.getMessage());
+            err.printStackTrace();
         }
     }
 

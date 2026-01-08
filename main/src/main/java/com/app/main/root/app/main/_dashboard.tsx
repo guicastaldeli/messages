@@ -517,6 +517,7 @@ export class Dashboard extends Component<Props, State> {
                             {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
                                     <div className="sidebar">
+                                        <button id="logout-actn" onClick={() => this.props.main.handleLogout(sessionContext)}>Logout</button>
                                         {this.contactService && (
                                             <ContactLayout contactService={this.contactService!}></ContactLayout>
                                         )}

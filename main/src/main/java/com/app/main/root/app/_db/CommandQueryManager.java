@@ -546,6 +546,32 @@ public enum CommandQueryManager {
     ),
     MARK_ALL_AS_READ(
         "UPDATE notifications SET is_read = TRUE WHERE user_id = ?"
+    ),
+
+    /*
+    * ~~~ PASSWORD RESET SERVICE ~~~ 
+    */
+    CREATE_PASSWORD_RESET_TOKEN(
+        "INSERT INTO password_reset (id, user_id, token, expires_at) VALUES (?, ?, ?, ?)"
+    ),
+    GET_PASSWORD_RESET_TOKEN(
+        "SELECT * FROM password_reset WHERE token = ? AND expires_at > ? AND used = FALSE"
+    ),
+    MARK_TOKEN_USED(
+        "UPDATE password_reset SET used = TRUE WHERE token = ?"
+    ),
+    UPDATE_USER_PASSWORD(
+        "UPDATE users SET password_hash = ? WHERE id = ?"
+    ),
+    INVALIDATE_USER_TOKENS(
+        "UPDATE password_reset SET used = TRUE WHERE user_id = ?"
+    ),
+    GET_USER_BY_RESET_TOKEN(
+        """
+           SELECT u.* FROM users u
+           JOIN password_reset prt ON u.id = prt.user_id
+           WHERE prt.token = ? AND prt.expires_at > ? AND prt.used = FALSE     
+        """
     );
 
     /* Main */
