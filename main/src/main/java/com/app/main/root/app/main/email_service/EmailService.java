@@ -11,8 +11,8 @@ import javax.mail.*;
 @Component
 public class EmailService {
     public final static String WEB_URL_SRC = EnvConfig.get("WEB_URL");
+    public final static String RESET_TOKEN = EnvConfig.get("RESET_TOKEN");
 
-    private final EmailData emailData;
     @Autowired private EmailDocumentParser emailDocumentParser;
 
     @Value("${email.smtp.host:smtp.gmail.com}")
@@ -30,13 +30,13 @@ public class EmailService {
     @Value("${web.url:{webUrlSrc}}")
     private String webUrl;
 
-    public EmailService() {
-        this.emailData = new EmailData(this, emailDocumentParser);
-    }
-
     public boolean isValidEmail(String email) {
         String regex = "^[A-Za-z0-9+_.-]+@(.+)$";
         return email != null && email.matches(regex);
+    }
+
+    public EmailData getEmailData() {
+        return new EmailData(this, emailDocumentParser);
     }
 
     /**
@@ -61,12 +61,5 @@ public class EmailService {
         message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
         message.setContent(body, "text/html; charset=utf-8");
         Transport.send(message);
-    }
-
-    /**
-     * Get Email Data
-     */
-    public EmailData getEmailData() {
-        return emailData;
     }
 }

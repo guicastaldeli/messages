@@ -39,7 +39,7 @@ public class SystemMessageService {
     }
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("system-messages").getConnection();
+        return dataSourceService.setDb("system_messages").getConnection();
     }
 
     /**

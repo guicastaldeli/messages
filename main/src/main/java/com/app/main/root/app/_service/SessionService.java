@@ -28,6 +28,7 @@ public class SessionService {
     public enum SessionType {
         LOGIN("LOGIN"),
         MAIN_DASHBOARD("MAIN_DASHBOARD"),
+        PASSWORD_RESET("PASSWORD_RESET"),
         DELETED("DELETED");
 
         private final String value;

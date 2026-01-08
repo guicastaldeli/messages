@@ -18,7 +18,7 @@ export interface ContextType {
     sessionTypes: { [key: string]: string };
     sessionTypesLoading: boolean;
     syncSessionServer: () => Promise<void>;
-    validadeSessionType: (type: string) => boolean;
+    validateSessionType: (type: string) => boolean;
 }
 
 interface Props {
@@ -127,7 +127,7 @@ export class SessionProvider extends Component<Props, State> {
     }
 
     setSession = async (session: SessionType): Promise<void> => {
-        if(!this.validadeSessionType(session)) {
+        if(!this.validateSessionType(session)) {
             console.warn(`Invalid session type: ${session}`);
             return;
         }
@@ -175,8 +175,8 @@ export class SessionProvider extends Component<Props, State> {
         }
     }
 
-    validadeSessionType = (t: string): boolean => {
-        return ['LOGIN', 'MAIN_DASHBOARD'].includes(t)
+    validateSessionType = (t: string): boolean => {
+        return ['LOGIN', 'MAIN_DASHBOARD', 'PASSWORD_RESET', 'DELETED'].includes(t)
     }
 
     setSessionData = (sessionData: any): void => {
@@ -232,7 +232,7 @@ export class SessionProvider extends Component<Props, State> {
             syncSessionServer: this.syncSessionServer,
             sessionTypes: this.sessionTypes.types || {},
             sessionTypesLoading: this.sessionTypes.loading || false,
-            validadeSessionType: this.validadeSessionType
+            validateSessionType: this.validateSessionType
         }
     }
 

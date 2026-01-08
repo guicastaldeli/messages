@@ -56,7 +56,7 @@ public class MessageService {
     }
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("message").getConnection();
+        return dataSourceService.setDb("message_service").getConnection();
     }
 
     /**
@@ -571,7 +571,7 @@ public class MessageService {
      */
     private String getGroupName(String groupId) throws SQLException {
         String query = CommandQueryManager.GET_GROUP_NAME.get();
-        DataSource db = dataSourceService.setDb("group");
+        DataSource db = dataSourceService.setDb("group_service");
 
         try(
             Connection conn = db.getConnection();
@@ -590,7 +590,7 @@ public class MessageService {
 
     private String getDirectChatName(String chatId, String currentUserId) throws SQLException {
         String query = CommandQueryManager.GET_USERNAME.get();
-        DataSource db = dataSourceService.setDb("user");
+        DataSource db = dataSourceService.setDb("user_service");
 
         try(
             Connection conn = db.getConnection();

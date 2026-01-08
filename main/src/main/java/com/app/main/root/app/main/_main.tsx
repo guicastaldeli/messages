@@ -12,6 +12,7 @@ import { Item } from './chat/chat-manager';
 import { ActiveChat } from './chat/chat-manager';
 import { SessionManager } from './_session/session-manager';
 import { CookieService } from './_session/cookie-service';
+import { PasswordResetController } from './password-reset-controller';
 
 interface State {
     chatManager: ChatManager | null;
@@ -23,6 +24,8 @@ interface State {
     username: string | null;
     isLoading: boolean;
     rememberUser: boolean;
+    showPasswordReset: boolean;
+    passwordResetToken?: string; 
 }
 
 export class Main extends Component<any, State> {
@@ -60,7 +63,9 @@ export class Main extends Component<any, State> {
             sessionId: null,
             username: null,
             isLoading: true,
-            rememberUser: rememberUserCookie
+            rememberUser: rememberUserCookie,
+            showPasswordReset: false,
+            passwordResetToken: undefined
         }
     }
 
@@ -456,6 +461,18 @@ export class Main extends Component<any, State> {
         }
     /* */
 
+    private handleForgotPassword = (sessionContext: any): void => {
+        if(sessionContext && sessionContext.setSession) {
+            sessionContext.setSession('PASSWORD_RESET');
+        }
+    }
+
+    private handleBackToLogin = (sessionContext: any): void => {
+        if(sessionContext && sessionContext.setSession) {
+            sessionContext.setSession('LOGIN');
+        }
+    }
+
     render() {
         const { chatList, activeChat, chatManager } = this.state;
 
@@ -470,10 +487,10 @@ export class Main extends Component<any, State> {
                             if(!sessionContext) {
                                 return <div>Loading...</div>
                             }
-                            
+
                             return (
                                 <>
-                                    {sessionContext && sessionContext.currentSession === 'LOGIN' && (
+                                    {sessionContext.currentSession === 'LOGIN' && (
                                         <div className='screen join-screen'>
                                             <div className='form'>
                                                 {/* Login Form */}
@@ -486,7 +503,7 @@ export class Main extends Component<any, State> {
                                                     />
                                                     <label>Password</label>
                                                     <input 
-                                                        type="text" 
+                                                        type="password"
                                                         ref={this.loginPasswordRef}
                                                     />
                                                     <div className='form-input'>
@@ -494,6 +511,13 @@ export class Main extends Component<any, State> {
                                                             onClick={() => this.handleJoin(sessionContext, false)}
                                                         >
                                                             Login
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            className="forgot-password-btn"
+                                                            onClick={() => this.handleForgotPassword(sessionContext)}
+                                                        >
+                                                            Forgot Password?
                                                         </button>
                                                     </div>
                                                 </div>
@@ -513,7 +537,7 @@ export class Main extends Component<any, State> {
                                                     />
                                                     <label>Password</label>
                                                     <input 
-                                                        type="text" 
+                                                        type="password"
                                                         ref={this.createPasswordRef}
                                                     />
                                                     <div className='form-input'>
@@ -527,7 +551,15 @@ export class Main extends Component<any, State> {
                                             </div>
                                         </div>
                                     )}
-                                    {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
+                                    {sessionContext.currentSession === 'PASSWORD_RESET' && (
+                                        <PasswordResetController
+                                            apiClientController={this.apiClientController}
+                                            socketClientConnect={this.socketClientConnect}
+                                            onBackToLogin={() => this.handleBackToLogin(sessionContext)}
+                                            token={this.state.passwordResetToken}
+                                        />
+                                    )}
+                                    {sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                         <>
                                             {!this.chatManager ? (
                                                 <div>Initializing chat manager...</div>

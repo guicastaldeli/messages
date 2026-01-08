@@ -22,7 +22,7 @@ public class MessageTracker {
     private final int maxMessages = 5000;
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("message").getConnection();
+        return dataSourceService.setDb("message_service").getConnection();
     }
 
     public void track(

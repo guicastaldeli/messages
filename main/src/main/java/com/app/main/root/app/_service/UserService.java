@@ -53,7 +53,7 @@ public class UserService {
     }
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("user").getConnection();
+        return dataSourceService.setDb("user_service").getConnection();
     }
 
     /**
@@ -172,7 +172,7 @@ public class UserService {
         List<Map<String, Object>> groups = new ArrayList<>();
 
         try(
-            Connection conn = dataSourceService.setDb("group").getConnection();
+            Connection conn = dataSourceService.setDb("group_service").getConnection();
             PreparedStatement stmt = conn.prepareStatement(query)
         ) {
             stmt.setString(1, userId);

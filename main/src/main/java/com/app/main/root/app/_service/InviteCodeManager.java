@@ -19,7 +19,7 @@ public class InviteCodeManager {
     }
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("invite-codes").getConnection();
+        return dataSourceService.setDb("invite_codes").getConnection();
     }
 
     /*

@@ -27,7 +27,7 @@ public class NotificationService {
     }
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("notification").getConnection();
+        return dataSourceService.setDb("notification_service").getConnection();
     }
 
     /**
@@ -152,29 +152,19 @@ public class NotificationService {
     /**
      * Send Notification
      */
-    /**
- * Send Notification
- */
-public void sendNotification(String userId, Map<String, Object> data) {
-    try {
-        System.out.println("📢 [NOTIFICATION SENT] To user: " + userId);
-        System.out.println("📢 Notification data: " + data);
-        
-        String userSession = serviceManager.getUserService().getSessionByUserId(userId);
-        if(userSession != null) {
-            Map<String, Object> event = new HashMap<>();
-            event.put("type", "NOTIFICATION");
-            event.put("notification", data);
-            event.put("timestamp", System.currentTimeMillis());
-            
-            System.out.println("📢 Sending via socket to session: " + userSession);
-            socketMethods.send(userSession, "/user/queue/notifications", event);
-            System.out.println("📢 Notification sent successfully!");
-        } else {
-            System.out.println("📢 User session not found for userId: " + userId);
+    public void sendNotification(String userId, Map<String, Object> data) {
+        try {
+            String userSession = serviceManager.getUserService().getSessionByUserId(userId);
+            if(userSession != null) {
+                Map<String, Object> event = new HashMap<>();
+                event.put("type", "NOTIFICATION");
+                event.put("notification", data);
+                event.put("timestamp", System.currentTimeMillis());
+                
+                socketMethods.send(userSession, "/user/queue/notifications", event);
+            }
+        } catch(Exception err) {
+            System.err.println("Failed to send notification to user " + userId + ": " + err.getMessage());
         }
-    } catch(Exception err) {
-        System.err.println("📢 Failed to send notification to user " + userId + ": " + err.getMessage());
     }
-}
 }

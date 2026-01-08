@@ -27,7 +27,7 @@ public class ContactService {
     }
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("user").getConnection();
+        return dataSourceService.setDb("user_service").getConnection();
     }
 
     /**

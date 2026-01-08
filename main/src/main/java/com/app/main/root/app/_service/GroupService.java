@@ -64,7 +64,7 @@ public class GroupService {
     }
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("group").getConnection();
+        return dataSourceService.setDb("group_service").getConnection();
     }
 
     public Map<String, Object> createGroup(

@@ -98,9 +98,9 @@ export class SocketClientConnect {
         return this.connectionPromise;
     }
 
-    /*
-    ** Setup Subscriptions
-    */
+    /**
+     * Setup Subscriptions
+     */
     public async onDestination(
         destination: string,
         callback: Function,
@@ -123,8 +123,6 @@ export class SocketClientConnect {
             return false;
         }
 
-        //console.log('Sending to:', destination, data);
-
         this.client.publish({
             destination: destination,
             body: JSON.stringify(data),
@@ -143,9 +141,57 @@ export class SocketClientConnect {
         return true;
     }
 
-    /*
-    ** Handle Reconnect
-    */
+    /**
+     * Request Response
+     */
+    public async requestResponse(
+        destination: any,
+        data?: any,
+        resDestination?: string
+    ): Promise<any> {
+        if(!this.client || !this.client.connected) {
+            console.error('Client not connected!');
+            throw new Error('Client not connected!');
+        }
+
+        console.log('Request to:', destination, 'Data:', data);
+        return new Promise((res, rej) => {
+            if(!resDestination) {
+                rej(new Error('Response destinaton is required!'));
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                console.error('Request timeout for:', destination);
+                this.offDestination(resDestination, handler);
+                rej(new Error('Request timeout'));
+            }, 20000);
+
+            const handler = (data: any) => {
+                clearTimeout(timeout);
+                this.offDestination(resDestination, handler);
+                console.log('Response received for:', destination, data);
+                res(data);
+            }
+
+            this.onDestination(resDestination, handler).then(() => {
+                this.client!.publish({
+                    destination: destination,
+                    body: JSON.stringify(data),
+                    headers: {
+                        'content-type': 'application/json'
+                    }
+                });
+            }).catch(err => {
+                clearTimeout(timeout);
+                rej(err)
+            });
+        });
+    }
+
+    /**
+     * Handle Reconnect
+     */
     private handleReconnect(): void {
         if(this.reconnectAttemps < this.maxReconnectAttemps) {
             this.reconnectAttemps++;
@@ -160,17 +206,17 @@ export class SocketClientConnect {
         }
     }
 
-    /*
-    ** On
-    */
+    /**
+     * On
+     */
     public async on(event: string, callback: Function): Promise<void> {
         if(!this.eventListeners.has(event)) this.eventListeners.set(event, []);
         this.eventListeners.get(event)!.push(callback);
     }
 
-    /*
-    ** Off
-    */
+    /**
+     * Off
+     */
     public off(event: string, callback: Function): void {
         const listeners = this.eventListeners.get(event);
         if(listeners) {
@@ -179,9 +225,9 @@ export class SocketClientConnect {
         }
     }
 
-    /*
-    ** Emit
-    */
+    /**
+     * Emit
+     */
     private async getEventEmit(event: string, data?: any): Promise<void> {
         let available = await this.eventDiscovery.isEventAvailable(event);
 
@@ -212,9 +258,9 @@ export class SocketClientConnect {
         return true;
     }
 
-    /*
-    ** Send
-    */
+    /**
+     * Send
+     */
     private async getEventSend(event: string, data?: any): Promise<void> {
         let available = await this.eventDiscovery.isEventAvailable(event);
 
@@ -252,9 +298,9 @@ export class SocketClientConnect {
         return true;
     }
 
-    /*
-    ** Disconnect
-    */
+    /**
+     * Disconnect
+     */
     public disconnect(): void {
         if(this.client) {
             this.client.deactivate();
@@ -264,9 +310,9 @@ export class SocketClientConnect {
         this.eventListeners.clear();
     }
 
-    /*
-    ** Socket Id
-    */
+    /**
+     * Socket Id
+     */
     public async getSocketId(): Promise<string> {
         if(this.socketId) return Promise.resolve(this.socketId);
         
@@ -297,9 +343,9 @@ export class SocketClientConnect {
         });
     }
 
-    /*
-    ** User Id
-    */
+    /**
+     * User Id
+     */
     public async getUserId(): Promise<string> {
         if(this.userId) return Promise.resolve(this.userId);
         
@@ -330,9 +376,9 @@ export class SocketClientConnect {
         });
     }
 
-    /*
-    ** Username
-    */
+    /**
+     * Username
+     */
     public async getUsername(): Promise<string> {
         if(this.userId) return Promise.resolve(this.userId);
         
@@ -363,9 +409,9 @@ export class SocketClientConnect {
         });
     }
 
-    /*
-    ** Getters
-    */
+    /**
+     * Getters
+     */
     public get isConnected(): boolean {
         return this.client?.connected || false;
     }

@@ -1625,13 +1625,23 @@ public class EventList {
         configs.put("request-password-reset", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 try {
+                    System.out.println("=== Password Reset Request Received ===");
+                    System.out.println("Session ID: " + sessionId);
                     Map<String, Object> data = (Map<String, Object>) payload;
                     String email = (String) data.get("email");
+                    System.out.println("Email: " + email);
 
                     Map<String, Object> res = serviceManager
                         .getPasswordResetService()
                         .requestPasswordReset(email);
 
+                    System.out.println("Password Reset Service Result: " + res);
+                    
+                    socketMethods.send(
+                        sessionId, 
+                        "/queue/password-reset-request-scss", 
+                        res
+                    );
                     eventTracker.track(
                         "request-password-reset",
                         Map.of(
@@ -1646,10 +1656,15 @@ public class EventList {
 
                     return res;
                 } catch(Exception err) {
+                    System.err.println("Password Reset Request Error: " + err.getMessage());
+                    err.printStackTrace();
+                    
                     Map<String, Object> error = new HashMap<>();
+                    error.put("success", false);
                     error.put("error", "PASSWORD_RESET_REQUEST_FAILED");
                     error.put("message", err.getMessage());
-                    socketMethods.send(sessionId, "/queue/password-reset-request-err", error);
+                    
+                    socketMethods.send(sessionId, "/queue/password-reset-request-scss", error);
                     return Collections.emptyMap();
                 }
             },
@@ -1667,6 +1682,11 @@ public class EventList {
                         .getPasswordResetService()
                         .validateResetToken(token);
 
+                    socketMethods.send(
+                        sessionId, 
+                        "/queue/token-validation-scss", 
+                        res
+                    );
                     eventTracker.track(
                         "validate-reset-token",
                         Map.of(
@@ -1692,7 +1712,7 @@ public class EventList {
             false
         ));
         /* Reset Password */
-        configs.put("validate-reset-token", new EventConfig(
+        configs.put("reset-password", new EventConfig(
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
@@ -1703,6 +1723,11 @@ public class EventList {
                         .getPasswordResetService()
                         .resetPassword(token, newPassword);
 
+                    socketMethods.send(
+                        sessionId, 
+                        "/queue/password-reset-scss", 
+                        res
+                    );
                     eventTracker.track(
                         "reset-password",
                         Map.of(
