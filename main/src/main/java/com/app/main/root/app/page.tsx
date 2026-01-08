@@ -39,10 +39,10 @@ export default function Home() {
   }, []);
 
   if(isConnecting) {
-    return <div>Connecting...</div>;
+    //return <div>Connecting...</div>;
   }
-  if (!socketClientConnect) {
-    return <div>Failed to connect. Please refresh the page.</div>;
+  if(!socketClientConnect) {
+    //return <div>Failed to connect. Please refresh the page.</div>;
   }
 
   const apiClientController = new ApiClientController(socketClientConnect);

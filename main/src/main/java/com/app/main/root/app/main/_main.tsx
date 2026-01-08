@@ -13,6 +13,7 @@ import { ActiveChat } from './chat/chat-manager';
 import { SessionManager } from './_session/session-manager';
 import { CookieService } from './_session/cookie-service';
 import { PasswordResetController } from './password-reset-controller';
+import { Renderer } from './renderer/renderer';
 
 interface State {
     chatManager: ChatManager | null;
@@ -25,7 +26,8 @@ interface State {
     isLoading: boolean;
     rememberUser: boolean;
     showPasswordReset: boolean;
-    passwordResetToken?: string; 
+    passwordResetToken?: string;
+    renderer: Renderer | null;
 }
 
 export class Main extends Component<any, State> {
@@ -34,8 +36,10 @@ export class Main extends Component<any, State> {
     private chatService: ChatService;
     private chatManager!: ChatManager;
     private chatController!: ChatController;
+    private renderer: Renderer | null = null;
 
     private appContainerRef = React.createRef<HTMLDivElement>();
+    private canvasRef = React.createRef<HTMLCanvasElement>();
     private dashboardInstance: Dashboard | null = null;
 
     constructor(props: any) {
@@ -65,12 +69,20 @@ export class Main extends Component<any, State> {
             isLoading: true,
             rememberUser: rememberUserCookie,
             showPasswordReset: false,
-            passwordResetToken: undefined
+            passwordResetToken: undefined,
+            renderer: null
         }
     }
 
     async componentDidMount(): Promise<void> {
         try {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            setTimeout(() => {
+                if (this.canvasRef.current) {
+                    this.initRenderer();
+                }
+            }, 100);
+            /*
             await this.connect();
 
             const userInfo = SessionManager.getUserInfo();
@@ -148,9 +160,16 @@ export class Main extends Component<any, State> {
                     rememberUser: rememberUser
                 });
             }
+                */
         } catch(err) {
             console.error('Error in componentDidMount:', err);
             this.setState({ isLoading: false });
+        }
+    }
+
+    componentDidUpdate(prevProps: any, prevState: State): void {
+        if(!prevState.renderer && this.canvasRef.current && !this.renderer) {
+            this.initRenderer();
         }
     }
 
@@ -473,6 +492,38 @@ export class Main extends Component<any, State> {
         }
     }
 
+    /**
+     * 
+     * Renderer
+     * 
+     */
+    private async initRenderer(): Promise<void> {
+        try {
+            if(!this.canvasRef.current) {
+                console.warn('Canvas ref not available');
+                return;
+            }
+
+            this.renderer = new Renderer();
+            await this.renderer.setup(this.canvasRef.current.id);
+
+            this.startRender();
+            this.setState({ renderer: this.renderer });
+        } catch(err) {
+            console.error('Renderer err', err);
+        }
+    }
+
+    private startRender(): void {
+        const render = async () => {
+            if(this.renderer) {
+                await this.renderer.render();
+            }
+            requestAnimationFrame(render);
+        }
+        render();
+    }
+
     render() {
         const { chatList, activeChat, chatManager } = this.state;
 
@@ -490,6 +541,13 @@ export class Main extends Component<any, State> {
 
                             return (
                                 <>
+                                    <div className='renderer'>
+                                        <canvas 
+                                            id='ctx'
+                                            ref={this.canvasRef}
+                                        >
+                                        </canvas>
+                                    </div>
                                     {sessionContext.currentSession === 'LOGIN' && (
                                         <div className='screen join-screen'>
                                             <div className='form'>

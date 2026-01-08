@@ -860,3 +860,11 @@ button {
     border-radius: 4px;
     margin-bottom: 1rem;
 }
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200px;
+    height: 200px;
+}
