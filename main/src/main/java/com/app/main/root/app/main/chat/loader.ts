@@ -165,7 +165,6 @@ export class Loader {
             
             if(sortedTimeline.length > 0) {
                 const lastItem = sortedTimeline[0];
-                
                 if(lastItem.type === 'file') {
                     return lastItem.fileData?.originalFileName || 'file';
                 } else if(lastItem.type === 'system' || lastItem.isSystem) {
@@ -178,11 +177,13 @@ export class Loader {
             const lastMessageData = await this.chatManager.lastMessage(userId, chatId);
             if(!lastMessageData) return 'No messages yet';
             
+            const senderUsername = lastMessageData.senderUsername || lastMessageData.sender;
+            const isCurrentUser = lastMessageData.sender === this.chatManager.userId;
             const formattedMessage = this.chatManager.formattedMessage(
                 chatId,
                 lastMessageData.content,
-                lastMessageData.sender,
-                chatId,
+                isCurrentUser,
+                senderUsername,
                 lastMessageData.isSystem
             );
 

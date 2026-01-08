@@ -8,6 +8,9 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 @Controller
@@ -49,10 +52,26 @@ public class DynamicEventController {
                     socketMethods.send(sessionId, config.getDestination(), res);
                     if(config.isBroadcast() && res != null) socketMethods.broadcastToDestination(destination, res);
                 } catch(Exception err) {
-                    System.out.println(err);
+                    String errorMessage = err.getMessage();
+                    if(errorMessage == null) {
+                        errorMessage = "Unknown error (null message)";
+                    }
+                    System.err.println("Error handling event " + eventName + ": " + errorMessage);
+                    err.printStackTrace();
                 }
             } else {
-                System.err.println("FATAL ERR. **DynamicEventController");
+                System.err.println("Event handler not found for: " + eventName);
+                System.err.println("Available events: " + eventConfigs.keySet());
+                
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "EVENT_HANDLER_NOT_FOUND");
+                errorResponse.put("event", eventName);
+                errorResponse.put("availableEvents", new ArrayList<>(eventConfigs.keySet()));
+                
+                String sessionId = headerAccessor.getSessionId();
+                if(sessionId != null) {
+                    socketMethods.send(sessionId, "/queue/errors", errorResponse);
+                }
             }
         }
     }

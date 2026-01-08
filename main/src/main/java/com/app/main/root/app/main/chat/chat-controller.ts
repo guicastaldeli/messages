@@ -13,7 +13,8 @@ import { ChatStateManager } from '../chat/chat-state-manager';
 import { ChatService } from './chat-service';
 import { Item } from './file/file-item';
 import { SessionManager } from '../_session/session-manager';
-import { AddToCache } from './add-to-cache';
+import { AddToCache, getAddToCache } from './add-to-cache';
+import { NotificationControllerClient } from './notification/notification-controller-client';
 
 export class ChatController {
     private queueManager: QueueManager;
@@ -26,9 +27,9 @@ export class ChatController {
     private chunkRenderer: ChunkRenderer;
     private chatStateManager = ChatStateManager.getIntance();
     private apiClientController: ApiClientController;
+    private notificationController: NotificationControllerClient;
 
     public dashboard: any;
-    
     private registeredMessageHandlers: RegisteredMessageHandlers;
     private currentHandler: MessageHandler | null = null;
     private messageHandlers: Map<string, (data: any) => Promise<void>> = new Map();
@@ -69,6 +70,7 @@ export class ChatController {
         this.chatService = chatService;
         this.messageElementRenderer = new MessageElementRenderer(this);
         this.chunkRenderer = new ChunkRenderer(chatService, this);
+        this.notificationController = new NotificationControllerClient(this.socketClient, this.apiClientController);
     }
 
     public async init(): Promise<void> {
@@ -81,7 +83,8 @@ export class ChatController {
         await this.socketClient.connect();
 
         const cacheService = await this.chatService.getCacheServiceClient();
-        await AddToCache().init(cacheService);
+        const addToCache = getAddToCache();
+        await addToCache.init(cacheService);
     }
 
     public async getChatData(
@@ -102,6 +105,13 @@ export class ChatController {
         this.userId = userId;
         this.username = username;
         await this.setupSubscriptions();
+        
+        await this.notificationController.init(userId, username);
+        
+        console.log('Initializing notifications for user:', userId);
+        
+        const notificationService = await this.notificationController.getNotificationSevrice();
+        await notificationService.loadUserNotification(userId);
     }
 
     private getHandlerByType(chatType: ChatType): MessageHandler {
@@ -430,23 +440,50 @@ export class ChatController {
         const tempMessageId = `msg_${time}_${Math.random().toString(36).substr(2, 9)}`
         const chatType = isGroupChat ? 'GROUP' : (isDirectChat ? 'DIRECT' : 'CHAT');
 
+        let groupMembers: string[] = [];
+        if(isGroupChat) {
+            groupMembers = currentChat?.members || [];
+            if(groupMembers.length === 0) {
+                const groupInfo = this.chatRegistry.getGroupInfo(chatId);
+                groupMembers = groupInfo?.members || [];
+            }
+            if(groupMembers.length === 0) {
+                try {
+                    const members = await this.chatManager.getGroupManager().getGroupMembers(chatId);
+                    groupMembers = members;
+                } catch(err) {
+                    console.error('Failed to fetch from server:', err);
+                }
+            }
+        }
+
+        let targetUserId: string | undefined;
+        if(isDirectChat) {
+            targetUserId = currentChat?.members?.find(memberId => memberId !== this.userId);
+        } else if(isGroupChat) {
+            targetUserId = undefined;
+        }
+
         const data = {
             senderId: this.userId,
             senderSessionId: this.socketId,
             username: this.username,
             content: content.content,
             messageId: tempMessageId,
-            targetUserId: isGroupChat ? undefined : currentChat?.members.find(m => m != this.socketId),
+            targetUserId: targetUserId,
             groupId: isGroupChat ? currentChat?.id : undefined,
             chatId: chatId,
             timestamp: time,
             chatType: content.chatType || chatType,
             type: chatType,
-            isTemp: true
+            isTemp: true,
+            memberIds: isGroupChat ? groupMembers : undefined
         }
 
         const analysis = this.messageAnalyzer.analyzeMessage(data);
         const metaType = analysis.messageType.split('_')[0];
+        const messageTypeToSend = metaType || chatType;
+
         const analyzedData = {
             ...analysis.context,
             _metadata: {
@@ -464,17 +501,20 @@ export class ChatController {
                 isDirect: analysis.context.isDirect,
                 isGroup: analysis.context.isGroup,
                 isSystem: analysis.context.isSystem
-            }
+            },
+            memberIds: data.memberIds,
+            recipientId: data.targetUserId
         }
 
         const res = await this.queueManager.sendWithRouting(
             analyzedData,
-            metaType || chatType.toLowerCase(),
+            messageTypeToSend,
             {
                 priority: analysis.priority,
                 metadata: analysis.metadata
             }
         );
+        
         if(res) {
             try {
                 const messageService = await this.chatService.getMessageController().getMessageService();
@@ -488,6 +528,73 @@ export class ChatController {
                     direction: 'SENT'
                 });
                 console.log('Message saved on server! :)');
+            
+                if(isGroupChat && groupMembers.length > 0) {
+                    const recipients = groupMembers.filter(memberId => memberId !== this.userId);
+                    console.log('[GROUP NOTIFICATION] Sending to recipients:', recipients);
+                    
+                    if(recipients.length > 0) {
+                        for (const recipientId of recipients) {
+                            const notificationData = {
+                                id: `notification_${tempMessageId}_${recipientId}`,
+                                userId: recipientId,
+                                type: 'MESSAGE',
+                                title: `New message in group from ${this.username}`,
+                                message: content.content,
+                                chatId: chatId,
+                                senderId: this.userId,
+                                senderName: this.username,
+                                timestamp: time,
+                                isRead: false,
+                                priority: 'NORMAL',
+                                metadata: {
+                                    messageId: tempMessageId,
+                                    chatType: chatType,
+                                    originalContent: content.content,
+                                    isGroup: true
+                                }
+                            };
+                            
+                            await this.queueManager.sendWithRouting(
+                                notificationData,
+                                'notification',
+                                {
+                                    priority: 'NORMAL',
+                                    metadata: { isNotification: true }
+                                }
+                            );
+                        }
+                    }
+                } else if(targetUserId && targetUserId !== this.userId) {
+                    const notificationData = {
+                        id: `notification_${tempMessageId}`,
+                        userId: targetUserId,
+                        type: 'MESSAGE',
+                        title: `New message from ${this.username}`,
+                        message: content.content,
+                        chatId: chatId,
+                        senderId: this.userId,
+                        senderName: this.username,
+                        timestamp: time,
+                        isRead: false,
+                        priority: 'NORMAL',
+                        metadata: {
+                            messageId: tempMessageId,
+                            chatType: chatType,
+                            originalContent: content.content
+                        }
+                    };
+                    
+                    await this.queueManager.sendWithRouting(
+                        notificationData,
+                        'notification',
+                        {
+                            priority: 'NORMAL',
+                            metadata: { isNotification: true }
+                        }
+                    );
+                }
+
                 const messageToCache = {
                     ...analyzedData,
                     id: savedMessage.id || savedMessage.messageId,
@@ -499,7 +606,8 @@ export class ChatController {
                     isTemp: false
                 }
 
-                await AddToCache().addMessage(chatId, messageToCache);
+                const addToCache = getAddToCache();
+                await addToCache.addMessage(chatId, messageToCache);
                 await this.chatService.getMessageController().addMessage(chatId, messageToCache);
             } catch(err) {
                 console.error('Failed to save message :(', err);
@@ -513,7 +621,8 @@ export class ChatController {
                     isTemp: true
                 }
                 
-                await AddToCache().addMessage(chatId, messageToCache);
+                const addToCache = getAddToCache();
+                await addToCache.addMessage(chatId, messageToCache);
                 await this.chatService.getMessageController().addMessage(chatId, messageToCache);
             }
             if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);
@@ -537,22 +646,15 @@ export class ChatController {
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
         const isSystemMessage = messageType.includes('SYSTEM');
         const isFileMessage = data.type === 'file' || data.fileData;
-        console.log('Handling message:', {
-            messageId: data.messageId,
-            type: messageType,
-            isFileMessage,
-            isSystemMessage,
-            chatId: data.chatId,
-            dataKeys: Object.keys(data)
-        });
 
         try {
+            const addToCache = getAddToCache();
             if(isSystemMessage) {
-                await AddToCache().addSystemMessage(data.chatId, data);
+                await addToCache.addSystemMessage(data.chatId, data);
             } else if(isFileMessage) {
-                await AddToCache().addFile(data.chatId, data);
+                await addToCache.addFile(data.chatId, data);
             } else {
-                await AddToCache().addMessage(data.chatId, data);
+                await addToCache.addMessage(data.chatId, data);
             }
         } catch(err) {
             console.error('Failed to update cache:', err);
@@ -564,10 +666,10 @@ export class ChatController {
             this.lastSystemMessageKeys.add(systemKey);
             this.chatManager.setLastMessage(
                 data.chatId,
-                data.userId || this.userId,
+                data.senderId || data.userId,
                 data.messageId || data.id,
                 data.content,
-                data.username || 'System',
+                data.senderName || data.username || 'System',
                 isSystemMessage
             );
         }
@@ -600,14 +702,47 @@ export class ChatController {
             await this.messageElementRenderer.setMessage(data, { ...analysis, direction });
         }
         
+        const isCurrentUserMessage = data.senderId === this.userId;
         this.chatManager.setLastMessage(
             data.chatId,
-            data.userId,
+            data.senderId || data.userId,
             data.messageId,
             data.content,
-            data.username,
-            data.isSystem
+            data.senderName || data.username,
+            data.isSystem || false
         );
+        
+        if(!isCurrentUserMessage && data.senderId !== this.userId) {
+            console.log('🔔 [CHAT CONTROLLER] Triggering notification for message from other user');
+            const notificationController = this.getNotificationController();
+            if(notificationController) {
+                const notificationData = {
+                    id: `notification_${data.messageId}`,
+                    userId: this.userId,
+                    type: 'MESSAGE',
+                    title: `New message from ${data.senderName || data.username}`,
+                    message: data.content,
+                    chatId: data.chatId,
+                    senderId: data.senderId,
+                    senderName: data.senderName || data.username,
+                    timestamp: data.timestamp || Date.now(),
+                    isRead: false,
+                    priority: 'NORMAL',
+                    metadata: {
+                        messageId: data.messageId,
+                        chatType: data.chatType || 'DIRECT',
+                        originalContent: data.content,
+                        isGroup: data.chatId?.startsWith('group_') || false
+                    }
+                };
+                
+                try {
+                    await notificationController.addNotification(notificationData);
+                } catch (err) {
+                    console.error(' Failed to create notification:', err);
+                }
+            }
+        }
     }
 
     /**
@@ -696,7 +831,8 @@ export class ChatController {
                     fileData: file
                 };
 
-                await AddToCache().addFile(chatId, fileToCache);
+                const addToCache = getAddToCache();
+                await addToCache.addFile(chatId, fileToCache);
                 await fileService.addFile(chatId, fileToCache);
             } catch(err) {
                 console.error('Failed to cache file :(', err);
@@ -715,7 +851,8 @@ export class ChatController {
                     fileData: file
                 };
 
-                await AddToCache().addFile(chatId, fileToCache);
+                const addToCache = getAddToCache();
+                await addToCache.addFile(chatId, fileToCache);
                 await fileService.addFile(chatId, fileToCache);
             }
             
@@ -836,5 +973,12 @@ export class ChatController {
      */
     public getApiClientController(): ApiClientController {
         return this.apiClientController;
+    }
+
+    /**
+     * Get Notification Controller
+     */
+    public getNotificationController(): NotificationControllerClient {
+        return this.notificationController;
     }
 }

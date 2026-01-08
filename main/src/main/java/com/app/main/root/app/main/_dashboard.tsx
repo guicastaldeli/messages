@@ -36,6 +36,7 @@ interface State {
     chatStreamComplete: boolean;
     chatItemsAdded: boolean;
     expectedChatCount: number;
+    unreadCounts: Map<string, number>;
 }
 
 export class Dashboard extends Component<Props, State> {
@@ -60,7 +61,8 @@ export class Dashboard extends Component<Props, State> {
             chatsLoaded: false,
             chatStreamComplete: false,
             chatItemsAdded: false,
-            expectedChatCount: 0
+            expectedChatCount: 0,
+            unreadCounts: new Map()
         }
         this.chatContainerRef = React.createRef();
         this.directContainerRef = React.createRef();
@@ -213,6 +215,9 @@ export class Dashboard extends Component<Props, State> {
 
         window.removeEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.removeEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
+
+        window.addEventListener('chat-unread-updated', this.handleChatUnreadUpdated as EventListener);
+        window.addEventListener('chat-read', this.handleChatRead as EventListener);
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.addEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
     }
@@ -222,6 +227,8 @@ export class Dashboard extends Component<Props, State> {
         window.removeEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
         window.removeEventListener('chat-stream-complete', () => {});
         window.removeEventListener('chats-stream-error', () => {});
+        window.removeEventListener('chat-unread-updated', this.handleChatUnreadUpdated as EventListener);
+        window.removeEventListener('chat-read', this.handleChatRead as EventListener);
     }
 
     componentDidUpdate(prevProps: Props): void {
@@ -282,9 +289,51 @@ export class Dashboard extends Component<Props, State> {
         this.setState({ currentSession: session });
     }
 
+    /**
+     * Unread Message
+     */
+    private getChatUnreadCount(chatId: string): number {
+        if(!this.props.chatController.getNotificationController()) return 0;
+        return this.props.chatController.getNotificationController().getChatUnreadCount(chatId);
+    }
+
+    private handleChatUnreadUpdated = (e: CustomEvent): void => {
+        const { chatId, unreadCount } = e.detail;
+        this.setState(prevState => {
+            const newUnreadCounts = new Map(prevState.unreadCounts);
+            newUnreadCounts.set(chatId, unreadCount);
+            return { unreadCounts: newUnreadCounts }
+        });
+    }
+
+    /**
+     * Handle Chat Read
+     */
+    private handleChatRead = (e: CustomEvent): void => {
+        const { chatId } = e.detail;
+        this.setState(prevState => {
+            const newUnreadCounts = new Map(prevState.unreadCounts);
+            return { unreadCounts: newUnreadCounts }
+        });
+    }
+
+    /**
+     * Handle Chat Select
+     */
     private handleChatSelect = async (chat: any): Promise<void> => {
         const chatType = chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP';
         const chatId = chat.id || chat.chatId;
+
+        if(this.props.chatController.getNotificationController()) {
+            await this.props.chatController
+                .getNotificationController()
+                .markAsRead(chatId);
+        }
+
+        const readEvent = new CustomEvent('chat-read', {
+            detail: { chatId: chatId }
+        });
+        window.dispatchEvent(readEvent);
         
         chatState.setType(chatType);
         
@@ -526,28 +575,37 @@ export class Dashboard extends Component<Props, State> {
                                         <p>No chats.</p>
                                     ) : (
                                         <ul>
-                                            {chatList.map((chat: any, i: any) => (
-                                                <li
-                                                    key={chat.id || `${chat.type}_${i}`}
-                                                    className={`chat-item${
-                                                        activeChat && 
-                                                        activeChat.id === chat.id ? ' active' : ''
-                                                    }`}
-                                                    onClick={() => this.handleChatSelect(chat)}
-                                                >
-                                                    <div className="chat-icon">
-                                                        {chat.type === 'DIRECT' ? 'd' : 'g'}
-                                                    </div>
-                                                    <div className="chat-info">
-                                                        <div id="chat-name">{chat.name}</div>
-                                                        <div id="chat-preview">
-                                                            {typeof chat.lastMessage === 'object' 
-                                                                ? chat.lastMessage.content 
-                                                                : chat.lastMessage}
+                                            {chatList.map((chat: any, i: any) => {
+                                                const unreadCount = this.getChatUnreadCount(chat.id || chat.chatId || chat.groupId);
+                                                const isUnread = unreadCount > 0;
+                                                return (
+                                                    <li
+                                                        key={chat.id || `${chat.type}_${i}`}
+                                                        className={`chat-item${
+                                                            activeChat && 
+                                                            activeChat.id === chat.id ? ' active' : ''
+                                                        }${isUnread ? ' unread' : ''}`} 
+                                                        onClick={() => this.handleChatSelect(chat)}
+                                                    >
+                                                        <div className="chat-icon">
+                                                            {chat.type === 'DIRECT' ? 'd' : 'g'}
                                                         </div>
-                                                    </div>
-                                                </li>
-                                            ))}
+                                                        <div className="chat-info">
+                                                            <div id="chat-name">{chat.name}</div>
+                                                            <div id="chat-preview">
+                                                                {typeof chat.lastMessage === 'object' 
+                                                                    ? chat.lastMessage.content 
+                                                                    : chat.lastMessage}
+                                                            </div>
+                                                        </div>
+                                                        {isUnread && (
+                                                            <div className="unread-badge">
+                                                                {unreadCount}
+                                                            </div>
+                                                        )}
+                                                    </li>
+                                                )
+                                            })}
                                         </ul>
                                     )}
                                 </div>

@@ -306,6 +306,52 @@ li:hover {
   -webkit-user-select: none;
      -moz-user-select: none;
           user-select: none;
+  position: relative;
+  padding: 3px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.chat-item:hover {
+  background-color: rgba(0, 0, 0, 0.388);
+}
+.chat-item.unread {
+  background-color: #f0f8ff;
+}
+.chat-item.unread #chat-name {
+  font-weight: bold;
+  color: #000;
+}
+.chat-item.unread #chat-preview {
+  font-weight: bold;
+  color: #000;
+}
+.chat-item.unread::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background-color: #0084ff;
+  border-radius: 50%;
+}
+.chat-item.active {
+  background-color: #e3f2fd;
+}
+
+.unread-badge {
+  position: absolute;
+  right: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #0084ff;
+  color: white;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 18px;
+  text-align: center;
 }
 
 #chat-name {

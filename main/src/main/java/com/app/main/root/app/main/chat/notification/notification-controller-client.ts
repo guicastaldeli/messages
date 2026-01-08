@@ -1,6 +1,6 @@
 import { SocketClientConnect } from "../../socket-client-connect";
 import { ApiClientController } from "../../_api-client/api-client-controller";
-import { AddNotification } from "./add-notification";
+import { getAddNotification } from "./add-notification";
 import { NotificationServiceClient } from "./notification-service-client";
 
 export enum Type {
@@ -8,11 +8,17 @@ export enum Type {
     FILE = 'FILE',
     SYSTEM = 'SYSTEM'
 }
+
+enum Priority {
+    LOW = 'LOW',
+    NORMAL = 'NORMAL',
+    HIGH = 'HIGH'
+}
     
 export interface Data {
     id: string;
     userId: string;
-    type: Type;
+    type: Type | string;
     title: string;
     message: string;
     chatId: string;
@@ -20,7 +26,8 @@ export interface Data {
     senderName: string;
     timestamp: Date;
     isRead: boolean;
-    priority: 'LOW' | 'NORMAL' | 'HIGH';
+    _typeOverride?: string;
+    priority: Priority | string;
     metadata?: any;
 }
 
@@ -46,7 +53,8 @@ export class NotificationControllerClient {
 
     public async init(userId: string, username: string): Promise<void> {
         this.getUserData(userId, username);
-        await AddNotification().init(this);
+        const addNotification = getAddNotification();
+        await addNotification.init(this);
         await this.setupListeners();
     }
 
@@ -66,13 +74,13 @@ export class NotificationControllerClient {
         this.socketClient.on('/user/queue/notifications', (data: any) => {
             this.handleIncomingNotification(data);
         });
+        this.socketClient.on('/queue/notifications', (data: any) => {
+            this.handleIncomingNotification(data);
+        });
         this.socketClient.on('/queue/messages', (data: any) => {
             if(this.shouldAddNotification(data)) {
                 this.createNotification(data);
             }
-        });
-        this.socketClient.on('/user/queue/notifications', (data: any) => {
-            this.handleIncomingNotification(data);
         });
     }
 
@@ -83,10 +91,7 @@ export class NotificationControllerClient {
             return false;
         }
 
-        const activeChatId = this.getActiveChat();
-        if(message.chatId === activeChatId) return false;
-
-        return false;
+        return true;
     }
 
     /**
@@ -96,19 +101,20 @@ export class NotificationControllerClient {
         if(!this.shouldAddNotification(data)) return;
         try {
             const messageType = this.detectMessageType(data);
+            const addNotification = getAddNotification();
             switch(messageType) {
                 case Type.MESSAGE:
-                    await AddNotification().addMessage(data);
+                    await addNotification.addMessage(data);
                     break;
                 case Type.FILE:
-                    await AddNotification().addFile(data);
+                    await addNotification.addFile(data);
                     break;
                 case Type.SYSTEM:
-                    await AddNotification().addSystemMessage(data);
+                    await addNotification.addSystemMessage(data);
                     break;
                 default:
                     console.warn('Unknown message type:', messageType, data);
-                    await AddNotification().addMessage(data);
+                    await addNotification.addMessage(data);
                     break;
             }
         } catch(err) {
@@ -154,25 +160,45 @@ export class NotificationControllerClient {
             chatId: data.chatId,
             senderId: data.senderId,
             senderName: data.senderName,
+            _typeOverride: data.type,
             timestamp: new Date(data.timestamp),
             isRead: data.isRead || false,
-            priority: data.priority || 'NORMAL',
+            priority: data.priority || Priority.NORMAL,
             metadata: data.metadata
         }
+        
         this.addNotification(content);
-        if(!data.isRead) this.showDesktopNotification(content);
+        this.showDesktopNotification(content);
     }
 
     /**
      * Add Notification
      */
     public async addNotification(data: Data): Promise<void> {
-        this.notifications.set(data.id, data);
-        if(data.isRead) {
+        const activeChatId = this.getActiveChat();
+        const isActiveChat = data.chatId === activeChatId;
+        const notificationData = {
+            ...data,
+            isRead: isActiveChat
+        }
+        this.notifications.set(data.id, notificationData);
+        if(!notificationData.isRead) {
             this.unreadCount++;
             this.updateBadgeCount();
+            if(data.chatId && data.chatId !== 'system') {
+                const unreadEvent = new CustomEvent('chat-unread-updated', {
+                    detail: {
+                        chatId: data.chatId,
+                        unreadCount: this.getChatUnreadCount(data.chatId),
+                        notification: data
+                    }
+                });
+                window.dispatchEvent(unreadEvent);
+            }
         }
+        
         this.notifySubscribers();
+        this.showDesktopNotification(data);
         await this.notificationService.persistNotification(data);
     }
 
@@ -183,7 +209,7 @@ export class NotificationControllerClient {
                 body: data.message,
                 icon: '',
                 tag: data.chatId,
-                requireInteraction: data.priority === 'HIGH'
+                requireInteraction: data.priority === Priority.HIGH
             });
             notification.onclick = () => {
                 window.focus();
@@ -192,7 +218,7 @@ export class NotificationControllerClient {
             }
             setTimeout(() => {
                 notification.close();
-            }, data.priority === 'HIGH' ? 10000 : 5000);
+            }, data.priority === Priority.HIGH ? 10000 : 5000);
         } else if(Notification.permission !== 'denied') {
             Notification.requestPermission().then(permission => {
                 if(permission === 'granted') {
@@ -200,6 +226,12 @@ export class NotificationControllerClient {
                 }
             });
         }
+    }
+
+    public getChatUnreadCount(chatId: string): number {
+        return Array.from(this.notifications.values()).filter(nt => 
+            nt.chatId === chatId && !nt.isRead
+        ).length;
     }
 
     /**
@@ -254,8 +286,23 @@ export class NotificationControllerClient {
     }
 
     public getNotifications(): Data[] {
-        return Array.from(this.notifications.values())
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        const notifications = Array.from(this.notifications.values())
+            .sort((a, b) => {
+                try {
+                    const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp);
+                    const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp);
+                    
+                    const timeA = dateA.getTime() || 0;
+                    const timeB = dateB.getTime() || 0;
+                    
+                    return timeB - timeA;
+                } catch (err) {
+                    console.error('Error sorting notifications:', err, { a, b });
+                    return 0;
+                }
+            });
+        
+        return notifications;
     }
 
     public notifySubscribers(): void {
@@ -304,5 +351,12 @@ export class NotificationControllerClient {
             detail: { notification }
         });
         window.dispatchEvent(e);
+    }
+
+    /**
+     * Get Notification Service
+     */
+    public async getNotificationSevrice(): Promise<NotificationServiceClient> {
+        return this.notificationService;
     }
 }

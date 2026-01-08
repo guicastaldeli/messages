@@ -17,6 +17,7 @@ export interface Item {
     type: 'DIRECT' | 'GROUP';
     lastMessage?: string;
     timestamp?: Date;
+    unreadCount: number;
 }
 
 export interface ActiveChat {
@@ -38,7 +39,9 @@ export class ChatManager {
     private chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
+
     public userId!: string;
+    public username!: string;
 
     private updateCallback: ((chatList: any[]) => void) | null = null;
     private setState: React.Component<any, State>['setState'];
@@ -90,6 +93,7 @@ export class ChatManager {
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
         this.userId = userId;
+        this.username = username;
         await this.directManager.getUserData(sessionId, userId);
         await this.groupManager.getUserData(sessionId, userId, username);
     }
@@ -245,11 +249,26 @@ export class ChatManager {
             return;
         }
 
+        if(!isCurrentUser) {
+            const unreadEvent = new CustomEvent('chat-unread-updated', {
+                detail: {
+                    chatId: chatId,
+                    unreadCount: this.chatController.getNotificationController().getChatUnreadCount(chatId),
+                    message: lastMessage
+                }
+            });
+            window.dispatchEvent(unreadEvent);
+        }
+
+        const isCurrentUserMessage = 
+            sender === this.userId || 
+            sender === this.username;
+
         const systemMessage = this.isSystemMessage(event.detail);
         const formattedMessage = this.formattedMessage(
             chatId, 
             lastMessage, 
-            isCurrentUser, 
+            isCurrentUserMessage, 
             sender, 
             systemMessage
         
@@ -280,6 +299,9 @@ export class ChatManager {
     }): void {
         const { id, lastMessage, sender, timestamp, messageId, userId } = detail;
         const now = new Date(timestamp);
+        const isFromOtherUser = 
+            sender !== this.userId &&
+            sender !== this.username;
         
         this.setState((prevState: State) => {
             const chatIndex = prevState.chatList.findIndex(chat => 
@@ -293,7 +315,8 @@ export class ChatManager {
                     name: sender,
                     type: chatType,
                     lastMessage: this.formattedLastMessage(lastMessage),
-                    timestamp: now
+                    timestamp: now,
+                    unreadCount: isFromOtherUser ? 1 : 0
                 };
                 return { 
                     chatList: [newItem, ...prevState.chatList] 
@@ -310,7 +333,10 @@ export class ChatManager {
                 lastMessage: this.formattedLastMessage(lastMessage),
                 lastMessageSender: sender,
                 lastMessageTime: timestamp,
-                timestamp: now
+                timestamp: now,
+                unreadCount: isFromOtherUser ?
+                    (originalChat.unreadCount || 0) + 1 :
+                    (originalChat.unreadCount || 0)
             };
 
             updatedChatList.splice(chatIndex, 1);
@@ -334,7 +360,10 @@ export class ChatManager {
                 lastMessage: this.formattedLastMessage(lastMessage),
                 lastMessageSender: sender,
                 lastMessageTime: timestamp,
-                timestamp: now
+                timestamp: now,
+                unreadCount: isFromOtherUser ? 
+                    (this.chatList[chatIndex].unreadCount || 0) + 1 : 
+                    (this.chatList[chatIndex].unreadCount || 0)
             };
             this.chatList.splice(chatIndex, 1);
             this.chatList.unshift(updatedChat);
@@ -345,7 +374,8 @@ export class ChatManager {
                 name: sender,
                 type: chatType,
                 lastMessage: this.formattedLastMessage(lastMessage),
-                timestamp: now
+                timestamp: now,
+                unreadCount: isFromOtherUser ? 1 : 0
             });
         }
     }
@@ -381,12 +411,16 @@ export class ChatManager {
             }
             const chatType = chatId.startsWith('direct_') ? 'DIRECT' : 'GROUP';
             const chatName = sender;
+            const isFromOtherUser = 
+                sender !== this.userId &&
+                sender !== this.username;
             
             const item: Item = {
                 id: chatId,
                 name: chatName,
                 type: chatType,
-                timestamp: new Date(timestamp)
+                timestamp: new Date(timestamp),
+                unreadCount: isFromOtherUser ? 1 : 0
             }
             
             return { chatList: [item, ...prevState.chatList] }
@@ -418,7 +452,8 @@ export class ChatManager {
     public async lastMessage(userId: string, chatId: string): Promise<{
         content: string,
         currentUserId: string, 
-        sender: string, 
+        sender: string,
+        senderUsername: string,
         isSystem: boolean
     } | null> {
         try {
@@ -455,6 +490,7 @@ export class ChatManager {
                     content: lastItem.content || lastItem.fileData?.originalFileName || 'System message',
                     currentUserId: lastItem.sender || lastItem.senderId || userId,
                     sender: lastItem.sender || lastItem.senderId || 'System',
+                    senderUsername: lastItem.username,
                     isSystem: lastItem.isSystem || lastItem.type === 'system'
                 };
             }
@@ -478,6 +514,7 @@ export class ChatManager {
         return;
     }
         const time = new Date().toISOString();
+        const isCurrentUserMessage = sender === this.userId || sender === this.username;
         const updateEvent = new CustomEvent('last-message-updated', {
             detail: {
                 chatId: id,
@@ -486,7 +523,7 @@ export class ChatManager {
                 lastMessage: content,
                 sender: sender,
                 timestamp: time,
-                isCurrentUser: sender,
+                isCurrentUser: isCurrentUserMessage,
                 isSystem: isSystem
             }
         });
@@ -545,7 +582,7 @@ export class ChatManager {
     public formattedMessage(
         chatId: string, 
         lastMessage: string, 
-        isCurrentUser: string, 
+        isCurrentUser: boolean,
         sender: string,
         systemMessage: boolean
     ): string {

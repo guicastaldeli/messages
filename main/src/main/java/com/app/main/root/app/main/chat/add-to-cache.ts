@@ -1,25 +1,30 @@
 import { CacheServiceClient } from "@/app/_cache/cache-service-client"
 
-export const AddToCache = (cacheService?: CacheServiceClient) => ({
-    /**
-     * Init
-     */
-    get init() {
-        return async(cacheService: CacheServiceClient) => {
-            cacheService = cacheService;
-        }
-    },
+export const AddToCache = (cacheServiceParam?: CacheServiceClient) => {
+    let cacheService: CacheServiceClient | undefined = cacheServiceParam;
     
-    /**
-     * Add Message
-     */
-    get addMessage() {
-        return async(chatId: string, data: any): Promise<void> => {
+    return {
+        /**
+         * Init
+         */
+        init: async (cacheServiceParam: CacheServiceClient): Promise<void> => {
+            cacheService = cacheServiceParam;
+        },
+        
+        /**
+         * Add Message
+         */
+        addMessage: async (chatId: string, data: any): Promise<void> => {
             try {
-                const cacheData = cacheService!.getCacheData(chatId);
+                if (!cacheService) {
+                    console.error('Cache service not initialized');
+                    return;
+                }
+                
+                const cacheData = cacheService.getCacheData(chatId);
                 if(!cacheData) {
                     console.log(`Cache not found for ${chatId}, initializing`);
-                    cacheService!.init(chatId);
+                    cacheService.init(chatId);
                     return;
                 } 
     
@@ -52,20 +57,23 @@ export const AddToCache = (cacheService?: CacheServiceClient) => ({
             } catch(err) {
                 console.error(`Failed to update cache for ${chatId}:`, err);
             }
-        }
-    },
+        },
 
-    /**
-     * Add File
-     */
-    get addFile() {
-        return async(chatId: string, data: any) => {
-            if(!cacheService!.isChatCached(chatId)) {
+        /**
+         * Add File
+         */
+        addFile: async (chatId: string, data: any) => {
+            if (!cacheService) {
+                console.error('Cache service not initialized');
+                return;
+            }
+            
+            if(!cacheService.isChatCached(chatId)) {
                 console.log(`Skipping cache update for exited group: ${chatId}`);
                 return;
             }
     
-            const cacheData = cacheService!.getCacheData(chatId);
+            const cacheData = cacheService.getCacheData(chatId);
             if(!cacheData) {
                 console.error(`No cache data found for chat ${chatId}`);
                 return;
@@ -109,20 +117,23 @@ export const AddToCache = (cacheService?: CacheServiceClient) => ({
             cacheData.timeline.set(fileId, fileEntry);
             
             console.log(`Updated cache for ${chatId} with file ${fileId}`);
-        }
-    },
+        },
 
-    /**
-     * Add System Message
-     */
-    get addSystemMessage() {
-        return async(chatId: string, data: any): Promise<void> => {
+        /**
+         * Add System Message
+         */
+        addSystemMessage: async (chatId: string, data: any): Promise<void> => {
             try {
-                const cacheData = cacheService!.getCacheData(chatId);
+                if (!cacheService) {
+                    console.error('Cache service not initialized');
+                    return;
+                }
+                
+                const cacheData = cacheService.getCacheData(chatId);
                 
                 if(!cacheData) {
                     console.log(`Cache not found for ${chatId}, initializing`);
-                    cacheService!.init(chatId);
+                    cacheService.init(chatId);
                     return;
                 }
                 
@@ -152,5 +163,11 @@ export const AddToCache = (cacheService?: CacheServiceClient) => ({
                 console.error(`Failed to update cache for ${chatId}:`, err);
             }
         }
-    }
-})
+    };
+};
+
+let instance: ReturnType<typeof AddToCache> | null = null;
+export const getAddToCache = (): ReturnType<typeof AddToCache> => {
+    if(!instance) instance = AddToCache();
+    return instance;
+}

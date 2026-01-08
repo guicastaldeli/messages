@@ -42,4 +42,17 @@ export class ChatRegistry {
     public getCurrentChat(): Context | null {
         return this.currentChat;
     }
+
+    public getGroupInfo(groupId: string): any {
+        const chat = this.chats.get(groupId);
+        if (chat && chat.type === 'GROUP') {
+            return {
+                id: chat.id,
+                name: chat.id,
+                members: chat.members || [],
+                creator: chat.id
+            };
+        }
+        return null;
+    }
 }

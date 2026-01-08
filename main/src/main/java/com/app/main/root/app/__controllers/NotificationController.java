@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.sql.SQLException;
 import java.util.*;
 
@@ -78,7 +77,7 @@ public class NotificationController {
         }
     }
 
-    @PutMapping("/user/{userId/read-all")
+    @PutMapping("/user/{userId}/read-all")
     public ResponseEntity<?> markAllAsRead(@PathVariable String userId) {
         try {
             serviceManager.getNotificationService().markAllAsRead(userId);

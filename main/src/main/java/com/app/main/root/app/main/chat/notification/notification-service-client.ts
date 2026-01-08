@@ -58,7 +58,7 @@ export class NotificationServiceClient {
 
     public async getServerUnreadCount(userId: string): Promise<number> {
         try {
-        const response = await fetch(`/api/notifications/user/${userId}/unread-count`);
+        const response = await fetch(`${this.apiClientController.getUrl()}/api/notifications/user/${userId}/unread-count`);
         if(response.ok) {
             const data = await response.json();
             return data.success ? data.count : 0;
@@ -71,7 +71,7 @@ export class NotificationServiceClient {
 
     public async updateNotificationStatus(notificationId: string, isRead: boolean): Promise<void> {
         try {
-        const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        const response = await fetch(`${this.apiClientController.getUrl()}/api/notifications/${notificationId}/read`, {
             method: 'PUT'
         });
             
@@ -85,7 +85,7 @@ export class NotificationServiceClient {
 
     public async deleteNotification(notificationId: string): Promise<void> {
         try {
-        const response = await fetch(`/api/notifications/${notificationId}`, {
+        const response = await fetch(`${this.apiClientController.getUrl()}/api/notifications/${notificationId}`, {
             method: 'DELETE'
         });
             
@@ -99,7 +99,7 @@ export class NotificationServiceClient {
 
     public async markAllAsRead(): Promise<void> {
         try {
-        const response = await fetch(`/api/notifications/user/${this.notificationController.userId}/read-all`, {
+        const response = await fetch(`${this.apiClientController.getUrl()}/api/notifications/user/${this.notificationController.userId}/read-all`, {
             method: 'PUT'
         });
             

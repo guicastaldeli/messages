@@ -27,7 +27,7 @@ public class NotificationService {
     }
 
     private Connection getConnection() throws SQLException {
-        return dataSourceService.setDb("message").getConnection();
+        return dataSourceService.setDb("notification").getConnection();
     }
 
     /**
@@ -98,7 +98,7 @@ public class NotificationService {
      * Mark As Read
      */
     public void markAsRead(String notificationid) throws SQLException {
-        String query = CommandQueryManager.MARK_NOTITICATION_AS_READ.get();
+        String query = CommandQueryManager.MARK_NOTIFICATION_AS_READ.get();
         try(
             Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(query);
@@ -152,18 +152,29 @@ public class NotificationService {
     /**
      * Send Notification
      */
-    public void sendNotification(String userId, Map<String, Object> data) {
-        try {
-            String userSession = serviceManager.getUserService().getSessionByUserId(userId);
-            if(userSession != null) {
-                Map<String, Object> event = new HashMap<>();
-                event.put("type", "NOTIFICATION");
-                event.put("notification", data);
-                event.put("timestamp", System.currentTimeMillis());
-                socketMethods.send(userSession, "/user/queue/notifications", event);
-            }
-        } catch(Exception err) {
-            System.err.println("Failed to send notification to user " + userId + ": " + err.getMessage());
+    /**
+ * Send Notification
+ */
+public void sendNotification(String userId, Map<String, Object> data) {
+    try {
+        System.out.println("📢 [NOTIFICATION SENT] To user: " + userId);
+        System.out.println("📢 Notification data: " + data);
+        
+        String userSession = serviceManager.getUserService().getSessionByUserId(userId);
+        if(userSession != null) {
+            Map<String, Object> event = new HashMap<>();
+            event.put("type", "NOTIFICATION");
+            event.put("notification", data);
+            event.put("timestamp", System.currentTimeMillis());
+            
+            System.out.println("📢 Sending via socket to session: " + userSession);
+            socketMethods.send(userSession, "/user/queue/notifications", event);
+            System.out.println("📢 Notification sent successfully!");
+        } else {
+            System.out.println("📢 User session not found for userId: " + userId);
         }
+    } catch(Exception err) {
+        System.err.println("📢 Failed to send notification to user " + userId + ": " + err.getMessage());
     }
+}
 }

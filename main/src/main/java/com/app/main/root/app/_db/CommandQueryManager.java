@@ -513,7 +513,7 @@ public enum CommandQueryManager {
     */
     SAVE_NOTIFICATION(
         """
-            INSER INTO notifications(
+            INSERT INTO notifications(
                 id,
                 user_id,
                 type,
@@ -535,7 +535,7 @@ public enum CommandQueryManager {
            ORDER BY created_at DESC     
         """
     ),
-    MARK_NOTITICATION_AS_READ(
+    MARK_NOTIFICATION_AS_READ(
         "UPDATE notifications SET is_read = TRUE WHERE id = ?"
     ),
     DELETE_NOTIFICATION(

@@ -4,10 +4,8 @@ export const AddNotification = (notificationController?: NotificationControllerC
     /**
      * Init
      */
-    get init() {
-        return async(notificationController: NotificationControllerClient) => {
-            notificationController = notificationController;
-        }
+    init: async (notificationController: NotificationControllerClient): Promise<void> => {
+        notificationController = notificationController;
     },
 
     /**
@@ -23,6 +21,7 @@ export const AddNotification = (notificationController?: NotificationControllerC
                 message: notificationController!.formatMessagePreview(data.content),
                 chatId: data.chatId,
                 senderId: data.senderId,
+                _typeOverride: Type.MESSAGE,
                 senderName: data.username || data.senderName || 'Unknown',
                 timestamp: new Date(data.timestamp || Date.now()),
                 isRead: false,
@@ -52,6 +51,7 @@ export const AddNotification = (notificationController?: NotificationControllerC
                 message: data.originalFileName || 'File shared',
                 chatId: data.chatId,
                 senderId: data.senderId,
+                _typeOverride: Type.FILE,
                 senderName: data.senderName || data.username || 'Unknown',
                 timestamp: new Date(),
                 isRead: false,
@@ -82,6 +82,7 @@ export const AddNotification = (notificationController?: NotificationControllerC
                 chatId: data.chatId || 'system',
                 senderId: 'system',
                 senderName: 'System',
+                _typeOverride: Type.SYSTEM,
                 timestamp: new Date(),
                 isRead: false,
                 priority: data.priority || 'NORMAL',
@@ -93,3 +94,9 @@ export const AddNotification = (notificationController?: NotificationControllerC
         }
     }
 });
+
+let instance: ReturnType<typeof AddNotification> | null = null;
+export const getAddNotification = (): ReturnType<typeof AddNotification> => {
+    if(!instance) instance = AddNotification();
+    return instance;
+}

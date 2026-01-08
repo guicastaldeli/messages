@@ -45,12 +45,7 @@ public class SocketMethods {
                 data
             );
         } catch(Exception err) {
-            if(!err.getMessage().contains("No session") && 
-                !err.getMessage().contains("not found") &&
-                !err.getMessage().contains("disconnected")
-            ) {
-                System.err.println("Error sending message to " + destination + ": " + err.getMessage());
-            }
+            System.err.println("Error sending message to " + destination + ": " + err.getMessage());
         }
     }
 
