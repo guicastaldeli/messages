@@ -16,6 +16,7 @@ public class ServiceManager {
     private final SystemMessageService systemMessageService;
     private final MessagePerspectiveService messagePerspectiveService;
     private final UserService userService;
+    private final PasswordResetService passwordResetService;
     private final DirectService directService;
     private final ContactService contactService;
     private final GroupService groupService;
@@ -37,6 +38,7 @@ public class ServiceManager {
         @Lazy ChatService chatService,
         @Lazy NotificationService notificationService,
         UserService userService,
+        @Lazy PasswordResetService passwordResetService,
         @Lazy DirectService directService,
         ContactService contactService,
         @Lazy GroupService groupService,
@@ -55,6 +57,7 @@ public class ServiceManager {
         this.chatService = chatService;
         this.notificationService = notificationService;
         this.userService = userService;
+        this.passwordResetService = passwordResetService;
         this.contactService = contactService;
         this.directService = directService;
         this.groupService = groupService;
@@ -109,6 +112,16 @@ public class ServiceManager {
         return userService;
     }
 
+    /**
+     * Password Reset Service
+     */
+    public PasswordResetService getPasswordResetService() {
+        return passwordResetService;
+    }
+    
+    /**
+     * Notification Service
+     */
     public NotificationService getNotificationService() {
         return notificationService;
     }

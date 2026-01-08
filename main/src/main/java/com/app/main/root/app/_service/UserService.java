@@ -444,7 +444,10 @@ public class UserService {
             if(rowsAffected > 0) {
                 createProfile(conn, userId);
                 CompletableFuture.runAsync(() -> {
-                    serviceManager.getEmailService().sendWelcomeEmail(email, username, userId);
+                    serviceManager
+                        .getEmailService()
+                        .getEmailData()
+                        .welcome(email, username, userId);
                 });
                 linkUserSession(userId, sessionId);
 

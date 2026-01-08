@@ -1620,7 +1620,113 @@ public class EventList {
             },
             "/queue/group-members-scss",
             false
-        ));   
+        ));
+        /* Request Password Reset */
+        configs.put("request-password-reset", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String email = (String) data.get("email");
+
+                    Map<String, Object> res = serviceManager
+                        .getPasswordResetService()
+                        .requestPasswordReset(email);
+
+                    eventTracker.track(
+                        "request-password-reset",
+                        Map.of(
+                            "email", email,
+                            "success",
+                            res.get("success")
+                        ),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "system"
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "PASSWORD_RESET_REQUEST_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/password-reset-request-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/password-reset-request-scss",
+            false
+        ));
+        /* Validate Reset Token */
+        configs.put("validate-reset-token", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String token = (String) data.get("token");
+
+                    Map<String, Object> res = serviceManager
+                        .getPasswordResetService()
+                        .validateResetToken(token);
+
+                    eventTracker.track(
+                        "validate-reset-token",
+                        Map.of(
+                            "token", token.substring(0, 8) + "...", 
+                            "valid", 
+                            res.get("valid")
+                        ),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "system"
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "TOKEN_VALIDATION_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/token-validation-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/token-validation-scss",
+            false
+        ));
+        /* Reset Password */
+        configs.put("validate-reset-token", new EventConfig(
+            (sessionId, payload, headerAccessor) -> {
+                try {
+                    Map<String, Object> data = (Map<String, Object>) payload;
+                    String token = (String) data.get("token");
+                    String newPassword = (String) data.get("newPassword");
+
+                    Map<String, Object> res = serviceManager
+                        .getPasswordResetService()
+                        .resetPassword(token, newPassword);
+
+                    eventTracker.track(
+                        "reset-password",
+                        Map.of(
+                            "token", token.substring(0, 8) + "...", 
+                            "success", 
+                            res.get("success")
+                        ),
+                        EventDirection.RECEIVED,
+                        sessionId,
+                        "system"
+                    );
+
+                    return res;
+                } catch(Exception err) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "PASSWORD_RESET_FAILED");
+                    error.put("message", err.getMessage());
+                    socketMethods.send(sessionId, "/queue/password-reset-err", error);
+                    return Collections.emptyMap();
+                }
+            },
+            "/queue/password-reset-scss",
+            false
+        ));
 
         return configs;
     }
