@@ -280,9 +280,9 @@ std::vector<unsigned char> MessageEncoder::decryptMessage(
     return decrypted;
 }
 
-/*
-** Save Key Material
-*/
+/**
+ * Save Key Material
+ */
 bool MessageEncoder::saveKeyMaterial(const std::string& filePath) {
     try {
         std::ofstream file(filePath, std::ios::binary);
@@ -313,9 +313,9 @@ bool MessageEncoder::saveKeyMaterial(const std::string& filePath) {
     }
 }
 
-/*
-** Load Key Material
-*/
+/**
+ * Load Key Material
+ */
 bool MessageEncoder::loadKeyMaterial(const std::string& filePath) {
     try {
         std::ifstream file(filePath, std::ios::binary);

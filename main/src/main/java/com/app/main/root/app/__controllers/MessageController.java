@@ -109,9 +109,9 @@ public class MessageController {
         }
     }
 
-    /*
-    * Recent Messages
-    */
+    /**
+     * Recent Messages
+     */
     @GetMapping("/messages/recent/{userId}")
     public Map<String, Object> getRecentMessages(
         @PathVariable String userId, 

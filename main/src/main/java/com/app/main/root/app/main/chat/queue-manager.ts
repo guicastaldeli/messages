@@ -38,9 +38,9 @@ export class QueueManager {
         return pattern;
     }
 
-    /*
-    ** Subscribe
-    */
+    /**
+     * Subscribe
+     */
     public async subscribe(
         pattern: string,
         handler: (data: any) => void
@@ -55,9 +55,9 @@ export class QueueManager {
         this.subscriptions.set(destination, handler);
     }
 
-    /*
-    ** Unsubscribe
-    */
+    /**
+     * Unsubscribe
+     */
     public async unsubscribe(pattern: string): Promise<void> {
         const destination = this.resolvePattern(pattern);
         const handler = this.subscriptions.get(destination);
@@ -67,9 +67,9 @@ export class QueueManager {
         }
     }
 
-    /*
-    ** Send
-    */
+    /**
+     * Send With Routing
+     */
     public async sendWithRouting(
         payload: any,
         messageType: string,

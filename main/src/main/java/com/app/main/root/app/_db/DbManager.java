@@ -20,9 +20,6 @@ public class DbManager {
         System.out.println("Database Manager initialized...");
     }
 
-    /*
-    * Init 
-    */
     public Map<String, DataSource> initAllDatabases() {
         Map<String, DataSource> dataSources = new HashMap<>();
 
@@ -51,9 +48,9 @@ public class DbManager {
         return dataSources;
     }
 
-    /*
-    * Discover 
-    */
+    /**
+     * Discover Files
+     */
     private Map<String, String> discoverSqlFiles() throws Exception {
         Map<String, String> sqlFiles = new HashMap<>();
         Path sqlPath = Paths.get(SQL_DIR);
@@ -77,9 +74,6 @@ public class DbManager {
         return sqlFiles;
     }
 
-    /*
-    * Create and Init 
-    */
     private SQLiteDataSource createAndInitDb(
         String dbName,
         String dbFileName,
@@ -109,18 +103,18 @@ public class DbManager {
         return dataSource;
     }
 
-    /*
-    * Read Sql 
-    */
+    /**
+     * Read Sql
+     */
     private String readSqlFile(String fileName) throws Exception {
         Path filePath = Paths.get(SQL_DIR + fileName);
         if(!Files.exists(filePath)) throw new Exception("SQL file not found: " + fileName);
         return Files.readString(filePath);
     }
 
-    /*
-    * Execute Statement 
-    */
+    /**
+     * Execute Statement
+     */
     private void executeSqlStmt(
         Statement stmt,
         String sqlContent,
@@ -147,9 +141,9 @@ public class DbManager {
         System.out.println(dbName + ": executed " + successCount + " statements");
     }
 
-    /*
-    * Validate 
-    */
+    /**
+     * Validate
+     */
     private boolean isValidDatabase(File dbFile) {
         if(!dbFile.exists() || dbFile.length() == 0) return false;
 
@@ -165,9 +159,6 @@ public class DbManager {
         }
     }
 
-    /*
-    * Ensure Directory 
-    */
     private void ensureDir() throws Exception {
         Files.createDirectories(Paths.get(DATA_DIR));
         Files.createDirectories(Paths.get(SQL_DIR));

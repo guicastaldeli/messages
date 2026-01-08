@@ -70,9 +70,9 @@ public class MessageLog {
         );
     }
 
-    /*
-    * Get Id 
-    */
+    /**
+     * Get Id 
+     */
     public void setMessageId(String id) {
         this.messageId = id;
     }
@@ -80,9 +80,9 @@ public class MessageLog {
         return messageId;
     }
 
-    /*
-    * Get Content 
-    */
+    /**
+     * Get Content 
+     */
     public void setContent(String content) {
         this.content = content;
     }
@@ -90,9 +90,9 @@ public class MessageLog {
         return content;
     }
 
-    /*
-    * Get Sender Id
-    */
+    /**
+     * Get Sender Id
+     */
     public void setSenderId(String id) {
         this.senderId = id;
     }
@@ -100,9 +100,9 @@ public class MessageLog {
         return senderId;
     }
 
-    /*
-    * Get Username  
-    */
+    /**
+     * Get Username
+     */
     public void setUsername(String username) {
         this.username = username;
     }
@@ -110,9 +110,9 @@ public class MessageLog {
         return username;
     }
 
-    /*
-    * Get Chat Id 
-    */
+    /**
+     * Get Chat Id
+     */
     public void setChatId(String id) {
         this.chatId = id;
     }
@@ -120,9 +120,9 @@ public class MessageLog {
         return chatId;
     }
 
-    /*
-    * Get Type 
-    */
+    /**
+     * Get Type 
+     */
     public void setMessageType(MessageType messageType) {
         this.messageType = messageType;
     }
@@ -130,9 +130,9 @@ public class MessageLog {
         return messageType;
     }
 
-    /*
-    * Get Direction 
-    */
+    /**
+     * Get Direction
+     */
     public void setDirection(MessageDirection direction) {
         this.direction = direction;
     }
@@ -140,9 +140,9 @@ public class MessageLog {
         return direction;
     }
 
-    /*
-    * Get Timestamp 
-    */
+    /**
+     * Get Timestamp 
+     */
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
     }

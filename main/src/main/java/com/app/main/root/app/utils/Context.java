@@ -9,16 +9,16 @@ public class Context {
     private boolean mobile;
     private int patternCorrelations;
 
-    /*
-    * Multiple Correlations 
-    */
+    /**
+     * Multiple Correlations
+     */
     public boolean hasMultipleCorrelations() {
         return patternCorrelations >= 2;
     }
 
-    /*
-    * User Agent Length 
-    */
+    /**
+     * User Agent Length
+     */
     public void setUserAgentLength(int length) {
         this.userAgentLength = length;
     }
@@ -26,9 +26,9 @@ public class Context {
         return userAgentLength;
     }
 
-    /* 
-    * Complex Structure 
-    */
+    /**
+     * Complex Structure 
+     */
     public void setComplexStructure(boolean hasComplexStructure) {
         this.hasComplexStructure = hasComplexStructure;
     }
@@ -36,9 +36,9 @@ public class Context {
         return hasComplexStructure;
     }
 
-    /*
-    * Version Numbers
-    */
+    /**
+     * Version Numbers
+     */
     public void setVersionNumbers(boolean hasVersionNumbers) {
         this.hasVersionNumbers = hasVersionNumbers;
     }
@@ -46,9 +46,9 @@ public class Context {
         return hasVersionNumbers;
     }
 
-    /*
-    * Unusual Combination 
-    */
+    /**
+     * Unusual Combination
+     */
     public void setUnusualCombination(boolean unusualCombination) {
         this.unusualCombination = unusualCombination;
     }
@@ -56,9 +56,9 @@ public class Context {
         return unusualCombination;
     }
 
-    /*
-    * Likely Bot 
-    */
+    /**
+     * Likely Bot
+     */
     public void setLikelyBot(boolean bot) {
         this.likelyBot = bot;
     }
@@ -66,9 +66,9 @@ public class Context {
         return likelyBot;
     }
 
-    /*
-    * Mobile Optimized 
-    */
+    /**
+     * Mobile Optimized
+     */
     public void setMobile(boolean m) {
         this.mobile = m;
     }
@@ -76,9 +76,9 @@ public class Context {
         return mobile;
     }
 
-    /*
-    * Pattern Correlations 
-    */
+    /**
+     * Pattern Correlations
+     */
     public void setPatternCorrelations(int pattern) {
         this.patternCorrelations = pattern;
     }

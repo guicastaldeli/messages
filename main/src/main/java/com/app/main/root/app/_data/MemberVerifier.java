@@ -129,9 +129,9 @@ public class MemberVerifier {
         }
     }
 
-    /*
-    * Verify Member 
-    */
+    /**
+     * Verify Member
+     */
     public VerificationResult verifyMember(String groupId, String userId, String username) {
         String cacheKey = groupId + ":" + userId;
         long time = System.currentTimeMillis();
@@ -200,9 +200,6 @@ public class MemberVerifier {
         }
     }
 
-    /*
-    * Verify Members 
-    */
     public BatchVerificationResult verifyMembers(String groupId, Map<String, String> users) {
         Map<String, VerificationResult> results = new HashMap<>();
         for(Map.Entry<String, String> userEntry : users.entrySet()) {
@@ -213,9 +210,9 @@ public class MemberVerifier {
         return new BatchVerificationResult(groupId, results);
     }
 
-    /*
-    * Group Creator Verification 
-    */
+    /**
+     * Group Creator Verification
+     */
     public VerificationResult verifyCreator(
         String groupId,
         String creatorId,
@@ -243,9 +240,9 @@ public class MemberVerifier {
         return result;
     }
 
-    /*
-    * Member Ids 
-    */
+    /**
+     * Member Ids
+     */
     public List<String> getGroupMemberIds(String groupId) throws SQLException {
         String query = CommandQueryManager.GET_MEMBER_ID.get();
         List<String> memberIds = new ArrayList<>();
@@ -265,9 +262,9 @@ public class MemberVerifier {
         return memberIds;
     }
 
-    /*
-    * Clear Cache 
-    */
+    /**
+     * Clear Cache 
+     */
     public void clearCache(String groupId, String userId) {
         if(groupId != null && userId != null) {
             verificationCache.remove(groupId + ":" + userId);

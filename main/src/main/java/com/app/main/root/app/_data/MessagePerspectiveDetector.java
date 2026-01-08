@@ -66,9 +66,9 @@ public class MessagePerspectiveDetector {
         }
     }
 
-    /*
-    * Display Username 
-    */
+    /**
+     * Display Username
+     */
     private String determineDisplayUsername(
         boolean isSelf,
         boolean isGroup,
@@ -81,11 +81,11 @@ public class MessagePerspectiveDetector {
         }
     }
 
-    /*
-    **
-    *** System
-    **
-    */
+    /**
+     * 
+     * System
+     * 
+     */
     private boolean isSystemMessage(Map<String, Object> data) {
         String type = (String) data.get("type");
         String messageType = (String) data.get("messageType");
@@ -96,11 +96,11 @@ public class MessagePerspectiveDetector {
             Boolean.TRUE.equals(data.get("isSystem"));
     }
 
-    /*
-    **
-    *** Normal
-    **
-    */
+    /**
+     * 
+     * Regular
+     * 
+     */
     private boolean isSelfMessage(String sessionId, Map<String, Object> data) {
         String senderId = (String) data.get("userId");
         String currentUserId = serviceManager.getUserService().getUserIdBySession(sessionId);

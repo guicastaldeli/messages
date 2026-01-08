@@ -30,9 +30,9 @@ public class PatternInterfaceEngine {
         return analysis;
     }
 
-    /*
-    * Analyze With Devices... 
-    */
+    /**
+     * Analyze With Devices
+     */
     private void analyzeWithDevices(String ua, PatternAnalysis analysis) {
         for(Map<String, Object> d : devices) {
             String brand = (String) d.get("brand");
@@ -48,9 +48,9 @@ public class PatternInterfaceEngine {
         }
     }
 
-    /*
-    * Analyze With Browsers
-    */
+    /**
+     * Analyze With Browsers
+     */
     private void analyzeWithBrowsers(String ua, PatternAnalysis analysis) {
         for(Map<String, Object> b : browsers) {
             String name = (String) b.get("name");
@@ -70,9 +70,9 @@ public class PatternInterfaceEngine {
         }
     }
 
-    /*
-    * Analyze With OS 
-    */
+    /**
+     * Analyze With OS 
+     */
     private void analyzeWithOs(String ua, PatternAnalysis analysis) {
         for(Map<String, Object> o : os) {
             String name = (String) o.get("name");
@@ -107,9 +107,9 @@ public class PatternInterfaceEngine {
         if(ua.contains("tablet")) analysis.addEvidence("device_type", "tablet", 0.7);
     }
 
-    /*
-    * Extract Version 
-    */
+    /**
+     * Extract Version 
+     */
     public void extractVersion(
         String ua,
         String type,

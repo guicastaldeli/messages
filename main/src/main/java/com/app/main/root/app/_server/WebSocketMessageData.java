@@ -9,16 +9,10 @@ public class WebSocketMessageData {
         this.data = data;
     }
 
-    /*
-    * Event 
-    */
     public String getEvent() {
         return event;
     }
 
-    /*
-    * Data 
-    */
     public Object getData() {
         return data;
     }

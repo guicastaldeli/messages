@@ -10,9 +10,9 @@ export class InviteCodeManager {
         this.groupManager = groupManager;
     }
 
-    /*
-    ** Generate
-    */
+    /**
+     * Generate
+     */
     public async generate(groupId: string): Promise<string> {
         return new Promise(async (res, rej) => {
             const sucssDestination = '/queue/invite-link-scss';
@@ -55,9 +55,9 @@ export class InviteCodeManager {
         });
     }
 
-    /*
-    ** Success
-    */
+    /**
+     * Success
+     */
     private success(
         res: any, 
         data: any, 
@@ -71,9 +71,9 @@ export class InviteCodeManager {
         res(data.inviteLink);
     }
 
-    /*
-    ** Error
-    */
+    /**
+     * Error
+     */
     private error(
         rej: any, 
         error: any, 
@@ -87,9 +87,9 @@ export class InviteCodeManager {
         rej(new Error(error.message));
     }
 
-    /*
-    ** Send
-    */
+    /**
+     * Send
+     */
     private async send(
         sucssDest: string,
         errorDest: string,

@@ -32,9 +32,9 @@ public class MessageRouter {
         registerDefaultHandlers();
     }
 
-    /*
-    * Default Handlers 
-    */
+    /**
+     * Default Handlers
+     */
     private void registerDefaultHandlers() {
         routeHandlers.put("CHAT", this::handleChatRoute);
         routeHandlers.put("USER", this::handleUserRoute);
@@ -44,34 +44,46 @@ public class MessageRouter {
         routeHandlers.put("SESSION", this::handleSessionRoute);
     }
 
-    /* Chat */
+    /**
+     * Chat
+     */
     private void handleChatRoute(RouteContext context) {
         context.targetSessions.add(context.sessionId);
         context.metadata.put("queue", "/queue/messages/all");
     }
 
-    /* User Messages */
+    /**
+     * User Messages
+     */
     private void handleUserRoute(RouteContext context) {
         serviceManager.getUserService().handleUserRoute(context);
     }
 
-    /* Direct */
+    /**
+     * Direct 
+     */
     private void handleDirectRoutes(RouteContext context) {
         serviceManager.getDirectService().handleDirectRoutes(context);
     }
 
-    /* Group */
+    /**
+     * Group
+     */
     private void handleGroupRoutes(RouteContext context) {
         serviceManager.getGroupService().handleGroupRoutes(context);
     }
 
-    /* Broadcast */
+    /**
+     * Broadcast
+     */
     private void handleBroadcastRoute(RouteContext context) {
         context.targetSessions.addAll(connectionTracker.getAllActiveSessions());
         context.metadata.put("queue", "/topic/broadcast");
     }
 
-    /* Session */
+    /**
+     * Session
+     */
     private void handleSessionRoute(RouteContext context) {
         String targetSession = (String) context.message.get("targetSession");
         if(targetSession != null) {

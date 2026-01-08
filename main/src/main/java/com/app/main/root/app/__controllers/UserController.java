@@ -19,9 +19,9 @@ public class UserController {
         this.serviceManager = serviceManager;
     }
 
-    /*
-    * All 
-    */
+    /**
+     * All 
+     */
     @GetMapping("/all")
     public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
         try {
@@ -43,9 +43,9 @@ public class UserController {
         }
     }
 
-    /*
-    * Online
-    */
+    /**
+     * Online
+     */
     @GetMapping("/online")
     public ResponseEntity<List<Map<String, Object>>> getOnlineUsers() {
         try {
@@ -68,9 +68,9 @@ public class UserController {
         }
     }
 
-    /*
-    * Email
-    */
+    /**
+     * Email
+     */
     @GetMapping("/email/{email}")
     public ResponseEntity<Map<String, Object>> getUserByEmail(@PathVariable String email) {
         try {
@@ -94,9 +94,9 @@ public class UserController {
         }
     }
 
-    /*
-    * Username
-    */
+    /**
+     * Username
+     */
     @GetMapping("/username/{username}")
     public ResponseEntity<Map<String, Object>> getUserIdByUsername(@PathVariable String username) {
         try {

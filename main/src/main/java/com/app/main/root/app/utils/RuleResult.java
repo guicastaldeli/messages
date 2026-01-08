@@ -19,16 +19,16 @@ public class RuleResult {
         return matches;
     }
 
-    /*
-    * Get Conclusion 
-    */
+    /**
+     * Get Conclusion
+     */
     public String getConclusion() {
         return conclusion;
     }
 
-    /*
-    * Get Confidence 
-    */
+    /**
+     * Get Confidence
+     */
     public double getConfidence() {
         return confidence;
     }

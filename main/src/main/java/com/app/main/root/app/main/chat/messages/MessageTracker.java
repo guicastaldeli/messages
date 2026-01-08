@@ -64,9 +64,9 @@ public class MessageTracker {
         }
     }
 
-    /*
-    * Count
-    */
+    /**
+     * Count
+     */
     public int getMessageCount() throws SQLException {
         String query = CommandQueryManager.TOTAL_MESSAGES.get();
 
@@ -83,9 +83,9 @@ public class MessageTracker {
         return 0;
     }
 
-    /*
-    * Clear Messages 
-    */
+    /**
+     * Clear Messages
+     */
     public void clearMessages() throws SQLException {
         String query = CommandQueryManager.CLEAR_MESSAGES.get();
 
@@ -99,9 +99,9 @@ public class MessageTracker {
         logs.clear();
     }
 
-    /*
-    * Stats 
-    */
+    /**
+     * Stats
+     */
     public Map<String, Long> getMessageStats() throws SQLException {
         Map<String, Long> stats = new HashMap<>();
 

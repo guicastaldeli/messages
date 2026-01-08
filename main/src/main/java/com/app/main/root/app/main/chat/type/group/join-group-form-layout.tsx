@@ -15,9 +15,9 @@ export const JoinGroupLayout: React.FC<Props> = ({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    /*
-    ** Group Preview
-    */
+    /**
+     * Group Preview
+     */
     const handleGroupPreview = async () => {
         setIsLoading(true);
         setError(null);
@@ -33,9 +33,9 @@ export const JoinGroupLayout: React.FC<Props> = ({
         }
     }
 
-    /*
-    ** Handle Join
-    */
+    /**
+     * Handle Join
+     */
     const handleJoin = async () => {
         setIsLoading(true);
         setError(null);

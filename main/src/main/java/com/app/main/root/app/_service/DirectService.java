@@ -19,9 +19,9 @@ public class DirectService {
         this.serviceManager = serviceManager;
     }
 
-    /*
-    * Get Participants 
-    */
+    /**
+     * Get Participants 
+     */
     public String[] getChatParticipants(String chatId) {
         if(chatId.startsWith("direct_")) {
             String[] parts = chatId.split("_");
@@ -32,17 +32,17 @@ public class DirectService {
         return new String[0];
     }
 
-    /*
-    * Validate Chat Access 
-    */
+    /**
+     * Validate Chat Access 
+     */
     public boolean userAccessChat(String userId, String chatId) {
         String[] participants = getChatParticipants(chatId);
         return Arrays.asList(participants).contains(userId);
     }
 
-    /*
-    * Get Other
-    */
+    /**
+     * Get Other
+     */
     public String getOtherParticipant(String chatId, String currentUserId) {
         String[] participants = getChatParticipants(chatId);
         for(String participant : participants) {
@@ -65,19 +65,18 @@ public class DirectService {
         return null;
     }
     
-    /*
-    **
-    ***
-    *** Routes
-    ***
-    ** 
-    */
+    /**
+     * 
+     * 
+     * Routes
+     * 
+     * 
+     */
     public void handleDirectRoutes(RouteContext context) {
         handleSelfRoute(context);
         handleOthersRoute(context);
     }
 
-    /* Direct */
     private void hadleDirectMessageRoute(RouteContext context) {
         String chatId = (String) context.message.get("chatId");
         String recipientId = (String) context.message.get("recipientId");
@@ -115,13 +114,11 @@ public class DirectService {
         }
     }
 
-    /* Self */
     private void handleSelfRoute(RouteContext context) {
         context.targetSessions.add(context.sessionId);
         context.metadata.put("queue", "/user/queue/messages/direct/self");
     }
 
-    /* Others */
     private void handleOthersRoute(RouteContext context) {
         String recipientId = (String) context.message.get("recipientId");
         String senderId = (String) context.message.get("senderId");
@@ -140,9 +137,9 @@ public class DirectService {
         }
     }
 
-    /*
-    * Id 
-    */
+    /**
+     * Id
+     */
     public String generateDirectChatId(String fUserId, String sUserId)  {
         List<String> ids = Arrays.asList(fUserId, sUserId);
         Collections.sort(ids);

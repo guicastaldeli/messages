@@ -19,9 +19,9 @@ export class UserColorGenerator {
 
     private static userColors = new Map<string, Map<string, { value: string; name: string }>>();
 
-    /*
-    ** Get User Color
-    */
+    /**
+     * Get User Color
+     */
     public static getUserColorForGroup(groupId: string, userId: string): { value: string; name: string } {
         if(!this.userColors.has(groupId)) this.userColors.set(groupId, new Map());
         const colors = this.userColors.get(groupId);
@@ -35,17 +35,17 @@ export class UserColorGenerator {
         return colors.get(userId)!;
     }
 
-    /*
-    ** Remove User Color
-    */
+    /**
+     * Remove User Color
+     */
     public static removeUserColorFromGroup(groupId: string, userId: string): void {
         const colors = this.userColors.get(groupId);
         if(colors) colors.delete(userId);
     }
 
-    /*
-    ** Get Color
-    */
+    /**
+     * Get Color
+     */
     public static getColor(name: string): { value: string; name: string } | undefined {
         return this.COLOR_PALETTE.find(color =>
             color.name.toLowerCase() === name.toLowerCase()

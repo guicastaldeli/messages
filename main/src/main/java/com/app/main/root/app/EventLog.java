@@ -35,9 +35,9 @@ public class EventLog {
         this.username = username;
     }
 
-    /*
-    * ID 
-    */
+    /**
+     * Id
+     */
     public void setId(String id) {
         this.id = id;
     }
@@ -45,9 +45,9 @@ public class EventLog {
         return id;
     }
 
-    /*
-    * Event Name 
-    */
+    /**
+     * Event Name
+     */
     public void setEventName(String eventName) {
         this.eventName = eventName;
     }
@@ -55,9 +55,9 @@ public class EventLog {
         return eventName;
     }
 
-    /*
-    * Data 
-    */
+    /**
+     * Data
+     */
     public void setData(Object data) {
         this.data = data;
     }
@@ -65,9 +65,9 @@ public class EventLog {
         return data;
     }
 
-    /*
-    * Timestamp 
-    */
+    /**
+     * Timestamp
+     */
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
     }
@@ -75,9 +75,9 @@ public class EventLog {
         return timestamp;
     }
 
-    /*
-    * Message Direction 
-    */
+    /**
+     * Direction 
+     */
     public void setDirection(EventDirection direction) {
         this.direction = direction;
     }
@@ -85,9 +85,9 @@ public class EventLog {
         return direction;
     }
 
-    /*
-    * Sender ID 
-    */
+    /**
+     * Sender Id 
+     */
     public void setSenderId(String senderId) {
         this.senderId = senderId;
     }
@@ -95,9 +95,9 @@ public class EventLog {
         return senderId;
     }
 
-    /*
-    * Username 
-    */
+    /**
+     * Username
+     */
     public void setUsername(String username) {
         this.username = username;
     }

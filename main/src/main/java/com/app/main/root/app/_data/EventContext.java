@@ -9,16 +9,16 @@ public class EventContext {
         this.eventConfig = eventConfig;
     }
 
-    /*
-    * Get Event Name 
-    */
+    /**
+     * Get Event Name
+     */
     public String getEventName() {
         return eventName;
     }
 
-    /*
-    * Get Event Config 
-    */
+    /**
+     * Get Event Config
+     */
     public EventConfig getEventConfig() {
         return eventConfig;
     }

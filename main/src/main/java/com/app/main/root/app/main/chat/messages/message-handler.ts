@@ -1,8 +1,8 @@
 import { ChatType } from "../chat-registry";
 
-/*
-** Handler
-*/
+/**
+ * Handler
+ */
 export interface MessageHandler {
     canHandle(chatType: ChatType): boolean;
     getSubscriptionPattern(chatId: string): string;
@@ -71,9 +71,9 @@ class GroupMessageHandler implements MessageHandler {
     }
 }
 
-/*
-** Registered
-*/
+/**
+ * Registered
+ */
 export class RegisteredMessageHandlers {
     public messageHandlers: MessageHandler[] = [];
     public register(): void {

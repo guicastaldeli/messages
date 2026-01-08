@@ -195,9 +195,9 @@ public class MessageService {
         return res;
     }
 
-    /*
-    * Get All Messages 
-    */
+    /**
+     * Get All Messages
+     */
     public List<Message> getAllMessages() throws SQLException {
         String query = CommandQueryManager.GET_ALL_MESSAGES.get();
         List<Message> messages = new ArrayList<>();

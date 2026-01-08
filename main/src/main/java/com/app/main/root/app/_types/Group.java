@@ -7,9 +7,9 @@ public class Group {
     private String creatorId;
     private Timestamp createdAt;
 
-    /*
-    * ID 
-    */
+    /**
+     * Id
+     */
     public void setId(String id) {
         this.id = id;
     }
@@ -17,9 +17,9 @@ public class Group {
         return id;
     }
 
-    /*
-    * Name 
-    */
+    /**
+     * Name
+     */
     public void setName(String name) {
         this.name = name;
     }
@@ -27,9 +27,9 @@ public class Group {
         return name;
     }
 
-    /*
-    * Creator ID 
-    */
+    /**
+     * Creator Id
+     */
     public void setCreatorId(String creatorId) {
         this.creatorId = creatorId;
     }
@@ -37,9 +37,9 @@ public class Group {
         return creatorId;
     }
 
-    /*
-    * CreatedAt 
-    */
+    /**
+     * Created At
+     */
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }

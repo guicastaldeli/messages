@@ -9,9 +9,9 @@ public class UserAgentParserRegistryData {
     private List<Map<String, Object>> os;
     private List<Map<String, Object>> rules;
 
-    /*
-    * Devices 
-    */
+    /**
+     * Devices
+     */
     public void setDevices(List<Map<String, Object>> devices) {
         this.devices = devices;
     }
@@ -19,9 +19,9 @@ public class UserAgentParserRegistryData {
         return devices;
     }
 
-    /*
-    * Browsers 
-    */
+    /**
+     * Browsers
+     */
     public void setBrowsers(List<Map<String, Object>> browsers) {
         this.browsers = browsers;
     }
@@ -29,9 +29,9 @@ public class UserAgentParserRegistryData {
         return browsers;
     }
 
-    /*
-    * OS 
-    */
+    /**
+     * OS
+     */
     public void setOs(List<Map<String, Object>> os) {
         this.os = os;
     }
@@ -39,9 +39,9 @@ public class UserAgentParserRegistryData {
         return os;
     }
 
-    /*
-    * Rules 
-    */
+    /**
+     * Rules
+     */
     public void setRules(List<Map<String, Object>> rules) {
         this.rules = rules;
     }

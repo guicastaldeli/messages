@@ -38,30 +38,30 @@ export class ApiClientController {
         return this.sessionConfig;
     }
 
-    /*
-    ** Time Stream
-    */
+    /**
+     * Time Stream
+     */
     public async getTimeStream(): Promise<TimeStreamClient> {
         return this.timeStream;
     }
 
-    /*
-    ** Session Service
-    */
+    /**
+     * Session Service
+     */
     public async getSessionService(): Promise<SessionServiceClient> {
         return this.sessionSerive;
     }
 
-    /*
-    ** Auth Service
-    */
+    /**
+     * Auth Service
+     */
     public async getAuthService(): Promise<AuthServiceClient> {
         return this.authService;
     }
 
-    /*
-    ** User Service
-    */
+    /**
+     * User Service
+     */
     public async getUserService(): Promise<UserServiceClient> {
         return this.userService;
     }

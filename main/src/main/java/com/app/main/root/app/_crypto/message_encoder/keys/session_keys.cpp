@@ -23,9 +23,9 @@ std::vector<unsigned char> hexToBytes(const std::string& hex) {
     return bytes;
 }
 
-/*
-** Serialize
-*/
+/**
+ * Serialize
+ */
 std::vector<unsigned char> SessionKeys::serialize() const {
     std::vector<unsigned char> data;
 
@@ -114,9 +114,9 @@ std::vector<unsigned char> SessionKeys::serialize() const {
     return data;
 }
 
-/*
-** Deserialize
-*/
+/**
+ * Deserialize
+ */
 SessionKeys SessionKeys::deserialize(const std::vector<unsigned char>& data) {
     SessionKeys session;
     size_t offset = 0;
@@ -274,9 +274,9 @@ SessionManager::SessionManager(const std::string& storagePath) : storagePath(sto
     loadSessions();
 }
 
-/*
-** Save Session
-*/
+/**
+ * Save Session
+ */
 bool SessionManager::saveSessions() {
     try {
         std::ofstream file(storagePath, std::ios::binary);
@@ -323,9 +323,9 @@ bool SessionManager::saveSessions() {
     }
 }
 
-/*
-** Load Session
-*/
+/**
+ * Load Session
+ */
 bool SessionManager::loadSessions() {
     try {
         std::ifstream file(storagePath, std::ios::binary);

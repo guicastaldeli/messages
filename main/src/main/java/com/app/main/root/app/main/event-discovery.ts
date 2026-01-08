@@ -55,9 +55,9 @@ export class EventDiscovery {
         return Array.from(this.availableEvents);
     }
 
-    /*
-    ** Wait for Events
-    */
+    /**
+     * Wait for Events
+     */
     public async waitForEvent(
         events: string,
         timeout: number = 100000
@@ -96,6 +96,9 @@ export class EventDiscovery {
         });
     }
 
+    /**
+     * Refresh
+     */
     public async autoRefreshEvents(
         event: string,
         maxWaitTime: 10000
@@ -109,9 +112,6 @@ export class EventDiscovery {
         return false;
     }
 
-    /*
-    ** Force Refresh
-    */
     public async refreshEvents(): Promise<void> {
         await this.events(true);
     }

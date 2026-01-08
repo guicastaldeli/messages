@@ -36,9 +36,9 @@ public class UserAgentParserApiClient {
         return data;
     }
 
-    /*
-    * Send Training Example 
-    */
+    /**
+     * Send Training Example
+     */
     public void sendTrainingExample(
         String userAgent,
         String browser,
@@ -63,9 +63,9 @@ public class UserAgentParserApiClient {
         if(response.statusCode() != 200) throw new RuntimeException("Training API returned: " + response.statusCode());
     }
 
-    /*
-    * Get Status 
-    */
+    /**
+     * Get Status
+     */
     public Map<String, Object> getStatus() throws Exception {
         String statusUrl = url + "/api/connection-tracker/connections/registry/status";
 
@@ -83,9 +83,9 @@ public class UserAgentParserApiClient {
         throw new RuntimeException("Status API returned: " + response.statusCode());
     }
 
-    /*
-    * Fetch Registry 
-    */
+    /**
+     * Fetch Registry
+     */
     private List<Map<String, Object>> fetchRegistry(String endpoint) throws Exception {
         String registryUrl = url + endpoint;
 

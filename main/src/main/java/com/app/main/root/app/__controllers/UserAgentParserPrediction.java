@@ -35,9 +35,9 @@ public class UserAgentParserPrediction {
         this.confidence = Math.max(0.1, Math.min(1.0, this.confidence + delta));
     }
 
-    /*
-    * Browser 
-    */
+    /**
+     * Browser
+     */
     public void setBrowser(String browser) {
         this.browser = browser;
     }
@@ -45,9 +45,9 @@ public class UserAgentParserPrediction {
         return browser;
     }
 
-    /*
-    * OS 
-    */
+    /**
+     * OS
+     */
     public void setOs(String os) {
         this.os = os;
     }
@@ -55,9 +55,9 @@ public class UserAgentParserPrediction {
         return os;
     }
 
-    /*
-    * Device Type
-    */
+    /**
+     * Device Type
+     */
     public void setDeviceType(String type) {
         this.deviceType = type;
     }
@@ -65,9 +65,9 @@ public class UserAgentParserPrediction {
         return deviceType;
     }
 
-    /*
-    * Device Brand 
-    */
+    /**
+     * Device Brand 
+     */
     public void setDeviceBrand(String brand) {
         this.deviceBrand = brand;
     }
@@ -75,9 +75,9 @@ public class UserAgentParserPrediction {
         return deviceBrand;
     } 
 
-    /*
-    * Confidence 
-    */
+    /**
+     * Confidence
+     */
     public void setConfidence(double confidence) {
         this.confidence = confidence;
     }
@@ -85,9 +85,9 @@ public class UserAgentParserPrediction {
         return confidence;
     }
 
-    /*
-    * Reasoning 
-    */
+    /**
+     * Reasoning
+     */
     public void setReasoning(String reasoning) {
         this.reasoning = reasoning;
     }

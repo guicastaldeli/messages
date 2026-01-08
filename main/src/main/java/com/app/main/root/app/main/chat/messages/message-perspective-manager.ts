@@ -16,9 +16,9 @@ export class MessagePerspectiveManager {
         this.currentUserId = currentUserId;
     }
 
-    /*
-    ** Analyze
-    */
+    /**
+     * Analyze
+     */
     public analyzeWithPerspective(data: any): Analysis {
         const perspective = this.calculateClientPerspective(data);
         const context = this.messageAnalyzerClient.analyzeContext(data);
@@ -81,9 +81,9 @@ export class MessagePerspectiveManager {
         }
     }
 
-    /*
-    ** Metadata
-    */
+    /**
+     * Metadata
+     */
     private generateMetadataPerspective(
         context: Context,
         perspective: any

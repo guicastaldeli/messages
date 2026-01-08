@@ -60,9 +60,9 @@ export class MessageAnalyzerClient {
         this.username = username;
     }
 
-    /*
-    ** Analyze
-    */
+    /**
+     * Analyze
+     */
     public analyzeMessage(data: any): Analysis {
         const context = this.analyzeContext(data);
         const routes = this.determineRoutes(context);
@@ -124,9 +124,9 @@ export class MessageAnalyzerClient {
         }
     }
 
-    /*
-    ** Determine Routes
-    */
+    /**
+     * Determine Routes
+     */
     public determineRoutes(context: Context): string[] {
         const routes: string[] = [];
 
@@ -138,9 +138,9 @@ export class MessageAnalyzerClient {
         return routes;
     }
 
-    /*
-    ** Generate Metadata
-    */
+    /**
+     * Generate Metadata
+     */
     private generateMetadata(context: Context): Metadata {
         const direction = this.setDirectionByContext(context);
 
@@ -158,9 +158,9 @@ export class MessageAnalyzerClient {
         }
     }
 
-    /*
-    ** Set Direction
-    */
+    /**
+     * Set Direction
+     */
     public setDirection(data: any): string {
         const senderId = data.userId || data.senderId;
         const isSelf = senderId === this.currentUserId;
@@ -173,9 +173,9 @@ export class MessageAnalyzerClient {
         return isSelf ? 'self' : 'other';
     }
 
-    /*
-    ** Message Type
-    */
+    /**
+     * Message Type
+     */
     public getMessageType(context: Context): any {
         if(context.isDirect) return 'DIRECT_MESSAGE';
         if(context.isGroup) return 'GROUP_MESSAGE';
@@ -199,19 +199,19 @@ export class MessageAnalyzerClient {
         return 'CHAT';
     }
 
-    /*
-    ** Message Id
-    */
+    /**
+     * Message Id
+     */
     private generateMessageId(): string {
         const time = Date.now();
         return 'msg_' + time + '_' + Math.random().toString(36).substring(2, 10);
     }
 
-    /*
-    **
-    ** Validate
-    **
-    */
+    /**
+     * 
+     * Validate
+     * 
+     */
     public validateMessage(data: any): ValidationResult {
         const errors: string[] = [];
         if(!data.content) errors.push('Content is required!');
@@ -222,11 +222,11 @@ export class MessageAnalyzerClient {
         }
     }
 
-    /*
-    **
-    ** Perspective
-    **
-    */
+    /**
+     * 
+     * Perspective
+     * 
+     */
     public getPerspective(): MessagePerspectiveManager {
         const perspective = new MessagePerspectiveManager(
             this, 

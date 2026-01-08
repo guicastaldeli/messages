@@ -15,18 +15,24 @@ public class ContextualReasoner {
         return context;
     }
 
-    /*
-    * Unusual Combinations 
-    */
+    /**
+     * Unusual Combinations
+     */
     private boolean detectUnusualCombinations(PatternAnalysis analysis) {
-        return (analysis.hasEvidence("browser", "Safari") && analysis.hasEvidence("os", "Android")) ||
-                (analysis.hasEvidence("browser", "Firefox") && analysis.hasEvidence("os", "iOS")) ||
-                (analysis.hasEvidence("device_type", "mobile") && analysis.hasEvidence("os", "Windows"));
+        return 
+            (analysis.hasEvidence("browser", "Safari") && 
+            analysis.hasEvidence("os", "Android")) ||
+
+            (analysis.hasEvidence("browser", "Firefox") && 
+            analysis.hasEvidence("os", "iOS")) ||
+
+            (analysis.hasEvidence("device_type", "mobile") && 
+            analysis.hasEvidence("os", "Windows"));
     }
 
-    /*
-    * Detect Bot Patterns 
-    */
+    /**
+     * Detect Bot Patterns
+     */
     private boolean detectBotPatterns(String userAgent) {
         String ua = userAgent.toLowerCase();
         return ua.contains("bot") || 
@@ -39,9 +45,9 @@ public class ContextualReasoner {
                 ua.contains("wget");
     }
 
-    /*
-    * Detect Mobile 
-    */
+    /**
+     * Detect Mobile
+     */
     private boolean detectMobile(String userAgent) {
         String ua = userAgent.toLowerCase();
         return ua.contains("mobile") || 

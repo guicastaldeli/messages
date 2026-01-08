@@ -9,9 +9,9 @@ public class RecentChat {
     private String chatType;
     private String chatName;
     
-    /*
-    * Chat ID 
-    */
+    /**
+     * Chat Id
+     */
     public void setChatId(String chatId) {
         this.chatId = chatId;
     }
@@ -19,9 +19,9 @@ public class RecentChat {
         return chatId;
     }
 
-    /*
-    * Last Message 
-    */
+    /**
+     * Last Message
+     */
     public void setLastMessage(String lastMessage) {
         this.lastMessage = lastMessage;
     }
@@ -29,9 +29,9 @@ public class RecentChat {
         return lastMessage;
     }
  
-    /*
-    * Last Message Time 
-    */
+    /**
+     * Last Message Time
+     */
     public void setLastMessageTime(Timestamp lastMessageTime) {
         this.lastMessageTime = lastMessageTime;
     }
@@ -39,9 +39,9 @@ public class RecentChat {
         return lastMessageTime;
     }
 
-    /*
-    * Last Sender
-    */
+    /**
+     * Last Sender
+     */
     public void setLastSender(String lastSender) {
         this.lastSender = lastSender;
     }
@@ -49,9 +49,9 @@ public class RecentChat {
         return lastSender;
     }
 
-    /*
-    * Chat Type 
-    */
+    /**
+     * Chat Type
+     */
     public void setChatType(String chatType) {
         this.chatType = chatType;
     }
@@ -59,9 +59,9 @@ public class RecentChat {
         return chatType;
     }
 
-    /*
-    * Chat Name 
-    */
+    /**
+     * Chat Name
+     */
     public void setChatName(String chatName) {
         this.chatName = chatName;
     }

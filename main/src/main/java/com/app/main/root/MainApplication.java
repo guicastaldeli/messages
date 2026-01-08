@@ -8,16 +8,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 
-/*
-***********************
-*	-------------------
-*
-*		ENTRY POINT
-*				
-*	-------------------
-***********************
-*/
-
+/******
+ * 
+ * 
+ *    ENTRY POINT
+ * 
+ * 
+ */
 @SpringBootApplication()
 public class MainApplication {
 	private static String url;
@@ -31,14 +28,10 @@ public class MainApplication {
 		});
 
 		try {
-			/*
-			* Env Path 
-			*/
+			/* Env Path */
 			url = EnvConfig.get("SERVER_DEF_HTTP_URL");
 	
-			/*
-			* App 
-			*/
+			/* App */
 			context = SpringApplication.run(MainApplication.class, args);
 			Loading.finished();
 			alert();

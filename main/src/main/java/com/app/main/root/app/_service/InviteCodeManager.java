@@ -22,9 +22,9 @@ public class InviteCodeManager {
         return dataSourceService.setDb("invite_codes").getConnection();
     }
 
-    /*
-    * Create Indexes 
-    */
+    /**
+     * Create Indexes
+     */
     public void createIdx() {
         String groupInviteCode = CommandQueryManager.EXEC_INDEX_GROUP_INVITE_CODE.get();
         String inviteExpires = CommandQueryManager.EXEC_INDEX_INVITE_EXPIRES.get();
@@ -43,9 +43,9 @@ public class InviteCodeManager {
         }  
     }
 
-    /*
-    * Store 
-    */
+    /**
+     * Store
+     */
     public void storeInviteCode(
         String groupId,
         String inviteCode,
@@ -70,9 +70,9 @@ public class InviteCodeManager {
         }
     }
 
-    /*
-    * Validate
-    */
+    /**
+     * Validate
+     */
     public boolean validateInviteCode(String code) throws SQLException {
         String groupId = findGroupByCode(code);
         if(groupId == null) throw new RuntimeException("Group id is null");
@@ -98,9 +98,9 @@ public class InviteCodeManager {
         return false;
     }
 
-    /*
-    * Mark as Used 
-    */
+    /**
+     * Mark as Used
+     */
     public void markInviteCodeAsUsed(String code) throws SQLException {
         String groupId = findGroupByCode(code);
         if(groupId == null) throw new RuntimeException("Group id is null");
@@ -119,9 +119,9 @@ public class InviteCodeManager {
         }
     }
 
-    /*
-    * Get Active Code 
-    */
+    /**
+     * Get Active Code
+     */
     public List<Map<String, Object>> getActiveInviteCodes(String groupId) throws SQLException {
         String query = CommandQueryManager.GET_ACTIVE_INVITE_CODES.get();
         Timestamp timestamp = Timestamp.valueOf(LocalDateTime.now());
@@ -149,9 +149,9 @@ public class InviteCodeManager {
         return codes;
     }
 
-    /*
-    * Find Group by Code 
-    */
+    /**
+     * Find Group by Code
+     */
     public String findGroupByCode(String inviteCode) throws SQLException {
         String query = CommandQueryManager.FIND_GROUP_ID_BY_INVITE_CODE.get();
         Timestamp currentTime = Timestamp.valueOf(LocalDateTime.now());

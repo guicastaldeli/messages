@@ -19,9 +19,9 @@ public class ScriptController {
         this.server = server;
     }
 
-    /*
-    * Api Url
-    */
+    /**
+     * Api Url
+     */
     @GetMapping(value = "/public/api-url.js", produces = "application/javascript")
     @ResponseBody
     public ResponseEntity<String> getApiUrl() {
@@ -38,9 +38,9 @@ public class ScriptController {
         }
     }
 
-    /*
-    * Time Updater 
-    */
+    /**
+     * Time Updater
+     */
     @GetMapping(value = "/public/time-updater.js", produces = "application/javascript")
     @ResponseBody
     public ResponseEntity<String> getTimeUpdater() {
@@ -57,9 +57,9 @@ public class ScriptController {
         }
     }
 
-    /*
-    * Server Interface Styles 
-    */
+    /**
+     * Server Interface Styles 
+     */
     @GetMapping(value = "/styles/interface.css", produces = "text/css")
     @ResponseBody
     public ResponseEntity<String> getServerInterfaceStyles() {

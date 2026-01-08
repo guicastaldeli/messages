@@ -50,9 +50,9 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
         }
     }
 
-    /*
-    ** Handle Add User
-    */
+    /**
+     * Handle Add User
+     */
     const handleAddUser = async () => {
         if(!selectedContact) return;
         setLoading(true);
@@ -69,9 +69,9 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
         }
     }
 
-    /*
-    ** Handle Remove User
-    */
+    /**
+     * Handle Remove User
+     */
     const handleRemoveUser = async (id: string, username: string) => {
         try {
             await groupManager.removeUserFromGroup(groupId, id, username);
@@ -81,9 +81,9 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
         }
     }
 
-    /*
-    ** Available Contacts
-    */
+    /**
+     * Available Contacts
+     */
     const availableContacts = contacts.filter(c =>
         !members.some(m => m.id === c.id)
     );

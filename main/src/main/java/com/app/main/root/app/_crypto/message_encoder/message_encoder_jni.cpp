@@ -43,9 +43,9 @@ jbyteArray vectorToJByteArray(JNIEnv* env, const std::vector<unsigned char>& vec
 extern "C" {
 #endif
 
-/*
-** Init Native Message Encoder
-*/
+/**
+ * Init Native Message Encoder
+ */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_initNative(
     JNIEnv* env, 
     jobject obj
@@ -66,9 +66,9 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
     }
 }
 
-/*
-** Cleanup Native Message Encoder
-*/
+/**
+ * Cleanup Native Message Encoder
+ */
 JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_cleanupNative(
     JNIEnv* env, 
     jobject obj
@@ -86,9 +86,9 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_Mess
     }
 }
 
-/*
-** Get Identity Public Key
-*/
+/**
+ * Get Identity Public Key
+ */
 JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_getIdentityPublicKey(
     JNIEnv* env, 
     jobject obj
@@ -110,9 +110,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encode
     }
 }
 
-/*
-** Get PreKey Bundle
-*/
+/**
+ * Get PreKey Bundle
+ */
 JNIEXPORT jobject JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_getPreKeyBundle(
     JNIEnv* env, 
     jobject obj
@@ -195,9 +195,9 @@ JNIEXPORT jobject JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_M
     }
 }
 
-/*
-** Verify and Store PreKey Bundle
-*/
+/**
+ * Verify and Store PreKey Bundle
+ */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_verifyAndStorePreKeyBundle(
     JNIEnv* env, 
     jobject obj,
@@ -242,9 +242,9 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
     }
 }
 
-/*
-** Init Session
-*/
+/**
+ * Init Session
+ */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_initSession(
     JNIEnv* env, 
     jobject obj,
@@ -289,9 +289,9 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
     }
 }
 
-/*
-** Encrypt Message
-*/
+/**
+ * Encrypt Message
+ */
 JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_encryptMessage(
     JNIEnv* env, 
     jobject obj,
@@ -322,9 +322,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encode
     }
 }
 
-/*
-** Decrypt Message
-*/
+/**
+ * Decrypt Message
+ */
 JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_decryptMessage(
     JNIEnv* env, 
     jobject obj,
@@ -355,9 +355,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_app_main_root_app__1crypto_message_1encode
     }
 }
 
-/*
-** Has Session
-*/
+/**
+ * Has Session
+ */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_hasSession(
     JNIEnv* env, 
     jobject obj,
@@ -385,9 +385,9 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
     }
 }
 
-/*
-** Perform Key Rotation
-*/
+/**
+ * Perform Key Rotation
+ */
 JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_performKeyRotation(
     JNIEnv* env, 
     jobject obj,
@@ -412,9 +412,9 @@ JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_Mess
     }
 }
 
-/*
-** Save Key Material
-*/
+/**
+ * Save Key Material
+ */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_saveKeyMaterial(
     JNIEnv* env, 
     jobject obj,
@@ -442,9 +442,9 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
     }
 }
 
-/*
-** Load Key Material
-*/
+/**
+ * Load Key Material
+ */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_loadKeyMaterial(
     JNIEnv* env, 
     jobject obj,
@@ -472,9 +472,9 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
     }
 }
 
-/*
-** Save Sessions
-*/
+/**
+ * Save Sessions
+ */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_saveSessions(
     JNIEnv* env, 
     jobject obj
@@ -496,9 +496,9 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
     }
 }
 
-/*
-** Load Sessions
-*/
+/**
+ * Load Sessions
+ */
 JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_MessageEncoderWrapper_loadSessions(
     JNIEnv* env, 
     jobject obj

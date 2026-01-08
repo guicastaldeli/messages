@@ -5,18 +5,18 @@ export class UserServiceClient {
         this.baseUrl = url;
     }
 
-    /*
-    ** Check User Exists
-    */
+    /**
+     * Check User Exists
+     */
     public async checkUserExists(email: string): Promise<boolean> {
         const res = await fetch(`${this.baseUrl}/api/users/email/${email}`);
         const data = await res.json();
         return data.exists || false;
     }
 
-    /*
-    ** Check Username Exists
-    */
+    /**
+     * Check Username Exists
+     */
     public async checkUsernameExists(username: string): Promise<boolean> {
         const res = await fetch(`${this.baseUrl}/api/users/username/${username}`);
         const data = await res.json();

@@ -65,9 +65,9 @@ public class ConfigSocketEvents implements ApplicationListener<BrokerAvailabilit
         }
     }
 
-    /*
-    * Register Message Handlers 
-    */
+    /**
+     * Register Message Handlers 
+     */
     private void registerMessageHandler() {
         Map<String, EventConfig> configs = eventList.list();
 

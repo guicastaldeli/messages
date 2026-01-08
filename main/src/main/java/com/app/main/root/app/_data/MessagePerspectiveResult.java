@@ -12,9 +12,9 @@ public class MessagePerspectiveResult {
         this.metadata = new HashMap<>();
     }
 
-    /*
-    * Direction 
-    */
+    /**
+     * Direction 
+     */
     public void setDirection(String direction) {
         this.direction = direction;
     }
@@ -22,9 +22,9 @@ public class MessagePerspectiveResult {
         return direction;
     }
 
-    /*
-    * Perpspective Type 
-    */
+    /**
+     * Perpspective Type
+     */
     public void setPerpspectiveType(String type) {
         this.perpspectiveType = type;
     }
@@ -32,9 +32,9 @@ public class MessagePerspectiveResult {
         return perpspectiveType;
     }
 
-    /*
-    * Render Config 
-    */
+    /**
+     * Render Config
+     */
     public void setRenderConfig(Map<String, Object> config) {
         this.renderConfig = config;
     }
@@ -43,9 +43,9 @@ public class MessagePerspectiveResult {
         return renderConfig;
     }
 
-    /*
-    * Metadata 
-    */
+    /**
+     * Metadata
+     */
     public void setMetadata(Map<String, Object> metadata) {
         this.metadata = metadata;
     }

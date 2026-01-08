@@ -23,9 +23,9 @@ public class MessageAnalyzer {
         this.messageRouter = messageRouter;
     }
 
-    /*
-    * Orginze and Route 
-    */
+    /**
+     * Orginze and Route
+     */
     public void organizeAndRoute(String sessionId, Map<String, Object> payload) {
         MessageContext context = analyzeContext(sessionId, payload);
         String[] routes = determineRoutes(context);
@@ -35,9 +35,9 @@ public class MessageAnalyzer {
         trackMessage(context);
     }
 
-    /*
-    * Analyze 
-    */
+    /**
+     * Analyze
+     */
     private MessageContext analyzeContext(String sessionId, Map<String, Object> payload) {
         String content = (String) payload.get("content");
         String messageId = (String) payload.get("messageId");
@@ -69,9 +69,9 @@ public class MessageAnalyzer {
         );
     }
 
-    /*
-    * Set 
-    */
+    /**
+     * Set
+     */
     private Map<String, Object> setMessage(MessageContext context) {
         String messageId = context.messageId != null ? context.messageId : 
             "msg_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
@@ -108,9 +108,9 @@ public class MessageAnalyzer {
         return message;
     }
 
-    /*
-    * Type 
-    */
+    /**
+     * Type
+     */
     public String getMessageType(MessageContext context) {
         if(context.isDirect) return "DIRECT_MESSAGE";
         if(context.isGroup) return "GROUP_MESSAGE";
@@ -118,9 +118,9 @@ public class MessageAnalyzer {
         return "BROADCAST_MESSAGE";
     }
 
-    /*
-    * Route 
-    */
+    /**
+     * Route
+     */
     private void routeMessage(
         MessageContext context,
         Map<String, Object> message,
@@ -134,9 +134,9 @@ public class MessageAnalyzer {
         );
     }
 
-    /*
-    * Determine 
-    */
+    /**
+     * Determine
+     */
     private String[] determineRoutes(MessageContext context) {
         List<String> routes = new ArrayList<>();
         if(context.isDirect) {
@@ -149,9 +149,9 @@ public class MessageAnalyzer {
         return routes.toArray(new String[0]);
     }
 
-    /*
-    * Extract Route 
-    */
+    /**
+     * Extract Route
+     */
     public String extractRouteType(String sessionId, Map<String, Object> payload) {
         MessageContext context = analyzeContext(sessionId, payload);
         String[] routes = determineRoutes(context);
@@ -162,9 +162,9 @@ public class MessageAnalyzer {
         return "CHAT";
     }
 
-    /*
-    * Track 
-    */
+    /**
+     * Track
+     */
     private void trackMessage(MessageContext context) {
         eventTracker.track(
             "message-analyzed",

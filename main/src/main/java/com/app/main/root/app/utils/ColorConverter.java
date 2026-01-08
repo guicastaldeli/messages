@@ -64,9 +64,9 @@ public class ColorConverter {
         return ansiColorsList.get("white");
     }
 
-    /*
-    *** HEX to ANSI 256
-    */
+    /**
+     * HEX to ANSI 256
+     */
     private String hexToAnsi(String hex) {
         hex = hex.replace("#", "");
         int r, g, b;
@@ -86,9 +86,9 @@ public class ColorConverter {
         return rgbToAnsi256(r, g, b);
     }
 
-    /*
-    *** RGB string to ANSI 256
-    */
+    /**
+     * RGB string to ANSI 256
+     */
     private String rgbToAnsi(String rgb) {
         Pattern pattern = Pattern.compile(
             "rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*[\\d.]+)?\\)",
@@ -104,9 +104,9 @@ public class ColorConverter {
         return rgbToAnsi256(r, g, b);
     }
 
-    /*
-    *** RGB values to ANSI 256
-    */
+    /**
+     * RGB values to ANSI 256
+     */
     private String rgbToAnsi256(
         int r,
         int b,
@@ -130,9 +130,9 @@ public class ColorConverter {
         return String.format(format, ansi);
     }
 
-    /*
-    *** Colorize text
-    */
+    /**
+     * Colorize Text
+     */
     public String colorize(String text, String color) {
         return colorizeText(text, color, true);
     }
@@ -143,9 +143,9 @@ public class ColorConverter {
         return ansiCode + text + resetCode;
     }
 
-    /*
-    *** Apply style
-    */
+    /**
+     * Apply Style
+     */
     public String style(String text, String... styles) {
         StringBuilder styleCodes = new StringBuilder();
         for(String style : styles) styleCodes.append(toAnsi(style));

@@ -7,9 +7,6 @@ import org.springframework.stereotype.Component;
 public class ChatDecryptionService {
     @Autowired @Lazy private SecureMessageService secureMessageService;
 
-    /*
-    * Decrypt Message 
-    */
     public String decryptMessage(String chatId, byte[] encryptedContent) {
         try {
             return secureMessageService.decryptMessage(chatId, encryptedContent);

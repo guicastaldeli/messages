@@ -59,9 +59,9 @@ export class ContactServiceClient {
         });
     }
 
-    /*
-    ** Response Contact Request
-    */
+    /**
+     * Response Contact Request
+     */
     public async responseContactRequest(requestId: string, accept: boolean): Promise<void> {
         const responseDestination = '/queue/contact-response-scss';
         const requestDestination = '/app/response-contact-request';
@@ -121,9 +121,9 @@ export class ContactServiceClient {
         });
     }
 
-    /*
-    ** Get Contacts
-    */
+    /**
+     * Get Contacts
+     */
     public async getContacts(): Promise<Contact[]> {
         const responseDestination = '/queue/contacts-scss';
         const requestDestination = '/app/get-contacts';
@@ -152,9 +152,9 @@ export class ContactServiceClient {
         })
     }
 
-    /*
-    ** Get Pending Contacts
-    */
+    /**
+     * Get Pending Contacts
+     */
     public async getPendingRequests(): Promise<ContactRequest[]> {
         const responseDestination = '/queue/pending-requests-scss';
         const requestDestination = '/app/get-pending-requests';
@@ -183,9 +183,9 @@ export class ContactServiceClient {
         });
     }
 
-    /*
-    ** Remove Contact
-    */
+    /**
+     * Remove Contact
+     */
     public async removeContact(contactId: string): Promise<void> {
         const responseDestination = '/queue/response-contact-scss';
         const requestDestination = '/app/remove-contact';

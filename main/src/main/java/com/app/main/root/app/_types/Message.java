@@ -12,9 +12,9 @@ public class Message {
     private String username;
     private boolean isSystem;
 
-    /*
-    * ID 
-    */
+    /**
+     * Id
+     */
     public void setId(int id) {
         this.id = id;
     }
@@ -22,9 +22,9 @@ public class Message {
         return id;
     }
 
-    /*
-    * Chat ID 
-    */
+    /**
+     * Chat Id
+     */
     public void setChatId(String chatId) {
         this.chatId = chatId;
     }
@@ -32,8 +32,8 @@ public class Message {
         return chatId;
     }
 
-    /*
-    * Sender ID 
+   /**
+    * Sender Id
     */
     public void setSenderId(String senderId) {
         this.senderId = senderId;
@@ -42,9 +42,9 @@ public class Message {
         return senderId;
     }
 
-    /*
-    * Content
-    */
+    /**
+     * Content
+     */
     public void setContent(String content) {
         this.content = content;
     }
@@ -58,9 +58,9 @@ public class Message {
         return contentBytes;
     }
 
-    /*
-    * Message Type
-    */
+    /**
+     * Message Type
+     */
     public void setMessageType(String messageType) {
         this.messageType = messageType;
     }
@@ -68,9 +68,9 @@ public class Message {
         return messageType;
     }
 
-    /*
-    * Created At
-    */
+    /**
+     * Created At
+     */
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
@@ -78,9 +78,9 @@ public class Message {
         return createdAt;
     }
 
-    /*
-    * Username 
-    */
+    /**
+     * Username
+     */
     public void setUsername(String username) {
         this.username = username;
     }
@@ -88,9 +88,9 @@ public class Message {
         return username;
     }
 
-    /*
-    * System 
-    */
+    /**
+     * System
+     */
     public void setSystem(boolean isSystem) {
         this.isSystem = isSystem;
     }

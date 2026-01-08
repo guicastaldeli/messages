@@ -16,23 +16,23 @@ public class EventConfig {
         this.broadcast = broadcast;
     }
 
-    /*
-    * Get Handler 
-    */
+    /**
+     * Get Handler
+     */
     public EventHandler getHandler() {
         return handler;
     } 
 
-    /*
-    * Get Destination 
-    */
+    /**
+     * Get Destination
+     */
     public String getDestination() {
         return destination;
     }
 
-    /*
-    * Broadcast 
-    */
+    /**
+     * Broadcast
+     */
     public boolean isBroadcast() {
         return broadcast;
     }

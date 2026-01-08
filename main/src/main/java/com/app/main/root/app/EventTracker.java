@@ -58,13 +58,11 @@ public class EventTracker {
         //logToConsole(eventLogs);
     }
 
-    /*
-    **
-    ***
-    *** Get Logs
-    ***
-    **
-    */
+    /**
+     * 
+     * Logs
+     * 
+     */
     public List<EventLog> getMessageLogs() {
         return new ArrayList<>(logs);
     }
@@ -99,9 +97,9 @@ public class EventTracker {
         return filtered;
     }
 
-    /*
-    * Utils
-    */
+    /**
+     * Utils
+     */
     public void clearLogs() {
         logs.clear();
     }
@@ -110,17 +108,17 @@ public class EventTracker {
         return logs.size();
     }
 
-    /*
-    * Generate ID 
-    */
+    /**
+     * Generate Id
+     */
     private String generateId() {
         String content = "evnt_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
         return content;
     }
 
-    /*
-    * Emitters 
-    */
+    /**
+     * Emitters
+     */
     private void emitMessageEvent(EventLog log) {
         for(Consumer<EventLog> listener : listeners) {
             try {

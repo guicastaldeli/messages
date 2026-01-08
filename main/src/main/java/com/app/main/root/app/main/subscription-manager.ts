@@ -21,9 +21,9 @@ export class SubscriptionManager {
         this.client = client;
     }
 
-    /*
-    ** Subscribe
-    */
+    /**
+     * Subscribe
+     */
     public async ensureSubscription(
         destination: string,
         options: SubscriptionOptions = {}
@@ -58,9 +58,9 @@ export class SubscriptionManager {
         });
     }
 
-    /*
-    ** Unsubscribe
-    */
+    /**
+     * Unsubscribe
+     */
     public async unsubscribeFromDestination(destination: string): Promise<void> {
         const registry = this.subscriptionRegistry.get(destination);
         if(!registry) return;
@@ -75,9 +75,9 @@ export class SubscriptionManager {
         }
     }
 
-    /*
-    ** On Destination
-    */
+    /**
+     * On Destination
+     */
     public async onDestination(
         destination: string,
         callback: Function,
@@ -89,9 +89,9 @@ export class SubscriptionManager {
         this.eventListeners.get(eventName)!.push(callback);
     }
 
-    /*
-    ** Off Destination
-    */
+    /**
+     * Off Destination
+     */
     public offDestination(destination: string, callback?: Function): void {
         const eventName = this.destinationToEventName(destination);
         const listeners = this.eventListeners.get(eventName);
@@ -136,9 +136,9 @@ export class SubscriptionManager {
         this.client = client;
     }
 
-    /*
-    ** Resubscribe
-    */
+    /**
+     * Resubscribe
+     */
     public async resubscribeAutoSubscriptions(): Promise<void> {
         for(const [destination, registry] of this.subscriptionRegistry) {
             if(registry.autoSubscribe) {

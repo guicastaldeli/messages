@@ -22,9 +22,9 @@ public class TokenService {
 
     private final Map<String, String> tokenBlackList = new ConcurrentHashMap<>();
 
-    /*
-    ** Get Signing Key
-    */
+    /**
+     * Get Signing Key
+     */
     private SecretKey getSigningKey() {
         if(secretKey == null || secretKey.isEmpty()) {
             return Jwts.SIG.HS256.key().build();
@@ -34,9 +34,9 @@ public class TokenService {
         return Keys.hmacShaKeyFor(keyByets);
     }
 
-    /*
-    ** Generate Access Token
-    */
+    /**
+     * Generate Access Token
+     */
     public String generateAccessToken(
         String sessionId,
         String userId, 
@@ -61,9 +61,9 @@ public class TokenService {
             .compact();
     }
 
-    /*
-    ** Generate Refresh Token
-    */
+    /**
+     * Generate Refresh Token
+     */
     public String generateRefreshToken(String userId) {
         long time = System.currentTimeMillis();
 
@@ -80,9 +80,9 @@ public class TokenService {
             .compact();
     }
 
-    /*
-    ** Validate Token
-    */
+    /**
+     * Validate Token
+     */
     public boolean validateToken(String key) {
         try {
             Jwts.parser()

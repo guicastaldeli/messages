@@ -14,9 +14,6 @@ export class ChatStateManager {
         return ChatStateManager.instance;
     }
 
-    /*
-    ** Setup Event Listeners
-    */
     private setupEventListeners(): void {
         if(typeof window === 'undefined') return;
         
@@ -40,9 +37,9 @@ export class ChatStateManager {
         this.emptyChats.delete(chatId);
     }
 
-    /*
-    ** Increment Message Count
-    */
+    /**
+     * Increment Message Count
+     */
     public incrementMessageCount(chatId: string): void {
         const currentCount = this.chatMessageCounts.get(chatId) || 0;
         const newCount = currentCount + 1;
@@ -53,9 +50,9 @@ export class ChatStateManager {
         }
     }
 
-    /*
-    ** Update Message Count
-    */
+    /**
+     * Update Message Count
+     */
     public updateMessageCount(chatId: string, count: number): void {
         this.chatMessageCounts.set(chatId, count);
         if(count > 0) {
@@ -83,9 +80,9 @@ export class ChatStateManager {
         window.dispatchEvent(event);
     }
 
-    /*
-    ** Reset
-    */
+    /**
+     * Reset
+     */
     public resetChatState(chatId: string): void {
         this.emptyChats.delete(chatId);
         this.chatMessageCounts.delete(chatId);

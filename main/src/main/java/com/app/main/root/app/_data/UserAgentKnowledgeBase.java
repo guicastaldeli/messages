@@ -49,9 +49,9 @@ public class UserAgentKnowledgeBase {
         System.out.println("Using fallback knowledge base...");
     }
 
-    /*
-    * Store Devices 
-    */
+    /**
+     * Store Devices
+     */
     private void storeDevices(List<Map<String, Object>> list) {
         if(list != null) {
             for(Map<String, Object> d : list) {
@@ -63,9 +63,9 @@ public class UserAgentKnowledgeBase {
         }
     }
 
-    /*
-    * Store Browsers 
-    */
+    /**
+     * Store Browsers
+     */
     private void storeBrowsers(List<Map<String, Object>> list) {
         if(list != null) {
             for(Map<String, Object> b : list) {
@@ -77,9 +77,9 @@ public class UserAgentKnowledgeBase {
         }
     }
 
-    /*
-    * Store OS 
-    */
+    /**
+     * Store OS
+     */
     public void storeOs(List<Map<String, Object>> list) {
         if(list != null) {
             for(Map<String, Object> os : list) {
@@ -142,9 +142,9 @@ public class UserAgentKnowledgeBase {
         }
     }
 
-    /*
-    * Infer 
-    */
+    /**
+     * Infer
+     */
     public UserAgentParserPrediction inferWithRules(PatternAnalysis analysis, Context context) {
         UserAgentParserPrediction prediction = new UserAgentParserPrediction();
 
@@ -159,9 +159,9 @@ public class UserAgentKnowledgeBase {
         return prediction;
     } 
 
-    /*
-    * Extract Type and Brand 
-    */
+    /**
+     * Extract Type and Brand
+     */
     private void extractDeviceTypeAndBrand(
         String result,
         UserAgentParserPrediction prediction
@@ -209,9 +209,9 @@ public class UserAgentKnowledgeBase {
         }
     }
 
-    /*
-    * Process Conclusion
-    */
+    /**
+     * Process Conclusion
+     */
     private void processConclusion(String conclusion, UserAgentParserPrediction prediction) {
         if(conclusion.startsWith("device_brand='") && conclusion.endsWith("'")) {
             String brand = conclusion.substring(14, conclusion.length() - 1);
@@ -243,9 +243,9 @@ public class UserAgentKnowledgeBase {
         }
     }
 
-    /*
-    * Apply Rules 
-    */
+    /**
+     * Apply Rules
+     */
     private String applyRules(
         String category,
         PatternAnalysis analysis,
@@ -272,9 +272,9 @@ public class UserAgentKnowledgeBase {
             .orElse("Unknown **Value Null");
     }
 
-    /*
-    * Validation Rules 
-    */
+    /**
+     * Validation Rules
+     */
     private void applyValidationRules(
         UserAgentParserPrediction prediction,
         PatternAnalysis analysis,
@@ -292,9 +292,9 @@ public class UserAgentKnowledgeBase {
         }
     }
 
-    /*
-    * Calculate Rule Confidence 
-    */
+    /**
+     * Calculate Rule Confidence
+     */
     private double calculateRuleConfidence(PatternAnalysis analysis) {
         double baseConfidence = analysis.getPatternStrength();
         if(analysis.hasVersionInformation()) baseConfidence += 0.2;
@@ -302,31 +302,39 @@ public class UserAgentKnowledgeBase {
         return Math.min(0.95, Math.max(0.1, baseConfidence));
     }
 
-    /*
-    * Add Rule 
-    */
+    /**
+     * Add Rule
+     */
     private void addRule(String category, String rule) {
         rules.computeIfAbsent(category, k -> new ArrayList<>())
             .add(new InferenceRule(rule));
         ruleCount.incrementAndGet();
     }
 
-    /* Get Rule Count */
+    /**
+     * Get Rule Count
+     */
     public int getRuleCount() {
         return ruleCount.get();
     }
 
-    /* Get Device Count */
+    /**
+     * Get Device Count
+     */
     public int getDeviceCount() {
         return devices.size();
     }
 
-    /* Get Browser Count */
+    /**
+     * Get Browser Count
+     */
     public int getBrowserCount() {
         return browsers.size();
     }
 
-    /* Get OS Count */
+    /**
+     * Get OS Count
+     */
     public int getOsCount() {
         return osList.size();
     }

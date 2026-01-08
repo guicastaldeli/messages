@@ -11,45 +11,45 @@ export class SessionServiceClient {
         this.baseUrl = url;
     }
 
-    /*
-    ** Types
-    */
+    /**
+     * Types
+     */
     public async getSessionTypes(): Promise<Types> {
         const res = await fetch(`${this.baseUrl}/api/session/types`);
         if(!res.ok) throw new Error('Failed to get session');
         return res.json();
     }
 
-    /*
-    ** Get Session
-    */
+    /**
+     * Get Session
+     */
     public async getSession(userId: string): Promise<any> {//
         const res = await fetch(`${this.baseUrl}/api/session/${userId}`);
         if(!res.ok) throw new Error('Failed to get session');
         return res.json();
     }
 
-    /*
-    ** Stats
-    */
+    /**
+     * Stats
+     */
     public async getSessionStats(): Promise<void> {
         const res = await fetch(`${this.baseUrl}/api/session/stats`);
         if(!res.ok) throw new Error('Failed to get session stats');
         return res.json();
     }
 
-    /*
-    ** Stats
-    */
+    /**
+     * Stats
+     */
     public async getActive(): Promise<void> {
         const res = await fetch(`${this.baseUrl}/api/session/active`);
         if(!res.ok) throw new Error('Failed to get active sessions');
         return res.json();
     }
 
-    /*
-    ** Update Session Type
-    */
+    /**
+     * Update Session Type
+     */
     public async updateSessionType(userId: string, type: SessionType): Promise<void> {
         const params = new URLSearchParams({ sessionType: type });
         const res = await fetch(`${this.baseUrl}/api/session/${userId}/type?${params}`, {
@@ -59,9 +59,9 @@ export class SessionServiceClient {
         return res.json();
     }
 
-    /*
-    ** Update Session
-    */
+    /**
+     * Update Session
+     */
     public async updateSession(
         userId: string,
         username: string, 

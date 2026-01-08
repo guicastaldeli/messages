@@ -11,9 +11,9 @@ public class PatternAnalysis {
         this.userAgent = userAgent;
     }
 
-    /*
-    * Add Evidence 
-    */
+    /**
+     * Evidence
+     */
     public void addEvidence(
         String category,
         String value,
@@ -22,43 +22,46 @@ public class PatternAnalysis {
         evidence.computeIfAbsent(category, k -> new HashMap<>()).put(value, strength);
     }
 
-    /*
-    * Add Version 
-    */
-    public void addVersion(String type, String version) {
-        versions.put(type, version);
-    }
-
-    /*
-    * Has Evidence 
-    */
     public boolean hasEvidence(String category, String value) {
-        return evidence.containsKey(category) &&
-                evidence.get(category).containsKey(value);
+        return 
+            evidence.containsKey(category) &&
+            evidence.get(category).containsKey(value);
     }
 
-    /*
-    * Has Strong Evidence 
-    */
     public boolean hasStrongEvidence() {
         return evidence.values().stream()
             .flatMap(m -> m.values().stream())
             .anyMatch(confidence -> confidence > 0.8);
     }
 
-    public boolean hasConflictPatterns() {
-        boolean hasMobile = hasEvidence("device_type", "mobile");
-        boolean hasDesktop = hasEvidence("device_type", "desktop");
-        return hasMobile && hasDesktop;
+    public Map<String, Map<String, Double>> getEvidence() {
+        return evidence;
+    }
+
+    /**
+     * Version
+     */
+    public void addVersion(String type, String version) {
+        versions.put(type, version);
+    }
+
+    public Map<String, String> getVersions() {
+        return versions;
     }
 
     public boolean hasVersionInformation() {
         return !versions.isEmpty();
     }
 
-    /*
-    * Calculate Pattern Strength 
-    */
+    /**
+     * Pattern
+     */
+    public boolean hasConflictPatterns() {
+        boolean hasMobile = hasEvidence("device_type", "mobile");
+        boolean hasDesktop = hasEvidence("device_type", "desktop");
+        return hasMobile && hasDesktop;
+    }
+
     public void calculatePatternStrength() {
         this.patternStrength = evidence.values().stream()
             .flatMap(m -> m.values().stream())
@@ -67,22 +70,13 @@ public class PatternAnalysis {
             .orElse(0.0);
     }
 
-    /* Get Pattern Strength */
     public double getPatternStrength() {
         return patternStrength;
     }
 
-    /* Get Evidence */
-    public Map<String, Map<String, Double>> getEvidence() {
-        return evidence;
-    }
-
-    /* Get Versions */
-    public Map<String, String> getVersions() {
-        return versions;
-    }
-
-    /* Get User Agent */
+    /**
+     * Get User Agent
+     */
     public String getUserAgent() {
         return userAgent;
     }
