@@ -1,5 +1,5 @@
-import { ShaderLoader } from "./shader-loader";
-import { ShaderConfig } from "./shader-config";
+import { ShaderLoader } from "./shader/shader-loader";
+import { ShaderConfig } from "./shader/shader-config";
 
 export class Renderer {
     private canvas: HTMLCanvasElement | null = null;

@@ -1,4 +1,4 @@
-import { ShaderType, ShaderStage, ShaderPaths, ShaderProgramName, ShaderProgramDef } from "../renderer/.shaders/shader-path";
+import { ShaderType, ShaderStage, ShaderPaths, ShaderProgramName } from "../shader/shader-path";
 
 export interface ShaderModule {
     code: string;
@@ -17,7 +17,7 @@ export interface ShaderPipeline {
 }
 
 export class ShaderLoader {
-    private static PATH: string = '../renderer/.shaders/';
+    private static readonly PATH: string = './data/shaders/';
 
     private device: GPUDevice | null = null;
     private shaderCache: Map<String, ShaderModule> = new Map();
@@ -25,6 +25,7 @@ export class ShaderLoader {
 
     private onLoadedCallbacks: ((pipeine: ShaderPipeline) => void)[] = [];
     private onErrorCallbacks: ((err: Error, shaderName: string) => void)[] = [];
+
 
     public setDevice(device: GPUDevice): void {
         this.device = device;
@@ -44,6 +45,12 @@ export class ShaderLoader {
 
         try {
             const fullPath = `${ShaderLoader.PATH}${shaderPath}`;
+            console.log('Shader loading details:');
+        console.log('- Base path:', ShaderLoader.PATH);
+        console.log('- Shader path:', shaderPath);
+        console.log('- Full path:', fullPath);
+        console.log('- Current URL:', window.location.href);
+        console.log('- Absolute URL:', new URL(fullPath, window.location.href).href);
             const res = await fetch(fullPath);
             if(!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
@@ -75,9 +82,9 @@ export class ShaderLoader {
         const programDef = ShaderPaths[name];
         const pipeline: ShaderPipeline = { name: programDef.name }
         try {
-            if('vertex' in programDef && 'fragment' in programDef) {
+            if('vert' in programDef && 'frag' in programDef) {
                 const [vert, frag] = await Promise.all([
-                    this.loadShader(programDef.vertex, ShaderType.VERT, programDef.name),
+                    this.loadShader(programDef.vert, ShaderType.VERT, programDef.name),
                     this.loadShader(programDef.frag, ShaderType.FRAG, programDef.name),
                 ]);
                 pipeline.vert = vert;

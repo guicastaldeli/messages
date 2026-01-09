@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "TURBOPACK=0 next dev",
     "build": "next build --turbopack",
     "start": "next start",
     "server": "tsx ./app/init.ts",
@@ -37,6 +37,7 @@
     "@types/sockjs-client": "^1.5.4",
     "@webgpu/types": "^0.1.68",
     "nodemon": "^3.1.10",
+    "raw-loader": "^4.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }

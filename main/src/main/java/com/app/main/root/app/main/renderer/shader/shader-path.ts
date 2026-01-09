@@ -26,12 +26,12 @@ export interface ShaderProgram {
 export const ShaderPaths = {
     MAIN: {
         name: 'main',
-        vertex: 'main/vert.wgsl',
+        vert: 'main/vert.wgsl',
         frag: 'main/frag.wgsl'
     },
     LIGHTNING: {
         name: 'lightning',
-        vertex: 'lightning/vert.wgsl',
+        vert: 'lightning/vert.wgsl',
         frag: 'lightning/frag.wgsl'
     },
     SKYBOX: {

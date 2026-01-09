@@ -518,6 +518,7 @@ export class Main extends Component<any, State> {
         const render = async () => {
             if(this.renderer) {
                 await this.renderer.render();
+                await this.renderer.init();
             }
             requestAnimationFrame(render);
         }
