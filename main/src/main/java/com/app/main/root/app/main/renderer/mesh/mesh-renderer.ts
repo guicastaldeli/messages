@@ -1,18 +1,21 @@
-import { MeshData, PrimitiveType } from "./mesh-data";
+import { MeshData, PrimitiveType, Type } from "./mesh-data";
+import { MeshLoader } from "./mesh-loader";
 
 export class MeshRenderer {
     private device: GPUDevice;
+    private uniformBuffer: GPUBuffer;
     private pipeline: GPURenderPipeline | null = null;
     private vertexBuffer: GPUBuffer | null = null;
     private indexBuffer: GPUBuffer | null = null;
     private bindGroup: GPUBindGroup | null = null;
     private indexFormat: GPUIndexFormat = 'uint32';
 
-    private meshData: MeshData;
+    private meshData!: MeshData;
+    private meshRenderers: Map<string, MeshRenderer> = new Map();
     
-    constructor(device: GPUDevice, meshData: MeshData) {
+    constructor(device: GPUDevice, uniformBuffer: GPUBuffer) {
         this.device = device;
-        this.meshData = meshData;
+        this.uniformBuffer = uniformBuffer;
     }
 
     private getBindGroupLayout(): GPUBindGroupLayout {
@@ -69,6 +72,16 @@ export class MeshRenderer {
         });
     }
 
+    public async set(type: Type): Promise<void> {
+        const meshData = MeshLoader.getMesh(type);
+        if(!meshData) {
+            console.warn(`Mesh type ${type} not found`);
+            return;
+        }
+        this.meshData = meshData;
+        await this.setup(this.uniformBuffer);
+    }
+
     /**
      * Render
      */
@@ -80,6 +93,13 @@ export class MeshRenderer {
         renderPass.setIndexBuffer(this.indexBuffer, this.indexFormat);
         renderPass.setBindGroup(0, this.bindGroup);
         renderPass.drawIndexed(this.meshData.getIndexCount());
+    }
+
+    /**
+     * Init
+     */
+    public async init(): Promise<void> {
+        await MeshLoader.load();
     }
 
     public cleanup(): void {

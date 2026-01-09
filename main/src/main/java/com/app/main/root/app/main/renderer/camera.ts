@@ -19,6 +19,7 @@ export class Camera {
         this.device = device;
         this.pipelines = pipelines;
 
+        this.createUniformBuffer();
         this.setFov(this.fov);
         this.updateAspect(1);
     }
@@ -125,6 +126,14 @@ export class Camera {
         this.fov = degrees * (Math.PI / 180);
     }
 
+    public getUniformBuffer(): GPUBuffer {
+        return this.uniformBuffer!;
+    }
+
+    public getBindGroup(): GPUBindGroup | null {
+        return this.bindGroup;
+    }
+
     /**
      * Create Uniform Buffer
      */
@@ -136,20 +145,22 @@ export class Camera {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
-        if(this.pipelines.has('main')) {
-            const pipeline = this.pipelines.get('main');
-            if(!pipeline) throw new Error('pipeline err');
-
-            this.bindGroup = this.device.createBindGroup({
-                layout: pipeline.getBindGroupLayout(0),
-                entries: [{
-                    binding: 0,
-                    resource: {
-                        buffer: this.uniformBuffer
-                    }
-                }]
-            });
-        }
+        const bindGroupLayout = this.device.createBindGroupLayout({
+            entries: [{
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: { type: 'uniform' }
+            }]
+        });
+        this.bindGroup = this.device.createBindGroup({
+            layout: bindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: {
+                    buffer: this.uniformBuffer
+                }
+            }]
+        });
     }
 
     /**
@@ -171,7 +182,6 @@ export class Camera {
     }
 
     public init(): void {
-        this.createUniformBuffer();
         this.updateUniform();
     }
 }

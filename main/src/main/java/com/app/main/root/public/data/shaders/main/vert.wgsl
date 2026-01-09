@@ -1,3 +1,10 @@
+struct Uniforms {
+    viewProjection: mat4x4<f32>
+};
+
+@group(0) @binding(0)
+var<uniform> uniforms: Uniforms;
+
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) color: vec3<f32>
@@ -9,7 +16,7 @@ fn main(
     @location(1) color: vec3<f32>
 ) -> VertexOutput {
     var output: VertexOutput;
-    output.position = vec4<f32>(position, 1.0);
+    output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
     output.color = color;
     return output;
 }

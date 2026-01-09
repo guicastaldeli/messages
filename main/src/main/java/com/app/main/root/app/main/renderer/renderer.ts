@@ -1,6 +1,7 @@
 import { ShaderLoader } from "./shader/shader-loader";
 import { ShaderConfig } from "./shader/shader-config";
 import { Camera } from "./camera";
+import { Scene } from "./scene";
 
 export class Renderer {
     private canvas: HTMLCanvasElement | null = null;
@@ -10,6 +11,7 @@ export class Renderer {
 
     private camera: Camera | null = null;
     private shaderLoader: ShaderLoader;
+    private scene!: Scene;
 
     private isRunning: boolean = false;
 
@@ -67,25 +69,7 @@ export class Renderer {
             alphaMode: "premultiplied"
         });
 
-        this.camera = new Camera(this.device!, this.pipelines);
-
-        this.shaderLoader.setDevice(this.device);
-        this.shaderLoader.onLoaded((p) => {
-            console.log(`Shader Loaded!: ${p.name}`);
-        });
-        this.shaderLoader.onError((err, name) => {
-            console.error(`Shader error in ${name}:`, err);
-        });
-
-        this.camera = new Camera(this.device!, this.pipelines);
-        
-        this.shaderLoader.setDevice(this.device);
-        this.shaderLoader.onLoaded((p) => {
-            console.log(`Shader Loaded!: ${p.name}`);
-        });
-        this.shaderLoader.onError((err, name) => {
-            console.error(`Shader error in ${name}:`, err);
-        });
+        await this.init();
     }
 
     /**
@@ -112,6 +96,7 @@ export class Renderer {
 
             if(this.camera) this.camera.update(deltaTime);
             await this.render();
+            await this.scene.update();
 
             requestAnimationFrame(update);
         }
@@ -124,6 +109,30 @@ export class Renderer {
     }
 
     /**
+     * Init
+     */
+    private async init(): Promise<void> {
+        if(!this.device || !this.ctx) return;
+
+        this.shaderLoader.setDevice(this.device);
+        this.shaderLoader.onLoaded((p) => {
+            console.log(`Shader Loaded!: ${p.name}`);
+        });
+        this.shaderLoader.onError((err, name) => {
+            console.error(`Shader error in ${name}:`, err);
+        });
+
+        await this.shaderLoader.loadProgram('MAIN');
+        await this.createPipeline();
+
+        this.camera = new Camera(this.device!, this.pipelines);
+        this.camera.init();
+
+        this.scene = new Scene(this.device, this.camera);
+        await this.scene.init();
+    }
+
+    /**
      * Render
      */
     public async render(): Promise<void> {
@@ -132,24 +141,47 @@ export class Renderer {
         const commandEncoder = this.device.createCommandEncoder();
         const texView = this.ctx.getCurrentTexture().createView();
 
+        const depthTexture = this.device.createTexture({
+            size: {
+                width: this.canvas!.width,
+                height: this.canvas!.height
+            },
+            format: 'depth24plus-stencil8',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
+
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
                 view: texView,
                 clearValue: { r: 0.1, g: 0.2, b: 0.2, a: 1.0 },
                 loadOp: 'clear',
                 storeOp: 'store'
-            }]
+            }],
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'store',
+                stencilClearValue: 0,
+                stencilLoadOp: 'clear',
+                stencilStoreOp: 'store'
+            }
         });
-        renderPass.end();
 
+        const mainPipeline = this.pipelines.get('main');
+        if(mainPipeline && this.scene) {
+            this.scene.render(renderPass, mainPipeline);
+        }
+
+        renderPass.end();
         this.device.queue.submit([commandEncoder.finish()]);
+
+        depthTexture.destroy();
     }
 
-    public async init() {
+    public async run(): Promise<void> {
         try {
-            await this.shaderLoader.loadProgram('MAIN');
-            await this.createPipeline();
-            if(this.camera) this.camera.init();
+            
         }  catch(err) {
             console.error('Failed to init shaders:', err);
             throw err;

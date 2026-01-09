@@ -25,7 +25,7 @@ export interface VertexLayout {
 
 export interface Mesh {
     name: string;
-    type: 'primitive'
+    type: string;
     vertices: number[][];
     indices: number[];
     vertexLayout: VertexLayout;

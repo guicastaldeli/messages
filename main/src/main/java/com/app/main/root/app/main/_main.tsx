@@ -500,7 +500,7 @@ export class Main extends Component<any, State> {
 
             this.renderer = new Renderer();
             await this.renderer.setup(this.canvasRef.current.id);
-            await this.renderer.init();
+            await this.renderer.run();
             await this.renderer.update();
 
             this.setState({ renderer: this.renderer });

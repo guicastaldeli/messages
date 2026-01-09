@@ -1,5 +1,5 @@
 {
-  "name": "sphere",
+  "name": "pyramid",
   "type": "primitive",
   "vertices": [
     [-0.5, -0.5, 0.5, 1.0, 0.0, 0.0],

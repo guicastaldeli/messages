@@ -9,16 +9,16 @@ export class ShaderConfig {
 
     private constructor() {
         const vertexBufferLayouts: GPUVertexBufferLayout[] = [{
-            arrayStride: 20,
+            arrayStride: 6 * 4,
             attributes: [
                 {
-                    format: 'float32x2' as const,
+                    format: 'float32x3' as const,
                     offset: 0,
                     shaderLocation: 0
                 },
                 {
                     format: 'float32x3' as const,
-                    offset: 8,
+                    offset: 3 * 4,
                     shaderLocation: 1
                 }
             ]
