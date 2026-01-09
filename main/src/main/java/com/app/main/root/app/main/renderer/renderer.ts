@@ -1,5 +1,6 @@
 import { ShaderLoader } from "./shader/shader-loader";
 import { ShaderConfig } from "./shader/shader-config";
+import { Camera } from "./camera";
 
 export class Renderer {
     private canvas: HTMLCanvasElement | null = null;
@@ -7,7 +8,10 @@ export class Renderer {
     private device: GPUDevice | null = null;
     private pipelines: Map<string, GPURenderPipeline> = new Map();
 
+    private camera: Camera | null = null;
     private shaderLoader: ShaderLoader;
+
+    private isRunning: boolean = false;
 
     constructor() {
         this.shaderLoader = new ShaderLoader();
@@ -63,12 +67,59 @@ export class Renderer {
             alphaMode: "premultiplied"
         });
 
+        this.camera = new Camera(this.device!, this.pipelines);
+
         this.shaderLoader.setDevice(this.device);
         this.shaderLoader.onLoaded((p) => {
             console.log(`Shader Loaded!: ${p.name}`);
         });
         this.shaderLoader.onError((err, name) => {
             console.error(`Shader error in ${name}:`, err);
+        });
+
+        this.camera = new Camera(this.device!, this.pipelines);
+        
+        this.shaderLoader.setDevice(this.device);
+        this.shaderLoader.onLoaded((p) => {
+            console.log(`Shader Loaded!: ${p.name}`);
+        });
+        this.shaderLoader.onError((err, name) => {
+            console.error(`Shader error in ${name}:`, err);
+        });
+    }
+
+    /**
+     * Update
+     */
+    public async update(): Promise<void> {
+        if(this.isRunning) return;
+        this.isRunning = true;
+
+        let lastTime = 0;
+        let frameCount = 0;
+        let lastFpsUpdate = 0;
+        let fps = 0;
+
+        const update = async (currentTime: number) => {
+            if(!this.isRunning) return;
+
+            const deltaTime = (currentTime - lastTime) / 1000.
+            lastTime = currentTime;
+            frameCount++;
+
+            const currentFps = 1.0 / deltaTime;
+            //console.log(`FPS: ${currentFps.toFixed(1)}`);
+
+            if(this.camera) this.camera.update(deltaTime);
+            await this.render();
+
+            requestAnimationFrame(update);
+        }
+
+        requestAnimationFrame((t) => {
+            lastTime = t;
+            lastFpsUpdate = t;
+            update(t);
         });
     }
 
@@ -98,6 +149,7 @@ export class Renderer {
         try {
             await this.shaderLoader.loadProgram('MAIN');
             await this.createPipeline();
+            if(this.camera) this.camera.init();
         }  catch(err) {
             console.error('Failed to init shaders:', err);
             throw err;

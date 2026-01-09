@@ -167,12 +167,6 @@ export class Main extends Component<any, State> {
         }
     }
 
-    componentDidUpdate(prevProps: any, prevState: State): void {
-        if(!prevState.renderer && this.canvasRef.current && !this.renderer) {
-            this.initRenderer();
-        }
-    }
-
     private async connect(): Promise<void> {
         if(!this.socketClientConnect) return;
         await this.socketClientConnect.connect();
@@ -506,23 +500,13 @@ export class Main extends Component<any, State> {
 
             this.renderer = new Renderer();
             await this.renderer.setup(this.canvasRef.current.id);
+            await this.renderer.init();
+            await this.renderer.update();
 
-            this.startRender();
             this.setState({ renderer: this.renderer });
         } catch(err) {
             console.error('Renderer err', err);
         }
-    }
-
-    private startRender(): void {
-        const render = async () => {
-            if(this.renderer) {
-                await this.renderer.render();
-                await this.renderer.init();
-            }
-            requestAnimationFrame(render);
-        }
-        render();
     }
 
     render() {

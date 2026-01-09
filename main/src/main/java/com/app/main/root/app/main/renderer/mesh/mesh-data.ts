@@ -15,7 +15,7 @@ export interface VertexAttribute {
     name: string;
     components: number;
     offset: number;
-    ype: 'float32' | 'uint32' | 'sint32' | 'uint16' | 'sint16' | 'uint8' | 'sint8';
+    type: 'float32' | 'uint32' | 'sint32' | 'uint16' | 'sint16' | 'uint8' | 'sint8';
 }
 
 export interface VertexLayout {
@@ -40,6 +40,7 @@ export class MeshData {
     public indices: Uint32Array | Uint16Array;
     public vertexLayout: VertexLayout;
     public primitiveType: PrimitiveType;
+    public vertexBufferLayout: GPUVertexBufferLayout;
 
     constructor(
         name: string,
@@ -64,6 +65,7 @@ export class MeshData {
             this.indices = new Uint16Array(indices);
         }
 
+        this.vertexBufferLayout = this.createVertexBufferLayout(vertexLayout);
         MeshData.meshes.set(name, this);
     }
 
@@ -101,5 +103,45 @@ export class MeshData {
      */
     public getIndexBufferSize(): number {
         return this.indices.byteLength;
+    }
+
+    /**
+     * Create Vertex Buffer Layout
+     */
+    private createVertexBufferLayout(layout: VertexLayout): GPUVertexBufferLayout {
+        const attributes: GPUVertexAttribute[] = [];
+        let currShaderLocation = 0;
+        const sortedAttr = [...layout.attributes].sort((a, b) => a.offset - b.offset);
+        for(const attr of sortedAttr) {
+            const format = this.getVertexFormat(attr.components, attr.type);
+            attributes.push({
+                format: format,
+                offset: attr.offset * 4,
+                shaderLocation: currShaderLocation++
+            });
+        }
+
+        return {
+            arrayStride: layout.stride * 4,
+            stepMode: 'vertex' as GPUVertexStepMode,
+            attributes: attributes
+        }
+    }
+
+    /**
+     * Get Vertex Format
+     */
+    private getVertexFormat(components: number, type: string): GPUVertexFormat {
+        const typeMap: Record<string, string> = {
+            'float32': 'float32',
+            'uint32': 'uint32',
+            'sint32': 'sint32',
+            'uint16': 'uint16',
+            'sint16': 'sint16',
+            'uint8': 'uint8',
+            'sint8': 'sint8'
+        };
+        const baseType = typeMap[type] || 'float32';
+        return `${baseType}x${components}` as GPUVertexFormat;
     }
 }
