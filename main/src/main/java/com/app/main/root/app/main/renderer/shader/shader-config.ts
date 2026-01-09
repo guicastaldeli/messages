@@ -2,6 +2,7 @@ interface Type {
     vertexBufferLayouts: GPUVertexBufferLayout[];
     depthStencil: GPUDepthStencilState
 }
+
 export class ShaderConfig {
     private static instance: ShaderConfig;
     public data: Type;

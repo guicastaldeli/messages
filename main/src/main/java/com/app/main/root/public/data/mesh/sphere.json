@@ -1,0 +1,25 @@
+{
+  "name": "Sphere",
+  "type": "primitive",
+  "radius": 0.5,
+  "segments": 16,
+  "color": [0.2, 0.8, 0.4],
+  "vertexLayout": {
+    "stride": 6,
+    "attributes": [
+      {
+        "name": "position",
+        "components": 3,
+        "offset": 0,
+        "type": "float32"
+      },
+      {
+        "name": "color",
+        "components": 3,
+        "offset": 3,
+        "type": "float32"
+      }
+    ]
+  },
+  "primitiveType": "triangle-list"
+}
