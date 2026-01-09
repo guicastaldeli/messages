@@ -548,10 +548,10 @@ export class Main extends Component<any, State> {
                                         >
                                         </canvas>
                                     </div>
+                                    {/*
                                     {sessionContext.currentSession === 'LOGIN' && (
                                         <div className='screen join-screen'>
                                             <div className='form'>
-                                                {/* Login Form */}
                                                 <div className="form-input">
                                                     <h2>Login</h2>
                                                     <label>Email</label>
@@ -580,7 +580,6 @@ export class Main extends Component<any, State> {
                                                     </div>
                                                 </div>
                                                 
-                                                {/* Create Account Form */}
                                                 <div className="form-input">
                                                     <h2>Create Account</h2>
                                                     <label>Email</label>
@@ -635,6 +634,7 @@ export class Main extends Component<any, State> {
                                             )}
                                         </>
                                     )}
+                                        */}
                                 </>
                             );
                         }}

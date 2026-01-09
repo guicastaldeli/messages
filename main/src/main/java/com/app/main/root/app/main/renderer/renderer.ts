@@ -36,7 +36,7 @@ export class Renderer {
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
                 view: texView,
-                clearValue: { r: 0.5, g: 0.5, b: 0.5, a: 1.0 },
+                clearValue: { r: 0.1, g: 0.2, b: 0.2, a: 1.0 },
                 loadOp: 'clear',
                 storeOp: 'store'
             }]
