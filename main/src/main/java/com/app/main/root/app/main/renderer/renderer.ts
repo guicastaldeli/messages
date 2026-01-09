@@ -1,12 +1,49 @@
+import { ShaderLoader } from "./shader-loader";
+import { ShaderConfig } from "./shader-config";
+
 export class Renderer {
     private canvas: HTMLCanvasElement | null = null;
     private ctx: GPUCanvasContext | null = null;
     private device: GPUDevice | null = null;
+    private pipelines: Map<string, GPURenderPipeline> = new Map();
+
+    private shaderLoader: ShaderLoader;
 
     constructor() {
-        
+        this.shaderLoader = new ShaderLoader();
+        ShaderConfig.getInstance();
     }
 
+    /**
+     * Create Pipeline
+     */
+    private async createPipeline(): Promise<void> {
+        if(!this.device || !this.ctx) return;
+
+        const bindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                    buffer: { type: 'uniform' as const }
+                }
+            ]
+        });
+
+        const mainLayout = this.shaderLoader.createPipelineLayout([bindGroupLayout]);
+        const mainPipeline = this.shaderLoader.createRenderPipeline(
+            'MAIN',
+            mainLayout,
+            ShaderConfig.get().vertexBufferLayouts,
+            [navigator.gpu.getPreferredCanvasFormat()],
+            ShaderConfig.get().depthStencil
+        );
+        this.pipelines.set('main', mainPipeline);
+    }
+
+    /**
+     * Setup
+     */
     public async setup(canvasId: string): Promise<void> {
         this.canvas = document.querySelector(`#${canvasId}`);
         if(!this.canvas) throw new Error('Canvas err');
@@ -25,8 +62,19 @@ export class Renderer {
             format: navigator.gpu.getPreferredCanvasFormat(),
             alphaMode: "premultiplied"
         });
+
+        this.shaderLoader.setDevice(this.device);
+        this.shaderLoader.onLoaded((p) => {
+            console.log(`Shader Loaded!: ${p.name}`);
+        });
+        this.shaderLoader.onError((err, name) => {
+            console.error(`Shader error in ${name}:`, err);
+        });
     }
 
+    /**
+     * Render
+     */
     public async render(): Promise<void> {
         if(!this.device || !this.ctx) return;
 
@@ -44,5 +92,15 @@ export class Renderer {
         renderPass.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
+    }
+
+    public async init() {
+        try {
+            await this.shaderLoader.loadProgram('MAIN');
+            await this.createPipeline();
+        }  catch(err) {
+            console.error('Failed to init shaders:', err);
+            throw err;
+        } 
     }
 }

@@ -1,3 +1,3 @@
-export class BufferGenerator {
+export class MeshGenerator {
     
 }
