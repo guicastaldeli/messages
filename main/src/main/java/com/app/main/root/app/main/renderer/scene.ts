@@ -2,6 +2,7 @@ import { MeshRenderer } from "./mesh/mesh-renderer";
 import { Type } from "./mesh/mesh-data";
 import { Camera } from "./camera";
 import { MeshLoader } from "./mesh/mesh-loader";
+import { Tick } from "./tick";
 
 export class Scene {
     private device: GPUDevice;
@@ -17,9 +18,9 @@ export class Scene {
     /**
      * Update
      */
-    public async update(deltaTime: number): Promise<void> {
-        this.meshRenderers[0].transform.rotate(0.0, deltaTime, 0.0);
-        this.meshRenderers[1].transform.rotate(0.0, deltaTime * 3.0, 0.0);
+    public async update(): Promise<void> {
+        this.meshRenderers[0].transform.rotate(0.0, Tick.getDeltaTime() / 2.0, 0.0);
+        this.meshRenderers[1].transform.rotate(0.0, Tick.getDeltaTime(), 0.0);
     }
 
     /**

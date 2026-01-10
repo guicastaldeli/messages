@@ -2,6 +2,7 @@ import { ShaderLoader } from "./shader/shader-loader";
 import { ShaderConfig } from "./shader/shader-config";
 import { Camera } from "./camera";
 import { Scene } from "./scene";
+import { Tick } from "./tick";
 
 export class Renderer {
     private canvas: HTMLCanvasElement | null = null;
@@ -9,13 +10,16 @@ export class Renderer {
     private device: GPUDevice | null = null;
     private pipelines: Map<string, GPURenderPipeline> = new Map();
 
+    private tick: Tick;
     private camera: Camera | null = null;
     private shaderLoader: ShaderLoader;
     private scene!: Scene;
 
     private isRunning: boolean = false;
+    private lastTime: number = 0;
 
     constructor() {
+        this.tick = new Tick();
         this.shaderLoader = new ShaderLoader();
         ShaderConfig.getInstance();
     }
@@ -85,31 +89,26 @@ export class Renderer {
         if(this.isRunning) return;
         this.isRunning = true;
 
-        let lastTime = 0;
-        let frameCount = 0;
-        let lastFpsUpdate = 0;
-        let fps = 0;
-
         const update = async (currentTime: number) => {
             if(!this.isRunning) return;
 
-            const deltaTime = (currentTime - lastTime) / 1000;
-            lastTime = currentTime;
-            frameCount++;
+            this.tick.update(currentTime);
+            const deltaTime = (currentTime - this.lastTime);
+            this.lastTime = currentTime;
 
             const currentFps = 1.0 / deltaTime;
             //console.log(`FPS: ${currentFps.toFixed(1)}`);
 
             if(this.camera) this.camera.update(deltaTime);
             await this.render();
-            await this.scene.update(deltaTime);
+
+            await this.scene.update();
 
             requestAnimationFrame(update);
         }
 
         requestAnimationFrame((t) => {
-            lastTime = t;
-            lastFpsUpdate = t;
+            this.lastTime = t;
             update(t);
         });
     }
