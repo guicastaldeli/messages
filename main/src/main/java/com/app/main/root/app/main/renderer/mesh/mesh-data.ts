@@ -161,4 +161,11 @@ export class MeshData {
         const baseType = typeMap[type] || 'float32';
         return `${baseType}x${components}` as GPUVertexFormat;
     }
+
+    /**
+     * Set Follow Rotation
+     */
+    public setFollowRotation(enabled: boolean): void {
+        this.enableFollowRotation = enabled;
+    }
 }

@@ -128,6 +128,6 @@ export class RotationBox {
     }
 
     private shouldFollowRotation(meshData: MeshData): boolean {
-        return (MeshData as any).enableFollowRotation || false;
+        return meshData.enableFollowRotation || false;
     }
 }

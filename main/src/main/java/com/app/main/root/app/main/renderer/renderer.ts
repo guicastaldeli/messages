@@ -133,7 +133,11 @@ export class Renderer {
         this.camera = new Camera(this.device!, this.pipelines);
         this.camera.init();
 
-        this.scene = new Scene(this.device, this.camera);
+        this.scene = new Scene(
+            this.canvas!,
+            this.device, 
+            this.camera
+        );
         await this.scene.init();
     }
 
