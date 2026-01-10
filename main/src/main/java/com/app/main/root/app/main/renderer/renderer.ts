@@ -42,7 +42,8 @@ export class Renderer {
             mainLayout,
             ShaderConfig.get().vertexBufferLayouts,
             [navigator.gpu.getPreferredCanvasFormat()],
-            ShaderConfig.get().depthStencil
+            ShaderConfig.get().depthStencil,
+            ShaderConfig.get().primitiveState
         );
         this.pipelines.set('main', mainPipeline);
     }
@@ -87,7 +88,7 @@ export class Renderer {
         const update = async (currentTime: number) => {
             if(!this.isRunning) return;
 
-            const deltaTime = (currentTime - lastTime) / 1000.
+            const deltaTime = (currentTime - lastTime) / 1000;
             lastTime = currentTime;
             frameCount++;
 
@@ -181,7 +182,8 @@ export class Renderer {
 
     public async run(): Promise<void> {
         try {
-            
+            const aspect = this.canvas!.width / this.canvas!.height;
+            if(this.camera) this.camera.updateAspect(aspect);
         }  catch(err) {
             console.error('Failed to init shaders:', err);
             throw err;

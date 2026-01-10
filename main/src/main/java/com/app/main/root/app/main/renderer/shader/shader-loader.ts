@@ -155,7 +155,8 @@ export class ShaderLoader {
         layout: GPUPipelineLayout,
         vertexBuffers: GPUVertexBufferLayout[],
         colorFormats: GPUTextureFormat[],
-        depthStencil?: GPUDepthStencilState
+        depthStencil?: GPUDepthStencilState,
+        primitive?: GPUPrimitiveState
     ): GPURenderPipeline {
         if(!this.device) throw new Error('Device not init');
 
@@ -178,7 +179,8 @@ export class ShaderLoader {
             },
             primitive: {
                 topology: 'triangle-list',
-                cullMode: 'back'
+                cullMode: 'none',
+                frontFace: 'ccw'
             },
             depthStencil,
             multisample: {

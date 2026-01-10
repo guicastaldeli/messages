@@ -1,6 +1,7 @@
 interface Type {
     vertexBufferLayouts: GPUVertexBufferLayout[];
-    depthStencil: GPUDepthStencilState
+    depthStencil: GPUDepthStencilState;
+    primitiveState: GPUPrimitiveState;
 }
 
 export class ShaderConfig {
@@ -29,10 +30,17 @@ export class ShaderConfig {
             depthCompare: 'less' as const,
             format: 'depth24plus-stencil8' as const
         }
+        
+        const primitiveState: GPUPrimitiveState = {
+            topology: 'triangle-list',
+            cullMode: 'none',
+            frontFace: 'ccw'
+        };
 
         this.data = {
             vertexBufferLayouts,
-            depthStencil
+            depthStencil,
+            primitiveState
         }
     }
 

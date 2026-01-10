@@ -4,13 +4,18 @@ export class Camera {
     private device: GPUDevice; 
     private pipelines: Map<string, GPURenderPipeline>;
 
-    private position: [number, number, number] = [0.0, 2.0, 95.0];
+    private position: [number, number, number] = [25.0, 8.0, 100.0];
     private target: [number, number, number] = [0.0, 0.0, 0.0];
     private up: [number, number, number] = [0.0, 1.0, 0.0];
-    private fov: number = 60 * (Math.PI / 180);
-    private aspect: number = 1;
+    private fov: number = 90 * (Math.PI / 180);
+    private aspect: number = 1.0;
     private near: number = 0.1;
-    private far: number = 100;
+    private far: number = 1000;
+
+    private yaw: number = 0;
+    private pitch: number = 0;
+    private radius: number = 100;
+    private rotationSpeed: number = 2.0;
 
     private uniformBuffer: GPUBuffer | null = null;
     private bindGroup: GPUBindGroup | null = null;
@@ -118,7 +123,7 @@ export class Camera {
         this.target = [x, y, z];
     }
 
-    private updateAspect(aspect: number): void {
+    public updateAspect(aspect: number): void {
         this.aspect = aspect;
     }
 
@@ -178,7 +183,10 @@ export class Camera {
     }
 
     public update(deltaTime: number): void {
-        this.updateUniform()
+        this.yaw += this.rotationSpeed * deltaTime;
+        this.position[0] = this.target[0] + this.radius * Math.sin(this.yaw);
+        this.position[2] = this.target[2] + this.radius * Math.cos(this.yaw);
+        this.updateUniform();
     }
 
     public init(): void {

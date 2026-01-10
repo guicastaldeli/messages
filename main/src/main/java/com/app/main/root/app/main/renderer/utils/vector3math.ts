@@ -45,15 +45,18 @@ export class Vector3Math {
      * Multiply Matrices
      */
     public static multiplyMatrices(a: Float32Array, b: Float32Array): Float32Array {
-        const res = new Float32Array(16);
-        for(let i = 0; i < 4; i++) {
-            for(let j = 0; j < 4; j++) {
-                res[i * 4 + j] = 0;
-                for(let k = 0; k < 4; k++) {
-                    res[j * 4 + i] += a[k * 4 + i] * b[j * 4 + k];
-                }
-            }
+    const res = new Float32Array(16);
+    
+    for(let col = 0; col < 4; col++) {
+        for(let row = 0; row < 4; row++) {
+            res[col * 4 + row] = 
+                a[0 * 4 + row] * b[col * 4 + 0] +
+                a[1 * 4 + row] * b[col * 4 + 1] +
+                a[2 * 4 + row] * b[col * 4 + 2] +
+                a[3 * 4 + row] * b[col * 4 + 3];
         }
-        return res;
     }
+    
+    return res;
+}
 }

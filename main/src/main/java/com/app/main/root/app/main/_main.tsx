@@ -530,6 +530,8 @@ export class Main extends Component<any, State> {
                                         <canvas 
                                             id='ctx'
                                             ref={this.canvasRef}
+                                            width={700}
+                                            height={500}
                                         >
                                         </canvas>
                                     </div>
