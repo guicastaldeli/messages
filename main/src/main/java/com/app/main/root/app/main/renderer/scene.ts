@@ -38,6 +38,8 @@ export class Scene {
         this.camera.setTarget(0, 0, 0);
 
         await this.meshRenderer.init();
+        this.meshRenderer.transform.setPosition(0.0, 0.0, 0.0);
+        this.meshRenderer.transform.setRotation(0.0, Math.PI / 4.0, 0.0);
         await this.meshRenderer.set(Type.DINO);
     }
 }

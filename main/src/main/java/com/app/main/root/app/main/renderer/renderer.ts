@@ -32,6 +32,11 @@ export class Renderer {
                     binding: 0,
                     visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                     buffer: { type: 'uniform' as const }
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.VERTEX,
+                    buffer: { type: 'uniform' as const }
                 }
             ]
         });

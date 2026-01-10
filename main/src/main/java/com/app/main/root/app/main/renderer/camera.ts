@@ -183,9 +183,11 @@ export class Camera {
     }
 
     public update(deltaTime: number): void {
+        /*
         this.yaw += this.rotationSpeed * deltaTime;
         this.position[0] = this.target[0] + this.radius * Math.sin(this.yaw);
         this.position[2] = this.target[2] + this.radius * Math.cos(this.yaw);
+        */
         this.updateUniform();
     }
 
