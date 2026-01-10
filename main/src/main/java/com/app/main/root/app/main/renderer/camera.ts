@@ -4,7 +4,7 @@ export class Camera {
     private device: GPUDevice; 
     private pipelines: Map<string, GPURenderPipeline>;
 
-    private position: [number, number, number] = [25.0, 200.0, 100.0];
+    private position: [number, number, number] = [0.0, 0.0, 10.0];
     private target: [number, number, number] = [0.0, 0.0, 0.0];
     private up: [number, number, number] = [0.0, 1.0, 0.0];
     private fov: number = 90 * (Math.PI / 180);

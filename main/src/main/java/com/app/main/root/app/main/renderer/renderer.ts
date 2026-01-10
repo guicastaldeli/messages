@@ -102,7 +102,7 @@ export class Renderer {
 
             if(this.camera) this.camera.update(deltaTime);
             await this.render();
-            await this.scene.update();
+            await this.scene.update(deltaTime);
 
             requestAnimationFrame(update);
         }
