@@ -12,6 +12,15 @@ export class MeshLoader {
     public static getLoadedMeshes(): string[] {
         return Array.from(this.loadedMeshes.keys());
     }
+
+    private static async checkFileExists(url: string): Promise<boolean> {
+        try {
+            const res = await fetch(url, { method: 'HEAD' });
+            return res.ok;
+        } catch {
+            return false;
+        }
+    }
     
     /**
      * 
@@ -24,8 +33,12 @@ export class MeshLoader {
             console.log(`Loading ${meshTypes.length} mesh types:`, meshTypes);
 
             const loadPromises = meshTypes.map(async (t) => {
-                const loaded = await this.loadMesh(t);
-                if(loaded) return loaded;
+                const url = `${MeshLoader.URL}${t}.json`;
+                const meshExists = await this.checkFileExists(url);
+                if(meshExists) {
+                    const loaded = await this.loadMesh(t);
+                    if(loaded) return loaded;
+                }
                 return await this.loadObj(t);
             });
 

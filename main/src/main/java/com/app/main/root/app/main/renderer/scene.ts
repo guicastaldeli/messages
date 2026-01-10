@@ -38,6 +38,6 @@ export class Scene {
         this.camera.setTarget(0, 0, 0);
 
         await this.meshRenderer.init();
-        await this.meshRenderer.set(Type.TREE);
+        await this.meshRenderer.set(Type.DINO);
     }
 }
