@@ -1,3 +1,4 @@
+import { Tick } from "./tick";
 import { Vector3Math } from "./utils/vector3math";
 
 export class Camera {
@@ -139,6 +140,18 @@ export class Camera {
         return this.bindGroup;
     }
 
+    public getPosition(): {
+        x: number,
+        y: number,
+        z: number
+    } {
+        return {
+            x: this.position[0],
+            y: this.position[1],
+            z: this.position[2]
+        }
+    }
+
     /**
      * Create Uniform Buffer
      */
@@ -182,9 +195,9 @@ export class Camera {
         );
     }
 
-    public update(deltaTime: number): void {
+    public update(): void {
         /*
-        this.yaw += this.rotationSpeed * deltaTime;
+        this.yaw += this.rotationSpeed * Tick.getDeltaTime();
         this.position[0] = this.target[0] + this.radius * Math.sin(this.yaw);
         this.position[2] = this.target[2] + this.radius * Math.cos(this.yaw);
         */

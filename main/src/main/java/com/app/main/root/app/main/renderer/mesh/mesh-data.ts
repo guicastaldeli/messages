@@ -57,6 +57,8 @@ export class MeshData {
     public primitiveType: PrimitiveType;
     public vertexBufferLayout: GPUVertexBufferLayout;
 
+    public enableFollowRotation: boolean = false;
+
     constructor(
         name: string,
         vertices: number[][],

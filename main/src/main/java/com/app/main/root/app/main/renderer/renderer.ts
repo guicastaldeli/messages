@@ -99,7 +99,7 @@ export class Renderer {
             const currentFps = 1.0 / deltaTime;
             //console.log(`FPS: ${currentFps.toFixed(1)}`);
 
-            if(this.camera) this.camera.update(deltaTime);
+            if(this.camera) this.camera.update();
             await this.render();
 
             await this.scene.update();
