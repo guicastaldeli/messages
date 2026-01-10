@@ -10,7 +10,7 @@ export class ShaderConfig {
 
     private constructor() {
         const vertexBufferLayouts: GPUVertexBufferLayout[] = [{
-            arrayStride: 6 * 4,
+            arrayStride: 8 * 4,
             attributes: [
                 {
                     format: 'float32x3' as const,
@@ -21,6 +21,11 @@ export class ShaderConfig {
                     format: 'float32x3' as const,
                     offset: 3 * 4,
                     shaderLocation: 1
+                },
+                {
+                    format: 'float32x2' as const,
+                    offset: 6 * 4,
+                    shaderLocation: 2
                 }
             ]
         }];
@@ -33,7 +38,7 @@ export class ShaderConfig {
         
         const primitiveState: GPUPrimitiveState = {
             topology: 'triangle-list',
-            cullMode: 'none',
+            cullMode: 'back',
             frontFace: 'ccw'
         };
 

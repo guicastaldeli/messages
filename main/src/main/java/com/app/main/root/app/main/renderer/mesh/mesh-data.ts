@@ -8,14 +8,24 @@ export enum PrimitiveType {
 export enum Type {
     CUBE = 'cube',
     SPHERE = 'sphere',
-    PYRAMID = 'pyramid'
+    PYRAMID = 'pyramid',
+    TREE = 'tree0'
 }
+
+type AttrType = 
+    'float32' | 
+    'uint32' | 
+    'sint32' | 
+    'uint16' | 
+    'sint16' | 
+    'uint8' | 
+    'sint8';
 
 export interface VertexAttribute {
     name: string;
     components: number;
     offset: number;
-    type: 'float32' | 'uint32' | 'sint32' | 'uint16' | 'sint16' | 'uint8' | 'sint8';
+    type: AttrType;
 }
 
 export interface VertexLayout {
@@ -30,6 +40,10 @@ export interface Mesh {
     indices: number[];
     vertexLayout: VertexLayout;
     primitiveType: PrimitiveType;
+}
+
+export interface ModelData {
+    name: string;
 }
 
 export class MeshData {
