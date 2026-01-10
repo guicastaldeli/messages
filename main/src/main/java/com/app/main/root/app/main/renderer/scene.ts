@@ -35,6 +35,8 @@ export class Scene {
      * Init
      */
     public async init(): Promise<void> {
+        this.camera.setTarget(0, 0, 0);
+
         await this.meshRenderer.init();
         await this.meshRenderer.set(Type.CUBE);
     }

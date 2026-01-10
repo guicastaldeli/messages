@@ -50,7 +50,7 @@ export class Vector3Math {
             for(let j = 0; j < 4; j++) {
                 res[i * 4 + j] = 0;
                 for(let k = 0; k < 4; k++) {
-                    res[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
+                    res[j * 4 + i] += a[k * 4 + i] * b[j * 4 + k];
                 }
             }
         }

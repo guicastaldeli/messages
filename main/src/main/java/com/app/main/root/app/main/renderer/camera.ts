@@ -4,7 +4,7 @@ export class Camera {
     private device: GPUDevice; 
     private pipelines: Map<string, GPURenderPipeline>;
 
-    private position: [number, number, number] = [0.0, 0.0, 5.0];
+    private position: [number, number, number] = [0.0, 2.0, 95.0];
     private target: [number, number, number] = [0.0, 0.0, 0.0];
     private up: [number, number, number] = [0.0, 1.0, 0.0];
     private fov: number = 60 * (Math.PI / 180);
@@ -36,7 +36,7 @@ export class Camera {
             this.target[2] - this.position[2]
         ]);
 
-        const right = Vector3Math.normalize(Vector3Math.cross([0.0, 1.0, 0.0], forward));
+        const right = Vector3Math.normalize(Vector3Math.cross(this.up, forward));
         const up = Vector3Math.normalize(Vector3Math.cross(forward, right));
 
         viewMatrix[0] = right[0];
