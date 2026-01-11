@@ -70,6 +70,22 @@ export class Renderer {
             ShaderConfig.get().primitiveState
         );
         this.pipelines.set('main', mainPipeline);
+
+        const starsState: GPUPrimitiveState = {
+            topology: 'point-list',
+            cullMode: 'none',
+            frontFace: 'ccw'
+        }
+
+        const starsPipeline = this.shaderLoader.createRenderPipeline(
+            'SKYBOX',
+            mainLayout,
+            ShaderConfig.get().vertexBufferLayouts,
+            [navigator.gpu.getPreferredCanvasFormat()],
+            ShaderConfig.get().depthStencil,
+            starsState
+        );
+        this.pipelines.set('stars', starsPipeline);
     }
 
     /**
@@ -143,6 +159,7 @@ export class Renderer {
         });
 
         await this.shaderLoader.loadProgram('MAIN');
+        await this.shaderLoader.loadProgram('SKYBOX');
         await this.createPipeline();
 
         this.camera = new Camera(this.device!, this.pipelines);
@@ -194,7 +211,7 @@ export class Renderer {
 
         const mainPipeline = this.pipelines.get('main');
         if(mainPipeline && this.scene) {
-            this.scene.render(renderPass, mainPipeline);
+            this.scene.render(renderPass, this.pipelines);
         }
 
         renderPass.end();

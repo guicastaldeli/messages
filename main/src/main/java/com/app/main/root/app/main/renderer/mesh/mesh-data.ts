@@ -10,7 +10,9 @@ export enum Type {
     SPHERE = 'sphere',
     PYRAMID = 'pyramid',
     TREE = 'tree0',
-    DINO = 'dino'
+    DINO = 'dino',
+    SKYBOX = 'skybox',
+    STARS = 'stars'
 }
 
 type AttrType = 

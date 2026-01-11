@@ -175,9 +175,14 @@ export class MeshRenderer {
 
         renderPass.setPipeline(pipeline);
         renderPass.setVertexBuffer(0, this.vertexBuffer);
-        renderPass.setIndexBuffer(this.indexBuffer, this.indexFormat);
-        renderPass.setBindGroup(0, this.bindGroup);
-        renderPass.drawIndexed(this.meshData.getIndexCount());
+
+        if(this.meshData.primitiveType === PrimitiveType.POINT_LIST) {
+            renderPass.draw(this.meshData.getIndexCount());
+        } else {
+            renderPass.setIndexBuffer(this.indexBuffer, this.indexFormat);
+            renderPass.setBindGroup(0, this.bindGroup);
+            renderPass.drawIndexed(this.meshData.getIndexCount());
+        }
     }
 
     /**

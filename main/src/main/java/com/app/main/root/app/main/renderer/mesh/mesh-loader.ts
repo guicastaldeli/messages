@@ -1,3 +1,4 @@
+import { Stars } from "@/public/data/mesh/stars";
 import { Mesh, PrimitiveType, MeshData, Type } from "./mesh-data";
 import { ModelLoader } from "./model-loader";
 
@@ -33,6 +34,10 @@ export class MeshLoader {
             console.log(`Loading ${meshTypes.length} mesh types:`, meshTypes);
 
             const loadPromises = meshTypes.map(async (t) => {
+                if(t === Type.STARS) {
+                    return await this.loadStars(t);
+                }
+
                 const url = `${MeshLoader.URL}${t}.json`;
                 const meshExists = await this.checkFileExists(url);
                 if(meshExists) {
@@ -52,6 +57,12 @@ export class MeshLoader {
 
     private static async loadMesh(t: Type): Promise<MeshData | null> {
         try {
+            if(t === Type.STARS) {
+                const starsData = Stars.generate();
+                this.loadedMeshes.set(t, starsData);
+                return starsData;
+            }
+
             const type = t.toLowerCase();
             const url = `${MeshLoader.URL}${type}.json`;
             const res = await fetch(url);
@@ -95,6 +106,26 @@ export class MeshLoader {
         } catch(err) {
             console.error(`Failed to load ${t}:`, err);
             throw new Error(`Could not load model for type: ${t}`);
+        }
+    }
+
+    private static async loadStars(t: Type): Promise<MeshData> {
+        try {
+            let meshData: MeshData;
+            switch(t) {
+                case Type.STARS:
+                    meshData = Stars.generate();
+                    break;
+                default:
+                    throw new Error(`No generator for type: ${t}`);
+            }
+            
+            this.loadedMeshes.set(t, meshData);
+            console.log(`Generated procedural mesh: ${t}`);
+            return meshData;
+        } catch(err) {
+            console.error(`Failed to generate stars mesh ${t}:`, err);
+            throw err;
         }
     }
 }

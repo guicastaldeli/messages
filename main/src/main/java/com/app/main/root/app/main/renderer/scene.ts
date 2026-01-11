@@ -1,5 +1,5 @@
 import { MeshRenderer } from "./mesh/mesh-renderer";
-import { Type } from "./mesh/mesh-data";
+import { PrimitiveType, Type } from "./mesh/mesh-data";
 import { Camera } from "./camera";
 import { MeshLoader } from "./mesh/mesh-loader";
 import { Tick } from "./tick";
@@ -176,10 +176,21 @@ export class Scene {
     /**
      * Render
      */
-    public async render(renderPass: GPURenderPassEncoder, pipeline: GPURenderPipeline): Promise<void> {
+    public async render(renderPass: GPURenderPassEncoder, pipelines: Map<string, GPURenderPipeline>): Promise<void> {
         const meshes = this.getElementsByType<MeshRenderer>('mesh');
         for(const renderer of meshes) {
-            renderer.render(renderPass, pipeline);
+            const meshData = renderer.getMeshData();
+
+            let pipeline: GPURenderPipeline | undefined;
+            if(meshData.primitiveType === PrimitiveType.POINT_LIST) {
+                pipeline = pipelines.get('stars');
+            } else {
+                pipeline = pipelines.get('main');
+            }
+
+            if(pipeline) {
+                renderer.render(renderPass, pipeline);
+            }
         }
     }
 

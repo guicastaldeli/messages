@@ -135,11 +135,7 @@ export class DocParser {
                 continue;
             }
             
-            console.log(`Parsing element: ${elementType}`);
-            console.log('Element attributes:', Array.from(child.attributes).map(attr => `${attr.name}="${attr.value}"`));
-            
             const schema = this.sceneSchema[elementType] || this.defaultSchema[elementType];
-            
             if(!schema) {
                 console.warn(`Unknown element type: ${elementType}`);
                 continue;
@@ -153,8 +149,6 @@ export class DocParser {
 
             this.parseProperties(child, schema, parsedElement.properties);
             parsedElement.children = this.parseElement(child);
-            
-            console.log(`Parsed element ${elementType}:`, parsedElement.properties);
             result.push(parsedElement);
         }
 
