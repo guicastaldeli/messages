@@ -32,10 +32,10 @@ export class Scene {
      * Update
      */
     public async update(): Promise<void> {
-        //if(this.raycaster) this.raycaster.getRotationBox().update(this.meshRenderers);
+        if(this.raycaster) this.raycaster.getRotationBox().update(this.meshRenderers);
 
-        this.meshRenderers[0].transform.rotate(0.0, Tick.getDeltaTime() / 2.0, 0.0);
-        this.meshRenderers[1].transform.rotate(0.0, Tick.getDeltaTime(), 0.0);
+        //this.meshRenderers[0].transform.rotate(0.0, Tick.getDeltaTime() / 2.0, 0.0);
+        //this.meshRenderers[1].transform.rotate(0.0, Tick.getDeltaTime(), 0.0);
         //this.meshRenderers[2].transform.rotate(0.0, Tick.getDeltaTime(), 0.0);
     }
 

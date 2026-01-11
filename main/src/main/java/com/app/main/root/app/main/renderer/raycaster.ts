@@ -22,9 +22,9 @@ export class Raycaster {
         this.rotationBox = new RotationBox(
             this,
             {
-                x: this.camera.getPosition().x + 50.0,
+                x: this.camera.getPosition().x + 70.0,
                 y: this.camera.getPosition().y + 50.0,
-                width: 350,
+                width: 550,
                 height: 350
             }
         )
