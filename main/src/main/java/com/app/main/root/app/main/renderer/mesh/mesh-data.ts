@@ -60,6 +60,8 @@ export class MeshData {
     public vertexBufferLayout: GPUVertexBufferLayout;
 
     public enableFollowRotation: boolean = false;
+    public autoRotate: boolean = false;
+    public rotationSpeed: number = 1.0;
 
     constructor(
         name: string,
@@ -171,5 +173,19 @@ export class MeshData {
      */
     public setFollowRotation(enabled: boolean): void {
         this.enableFollowRotation = enabled;
+    }
+
+    /**
+     * Set Auto Rotate
+     */
+    public setAutoRotate(enabled: boolean): void {
+        this.autoRotate = enabled;
+    }
+
+    /**
+     * Set Rotation Speed
+     */
+    public setRotationSpeed(speed: number): void {
+        this.rotationSpeed = speed;
     }
 }
