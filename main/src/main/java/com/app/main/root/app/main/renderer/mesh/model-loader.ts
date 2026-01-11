@@ -220,12 +220,12 @@ export class ModelLoader {
 
         const vertexData: number[] = [];
 
+
         if(indices.v >= 0 && indices.v < vertices.length) {
             vertexData.push(...vertices[indices.v]);
         } else {
             vertexData.push(0, 0, 0);
         }
-
         if(indices.vn >= 0 && indices.vn < normals.length) {
             vertexData.push(...normals[indices.vn]);
         } else if(faceNormal) {
@@ -233,12 +233,12 @@ export class ModelLoader {
         } else {
             vertexData.push(0, 1, 0);
         }
-
         if(indices.vt >= 0 && indices.vt < texCoords.length) {
             vertexData.push(texCoords[indices.vt][0], texCoords[indices.vt][1]);
         } else {
             vertexData.push(0, 0);
         }
+        vertexData.push(1.0, 1.0, 1.0);
         
         const newIndex = mesh.vertices.length;
         mesh.vertices.push(vertexData);
@@ -259,7 +259,7 @@ export class ModelLoader {
         modelType: string
     ): MeshData {
         const vertexLayout: VertexLayout = {
-            stride: 8,
+            stride: 11,
             attributes: [
                 {
                     name: 'position',
@@ -279,6 +279,12 @@ export class ModelLoader {
                     offset: 6,
                     type: 'float32'
                 },
+                {
+                    name: 'color',
+                    components: 3,
+                    offset: 8,
+                    type: 'float32'
+                }
             ]
         };
 

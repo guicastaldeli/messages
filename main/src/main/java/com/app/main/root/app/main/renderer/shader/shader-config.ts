@@ -2,6 +2,7 @@ interface Type {
     vertexBufferLayouts: GPUVertexBufferLayout[];
     depthStencil: GPUDepthStencilState;
     primitiveState: GPUPrimitiveState;
+    bindGroupLayout: GPUBindGroupLayoutDescriptor;
 }
 
 export class ShaderConfig {
@@ -10,7 +11,7 @@ export class ShaderConfig {
 
     private constructor() {
         const vertexBufferLayouts: GPUVertexBufferLayout[] = [{
-            arrayStride: 8 * 4,
+            arrayStride: 11 * 4,
             attributes: [
                 {
                     format: 'float32x3' as const,
@@ -26,6 +27,11 @@ export class ShaderConfig {
                     format: 'float32x2' as const,
                     offset: 6 * 4,
                     shaderLocation: 2
+                },
+                {
+                    format: 'float32x3' as const,
+                    offset: 8 * 4,
+                    shaderLocation: 3
                 }
             ]
         }];
@@ -38,14 +44,45 @@ export class ShaderConfig {
         
         const primitiveState: GPUPrimitiveState = {
             topology: 'triangle-list',
-            cullMode: 'back',
+            cullMode: 'none',
             frontFace: 'ccw'
+        };
+
+        const bindGroupLayout: GPUBindGroupLayoutDescriptor = {
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                    buffer: { type: 'uniform' as const }
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.VERTEX,
+                    buffer: { type: 'uniform' as const }
+                },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    buffer: { type: 'uniform' as const }
+                },
+                {
+                    binding: 3,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: { sampleType: 'float' as const }
+                },
+                {
+                    binding: 4,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    sampler: { type: 'filtering' as const }
+                }
+            ]
         };
 
         this.data = {
             vertexBufferLayouts,
             depthStencil,
-            primitiveState
+            primitiveState,
+            bindGroupLayout
         }
     }
 

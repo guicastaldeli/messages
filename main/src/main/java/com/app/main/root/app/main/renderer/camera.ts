@@ -159,7 +159,7 @@ export class Camera {
         if(!this.device) return;
 
         this.uniformBuffer = this.device.createBuffer({
-            size: 64,
+            size: 80,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 

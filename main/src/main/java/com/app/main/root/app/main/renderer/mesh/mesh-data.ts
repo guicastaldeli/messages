@@ -37,6 +37,7 @@ export interface VertexLayout {
 export interface Mesh {
     name: string;
     type: string;
+    texture?: string;
     vertices: number[][];
     indices: number[];
     vertexLayout: VertexLayout;
@@ -51,6 +52,7 @@ export class MeshData {
     private static meshes: Map<string, MeshData> = new Map();
 
     public name: string;
+    public texture?: string;
     public vertices: Float32Array;
     public indices: Uint32Array | Uint16Array;
     public vertexLayout: VertexLayout;
@@ -64,9 +66,11 @@ export class MeshData {
         vertices: number[][],
         indices: number[],
         vertexLayout: VertexLayout,
-        primitiveType: PrimitiveType = PrimitiveType.TRIANGLE_LIST
+        primitiveType: PrimitiveType = PrimitiveType.TRIANGLE_LIST,
+        texture?: string
     ) {
         this.name = name;
+        this.texture = texture;
         this.vertexLayout = vertexLayout;
         this.primitiveType = primitiveType;
 

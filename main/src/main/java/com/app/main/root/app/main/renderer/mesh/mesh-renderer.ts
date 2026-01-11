@@ -1,3 +1,4 @@
+import { TextureData, TextureLoader } from "../resource/texture-loader";
 import { Transform } from "../utils/transform";
 import { MeshData, PrimitiveType, Type } from "./mesh-data";
 import { MeshLoader } from "./mesh-loader";
@@ -9,20 +10,29 @@ export class MeshRenderer {
 
     private uniformBuffer: GPUBuffer;
     private modelBuffer: GPUBuffer | null = null;
+    private materialBuffer: GPUBuffer | null = null;
     private vertexBuffer: GPUBuffer | null = null;
     private indexBuffer: GPUBuffer | null = null;
     private bindGroup: GPUBindGroup | null = null;
     private indexFormat: GPUIndexFormat = 'uint32';
 
     private meshData!: MeshData;
+    private textureData!: TextureData;
     private meshRenderers: Map<string, MeshRenderer> = new Map();
+    private textureLoader: TextureLoader;
+    private useTexture: boolean = false;
     
     constructor(device: GPUDevice, uniformBuffer: GPUBuffer) {
         this.device = device;
         this.uniformBuffer = uniformBuffer;
         this.transform = new Transform();
+        this.textureLoader = TextureLoader.getInstance();
+        this.textureLoader.setDevice(device);
     }
 
+    /**
+     * Bind Group
+     */
     private getBindGroupLayout(): GPUBindGroupLayout {
         return this.device.createBindGroupLayout({
             entries: [
@@ -35,6 +45,51 @@ export class MeshRenderer {
                     binding: 1,
                     visibility: GPUShaderStage.VERTEX,
                     buffer: { type: 'uniform' }
+                },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    buffer: { type: 'uniform' }
+                },
+                {
+                    binding: 3,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: { sampleType: 'float' }
+                },
+                {
+                    binding: 4,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    sampler: { type: 'filtering' }
+                }
+            ]
+        });
+    }
+
+    private async updateBindGroup(): Promise<void> {
+        if(!this.modelBuffer || !this.materialBuffer) return;
+        
+        this.bindGroup = this.device.createBindGroup({
+            layout: this.getBindGroupLayout(),
+            entries: [
+                {
+                    binding: 0,
+                    resource: { buffer: this.uniformBuffer }
+                },
+                {
+                    binding: 1,
+                    resource: { buffer: this.modelBuffer }
+                },
+                {
+                    binding: 2,
+                    resource: { buffer: this.materialBuffer }
+                },
+                {
+                    binding: 3,
+                    resource: this.textureData?.view || this.textureLoader.createDefaultTextureView()
+                },
+                {
+                    binding: 4,
+                    resource: this.textureData?.sampler || this.textureLoader.createSampler()
                 }
             ]
         });
@@ -53,7 +108,7 @@ export class MeshRenderer {
     /**
      * Setup
      */
-    public async setup(uniformBuffer: GPUBuffer): Promise<void> {
+    public async setup(): Promise<void> {
         this.vertexBuffer = this.device.createBuffer({
             size: this.meshData.getVertexBufferSize(),
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -81,30 +136,33 @@ export class MeshRenderer {
             size: 64,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
-
-        this.bindGroup = this.device.createBindGroup({
-            layout: this.getBindGroupLayout(),
-            entries: [
-                {
-                    binding: 0,
-                    resource: { buffer: uniformBuffer }
-                },
-                {
-                    binding: 1,
-                    resource: { buffer: this.modelBuffer }
-                }
-            ]
+        this.materialBuffer = this.device.createBuffer({
+            size: 32,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
+        const materialData = new Float32Array([
+            this.useTexture ? 1.0 : 0.0,
+            2.0, 0.0, 0.0
+        ]);
+
+        this.device.queue.writeBuffer(this.materialBuffer, 0, materialData.buffer);
+        await this.updateBindGroup();
     }
 
-    public async set(type: Type): Promise<void> {
+    public async set(type: Type, texUrl?: string): Promise<void> {
         const meshData = MeshLoader.getMesh(type);
         if(!meshData) {
             console.warn(`Mesh type ${type} not found`);
             return;
         }
         this.meshData = meshData;
-        await this.setup(this.uniformBuffer);
+        if(texUrl) {
+            this.textureData = await this.textureLoader.load(texUrl);
+            this.useTexture = true;
+        } else {
+            this.useTexture = false;
+        }
+        await this.setup();
     }
 
     /**

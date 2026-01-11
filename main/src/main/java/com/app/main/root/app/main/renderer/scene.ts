@@ -36,6 +36,7 @@ export class Scene {
 
         this.meshRenderers[0].transform.rotate(0.0, Tick.getDeltaTime() / 2.0, 0.0);
         this.meshRenderers[1].transform.rotate(0.0, Tick.getDeltaTime(), 0.0);
+        //this.meshRenderers[2].transform.rotate(0.0, Tick.getDeltaTime(), 0.0);
     }
 
     /**
@@ -57,8 +58,8 @@ export class Scene {
 
         const dino = new MeshRenderer(this.device, this.camera.getUniformBuffer());
         dino.transform.setPosition(0.0, -2.0, -100.0);
-        await dino.set(Type.DINO);
-
+        await dino.set(Type.DINO, 'rd.png');
+        
         const dinoMeshData = dino.getMeshData();
         if(dinoMeshData) dinoMeshData.setFollowRotation(true);
         this.meshRenderers.push(dino);

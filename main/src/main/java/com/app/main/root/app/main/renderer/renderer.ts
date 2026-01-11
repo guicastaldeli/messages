@@ -41,6 +41,21 @@ export class Renderer {
                     binding: 1,
                     visibility: GPUShaderStage.VERTEX,
                     buffer: { type: 'uniform' as const }
+                },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    buffer: { type: 'uniform' as const }
+                },
+                {
+                    binding: 3,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: { sampleType: 'float' as const }
+                },
+                {
+                    binding: 4,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    sampler: { type: 'filtering' as const }
                 }
             ]
         });
