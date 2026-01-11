@@ -1,5 +1,5 @@
 export class AmbientLight {
-    private color: [number, number, number] = [1.0, 1.0, 1.0];
+    private color: [number, number, number] = [0.0, 0.0, 0.0];
     private intensity: number = 0.1;
 
     public getData(): Float32Array {

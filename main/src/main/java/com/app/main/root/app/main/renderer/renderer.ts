@@ -1,8 +1,9 @@
-import { ShaderLoader } from "./shader/shader-loader";
-import { ShaderConfig } from "./shader/shader-config";
 import { Camera } from "./camera";
 import { Scene } from "./scene";
 import { Tick } from "./tick";
+import { ShaderLoader } from "./shader/shader-loader";
+import { ShaderConfig } from "./shader/shader-config";
+import { LightningController } from "./lightning/lightning-controller";
 
 export class Renderer {
     private canvas: HTMLCanvasElement | null = null;
@@ -14,6 +15,7 @@ export class Renderer {
     private camera: Camera | null = null;
     private shaderLoader: ShaderLoader;
     private scene!: Scene;
+    private lightningController: LightningController | null = null;
 
     private isRunning: boolean = false;
     private lastTime: number = 0;
@@ -29,6 +31,8 @@ export class Renderer {
      */
     private async createPipeline(): Promise<void> {
         if(!this.device || !this.ctx) return;
+
+        this.lightningController = new LightningController(this.device);
 
         const bindGroupLayout = this.device.createBindGroupLayout({
             entries: [
@@ -60,10 +64,31 @@ export class Renderer {
             ]
         });
 
-        const mainLayout = this.shaderLoader.createPipelineLayout([bindGroupLayout]);
+        const bindGroupLayouts = [bindGroupLayout];
+
+        /* Lightning */
+        const lightningBindGroupLayout = this.lightningController.getBindGroupLayout();
+        if(lightningBindGroupLayout) {
+            bindGroupLayouts.push(lightningBindGroupLayout);
+        }
+
+        const layout = this.shaderLoader.createPipelineLayout(bindGroupLayouts);
+
+        await this.shaderLoader.loadProgram('LIGHTNING');
+        const lightningPipeline = this.shaderLoader.createRenderPipeline(
+            'LIGHTNING',
+            layout,
+            ShaderConfig.get().vertexBufferLayouts,
+            [navigator.gpu.getPreferredCanvasFormat()],
+            ShaderConfig.get().depthStencil,
+            ShaderConfig.get().primitiveState
+        );
+        this.pipelines.set('lightning', lightningPipeline);
+
+        /* Main */
         const mainPipeline = this.shaderLoader.createRenderPipeline(
             'MAIN',
-            mainLayout,
+            layout,
             ShaderConfig.get().vertexBufferLayouts,
             [navigator.gpu.getPreferredCanvasFormat()],
             ShaderConfig.get().depthStencil,
@@ -71,6 +96,7 @@ export class Renderer {
         );
         this.pipelines.set('main', mainPipeline);
 
+        /* Stars */
         const starsState: GPUPrimitiveState = {
             topology: 'triangle-list',
             cullMode: 'none',
@@ -96,7 +122,7 @@ export class Renderer {
         await this.shaderLoader.loadProgram('SKYBOX');
         const starsPipeline = this.shaderLoader.createRenderPipeline(
             'SKYBOX',
-            mainLayout,
+            layout,
             ShaderConfig.get().vertexBufferLayouts,
             [navigator.gpu.getPreferredCanvasFormat()],
             starsDepthStencil,
@@ -231,10 +257,18 @@ export class Renderer {
             }
         });
 
-        const mainPipeline = this.pipelines.get('main');
-        if(mainPipeline && this.scene) {
-            this.scene.render(renderPass, this.pipelines);
+        if(this.lightningController && this.lightningController.getBindGroup()) {
+            renderPass.setBindGroup(1, this.lightningController.getBindGroup());
+            const mainPipeline = this.pipelines.get('lightning');
+            if(mainPipeline && this.scene) {
+                this.scene.render(
+                    renderPass, 
+                    this.pipelines,
+                    this.lightningController.getBindGroup()!
+                );
+            }
         }
+
 
         renderPass.end();
         this.device.queue.submit([commandEncoder.finish()]);

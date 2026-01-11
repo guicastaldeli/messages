@@ -42,13 +42,13 @@ fn calculateDirectionalLight(
     light: DirectionalLight, 
     normal: vec3<f32>, 
     viewDir: vec3<f32>
-) -> f32 {
+) -> vec3<f32> {
     let lightDir = normalize(-light.direction);
     let diff = max(dot(normal, lightDir), 0.0);
     let diffuse = diff * light.color * light.intensity;
 
     let halfwayDir = normalize(lightDir + viewDir);
-    let spec pow(max(dot(normal, halfwayDir), 0.0), material.specularPower);
+    let spec = pow(max(dot(normal, halfwayDir), 0.0), material.specularPower);
     let specular = spec * light.color * material.specularIntensity;
 
     return diffuse + specular;
@@ -56,7 +56,7 @@ fn calculateDirectionalLight(
 
 @fragment
 fn main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let normal = normalze(input.worldNormal);
+    let normal = normalize(input.worldNormal);
     let viewDir = normalize(-input.worldPos);
 
     var baseColor: vec3<f32>;
@@ -83,5 +83,5 @@ fn main(input: VertexOutput) -> @location(0) vec4<f32> {
 
     let finalColor = baseColor * (ambient + directional);
     return vec4<f32>(finalColor, 1.0);
-    
+
 }

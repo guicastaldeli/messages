@@ -36,9 +36,9 @@
     <mesh 
         type="pyramid" 
         position-x="2" position-y="0" position-z="-1"
-        rotation-x="0" rotation-y="0" rotation-z="0"
+        rotation-x="0" rotation-y="20" rotation-z="0"
         scale-x="1.5" scale-y="1.5" scale-z="1.5"
-        followRotation="true"
+        followRotation="false"
         autoRotate="false"
         rotationSpeed="0.3"
     />

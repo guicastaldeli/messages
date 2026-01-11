@@ -142,7 +142,9 @@ export class MeshRenderer {
         });
         const materialData = new Float32Array([
             this.useTexture ? 1.0 : 0.0,
-            2.0, 0.0, 0.0
+            32.0, 
+            0.5, 
+            0.0
         ]);
 
         this.device.queue.writeBuffer(this.materialBuffer, 0, materialData.buffer);
@@ -168,7 +170,11 @@ export class MeshRenderer {
     /**
      * Render
      */
-    public render(renderPass: GPURenderPassEncoder, pipeline: GPURenderPipeline): void {
+    public render(
+        renderPass: GPURenderPassEncoder, 
+        pipeline: GPURenderPipeline,
+        lightningBindGroup: GPUBindGroup
+    ): void {
         if(!this.vertexBuffer || !this.indexBuffer) throw new Error('Mesh renderer not init!');
         
         this.updateModelMatrix();
@@ -176,6 +182,10 @@ export class MeshRenderer {
         renderPass.setPipeline(pipeline);
         renderPass.setVertexBuffer(0, this.vertexBuffer);
         renderPass.setBindGroup(0, this.bindGroup);
+
+        if(lightningBindGroup) {
+            renderPass.setBindGroup(1, lightningBindGroup);
+        }
 
         renderPass.setIndexBuffer(this.indexBuffer, this.indexFormat);
         renderPass.drawIndexed(this.meshData.getIndexCount());
