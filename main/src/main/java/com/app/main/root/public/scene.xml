@@ -29,8 +29,8 @@
         rotation-x="0" rotation-y="0" rotation-z="0"
         scale-x="1" scale-y="1" scale-z="1"
         texture="rd.png" 
-        followRotation="false"
-        autoRotate="true"
+        followRotation="true"
+        autoRotate="false"
         rotationSpeed="1.0"
     />
     <mesh 
@@ -38,8 +38,8 @@
         position-x="2" position-y="0" position-z="-1"
         rotation-x="0" rotation-y="0" rotation-z="0"
         scale-x="1.5" scale-y="1.5" scale-z="1.5"
-        followRotation="false"
-        autoRotate="true"
+        followRotation="true"
+        autoRotate="false"
         rotationSpeed="0.3"
     />
     <mesh 
@@ -49,6 +49,6 @@
         scale-x="1.5" scale-y="1.5" scale-z="1.5"
         followRotation="false"
         autoRotate="true"
-        rotationSpeed="2.0"
+        rotationSpeed="1.0"
     />
 </scene>
