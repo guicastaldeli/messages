@@ -4,11 +4,12 @@ import { Vector3Math } from "./utils/vector3math";
 export class Camera {
     private device: GPUDevice; 
     private pipelines: Map<string, GPURenderPipeline>;
+    private tick: Tick;
 
-    private position: [number, number, number] = [0.0, 0.0, 10.0];
+    private position: [number, number, number] = [0.0, 0.0, 0.0];
     private target: [number, number, number] = [0.0, 0.0, 0.0];
     private up: [number, number, number] = [0.0, 1.0, 0.0];
-    private fov: number = 90 * (Math.PI / 180);
+    private fov: number = 50;
     private aspect: number = 1.0;
     private near: number = 0.1;
     private far: number = 1000;
@@ -21,7 +22,12 @@ export class Camera {
     private uniformBuffer: GPUBuffer | null = null;
     private bindGroup: GPUBindGroup | null = null;
 
-    constructor(device: GPUDevice, pipelines: Map<string, GPURenderPipeline>) {
+    constructor(
+        tick: Tick,
+        device: GPUDevice, 
+        pipelines: Map<string, GPURenderPipeline>
+    ) {
+        this.tick = tick;
         this.device = device;
         this.pipelines = pipelines;
 
@@ -159,7 +165,7 @@ export class Camera {
         if(!this.device) return;
 
         this.uniformBuffer = this.device.createBuffer({
-            size: 80,
+            size: 128,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
@@ -187,11 +193,26 @@ export class Camera {
     private updateUniform(): void {
         if(!this.device || !this.uniformBuffer) return;
 
+        const time = Tick.getDeltaTime() * this.tick.getTickCount();
+
         const viewProjMatrix = this.getViewProjectionMatrix();
+        const cameraData = new Float32Array(24);
+        cameraData.set(viewProjMatrix, 0);
+        
+        cameraData[16] = this.position[0];
+        cameraData[17] = this.position[1];
+        cameraData[18] = this.position[2];
+        cameraData[19] = 0.0;
+        
+        cameraData[20] = time / 2;
+        cameraData[21] = 0.0;
+        cameraData[22] = 0.0;
+        cameraData[23] = 0.0;
+        
         this.device.queue.writeBuffer(
             this.uniformBuffer, 
             0, 
-            viewProjMatrix.buffer
+            cameraData.buffer
         );
     }
 

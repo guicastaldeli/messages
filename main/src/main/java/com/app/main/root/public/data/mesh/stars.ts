@@ -5,26 +5,48 @@ export class Stars {
         const vertices: number[][] = [];
         const indices: number[] = [];
 
-        const radius = 400.0;
-        const count = 1000.0;
+        const minRadius = 30.0;
+        const maxRadius = 200.0;
+        const count = 2000;
 
         for(let i = 0; i < count; i++) {
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
 
+            const radius = minRadius + Math.random() * (maxRadius - minRadius);
             const x = radius * Math.sin(phi) * Math.cos(theta);
             const y = radius * Math.sin(phi) * Math.sin(theta);
             const z = radius * Math.cos(phi);
             const brightness = 0.5 + Math.random() * 0.5;
 
+            const baseIndex = vertices.length;
             vertices.push([
                 x, y, z,
                 0.0, 0.0, 1.0,
                 0.0, 0.0,
                 brightness, brightness, brightness
             ]);
+            vertices.push([
+                x, y, z,
+                0.0, 0.0, 1.0,
+                1.0, 0.0,
+                brightness, brightness, brightness
+            ]);
+            vertices.push([
+                x, y, z,
+                0.0, 0.0, 1.0,
+                1.0, 1.0,
+                brightness, brightness, brightness
+            ]);
+            vertices.push([
+                x, y, z,
+                0.0, 0.0, 1.0,
+                0.0, 1.0,
+                brightness, brightness, brightness
+            ]);
 
-            indices.push(i);
+            indices.push(baseIndex, baseIndex + 1, baseIndex + 2);
+            indices.push(baseIndex, baseIndex + 2, baseIndex + 3);
         }
 
         const vertexLayout: VertexLayout = {
@@ -62,7 +84,7 @@ export class Stars {
             vertices,
             indices,
             vertexLayout,
-            PrimitiveType.POINT_LIST
+            PrimitiveType.TRIANGLE_LIST
         );
     }
 }

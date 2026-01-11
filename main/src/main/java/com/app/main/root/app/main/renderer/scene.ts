@@ -168,7 +168,14 @@ export class Scene {
         for(const mesh of meshes) {
             const meshData = mesh.getMeshData();
             if(meshData && meshData.autoRotate) {
-                mesh.transform.rotate(0.0, Tick.getDeltaTime() * meshData.rotationSpeed, 0.0);
+                const speed = Tick.getDeltaTime() * meshData.rotationSpeed;
+                if(meshData.name === 'stars') {
+                    const angle = Math.sqrt(2) / 2;
+                    const starSpeed = speed * angle;
+                    mesh.transform.rotate(starSpeed, 0.0, starSpeed);
+                } else {
+                    mesh.transform.rotate(0.0, speed, 0.0);
+                }
             }
         }
     }
@@ -178,18 +185,23 @@ export class Scene {
      */
     public async render(renderPass: GPURenderPassEncoder, pipelines: Map<string, GPURenderPipeline>): Promise<void> {
         const meshes = this.getElementsByType<MeshRenderer>('mesh');
+        
         for(const renderer of meshes) {
             const meshData = renderer.getMeshData();
-
-            let pipeline: GPURenderPipeline | undefined;
-            if(meshData.primitiveType === PrimitiveType.POINT_LIST) {
-                pipeline = pipelines.get('stars');
-            } else {
-                pipeline = pipelines.get('main');
+            if(meshData.name !== 'stars') {
+                const pipeline = pipelines.get('main');
+                if(pipeline) {
+                    renderer.render(renderPass, pipeline);
+                }
             }
-
-            if(pipeline) {
-                renderer.render(renderPass, pipeline);
+        }
+        for(const renderer of meshes) {
+            const meshData = renderer.getMeshData();
+            if(meshData.name === 'stars') {
+                const pipeline = pipelines.get('stars');
+                if(pipeline) {
+                    renderer.render(renderPass, pipeline);
+                }
             }
         }
     }

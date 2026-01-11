@@ -72,18 +72,36 @@ export class Renderer {
         this.pipelines.set('main', mainPipeline);
 
         const starsState: GPUPrimitiveState = {
-            topology: 'point-list',
+            topology: 'triangle-list',
             cullMode: 'none',
             frontFace: 'ccw'
         }
-
+        const starsDepthStencil: GPUDepthStencilState = {
+            depthWriteEnabled: false,
+            depthCompare: 'less-equal',
+            format: 'depth24plus-stencil8'
+        }
+        const starsBlend: GPUBlendState = {
+            color: {
+                srcFactor: 'src-alpha',
+                dstFactor: 'one-minus-src-alpha',
+                operation: 'add'
+            },
+            alpha: {
+                srcFactor: 'one',
+                dstFactor: 'one-minus-src-alpha', 
+                operation: 'add'
+            }
+        };
+        await this.shaderLoader.loadProgram('SKYBOX');
         const starsPipeline = this.shaderLoader.createRenderPipeline(
             'SKYBOX',
             mainLayout,
             ShaderConfig.get().vertexBufferLayouts,
             [navigator.gpu.getPreferredCanvasFormat()],
-            ShaderConfig.get().depthStencil,
-            starsState
+            starsDepthStencil,
+            starsState,
+            starsBlend
         );
         this.pipelines.set('stars', starsPipeline);
     }
@@ -162,7 +180,11 @@ export class Renderer {
         await this.shaderLoader.loadProgram('SKYBOX');
         await this.createPipeline();
 
-        this.camera = new Camera(this.device!, this.pipelines);
+        this.camera = new Camera(
+            this.tick, 
+            this.device!, 
+            this.pipelines
+        );
         this.camera.init();
 
         this.scene = new Scene(

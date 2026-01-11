@@ -14,22 +14,22 @@ export class ShaderConfig {
             arrayStride: 11 * 4,
             attributes: [
                 {
-                    format: 'float32x3' as const,
+                    format: 'float32x3',
                     offset: 0,
                     shaderLocation: 0
                 },
                 {
-                    format: 'float32x3' as const,
+                    format: 'float32x3',
                     offset: 3 * 4,
                     shaderLocation: 1
                 },
                 {
-                    format: 'float32x2' as const,
+                    format: 'float32x2',
                     offset: 6 * 4,
                     shaderLocation: 2
                 },
                 {
-                    format: 'float32x3' as const,
+                    format: 'float32x3',
                     offset: 8 * 4,
                     shaderLocation: 3
                 }
@@ -38,8 +38,8 @@ export class ShaderConfig {
 
         const depthStencil: GPUDepthStencilState = {
             depthWriteEnabled: true,
-            depthCompare: 'less' as const,
-            format: 'depth24plus-stencil8' as const
+            depthCompare: 'less',
+            format: 'depth24plus-stencil8'
         }
         
         const primitiveState: GPUPrimitiveState = {
@@ -53,27 +53,27 @@ export class ShaderConfig {
                 {
                     binding: 0,
                     visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                    buffer: { type: 'uniform' as const }
+                    buffer: { type: 'uniform' }
                 },
                 {
                     binding: 1,
                     visibility: GPUShaderStage.VERTEX,
-                    buffer: { type: 'uniform' as const }
+                    buffer: { type: 'uniform' }
                 },
                 {
                     binding: 2,
                     visibility: GPUShaderStage.FRAGMENT,
-                    buffer: { type: 'uniform' as const }
+                    buffer: { type: 'uniform' }
                 },
                 {
                     binding: 3,
                     visibility: GPUShaderStage.FRAGMENT,
-                    texture: { sampleType: 'float' as const }
+                    texture: { sampleType: 'float' }
                 },
                 {
                     binding: 4,
                     visibility: GPUShaderStage.FRAGMENT,
-                    sampler: { type: 'filtering' as const }
+                    sampler: { type: 'filtering' }
                 }
             ]
         };

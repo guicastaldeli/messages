@@ -45,12 +45,6 @@ export class ShaderLoader {
 
         try {
             const fullPath = `${ShaderLoader.PATH}${shaderPath}`;
-            console.log('Shader loading details:');
-        console.log('- Base path:', ShaderLoader.PATH);
-        console.log('- Shader path:', shaderPath);
-        console.log('- Full path:', fullPath);
-        console.log('- Current URL:', window.location.href);
-        console.log('- Absolute URL:', new URL(fullPath, window.location.href).href);
             const res = await fetch(fullPath);
             if(!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
@@ -156,7 +150,8 @@ export class ShaderLoader {
         vertexBuffers: GPUVertexBufferLayout[],
         colorFormats: GPUTextureFormat[],
         depthStencil?: GPUDepthStencilState,
-        primitive?: GPUPrimitiveState
+        primitive?: GPUPrimitiveState,
+        blend?: GPUBlendState
     ): GPURenderPipeline {
         if(!this.device) throw new Error('Device not init');
 
@@ -175,7 +170,10 @@ export class ShaderLoader {
             fragment: {
                 module: shaderPipeline.frag.module,
                 entryPoint: 'main',
-                targets: colorFormats.map(format => ({ format }))
+                targets: colorFormats.map(format => ({ 
+                    format,
+                    blend 
+                }))
             },
             primitive: {
                 topology: 'triangle-list',

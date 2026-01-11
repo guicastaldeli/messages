@@ -1,7 +1,7 @@
 struct Material {
     useTexture: f32,
     padding: vec3<f32>
-};
+}
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
@@ -9,7 +9,7 @@ struct VertexOutput {
     @location(1) worldPos: vec3<f32>,
     @location(2) color: vec3<f32>,
     @location(3) normal: vec3<f32>
-};
+}
 
 @group(0) @binding(2) var<uniform> material: Material;
 @group(0) @binding(3) var baseColorTexture: texture_2d<f32>;

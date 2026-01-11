@@ -9,14 +9,23 @@
         type="skybox" 
         position-x="0" position-y="0" position-z="0"
         rotation-x="0" rotation-y="0" rotation-z="0"
-        scale-x="1" scale-y="1" scale-z="1"
+        scale-x="100" scale-y="100" scale-z="1"
         followRotation="false"
         autoRotate="false"
+    />
+    <mesh 
+        type="stars" 
+        position-x="0" position-y="0" position-z="0"
+        rotation-x="0" rotation-y="0" rotation-z="0"
+        scale-x="1" scale-y="1" scale-z="1"
+        followRotation="false"
+        autoRotate="true"
+        rotationSpeed="0.003"
     />
     
     <mesh 
         type="dino" 
-        position-x="0" position-y="-2" position-z="-100"
+        position-x="0" position-y="-2" position-z="0"
         rotation-x="0" rotation-y="0" rotation-z="0"
         scale-x="1" scale-y="1" scale-z="1"
         texture="rd.png" 
@@ -26,7 +35,7 @@
     />
     <mesh 
         type="pyramid" 
-        position-x="2" position-y="0" position-z="-200"
+        position-x="2" position-y="0" position-z="-1"
         rotation-x="0" rotation-y="0" rotation-z="0"
         scale-x="1.5" scale-y="1.5" scale-z="1.5"
         followRotation="false"
@@ -35,7 +44,7 @@
     />
     <mesh 
         type="cube" 
-        position-x="-2" position-y="0" position-z="-200"
+        position-x="-2" position-y="0" position-z="-1"
         rotation-x="0" rotation-y="0" rotation-z="0"
         scale-x="1.5" scale-y="1.5" scale-z="1.5"
         followRotation="false"
