@@ -46,12 +46,8 @@ fn calculateDirectionalLight(
     let lightDir = normalize(-light.direction);
     let diff = max(dot(normal, lightDir), 0.0);
     let diffuse = diff * light.color * light.intensity;
-
-    let halfwayDir = normalize(lightDir + viewDir);
-    let spec = pow(max(dot(normal, halfwayDir), 0.0), material.specularPower);
-    let specular = spec * light.color * material.specularIntensity;
-
-    return diffuse + specular;
+    
+    return diffuse;
 }
 
 @fragment

@@ -1,6 +1,7 @@
 import { Stars } from "@/public/data/mesh/stars";
 import { Mesh, PrimitiveType, MeshData, Type } from "./mesh-data";
 import { ModelLoader } from "./model-loader";
+import { Sphere } from "@/public/data/mesh/sphere";
 
 export class MeshLoader {
     private static readonly URL = './data/mesh/'; 
@@ -34,8 +35,8 @@ export class MeshLoader {
             console.log(`Loading ${meshTypes.length} mesh types:`, meshTypes);
 
             const loadPromises = meshTypes.map(async (t) => {
-                if(t === Type.STARS) {
-                    return await this.loadStars(t);
+                if(t === Type.STARS || t === Type.SPHERE) {
+                    return await this.loadFile(t);
                 }
 
                 const url = `${MeshLoader.URL}${t}.json`;
@@ -58,9 +59,14 @@ export class MeshLoader {
     private static async loadMesh(t: Type): Promise<MeshData | null> {
         try {
             if(t === Type.STARS) {
-                const starsData = Stars.generate();
-                this.loadedMeshes.set(t, starsData);
-                return starsData;
+                const data = Stars.generate();
+                this.loadedMeshes.set(t, data);
+                return data;
+            }
+            if(t === Type.SPHERE) {
+                const data = Sphere.generate();
+                this.loadedMeshes.set(t, data);
+                return data;
             }
 
             const type = t.toLowerCase();
@@ -109,12 +115,15 @@ export class MeshLoader {
         }
     }
 
-    private static async loadStars(t: Type): Promise<MeshData> {
+    private static async loadFile(t: Type): Promise<MeshData> {
         try {
             let meshData: MeshData;
             switch(t) {
                 case Type.STARS:
                     meshData = Stars.generate();
+                    break;
+                case Type.SPHERE:
+                    meshData = Sphere.generate();
                     break;
                 default:
                     throw new Error(`No generator for type: ${t}`);
@@ -124,7 +133,7 @@ export class MeshLoader {
             console.log(`Generated procedural mesh: ${t}`);
             return meshData;
         } catch(err) {
-            console.error(`Failed to generate stars mesh ${t}:`, err);
+            console.error(`Failed to generate mesh ${t}:`, err);
             throw err;
         }
     }

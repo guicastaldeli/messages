@@ -96,10 +96,7 @@ export class TextureLoader {
                 usage: GPUTextureUsage.TEXTURE_BINDING |
                     GPUTextureUsage.COPY_DST |
                     GPUTextureUsage.RENDER_ATTACHMENT,
-                mipLevelCount: this.calculateMipLevels(
-                    imgBitmap.width,
-                    imgBitmap.height
-                )
+                mipLevelCount: 1
             });
 
             this.device.queue.copyExternalImageToTexture(
@@ -119,7 +116,7 @@ export class TextureLoader {
 
             return texTextureData;
         } catch(err) {
-            console.error(`Failed to load texture ${name}:`, err);
+            console.error(`Failed to load texture ${url}:`, err);
             throw err;
         }
     }

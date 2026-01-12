@@ -25,7 +25,7 @@
     
     <mesh 
         type="dino" 
-        position-x="0" position-y="-2" position-z="0"
+        position-x="2" position-y="-2" position-z="-1"
         rotation-x="0" rotation-y="0" rotation-z="0"
         scale-x="1" scale-y="1" scale-z="1"
         texture="rd.png" 
@@ -34,12 +34,13 @@
         rotationSpeed="1.0"
     />
     <mesh 
-        type="pyramid" 
-        position-x="2" position-y="0" position-z="-1"
-        rotation-x="0" rotation-y="20" rotation-z="0"
+        type="sphere" 
+        position-x="0" position-y="0" position-z="0"
+        rotation-x="0" rotation-y="0" rotation-z="0"
         scale-x="1.5" scale-y="1.5" scale-z="1.5"
+        texture="earth.png" 
         followRotation="false"
-        autoRotate="false"
+        autoRotate="true"
         rotationSpeed="0.3"
     />
     <mesh 
