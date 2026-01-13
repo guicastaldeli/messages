@@ -218,6 +218,8 @@ export class Dashboard extends Component<Props, State> {
         window.addEventListener('chat-read', this.handleChatRead as EventListener);
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.addEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
+
+        this.handleCloseChatLayout();
     }
 
     componentWillUnmount(): void {
@@ -379,7 +381,7 @@ export class Dashboard extends Component<Props, State> {
         }
     }
 
-    private handleCloseGroupLayout = (): void => {
+    private handleCloseChatLayout = (): void => {
         if(this.chatContainerRef.current) {
             this.chatContainerRef.current.innerHTML = '';
         }
@@ -475,39 +477,27 @@ export class Dashboard extends Component<Props, State> {
         const { activeChat, chatList } = this.state;
         const { chatController, chatManager } = this.props;
 
-        if (!activeChat || !chatManager) {
-            return (
-                <div className="chat-content-empty">
-                    <div className="empty-state">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="currentColor"/>
-                        </svg>
-                        <h3>Select a chat</h3>
-                        <p>Choose a conversation from the sidebar to start messaging</p>
-                    </div>
-                </div>
-            );
-        }
+        if (!activeChat || !chatManager) return;
 
-        if (activeChat.type === 'DIRECT' && chatManager.getDirectManager()) {
+        if(activeChat.type === 'DIRECT' && chatManager.getDirectManager()) {
             return (
                 <DirectLayout
                     chatController={chatController}
                     directManager={chatManager.getDirectManager()}
-                    onClose={this.handleCloseGroupLayout}
+                    onClose={this.handleCloseChatLayout}
                     chatId={activeChat.id}
                     participantName={activeChat.name}
                     key={`direct-${activeChat.id}`}
                 />
             );
-        } else if (activeChat.type === 'GROUP' && chatManager.getGroupManager()) {
+        } else if(activeChat.type === 'GROUP' && chatManager.getGroupManager()) {
             return (
                 <GroupLayout
                     chatController={chatController}
                     groupManager={chatManager.getGroupManager()}
                     groupId={activeChat.id}
                     groupName={activeChat.name}
-                    onClose={this.handleCloseGroupLayout}
+                    onClose={this.handleCloseChatLayout}
                     mode="chat"
                     key={`group-${activeChat.id}`}
                 />

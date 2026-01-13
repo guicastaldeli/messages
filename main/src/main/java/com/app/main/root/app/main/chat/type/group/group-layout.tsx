@@ -221,17 +221,22 @@ export class GroupLayout extends Component<Props, State> {
      * Handle Back
      */
     handleBack = () => {
-        this.groupManager.dashboard?.updateState({
-            showCreationForm: false,
-            showJoinForm: false,
-            showGroup: false,
-            hideGroup: true,
-            groupName: ''
-        });
+        if(this.groupManager.dashboard) {
+            this.groupManager.dashboard?.updateState({
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: false,
+                hideGroup: true,
+                groupName: ''
+            });
+            this.groupManager.dashboard?.setState({ activeChat: null });
+        }
         if(this.groupManager.root) {
             this.groupManager.root.unmount();
             this.groupManager.root = null;
         }
+        
+        this.chatController.setCurrentChat(null, null, []);
     }
 
     /**
