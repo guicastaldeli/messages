@@ -550,14 +550,20 @@ export class ChatManager {
     /**
      * Set Container
      */
-    public setContainer(container: HTMLElement): void {
+    public setContainer(container: HTMLDivElement): void {
         this.container = container;
 
         const directManager = this.getDirectManager();
-        if(directManager) directManager.setContainer(container);
+        if(directManager) {
+            directManager.setContainer(container);
+            directManager.container = container;
+        }
 
         const groupManager = this.getGroupManager();
-        if(groupManager) groupManager.container = container;
+        if(groupManager) {
+            groupManager.setContainer(container);
+            groupManager.container = container;
+        }
     }
 
     /**

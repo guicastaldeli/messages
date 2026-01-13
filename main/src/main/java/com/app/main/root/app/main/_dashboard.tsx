@@ -37,13 +37,12 @@ interface State {
     chatItemsAdded: boolean;
     expectedChatCount: number;
     unreadCounts: Map<string, number>;
+    activeSidebarTab: 'chats' | 'contacts';
 }
 
 export class Dashboard extends Component<Props, State> {
     public contactService: ContactServiceClient | null = null;
     private chatContainerRef: React.RefObject<HTMLDivElement | null>;
-    private directContainerRef: React.RefObject<HTMLDivElement | null>;
-    private groupContainerRef: React.RefObject<HTMLDivElement | null>;
 
     private removedChatIds = new Set<string>();
 
@@ -62,11 +61,10 @@ export class Dashboard extends Component<Props, State> {
             chatStreamComplete: false,
             chatItemsAdded: false,
             expectedChatCount: 0,
-            unreadCounts: new Map()
+            unreadCounts: new Map(),
+            activeSidebarTab: 'chats'
         }
         this.chatContainerRef = React.createRef();
-        this.directContainerRef = React.createRef();
-        this.groupContainerRef = React.createRef();
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {
@@ -193,11 +191,11 @@ export class Dashboard extends Component<Props, State> {
                 );
                 this.setState({ chatList: filteredList }); 
             });
-            if(this.directContainerRef.current && this.props.chatManager.getDirectManager()) {
-                this.props.chatManager.getDirectManager().container = this.directContainerRef.current;
-            }
-            if(this.groupContainerRef.current && this.props.chatManager.getGroupManager()) {
-                this.props.chatManager.getGroupManager().container = this.groupContainerRef.current;
+            if(this.chatContainerRef.current) {
+                const container = this.chatContainerRef.current;
+                this.props.chatManager.setContainer(container);
+                this.props.chatManager.getDirectManager()?.setContainer(container);
+                this.props.chatManager.getGroupManager()?.setContainer(container);
             }
         }
 
@@ -233,10 +231,9 @@ export class Dashboard extends Component<Props, State> {
 
     componentDidUpdate(prevProps: Props): void {
         if(this.props.chatList && 
-            this.props.chatManager !== prevProps.chatManager &&
-            this.groupContainerRef.current 
+            this.props.chatManager !== prevProps.chatManager
         ) {
-            this.props.chatManager.setContainer(this.groupContainerRef.current);
+            this.props.chatManager.setContainer(this.chatContainerRef.current!);
         }
 
         let stateUpdates: Partial<State> = {};
@@ -356,14 +353,11 @@ export class Dashboard extends Component<Props, State> {
                     groupName: chat.name || chat.contactUsername || 'Chat'
                 });
 
-                if(chatType === 'GROUP') {
-                    if(this.props.chatManager.getGroupManager()) {
-                        this.props.chatManager.getGroupManager().container = this.groupContainerRef.current!;
-                    }
-                } else if(chatType === 'DIRECT') {
-                    if(this.props.chatManager.getDirectManager()) {
-                        this.props.chatManager.getDirectManager().container = this.directContainerRef.current!;
-                    }
+                if(this.chatContainerRef.current && this.props.chatManager) {
+                    const container = this.chatContainerRef.current;
+                    this.props.chatManager.setContainer(container);
+                    this.props.chatManager.getDirectManager()?.setContainer(container);
+                    this.props.chatManager.getGroupManager()?.setContainer(container);
                 }
 
                 this.props.chatController.setCurrentChat(
@@ -386,6 +380,9 @@ export class Dashboard extends Component<Props, State> {
     }
 
     private handleCloseGroupLayout = (): void => {
+        if(this.chatContainerRef.current) {
+            this.chatContainerRef.current.innerHTML = '';
+        }
         localStorage.removeItem('active-chat');
         this.setState({
             activeChat: null
@@ -474,10 +471,56 @@ export class Dashboard extends Component<Props, State> {
             this.state.chatItemsAdded;
     }
 
+    private renderChatLayout() {
+        const { activeChat, chatList } = this.state;
+        const { chatController, chatManager } = this.props;
+
+        if (!activeChat || !chatManager) {
+            return (
+                <div className="chat-content-empty">
+                    <div className="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="currentColor"/>
+                        </svg>
+                        <h3>Select a chat</h3>
+                        <p>Choose a conversation from the sidebar to start messaging</p>
+                    </div>
+                </div>
+            );
+        }
+
+        if (activeChat.type === 'DIRECT' && chatManager.getDirectManager()) {
+            return (
+                <DirectLayout
+                    chatController={chatController}
+                    directManager={chatManager.getDirectManager()}
+                    onClose={this.handleCloseGroupLayout}
+                    chatId={activeChat.id}
+                    participantName={activeChat.name}
+                    key={`direct-${activeChat.id}`}
+                />
+            );
+        } else if (activeChat.type === 'GROUP' && chatManager.getGroupManager()) {
+            return (
+                <GroupLayout
+                    chatController={chatController}
+                    groupManager={chatManager.getGroupManager()}
+                    groupId={activeChat.id}
+                    groupName={activeChat.name}
+                    onClose={this.handleCloseGroupLayout}
+                    mode="chat"
+                    key={`group-${activeChat.id}`}
+                />
+            );
+        }
+
+        return null;
+    }
+
     render() {
         const sessionData = SessionManager.getUserInfo();
         const userId = sessionData?.userId;
-        const { chatList } = this.state;
+        const { chatList, activeSidebarTab } = this.state;
         const { activeChat } = this.state;
         const { chatController, chatManager } = this.props
 
@@ -517,100 +560,139 @@ export class Dashboard extends Component<Props, State> {
                             {sessionContext && sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                 <div className="screen main-dashboard">
                                     <div className="sidebar">
-                                        <button id="logout-actn" onClick={() => this.props.main.handleLogout(sessionContext)}>Logout</button>
-                                        {this.contactService && (
-                                            <ContactLayout contactService={this.contactService!}></ContactLayout>
-                                        )}
-                                    </div>
-                                    <header>
-                                        <div id="actions-bar">
-                                            <button 
-                                                id="action-create-group"
-                                                onClick={() => chatManager?.getGroupManager()?.onCreateGroup()}
-                                                disabled={!chatManager}
+                                        {/* User Info Section */}
+                                        <div className="user-info-section">
+                                            <div className="user-profile">
+                                                <div className="user-avatar">
+                                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="currentColor"/>
+                                                        <path d="M12 14C6.477 14 2 18.477 2 24H22C22 18.477 17.523 14 12 14Z" fill="currentColor"/>
+                                                    </svg>
+                                                </div>
+                                                <div className="user-details">
+                                                    <div className="username-display">
+                                                        {sessionData?.username || 'User'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="user-options">
+                                                
+                                                <button 
+                                                    id="logout-actn" 
+                                                    onClick={() => this.props.main.handleLogout(sessionContext)}
+                                                    title="Logout"
+                                                >
+                                                    Logout
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Sidebar Tabs */}
+                                        <div className="sidebar-tabs">
+                                            <button
+                                                className={activeSidebarTab === 'chats' ? 'active' : ''}
+                                                onClick={() => this.setState({ activeSidebarTab: 'chats' })}
                                             >
-                                                Group++++
+                                                Chats
                                             </button>
-                                            <button 
-                                                id="action-join-group"
-                                                onClick={() => chatManager?.getGroupManager()?.onJoinGroup()}
-                                                disabled={!chatManager}
+                                            <button
+                                                className={activeSidebarTab === 'contacts' ? 'active' : ''}
+                                                onClick={() => this.setState({ activeSidebarTab: 'contacts' })}
                                             >
-                                                Join :))
+                                                Contacts
                                             </button>
                                         </div>
-                                    </header>
+                                        
+                                        {/* Conditional Rendering Based on Tab */}
+                                        {activeSidebarTab === 'contacts' && this.contactService && (
+                                            <ContactLayout contactService={this.contactService} />
+                                        )}
+                                        
+                                        {activeSidebarTab === 'chats' && (
+                                            <div id="chat-container">
+                                                <header>
+                                                    <div id="actions-bar">
+                                                        <button 
+                                                            id="action-create-group"
+                                                            onClick={() => chatManager?.getGroupManager()?.onCreateGroup()}
+                                                            disabled={!chatManager}
+                                                        >
+                                                            Create Group
+                                                        </button>
+                                                        <button 
+                                                            id="action-join-group"
+                                                            onClick={() => chatManager?.getGroupManager()?.onJoinGroup()}
+                                                            disabled={!chatManager}
+                                                        >
+                                                            Join Group
+                                                        </button>
+                                                    </div>
+                                                </header>
+                                                
+                                                <div className="chat-list">
+                                                    {chatList.length === 0 ? (
+                                                        <p>No chats yet.</p>
+                                                    ) : (
+                                                        <ul>
+                                                            {chatList.map((chat: any, i: any) => {
+                                                                const unreadCount = this.getChatUnreadCount(chat.id || chat.chatId || chat.groupId);
+                                                                const isUnread = unreadCount > 0;
+                                                                return (
+                                                                    <li
+                                                                        key={chat.id || `${chat.type}_${i}`}
+                                                                        className={`chat-item${
+                                                                            activeChat && 
+                                                                            activeChat.id === chat.id ? ' active' : ''
+                                                                        }${isUnread ? ' unread' : ''}`} 
+                                                                        onClick={() => this.handleChatSelect(chat)}
+                                                                    >
+                                                                        <div 
+                                                                            className={`chat-icon ${chat.type === 'DIRECT' ? 'direct-icon' : 'group-icon'}`}
+                                                                            data-chat-index={i}
+                                                                        >
+                                                                            {chat.type === 'DIRECT' ? (
+                                                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                                    <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="currentColor"/>
+                                                                                    <path d="M12 14C6.477 14 2 18.477 2 24H22C22 18.477 17.523 14 12 14Z" fill="currentColor"/>
+                                                                                </svg>
+                                                                            ) : (
+                                                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                                    <path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z" fill="currentColor"/>
+                                                                                </svg>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="chat-info">
+                                                                            <div id="chat-name">{chat.name}</div>
+                                                                            <div id="chat-preview">
+                                                                                {typeof chat.lastMessage === 'object' 
+                                                                                    ? chat.lastMessage.content 
+                                                                                    : chat.lastMessage}
+                                                                            </div>
+                                                                        </div>
+                                                                        {isUnread && (
+                                                                            <div className="unread-badge">
+                                                                                {unreadCount}
+                                                                            </div>
+                                                                        )}
+                                                                    </li>
+                                                                )
+                                                            })}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div 
+                                        className="chat-content-container"
+                                        ref={this.chatContainerRef}
+                                        key={`chat-content-${activeChat?.id || 'empty'}-${activeChat?.type || 'none'}`}
+                                    >
+                                        {this.renderChatLayout()}
+                                    </div>
                                 </div>
                             )}
-
-                            <div className="direct-container" ref={this.directContainerRef} />
-                            <div className="group-container" ref={this.groupContainerRef} />
-                            <div className="chat-container" ref={this.chatContainerRef}>
-                                {activeChat && chatManager && (
-                                    activeChat.type === 'DIRECT' && chatManager.getDirectManager() ? (
-                                        <DirectLayout
-                                            chatController={chatController}
-                                            directManager={chatManager.getDirectManager()}
-                                            onClose={this.handleCloseGroupLayout}
-                                            chatId={activeChat.id}
-                                            participantName={activeChat.name}
-                                             key={`direct-${activeChat.id}`}
-                                        />
-                                    ) : activeChat.type === 'GROUP' && chatManager.getGroupManager() ? (
-                                        <GroupLayout
-                                            chatController={chatController}
-                                            groupManager={chatManager.getGroupManager()}
-                                            groupId={activeChat.id}
-                                            groupName={activeChat.name}
-                                            onClose={this.handleCloseGroupLayout}
-                                            mode="chat"
-                                            key={`group-${activeChat.id}`}
-                                        />
-                                    ) : null
-                                )}
-                            </div>
-
-                            <div id="chat-container">
-                                <div className="chat-list">
-                                    {chatList.length === 0 ? (
-                                        <p>No chats.</p>
-                                    ) : (
-                                        <ul>
-                                            {chatList.map((chat: any, i: any) => {
-                                                const unreadCount = this.getChatUnreadCount(chat.id || chat.chatId || chat.groupId);
-                                                const isUnread = unreadCount > 0;
-                                                return (
-                                                    <li
-                                                        key={chat.id || `${chat.type}_${i}`}
-                                                        className={`chat-item${
-                                                            activeChat && 
-                                                            activeChat.id === chat.id ? ' active' : ''
-                                                        }${isUnread ? ' unread' : ''}`} 
-                                                        onClick={() => this.handleChatSelect(chat)}
-                                                    >
-                                                        <div className="chat-icon">
-                                                            {chat.type === 'DIRECT' ? 'd' : 'g'}
-                                                        </div>
-                                                        <div className="chat-info">
-                                                            <div id="chat-name">{chat.name}</div>
-                                                            <div id="chat-preview">
-                                                                {typeof chat.lastMessage === 'object' 
-                                                                    ? chat.lastMessage.content 
-                                                                    : chat.lastMessage}
-                                                            </div>
-                                                        </div>
-                                                        {isUnread && (
-                                                            <div className="unread-badge">
-                                                                {unreadCount}
-                                                            </div>
-                                                        )}
-                                                    </li>
-                                                )
-                                            })}
-                                        </ul>
-                                    )}
-                                </div>
-                            </div>
                         </>
                     )
                 }}

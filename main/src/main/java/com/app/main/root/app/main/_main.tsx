@@ -79,10 +79,10 @@ export class Main extends Component<any, State> {
             await new Promise(resolve => setTimeout(resolve, 0));
             setTimeout(() => {
                 if (this.canvasRef.current) {
-                    this.initRenderer();
+                    //this.initRenderer();
                 }
             }, 100);
-            /*
+
             await this.connect();
 
             const userInfo = SessionManager.getUserInfo();
@@ -160,7 +160,6 @@ export class Main extends Component<any, State> {
                     rememberUser: rememberUser
                 });
             }
-                */
         } catch(err) {
             console.error('Error in componentDidMount:', err);
             this.setState({ isLoading: false });
@@ -526,6 +525,7 @@ export class Main extends Component<any, State> {
 
                             return (
                                 <>
+                                    {/*
                                     <div className='renderer'>
                                         <canvas 
                                             id='ctx'
@@ -535,7 +535,7 @@ export class Main extends Component<any, State> {
                                         >
                                         </canvas>
                                     </div>
-                                    {/*
+                                    */}
                                     {sessionContext.currentSession === 'LOGIN' && (
                                         <div className='screen join-screen'>
                                             <div className='form'>
@@ -621,7 +621,6 @@ export class Main extends Component<any, State> {
                                             )}
                                         </>
                                     )}
-                                        */}
                                 </>
                             );
                         }}

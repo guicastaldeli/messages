@@ -88,12 +88,12 @@ export class DirectLayout extends Component<Props, State> {
             <>
                 <div className="screen chat-screen">
                     <div className="header">
-                        <div id="participant-name">
-                            {participantName || 'Unknown User'}
-                        </div>
                         <button onClick={this.handleBack} id="exit-chat">
                             Back
                         </button>
+                        <div id="participant-name">
+                            {participantName || 'Unknown User'}
+                        </div>
                     </div>
                     <div className="messages"></div>
                     <div className="typebox">

@@ -7,6 +7,7 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
     const [showAddContact, setShowAddContact] = useState(false);
     const [usernameToAdd, setUsernameToAdd] = useState('');
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<'contacts' | 'pending'>('contacts');
     const hasSubscribedRef = useRef(false);
 
     useEffect(() => {
@@ -168,7 +169,7 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
             await contactService.sendContactRequest(usernameToAdd.trim());
             setUsernameToAdd('');
             setShowAddContact(false);
-            console.log('Contact request sent!'); //Switch later...
+            console.log('Contact request sent!');
             await loadPendingRequests();
         } catch(err: any) {
             console.log(`Failed to send request: ${err.message}`);
@@ -181,19 +182,19 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
      * Response Request
      */
     const handleResponseRequest = async (requestId: string, accept: boolean) => {
-    console.log('ContactLayout: handleResponseRequest called', { requestId, accept });
-    try {
-        await contactService.responseContactRequest(requestId, accept);
-        console.log('ContactLayout: Response sent successfully');
-        await loadPendingRequests();
-        if(accept) {
-            console.log('ContactLayout: Request accepted, reloading contacts');
-            setTimeout(() => loadContacts(), 100);
+        console.log('ContactLayout: handleResponseRequest called', { requestId, accept });
+        try {
+            await contactService.responseContactRequest(requestId, accept);
+            console.log('ContactLayout: Response sent successfully');
+            await loadPendingRequests();
+            if(accept) {
+                console.log('ContactLayout: Request accepted, reloading contacts');
+                setTimeout(() => loadContacts(), 100);
+            }
+        } catch(err: any) {
+            console.log(`ContactLayout: Failed to respond: ${err.message}`);
         }
-    } catch(err: any) {
-        console.log(`ContactLayout: Failed to respond: ${err.message}`);
     }
-}
 
     /**
      * Remove Contact
@@ -228,7 +229,23 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
                     onClick={() => setShowAddContact(!showAddContact)}
                     className="btn-primary-add"
                 >
-                    Add Contact
+                    + Add
+                </button>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="contacts-tabs">
+                <button
+                    className={`tab-button ${activeTab === 'contacts' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('contacts')}
+                >
+                    Contacts ({contacts.length})
+                </button>
+                <button
+                    className={`tab-button ${activeTab === 'pending' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('pending')}
+                >
+                    Pending ({pendingRequests.length})
                 </button>
             </div>
 
@@ -237,9 +254,10 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
                 <div className="add-contact-form">
                     <input 
                         type="text"
-                        placeholder="Enter username!"
+                        placeholder="Enter username"
                         value={usernameToAdd}
-                        onChange={(e) => setUsernameToAdd(e.target.value)} 
+                        onChange={(e) => setUsernameToAdd(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddContact()}
                     />
                     <button
                         onClick={handleAddContact}
@@ -251,64 +269,71 @@ export const ContactLayout: React.FC<ContactLayoutProps> = ({ contactService }) 
                 </div>
             )}
 
-            {/* Pending Requests */}
-            {pendingRequests.length > 0 && (
-                <div className="pending-requests">
-                    <h3>Pending Requests ({pendingRequests.length})</h3>
-                    {pendingRequests.map(request => (
-                        <div 
-                            key={request.requestId}
-                            className="contact-request"
-                        >
-                            <span>{request.fromUsername}</span>
-                            <div className="request-actions">
-                                <button
-                                    onClick={() => handleResponseRequest(request.requestId, true)}
-                                    className="btn-accept-req"
-                                >
-                                    Accept
-                                </button>
-                                <button
-                                    onClick={() => handleResponseRequest(request.requestId, false)}
-                                    className="btn-reject-req"
-                                >
-                                    Reject
-                                </button>
+            {/* Contacts Tab */}
+            {activeTab === 'contacts' && (
+                <div className="contacts-list">
+                    {contacts.length === 0 ? (
+                        <p className="empty-state">No contacts yet. Add some friends!</p>
+                    ) : (
+                        contacts.map(contact => (
+                            <div 
+                                key={contact.id} 
+                                className="contact-item"
+                            >
+                                <div className="contact-info" onClick={() => handleContactClick(contact)}>
+                                    <span className={`username ${contact.isOnline ? 'online' : 'offline'}`}>
+                                        {contact.username}
+                                        <span className="status"></span>
+                                    </span>
+                                </div>
+                                <div className="contact-actions">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveContact(contact.id);
+                                        }}
+                                        className="btn-remove"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             )}
 
-            {/* Contact List*/}
-            <div className="contacts-list">
-                {contacts.length === 0 ? (
-                    <p>No contacts yet. Add some friends... :')</p>
-                ) : (
-                    contacts.map(contact => (
-                        <div 
-                            key={contact.id} 
-                            className="contact-item"
-                            onClick={() => handleContactClick(contact)}
-                        >
-                            <div className="contact-info">
-                                <span className={`username ${contact.isOnline ? 'online' : 'offline'}`}>
-                                    {contact.username}
-                                    {contact.isOnline && <span className="status"></span>}
-                                </span>
+            {/* Pending Requests Tab */}
+            {activeTab === 'pending' && (
+                <div className="pending-requests-list">
+                    {pendingRequests.length === 0 ? (
+                        <p className="empty-state">No pending requests</p>
+                    ) : (
+                        pendingRequests.map(request => (
+                            <div 
+                                key={request.requestId}
+                                className="contact-request"
+                            >
+                                <span className="request-username">{request.fromUsername}</span>
+                                <div className="request-actions">
+                                    <button
+                                        onClick={() => handleResponseRequest(request.requestId, true)}
+                                        className="btn-accept-req"
+                                    >
+                                        Accept
+                                    </button>
+                                    <button
+                                        onClick={() => handleResponseRequest(request.requestId, false)}
+                                        className="btn-reject-req"
+                                    >
+                                        Reject
+                                    </button>
+                                </div>
                             </div>
-                            <div className="contact-actions">
-                                <button
-                                    onClick={() => handleRemoveContact(contact.id)}
-                                    className="btn-remove"
-                                >
-                                    Remove
-                                </button>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     )
 }

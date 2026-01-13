@@ -306,27 +306,31 @@ export class GroupLayout extends Component<Props, State> {
                     !showJoinForm && 
                 (
                     <div className="group-info form">
-                        <button 
-                            id="close-menu button"
-                            onClick={this.handleBack}
-                        >
-                            Back
-                        </button>
-                        <input 
-                            type="text" 
-                            id="group-info-name"
-                            ref={this.nameInputRef}
-                            placeholder="Enter group name"
-                            disabled={isLoading}
-                            defaultValue={groupName}
-                        />
-                        <button 
-                            id="create-group button"
-                            disabled={isLoading}
-                            onClick={this.handleCreate}
-                        >
-                            {isLoading ? 'Creating...' : 'Create Group'}
-                        </button>
+                        <div className="group-info-form-content">
+                            <input 
+                                type="text" 
+                                id="group-info-name"
+                                ref={this.nameInputRef}
+                                placeholder="Enter group name"
+                                disabled={isLoading}
+                                defaultValue={groupName}
+                            />
+                            <div className="group-info-actn">
+                                <button 
+                                    id="create-group button"
+                                    disabled={isLoading}
+                                    onClick={this.handleCreate}
+                                >
+                                    {isLoading ? 'Creating...' : 'Create Group'}
+                                </button>
+                                <button 
+                                    id="close-menu button"
+                                    onClick={this.handleBack}
+                                >
+                                    Back
+                                </button>
+                            </div>
+                        </div>
 
                         {/* Loading */}
                         {isLoading && (
@@ -347,6 +351,12 @@ export class GroupLayout extends Component<Props, State> {
                 {showGroup && (
                     <div className="screen chat-screen">
                         <div className="header">
+                            <button 
+                                id="exit-chat"
+                                onClick={this.handleBack}
+                            >
+                                Back
+                            </button>
                             <div id="group-name">{groupName}</div>
                             <button
                                 onClick={this.handleShowMembersInterface}
@@ -359,12 +369,6 @@ export class GroupLayout extends Component<Props, State> {
                                 id='invite-button'
                             >
                                 Invite
-                            </button>
-                            <button 
-                                id="exit-chat"
-                                onClick={this.handleBack}
-                            >
-                                Back
                             </button>
                             <button 
                                 id="exit-chat"

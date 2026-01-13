@@ -84,6 +84,10 @@ export class GroupManager {
         this.userId = userId;
         this.username = username;
     }
+
+    public setContainer(container: HTMLDivElement): void {
+        this.container = container;
+    }
     
     /**
      * 
