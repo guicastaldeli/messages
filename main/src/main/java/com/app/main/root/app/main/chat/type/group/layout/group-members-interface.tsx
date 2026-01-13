@@ -26,11 +26,22 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
     const [contacts, setContacts] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedContact, setSelectedContact] = useState<string>('');
+    const [currentUserId, setCurrentUserId] = useState<string>('');
 
     useEffect(() => {
         loadGroupMembers();
         loadContacts();
+        getCurrentUserId();
     }, [groupId]);
+ 
+    const getCurrentUserId = async () => {
+        try {
+            const userId = groupManager.userId || chatController.userId;
+            setCurrentUserId(userId || '');
+        } catch(err) {
+            console.error('Failed to get current user ID', err);
+        }
+    }
 
     const loadGroupMembers = async () => {
         try {
@@ -121,12 +132,14 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                         </span>
                                     </div>
                                     <div className="member-actions">
-                                        <button 
-                                            className="btn-remove-member"
-                                            onClick={() => handleRemoveUser(member.id, member.username || member.id)}
-                                        >
-                                            Remove
-                                        </button>
+                                        {member.id !== currentUserId && (
+                                            <button 
+                                                className="btn-remove-member"
+                                                onClick={() => handleRemoveUser(member.id, member.username || member.id)}
+                                            >
+                                                Remove
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))

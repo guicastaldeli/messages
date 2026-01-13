@@ -172,9 +172,27 @@ export class GroupManager {
     /* Creation Menu */
     public async showCreationMenu(): Promise<void> {
         if(!this.appEl) return;
-        if(this.root) {
-            this.root.unmount();
-            this.root = null;
+
+        if(this.dashboard) {
+            this.dashboard.setState({ activeChat: null });
+            
+            if(this.root) {
+                try {
+                    this.root.unmount();
+                } catch(err) {
+                    console.warn('Safe unmount error (ignored):', err);
+                }
+                this.root = null;
+            }
+        }
+        
+        if(!this.container && this.dashboard?.chatContainerRef.current) {
+            this.container = this.dashboard.chatContainerRef.current;
+        }
+        
+        if(!this.container) {
+            console.error('No container available for group creation menu');
+            return;
         }
         
         this.renderCreationLayout(
@@ -374,9 +392,23 @@ export class GroupManager {
     /* Join Menu */
     public showJoinMenu(): void {
         if(!this.appEl) return;
+        
         if(this.root) {
-            this.root.unmount();
+            try {
+                this.root.unmount();
+            } catch(err) {
+                console.warn('Safe unmount error (ignored):', err);
+            }
             this.root = null;
+        }
+        
+        if(!this.container && this.dashboard?.chatContainerRef.current) {
+            this.container = this.dashboard.chatContainerRef.current;
+        }
+        
+        if(!this.container) {
+            console.error('No container available for join menu');
+            return;
         }
         
         this.renderJoinLayout(

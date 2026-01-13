@@ -11,6 +11,7 @@ import { ContactLayout } from "./contact/contact-layout";
 import { SessionManager } from "./_session/session-manager";
 import { Main } from "./_main";
 import { DirectLayout } from "./chat/type/direct/direct-layout";
+import { JoinGroupLayout } from "./chat/type/group/join-group-form-layout";
 
 interface Props {
     chatController: ChatController;
@@ -42,8 +43,8 @@ interface State {
 
 export class Dashboard extends Component<Props, State> {
     public contactService: ContactServiceClient | null = null;
-    private chatContainerRef: React.RefObject<HTMLDivElement | null>;
 
+    public chatContainerRef: React.RefObject<HTMLDivElement | null>;
     private removedChatIds = new Set<string>();
 
     constructor(props: Props) {
@@ -477,7 +478,70 @@ export class Dashboard extends Component<Props, State> {
         const { activeChat, chatList } = this.state;
         const { chatController, chatManager } = this.props;
 
-        if (!activeChat || !chatManager) return;
+        if (!activeChat || !chatManager) {
+            const showCreationForm = this.currentState.showCreationForm;
+            const showJoinForm = this.currentState.showJoinForm;
+            
+            if (showCreationForm && chatManager?.getGroupManager()) {
+                return (
+                    <GroupLayout
+                        chatController={chatController}
+                        groupManager={chatManager.getGroupManager()}
+                        onSuccess={(data) => {
+                            this.updateState({
+                                showCreationForm: false,
+                                showJoinForm: false,
+                                showGroup: true,
+                                hideGroup: false,
+                                groupName: data.name
+                            });
+                        }}
+                        onError={(error) => {
+                            alert(`Failed to create group: ${error.message}`);
+                            this.updateState({
+                                showCreationForm: true,
+                                showJoinForm: false,
+                                showGroup: false,
+                                hideGroup: false,
+                                groupName: ''
+                            });
+                        }}
+                        mode="create"
+                    />
+                );
+            } 
+            
+            if(showJoinForm && chatManager?.getGroupManager()) {
+                return (
+                    <JoinGroupLayout
+                        chatController={chatController}
+                        groupManager={chatManager.getGroupManager()}
+                        onSuccess={(data) => {
+                            this.updateState({
+                                showCreationForm: false,
+                                showJoinForm: false,
+                                showGroup: true,
+                                hideGroup: false,
+                                groupName: data.name
+                            });
+                        }}
+                        onError={(error) => {
+                            alert(`Failed to join group: ${error.message}`);
+                            this.updateState({
+                                showCreationForm: false,
+                                showJoinForm: true,
+                                showGroup: false,
+                                hideGroup: false,
+                                groupName: ''
+                            });
+                        }}
+                        mode="join"
+                    />
+                );
+            }
+            
+            return null;
+        }
 
         if(activeChat.type === 'DIRECT' && chatManager.getDirectManager()) {
             return (
@@ -593,7 +657,6 @@ export class Dashboard extends Component<Props, State> {
                                             </button>
                                         </div>
                                         
-                                        {/* Conditional Rendering Based on Tab */}
                                         {activeSidebarTab === 'contacts' && this.contactService && (
                                             <ContactLayout contactService={this.contactService} />
                                         )}
@@ -604,15 +667,41 @@ export class Dashboard extends Component<Props, State> {
                                                     <div id="actions-bar">
                                                         <button 
                                                             id="action-create-group"
-                                                            onClick={() => chatManager?.getGroupManager()?.onCreateGroup()}
-                                                            disabled={!chatManager}
+                                                            onClick={() => {
+                                                                this.setState({ activeChat: null });
+                                                                localStorage.removeItem('active-chat');
+                                                                
+                                                                this.props.chatController.setCurrentChat(null, null, []);
+                                                                
+                                                                this.updateState({
+                                                                    showCreationForm: true,
+                                                                    showJoinForm: false,
+                                                                    showGroup: false,
+                                                                    hideGroup: false,
+                                                                    groupName: ''
+                                                                });
+                                                            }}
+                                                            disabled={!this.props.chatManager}
                                                         >
                                                             Create Group
                                                         </button>
                                                         <button 
                                                             id="action-join-group"
-                                                            onClick={() => chatManager?.getGroupManager()?.onJoinGroup()}
-                                                            disabled={!chatManager}
+                                                            onClick={() => {
+                                                                this.setState({ activeChat: null });
+                                                                localStorage.removeItem('active-chat');
+                                                                
+                                                                this.props.chatController.setCurrentChat(null, null, []);
+                                                                
+                                                                this.updateState({
+                                                                    showCreationForm: false,
+                                                                    showJoinForm: true,
+                                                                    showGroup: false,
+                                                                    hideGroup: false,
+                                                                    groupName: ''
+                                                                });
+                                                            }}
+                                                            disabled={!this.props.chatManager}
                                                         >
                                                             Join Group
                                                         </button>
