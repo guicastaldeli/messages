@@ -47,6 +47,8 @@ export class Dashboard extends Component<Props, State> {
     public chatContainerRef: React.RefObject<HTMLDivElement | null>;
     private removedChatIds = new Set<string>();
 
+    private pollInterval: NodeJS.Timeout | null = null;
+
     constructor(props: Props) {
         super(props);
         this.state = {
@@ -163,8 +165,6 @@ export class Dashboard extends Component<Props, State> {
         }
     }
 
-    private pollInterval: NodeJS.Timeout | null = null;
-
     async componentDidMount(): Promise<void> {
         this.setSession('MAIN_DASHBOARD');
 
@@ -244,7 +244,7 @@ export class Dashboard extends Component<Props, State> {
     }
 
     /**
-     * Poll for New Chats
+     * Polling
      */
     private async pollForNewChats(): Promise<void> {
         if(!this.state.chatStreamComplete || !this.state.chatItemsAdded) {

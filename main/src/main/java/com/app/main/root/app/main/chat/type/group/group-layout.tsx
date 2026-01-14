@@ -34,6 +34,8 @@ interface State {
     messagesLoaded: boolean;
     showMembersInterface: boolean;
     activatedGroups: Set<string>;
+    showInviteDialog: boolean;
+    inviteCode: string; 
 }
 
 export class GroupLayout extends Component<Props, State> {
@@ -64,7 +66,9 @@ export class GroupLayout extends Component<Props, State> {
             },
             messagesLoaded: false,
             showMembersInterface: false,
-            activatedGroups: new Set()
+            activatedGroups: new Set(),
+            showInviteDialog: false,
+            inviteCode: ''
         }
     }
 
@@ -243,16 +247,25 @@ export class GroupLayout extends Component<Props, State> {
      * Handle Generate Invite Link
      */
     handleGenerateInviteLink = async () => {
+        console.log('handleGenerateInviteLink called');
+        
         if(!this.groupManager.currentGroupId) {
             console.error('No active group selected!')
             return;
         }
 
         try {
+            console.log('Generating invite link for group:', this.groupManager.currentGroupId);
             await new Promise(res => setTimeout(res, 500));
             const groupId = this.groupManager.currentGroupId;
             const link = await this.groupManager.getInviteCodeManager().generate(groupId);
-            this.setState({ generatedLink: link });
+            const inviteCode = link.split('/').pop() || link;
+            this.setState({ 
+                generatedLink: link,
+                inviteCode: inviteCode,
+                showInviteDialog: true,
+                isLoading: false
+            });
         } catch(err: any) {
             console.error('Failed to generate invite link:', err);
         }
@@ -294,8 +307,35 @@ export class GroupLayout extends Component<Props, State> {
         console.log('File shared in chat:', fileData);
     }
 
+    handleCopyInviteCode = async () => {
+        try {
+            await navigator.clipboard.writeText(this.state.inviteCode);
+            console.log('Invite code copied to clipboard');
+        } catch(err) {
+            console.error('Failed to copy invite code:', err);
+            this.setState({ error: 'Failed to copy invite code to clipboard' });
+        }
+    }
+
+    /**
+     * Handle Close Invite Dialog
+     */
+    handleCloseInviteDialog = () => {
+        this.setState({ 
+            showInviteDialog: false,
+            inviteCode: '',
+            generatedLink: ''
+        });
+    }
+
     render() {
-        const { isLoading, error, showMembersInterface } = this.state;
+        const { 
+            isLoading, 
+            error, 
+            showMembersInterface, 
+            showInviteDialog, 
+            inviteCode 
+        } = this.state;
         const { 
             showCreationForm,
             showJoinForm, 
@@ -391,6 +431,47 @@ export class GroupLayout extends Component<Props, State> {
                             <button id="send-file" onClick={this.handleFileUpload}>
                                 Send
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {showInviteDialog && (
+                    <div className="invite-dialog-overlay">
+                        <div className="invite-dialog">
+                            <div className="invite-dialog-header">
+                                <h3>Group Invite Code</h3>
+                                <button 
+                                    className="close-button"
+                                    onClick={this.handleCloseInviteDialog}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div className="invite-dialog-content">
+                                <p>Share this code to invite others to the group:</p>
+                                <div className="invite-code-container">
+                                    <input 
+                                        type="text" 
+                                        value={inviteCode}
+                                        readOnly
+                                        className="invite-code-input"
+                                    />
+                                    <button 
+                                        onClick={this.handleCopyInviteCode}
+                                        className="copy-button"
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
+                                <div className="invite-dialog-actions">
+                                    <button 
+                                        onClick={this.handleCloseInviteDialog}
+                                        className="close-dialog-button"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
