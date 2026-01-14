@@ -251,17 +251,28 @@ export class Dashboard extends Component<Props, State> {
         window.removeEventListener('chat-message-received', this.props.chatManager.handleChatMessageReceived as EventListener);
     }
 
+    componentDidUpdate(prevProps: Props): void {
+        if(this.props.chatList && 
+            this.props.chatManager !== prevProps.chatManager
+        ) {
+            this.props.chatManager.setContainer(this.chatContainerRef.current!);
+        }
+
+        let stateUpdates: Partial<State> = {};
+        if(prevProps.activeChat !== this.props.activeChat) {
+            stateUpdates.activeChat = this.props.activeChat || null;
+        }
+        
+        if(Object.keys(stateUpdates).length > 0) {
+            this.setState(stateUpdates as Pick<State, keyof State>);
+        }
+    }
+
     /**
      * Polling
      */
     private async pollForNewChats(): Promise<void> {
         if(!this.state.chatStreamComplete || !this.state.chatItemsAdded) {
-            /*
-            console.log('[Polling] Skipping - chat processing not complete:', {
-                streamComplete: this.state.chatStreamComplete,
-                itemsAdded: this.state.chatItemsAdded
-            });
-            */
             return;
         }
         
@@ -281,6 +292,7 @@ export class Dashboard extends Component<Props, State> {
                 if(!currentIds.has(chatId) && !this.removedChatIds.has(chatId)) {
                     console.log('Polling Found new chat:', chatId);
                     
+                    await this.props.chatManager.subscribeToChat(chatId, chat.type || 'DIRECT');
                     const event = new CustomEvent('chat-item-added', {
                         detail: {
                             id: chatId,
@@ -302,23 +314,6 @@ export class Dashboard extends Component<Props, State> {
             await stream.start();
         } catch (err) {
             console.error('[Polling] Error:', err);
-        }
-    }
-
-    componentDidUpdate(prevProps: Props): void {
-        if(this.props.chatList && 
-            this.props.chatManager !== prevProps.chatManager
-        ) {
-            this.props.chatManager.setContainer(this.chatContainerRef.current!);
-        }
-
-        let stateUpdates: Partial<State> = {};
-        if(prevProps.activeChat !== this.props.activeChat) {
-            stateUpdates.activeChat = this.props.activeChat || null;
-        }
-        
-        if(Object.keys(stateUpdates).length > 0) {
-            this.setState(stateUpdates as Pick<State, keyof State>);
         }
     }
 
@@ -392,7 +387,7 @@ export class Dashboard extends Component<Props, State> {
             
             try {
                 const queuePattern = `/user/queue/messages/${chatType.toLowerCase()}/${chatId}`;
-                console.log('📡 Subscribing to queue:', queuePattern);
+                console.log('Subscribing to queue:', queuePattern);
                 
                 await this.props.chatController.queueManager.subscribe(
                     queuePattern,
@@ -405,7 +400,7 @@ export class Dashboard extends Component<Props, State> {
             }
         }
         
-        console.log('✅ Subscribed to all chats');
+        console.log('Subscribed to all chats');
     }
 
     private setSession = (session: SessionType): void => {
