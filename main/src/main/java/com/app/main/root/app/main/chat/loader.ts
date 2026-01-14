@@ -130,7 +130,7 @@ export class Loader {
 
     private async chatHasMessages(userId: string, chatId: string): Promise<boolean> {
         try {
-            const chatData = await this.chatService.getData(chatId, userId, 0);
+            const chatData = await this.chatService.getData(userId, chatId, 0);
             const hasTimelineItems = chatData.timeline && chatData.timeline.length > 0;
             const hasRegularMessages = chatData.messages && chatData.messages.length > 0;
             const hasFiles = chatData.files && chatData.files.length > 0;
@@ -154,7 +154,7 @@ export class Loader {
     private async setLastMessage(userId: string, chat: any): Promise<string> {
         const chatId = chat.id;
         try {
-            const chatData = await this.chatService.getData(chatId, userId, 0);
+            const chatData = await this.chatService.getData(userId, chatId, 0);
             
             const timeline = chatData.timeline || [];
             const sortedTimeline = timeline.sort((a: any, b: any) => {

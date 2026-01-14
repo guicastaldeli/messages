@@ -63,7 +63,12 @@ export class ChatService {
         }
     }> {
         try {
-            console.log(`Fetching unified chat data for ${chatId}, page ${page}`);
+            console.log(`Fetching unified chat data for chatId=${chatId}, userId=${userId}, page=${page}`);
+            
+            if(!userId || userId.includes('direct_') || userId.includes('group_')) {
+                console.error(`Invalid userId passed to getChatData: ${userId}`);
+                throw new Error(`Invalid userId: ${userId}. User ID should not be a chat ID.`);
+            }
             
             const cookies = document.cookie;
             const headers: Record<string, string> = {
@@ -77,7 +82,7 @@ export class ChatService {
             }
             
             const res = await fetch(
-                `${this.apiClientController.getUrl()}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`,
+                `${this.apiClientController.getUrl()}/api/chat/${chatId}/data?userId=${encodeURIComponent(userId)}&page=${page}&pageSize=${pageSize}`,
                 {
                     method: 'GET',
                     credentials: 'include',
@@ -88,7 +93,23 @@ export class ChatService {
             if(!res.ok) {
                 const errorText = await res.text();
                 console.error(`API Error (${res.status}):`, errorText);
-                throw new Error(`Failed to fetch chat data! Status: ${res.status}`);
+                console.error(`Failed to fetch chat data! Status: ${res.status}`);
+                console.error(`Request details: chatId=${chatId}, userId=${userId}, page=${page}`);
+                return {
+                    messages: [],
+                    files: [],
+                    timeline: [],
+                    pagination: {
+                        page,
+                        pageSize,
+                        totalMessages: 0,
+                        totalFiles: 0,
+                        totalTimeline: 0,
+                        totalPages: 0,
+                        hasMore: false,
+                        fromCache: false
+                    }
+                };
             }
 
             const resData = await res.json();
@@ -130,7 +151,7 @@ export class ChatService {
                         ...pagination,
                         ...data.pagination,
                         totalMessages: data.pagination.totalMessages || data.pagination.total || 0,
-                        totalFiles: data.pagination.totalFiles || files.length, // Use actual files count
+                        totalFiles: data.pagination.totalFiles || files.length,
                         totalTimeline: data.pagination.totalTimeline || data.pagination.totalItems || 0
                     };
                 }
@@ -324,7 +345,7 @@ export class ChatService {
                 pagination
             };
         } catch(err) {
-            console.error(`Failed to fetch chat data for ${chatId}:`, err);
+            console.error(`Failed to fetch chat data for chatId=${chatId}, userId=${userId}:`, err);
             return {
                 messages: [],
                 files: [],
@@ -343,6 +364,9 @@ export class ChatService {
         }
     }
 
+    /**
+     * Fetch and Cache Data
+     */
     public async fetchAndCacheData(
         chatId: string,
         userId: string,
@@ -353,6 +377,10 @@ export class ChatService {
         timeline: any[]
     }> {
         try {
+            if(!userId || userId.includes('direct_') || userId.includes('group_')) {
+                throw new Error(`Invalid userId in fetchAndCacheData: ${userId}`);
+            }
+            
             const chatData = await this.getChatData(userId, chatId, page);
             this.addChatDataPage(
                 chatId,
@@ -367,7 +395,7 @@ export class ChatService {
                 timeline: chatData.timeline || []
             }
         } catch(err) {
-            console.error(`Failed to fetch chat data for ${chatId} page ${page}:`, err);
+            console.error(`Failed to fetch chat data for chatId=${chatId}, userId=${userId}, page=${page}:`, err);
             throw err;
         }
     }
@@ -376,8 +404,8 @@ export class ChatService {
      * Get Data
      */
     public async getData(
-        chatId: string,
         userId: string,
+        chatId: string,
         page: number = 0,
         forceRefresh: boolean = false
     ): Promise<{
@@ -386,6 +414,11 @@ export class ChatService {
         timeline: any[],
         fromCache: boolean
     }> {
+        if(!userId || userId.includes('direct_') || userId.includes('group_')) {
+            console.error(`Invalid userId in getData: ${userId}`);
+            throw new Error(`Invalid userId: ${userId}. Expected a user ID, not a chat ID.`);
+        }
+        
         const cacheService = await this.getCacheServiceClient();
         if(!cacheService.cache.has(chatId)) {
             console.log(`Skipping fetch for exited group: ${chatId}`);
@@ -447,7 +480,7 @@ export class ChatService {
             return this.cacheServiceClient.pendingRequests.get(cacheKey);
         }
 
-        console.log(`Fetching fresh data for ${chatId} page ${page}`);
+        console.log(`Fetching fresh data for chatId=${chatId}, userId=${userId}, page=${page}`);
         const reqPromise = this.fetchAndCacheData(chatId, userId, page);
         this.cacheServiceClient.pendingRequests.set(cacheKey, reqPromise);
         try {
@@ -462,9 +495,6 @@ export class ChatService {
         }
     }
 
-    /**
-     * Add Chat Data Page
-     */
     public addChatDataPage(
         chatId: string,
         messages: any[],
@@ -617,9 +647,6 @@ export class ChatService {
         console.log(`Cache updated for ${chatId}: loaded pages: ${Array.from(data.loadedPages)}, messages: ${data.messageOrder.length}, files: ${data.fileOrder.length}, timeline: ${data.timelineOrder.length}`);
     }
 
-    /**
-     * Is Data Loaded
-     */
     public isDataLoaded(chatId: string, page: number): boolean {
         const data = this.cacheServiceClient.cache.get(chatId);
         return !!data && 
@@ -628,9 +655,6 @@ export class ChatService {
             data.loadedTimelinePages.has(page);
     }
 
-    /**
-     * Get Cached Data
-     */
     public async getCachedData(chatId: string): Promise<any> {
         try {
             const cacheService = await this.getCacheServiceClient();
@@ -647,9 +671,6 @@ export class ChatService {
         }
     }
 
-    /**
-     * Stream User Chats
-     */
     public async streamUserChats(
         userId: string,
         page: number = 0,
@@ -666,9 +687,6 @@ export class ChatService {
         });
     }
 
-    /**
-     * Stream Chat Data
-     */
     public async streamChatData(
         chatId: string,
         userId: string,
@@ -713,23 +731,14 @@ export class ChatService {
         }
     }
 
-    /**
-     * Get Cache Service
-     */
     public async getCacheServiceClient(): Promise<CacheServiceClient> {
         return this.cacheServiceClient;
     }
 
-    /**
-     * Get Message Controller
-     */
     public getMessageController(): MessageControllerClient {
         return this.messageControllerClient;
     }
 
-    /**
-     * Get File Controller
-     */
     public getFileController(): FileControllerClient {
         return this.fileControllerClient;
     }

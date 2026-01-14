@@ -150,8 +150,17 @@ export class Main extends Component<any, State> {
 
                 const cacheService = await this.chatService.getCacheServiceClient();
                 if(userInfo.userId) {
-                    console.log('Initializing cache with active chat:', activeChatId);
-                    await cacheService.initCache(userInfo.userId, activeChatId || undefined);
+                    console.log('Initializing cache for user:', userInfo.userId);
+                    
+                    await cacheService.initCache(userInfo.userId);
+                    if(activeChatId) {
+                        console.log('Loading active chat:', activeChatId);
+                        try {
+                            await this.chatService.getData(userInfo.userId, activeChatId, 0);
+                        } catch(err) {
+                            console.error('Failed to load active chat:', err);
+                        }
+                    }
                 }
                 this.loadData(userInfo.userId);
                 this.setState({ 

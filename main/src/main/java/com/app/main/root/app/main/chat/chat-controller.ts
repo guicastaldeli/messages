@@ -97,7 +97,7 @@ export class ChatController {
         timeline: any[], 
         fromCache: boolean 
     }> {
-        return this.chatService.getData(chatId, userId, page);
+        return this.chatService.getData(userId, chatId, page);
     }
 
     public async getUserData(sessionId: string, userId: string, username: string): Promise<void> {

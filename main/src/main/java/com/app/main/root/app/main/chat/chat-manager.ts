@@ -134,41 +134,39 @@ export class ChatManager {
     }
 
     private handleChatMessageReceived = (event: CustomEvent): void => {
-    const { chatId, message, sender, timestamp, isSystem } = event.detail;
-    
-    this.updateChatMessage({
-        id: chatId,
-        userId: sender,
-        messageId: `msg_${timestamp}`,
-        lastMessage: message,
-        sender: sender,
-        timestamp: new Date(timestamp).toISOString()
-    });
-    
-    const isFromCurrentUser = 
-        sender === this.userId || 
-        sender === this.username;
-    
-    // Check if this chat is currently active
-    const isChatActive = this.activeChat && 
-        (this.activeChat.id === chatId || 
-         this.activeChat.chatId === chatId || 
-         this.activeChat.groupId === chatId);
-    
-    if(!isFromCurrentUser && !isChatActive) {
-        const currentUnreadCount = this.chatController.getNotificationController().getChatUnreadCount(chatId);
-        const unreadEvent = new CustomEvent('chat-unread-updated', {
-            detail: {
-                chatId: chatId,
-                unreadCount: currentUnreadCount + 1,
-                message: message
-            }
+        const { chatId, message, sender, timestamp, isSystem } = event.detail;
+        
+        this.updateChatMessage({
+            id: chatId,
+            userId: sender,
+            messageId: `msg_${timestamp}`,
+            lastMessage: message,
+            sender: sender,
+            timestamp: new Date(timestamp).toISOString()
         });
-        window.dispatchEvent(unreadEvent);
+        
+        const isFromCurrentUser = 
+            sender === this.userId || 
+            sender === this.username;
+        
+        const isChatActive = this.activeChat && 
+            (this.activeChat.id === chatId || 
+            this.activeChat.chatId === chatId || 
+            this.activeChat.groupId === chatId);
+        if(!isFromCurrentUser && !isChatActive) {
+            const currentUnreadCount = this.chatController.getNotificationController().getChatUnreadCount(chatId);
+            const unreadEvent = new CustomEvent('chat-unread-updated', {
+                detail: {
+                    chatId: chatId,
+                    unreadCount: currentUnreadCount + 1,
+                    message: message
+                }
+            });
+            window.dispatchEvent(unreadEvent);
+        }
         
         this.updateChatList();
     }
-}
     
     private handleChatItemRemoved = (event: CustomEvent): void => {
         const { id, groupId, reason } = event.detail;
@@ -687,8 +685,14 @@ export class ChatManager {
 
     private sortChats(chats: any[]): any[] {
         return chats.sort((a, b) => {
-            const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : new Date(a.createdAt).getTime();
-            const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : new Date(b.createdAt).getTime();
+            const timeA = 
+                a.timestamp ? new Date(a.timestamp).getTime() : 
+                (a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 
+                new Date(a.createdAt || 0).getTime());
+            const timeB = 
+                b.timestamp ? new Date(b.timestamp).getTime() : 
+                (b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 
+                new Date(b.createdAt || 0).getTime());
             return timeB - timeA;
         });
     }
