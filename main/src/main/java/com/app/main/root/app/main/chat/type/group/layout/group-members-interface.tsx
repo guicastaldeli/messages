@@ -25,15 +25,93 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
     const [showAddUser, setShowAddUser] = useState(false);
     const [contacts, setContacts] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [pollingLoading, setPollingLoading] = useState(false);
     const [selectedContact, setSelectedContact] = useState<string>('');
     const [currentUserId, setCurrentUserId] = useState<string>('');
+    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
+    const isLoading = loading || pollingLoading;
 
     useEffect(() => {
+        console.log('GroupMembersInterface mounted for group:', groupId);
         loadGroupMembers();
         loadContacts();
         getCurrentUserId();
+        startPolling();
+        
+        return () => {
+            console.log('stopping polling');
+            stopPolling();
+        };
     }, [groupId]);
- 
+
+    /**
+     * Start Polling
+     */
+    const startPolling = () => {
+        console.log('Starting polling for group members');
+
+        stopPolling();
+        
+        const interval = setInterval(async () => {
+            try {
+                await pollForGroupMembers();
+            } catch(err) {
+                console.error('Error polling for group members:', err);
+            }
+        }, 3000);
+        
+        setPollingInterval(interval);
+    };
+
+    /**
+     * Stop Polling
+     */
+    const stopPolling = () => {
+        if(pollingInterval) {
+            console.log('Stopping polling interval');
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+        }
+    };
+
+    /**
+     * Poll for Group Members
+     */
+    const pollForGroupMembers = async () => {
+        try {
+            setPollingLoading(true);
+            const currentMembers = await groupManager.getGroupMembers(groupId);
+            
+            if(hasMembersChanged(members, currentMembers)) {
+                console.log('Group members updated, refreshing list');
+                setMembers(currentMembers);
+                
+                const event = new CustomEvent('group-members-updated', {
+                    detail: { 
+                        groupId, 
+                        members: currentMembers,
+                        timestamp: new Date().toISOString()
+                    }
+                });
+                window.dispatchEvent(event);
+            }
+        } catch(err) {
+            console.error('Failed to poll group members:', err);
+        } finally {
+            setPollingLoading(false);
+        }
+    };
+
+    const hasMembersChanged = (oldMembers: GroupMember[], newMembers: GroupMember[]): boolean => {
+        if(oldMembers.length !== newMembers.length) return true;
+        
+        const oldIds = oldMembers.map(m => m.id).sort();
+        const newIds = newMembers.map(m => m.id).sort();
+        
+        return !oldIds.every((id, index) => id === newIds[index]);
+    };
+
     const getCurrentUserId = async () => {
         try {
             const userId = groupManager.userId || chatController.userId;
@@ -44,11 +122,19 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
     }
 
     const loadGroupMembers = async () => {
+        console.log('loadGroupMembers called');
         try {
+            setLoading(true);
+            console.log('Loading group members for group:', groupId);
             const groupMembers = await groupManager.getGroupMembers(groupId);
+            console.log('Group members loaded:', groupMembers);
             setMembers(groupMembers);
         } catch(err) {
-            console.error('Failed to load contacts', err);
+            console.error('Failed to load group members', err);
+            setMembers([]);
+        } finally {
+            setLoading(false);
+            console.log('Loading state set to false');
         }
     }
 
@@ -80,21 +166,18 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
         }
     }
 
-    /**
-     * Handle Remove User
-     */
     const handleRemoveUser = async (id: string, username: string) => {
+        setLoading(true);
         try {
             await groupManager.removeUserFromGroup(groupId, id, username);
             await loadGroupMembers();
         } catch(err: any) {
             console.error('Failed to remove member:', err.message);
+        } finally {
+            setLoading(false);
         }
     }
 
-    /**
-     * Available Contacts
-     */
     const availableContacts = contacts.filter(c =>
         !members.some(m => m.id === c.id)
     );
@@ -105,7 +188,9 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                 {/* Header */}
                 <div className="modal-header">
                     <h2>{groupName} - Members</h2>
-                    <button className="close-button" onClick={onClose}>X</button>
+                    <div className="header-actions">
+                        <button className="close-button" onClick={onClose}>X</button>
+                    </div>
                 </div>
 
                 {/* Members List */}
@@ -115,35 +200,36 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                         <button 
                             className="btn-add-member"
                             onClick={() => setShowAddUser(true)}
+                            disabled={isLoading}
                         >
                             Add Members
                         </button>
                     </div>
                     
                     <div className="members-list">
-                        {members.length === 0 ? (
-                            <p className="no-members">No members in this group</p>
-                        ) : (
-                            members.map(member => (
-                                <div key={member.id} className="member-item">
-                                    <div className="member-info">
-                                        <span className="username">
-                                            {member.username || member.id}
-                                        </span>
-                                    </div>
-                                    <div className="member-actions">
-                                        {member.id !== currentUserId && (
-                                            <button 
-                                                className="btn-remove-member"
-                                                onClick={() => handleRemoveUser(member.id, member.username || member.id)}
-                                            >
-                                                Remove
-                                            </button>
-                                        )}
-                                    </div>
+                        {members.map(member => (
+                            <div key={member.id} className="member-item">
+                                <div className="member-info">
+                                    <span className="username">
+                                        {member.username || member.id}
+                                    </span>
+                                    {member.id === currentUserId && (
+                                        <span className="you-badge">(You)</span>
+                                    )}
                                 </div>
-                            ))
-                        )}
+                                <div className="member-actions">
+                                    {member.id !== currentUserId && (
+                                        <button 
+                                            className="btn-remove-member"
+                                            onClick={() => handleRemoveUser(member.id, member.username || member.id)}
+                                            disabled={isLoading}
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -160,6 +246,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                     value={selectedContact}
                                     onChange={(e) => setSelectedContact(e.target.value)}
                                     className="contact-select"
+                                    disabled={isLoading}
                                 >
                                     <option value="">Select a contact...</option>
                                     {availableContacts.map(contact => (
@@ -172,10 +259,10 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                 <div className="add-user-actions">
                                     <button 
                                         onClick={handleAddUser}
-                                        disabled={!selectedContact || loading}
+                                        disabled={!selectedContact || isLoading}
                                         className="btn-confirm-add"
                                     >
-                                        {loading ? 'Adding...' : 'Add to Group'}
+                                        {isLoading ? 'Adding...' : 'Add to Group'}
                                     </button>
                                     <button 
                                         onClick={() => {
@@ -183,6 +270,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                             setSelectedContact('');
                                         }}
                                         className="btn-cancel-add"
+                                        disabled={isLoading}
                                     >
                                         Cancel
                                     </button>

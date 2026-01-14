@@ -85,13 +85,27 @@ export class NotificationControllerClient {
     }
 
     private shouldAddNotification(message: any): boolean {
-        if(message.senderId === this.userId || 
-            message.senderId === this.username
-        ) {
+        if(!message.senderId && !message.senderUsername && !message.senderName) {
             return false;
         }
-
-        return true;
+        
+        const senderIdentifiers = [
+            message.senderId,
+            message.senderUsername,
+            message.senderName,
+            message.username
+        ];
+        
+        const currentUserIdentifiers = [
+            this.userId,
+            this.username
+        ];
+        
+        const isFromCurrentUser = senderIdentifiers.some(senderId =>
+            senderId && currentUserIdentifiers.includes(senderId)
+        );
+        
+        return !isFromCurrentUser;
     }
 
     /**
