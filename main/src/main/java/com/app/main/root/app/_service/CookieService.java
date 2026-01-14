@@ -50,24 +50,15 @@ public class CookieService {
     /**
      * Create Cookie
      */
-    public Cookie createCookie(String name, String value, int maxAge) {        
-        if(name == null || name.trim().isEmpty()) {
-            System.err.println("ERR Cookie name is null or empty! name=" + name);
-        }
-        
+    public Cookie createCookie(String name, String value, int maxAge) {
         Cookie cookie = new Cookie(name, value);
         cookie.setHttpOnly(true);
         cookie.setSecure(cookieSecure);
         cookie.setPath("/");
         cookie.setMaxAge(maxAge);
-
-        if(cookieDomain != null && 
-            !cookieDomain.equals("localhost") && 
-            !cookieDomain.equals(webUrl)
-        ) {
+        
+        if(cookieDomain != null && !cookieDomain.isEmpty()) {
             cookie.setDomain(cookieDomain);
-        } else {
-            System.out.println("Not setting domain");
         }
         
         return cookie;

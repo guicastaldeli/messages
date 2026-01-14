@@ -220,7 +220,7 @@ public class FileService {
 
             cacheService.getFileCache().invalidateFileCache(userId, chatId);
             return res;
-        } catch (Exception err) {
+        } catch(Exception err) {
             System.err.println("Error deleting file: " + err.getMessage());
             err.printStackTrace();
             return false;
@@ -279,7 +279,7 @@ public class FileService {
                 userId 
             );
             return dbName;
-        } catch (Exception err) {
+        } catch(Exception err) {
             System.out.println("Could not find database for file " + fileId + ": " + err.getMessage());
             return null;
         }
@@ -429,11 +429,11 @@ public class FileService {
                     return null;
                 }
                 return encryptedContent;
-            } catch (Exception err) {
+            } catch(Exception err) {
                 System.err.println("Error retrieving encrypted content for file " + fileId + ": " + err.getMessage());
                 return null;
             }
-        } catch (Exception err) {
+        } catch(Exception err) {
             System.err.println("Error in getEncryptedFileContent for file " + fileId + ": " + err.getMessage());
             err.printStackTrace();
             return null;
@@ -465,7 +465,7 @@ public class FileService {
             }
             
             return convertToFileList(rows).get(0);
-        } catch (Exception err) {
+        } catch(Exception err) {
             System.err.println("Error getting file info for " + fileId + ": " + err.getMessage());
             return null;
         }
@@ -504,7 +504,7 @@ public class FileService {
         } else if(obj instanceof String) {
             try {
                 timestamp = Timestamp.valueOf((String) obj);
-            } catch (Exception e) {
+            } catch(Exception e) {
                 timestamp = new Timestamp(System.currentTimeMillis());
             }
         } else if(obj instanceof Long) {
@@ -552,7 +552,7 @@ public class FileService {
                             }
                         }
                     }
-                } catch (Exception err) {
+                } catch(Exception err) {
                     System.err.println("Failed to parse timestamp string: " + str + " - " + err.getMessage());
                     return null;
                 }

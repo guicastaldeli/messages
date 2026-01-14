@@ -358,7 +358,7 @@ export class GroupManager {
                 chat.id === this.currentGroupId || chat.groupId === this.currentGroupId
             );
             
-            if (!chatExists) {
+            if(!chatExists) {
                 const updatedChatList = [...currentChatList, chatItem];
                 this.dashboard.updateChatList(updatedChatList);
             }

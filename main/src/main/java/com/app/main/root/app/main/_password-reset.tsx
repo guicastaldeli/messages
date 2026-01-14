@@ -66,7 +66,7 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({
     const error = passwordReset?.error ?? localError;
     
     const setEmail = (value: string) => {
-        if (passwordReset?.setEmail) {
+        if(passwordReset?.setEmail) {
             passwordReset.setEmail(value);
         } else {
             setLocalEmail(value);
@@ -74,7 +74,7 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({
     };
 
     const setNewPassword = (value: string) => {
-        if (passwordReset?.setNewPassword) {
+        if(passwordReset?.setNewPassword) {
             passwordReset.setNewPassword(value);
         } else {
             setLocalNewPassword(value);
@@ -82,7 +82,7 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({
     };
 
     const setConfirmPassword = (value: string) => {
-        if (passwordReset?.setConfirmPassword) {
+        if(passwordReset?.setConfirmPassword) {
             passwordReset.setConfirmPassword(value);
         } else {
             setLocalConfirmPassword(value);

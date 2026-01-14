@@ -21,7 +21,7 @@ export class NotificationServiceClient {
                 'Content-Type': 'application/json'
             };
             
-            if (cookies) {
+            if(cookies) {
                 headers['Cookie'] = cookies;
                 console.log(`[NotificationService] Forwarding cookies for persist: ${cookies}`);
             }
@@ -48,7 +48,7 @@ export class NotificationServiceClient {
                 'Content-Type': 'application/json'
             };
             
-            if (cookies) {
+            if(cookies) {
                 headers['Cookie'] = cookies;
                 console.log(`[NotificationService] Forwarding cookies for load: ${cookies}`);
             } else {
@@ -97,7 +97,7 @@ export class NotificationServiceClient {
                 'Content-Type': 'application/json'
             };
             
-            if (cookies) {
+            if(cookies) {
                 headers['Cookie'] = cookies;
             }
 
@@ -127,7 +127,7 @@ export class NotificationServiceClient {
                 'Content-Type': 'application/json'
             };
             
-            if (cookies) {
+            if(cookies) {
                 headers['Cookie'] = cookies;
             }
 
@@ -142,7 +142,7 @@ export class NotificationServiceClient {
                 console.error(`Update status API Error (${response.status}):`, errorText);
                 throw new Error('Failed to update notification status');
             }
-        } catch (error) {
+        } catch(error) {
             console.error('Failed to update notification status:', error);
         }
     }
@@ -154,7 +154,7 @@ export class NotificationServiceClient {
                 'Content-Type': 'application/json'
             };
             
-            if (cookies) {
+            if(cookies) {
                 headers['Cookie'] = cookies;
             }
 
@@ -169,7 +169,7 @@ export class NotificationServiceClient {
                 console.error(`Delete API Error (${response.status}):`, errorText);
                 throw new Error('Failed to delete notification');
             }
-        } catch (error) {
+        } catch(error) {
             console.error('Failed to delete notification:', error);
         }
     }
@@ -181,7 +181,7 @@ export class NotificationServiceClient {
                 'Content-Type': 'application/json'
             };
             
-            if (cookies) {
+            if(cookies) {
                 headers['Cookie'] = cookies;
             }
 
@@ -191,12 +191,12 @@ export class NotificationServiceClient {
                 credentials: 'include'
             });
             
-            if (!response.ok) {
+            if(!response.ok) {
                 const errorText = await response.text();
                 console.error(`Mark all read API Error (${response.status}):`, errorText);
                 throw new Error('Failed to mark all as read');
             }
-        } catch (error) {
+        } catch(error) {
             console.error('Failed to mark all as read:', error);
         }
     }

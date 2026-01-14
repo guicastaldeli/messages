@@ -22,7 +22,7 @@ export default function Home() {
         await socketClient.connect();
         setSocketClientConnect(socketClient);
         console.log("Socket connected successfully");
-      } catch (error) {
+      } catch(error) {
         console.error("Failed to connect socket:", error);
       } finally {
         setIsConnecting(false);
@@ -32,7 +32,7 @@ export default function Home() {
     connectSocket();
 
     return () => {
-      if (socketClient) {
+      if(socketClient) {
         socketClient.disconnect();
       }
     };

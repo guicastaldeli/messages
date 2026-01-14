@@ -213,10 +213,10 @@ public class PasswordResetService {
                 err.printStackTrace();
                 
                 if(userConn != null) {
-                    try { userConn.rollback(); } catch (SQLException e) {}
+                    try { userConn.rollback(); } catch(SQLException e) {}
                 }
                 if(passwordResetConn != null) {
-                    try { passwordResetConn.rollback(); } catch (SQLException e) {}
+                    try { passwordResetConn.rollback(); } catch(SQLException e) {}
                 }
                 
                 throw err;
@@ -225,13 +225,13 @@ public class PasswordResetService {
                     try {
                         userConn.setAutoCommit(true);
                         userConn.close();
-                    } catch (SQLException e) {}
+                    } catch(SQLException e) {}
                 }
                 if(passwordResetConn != null) {
                     try {
                         passwordResetConn.setAutoCommit(true);
                         passwordResetConn.close();
-                    } catch (SQLException e) {}
+                    } catch(SQLException e) {}
                 }
             }
         } catch(Exception err) {

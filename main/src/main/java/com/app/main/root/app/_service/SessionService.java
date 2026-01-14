@@ -263,8 +263,10 @@ public class SessionService {
         HttpServletResponse response
     ) {
         String sessionId = generateSessionId();
+        String browserInstanceId = UUID.randomUUID().toString();
+    
         SessionData sessionData = new SessionData(
-            sessionId,
+            sessionId, 
             type, 
             userId, 
             username, 
@@ -273,6 +275,7 @@ public class SessionService {
             ipAddress, 
             rememberUser
         );
+        sessionData.setAttr("browserInstanceId", browserInstanceId);
 
         userSessions.put(sessionId, sessionData);
         tokenToUserIdMap.put(sessionId, userId);

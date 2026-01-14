@@ -45,7 +45,7 @@ export class ChatRegistry {
 
     public getGroupInfo(groupId: string): any {
         const chat = this.chats.get(groupId);
-        if (chat && chat.type === 'GROUP') {
+        if(chat && chat.type === 'GROUP') {
             return {
                 id: chat.id,
                 name: chat.id,

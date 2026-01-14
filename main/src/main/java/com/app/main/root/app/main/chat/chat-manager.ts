@@ -99,22 +99,52 @@ export class ChatManager {
         await this.groupManager.getUserData(sessionId, userId, username);
     }
 
+    private setupEventListeners(): void {
+        window.addEventListener('chat-item-added', this.handleChatItemAdded as unknown as EventListener);
+        window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
+        window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
+        window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
+        window.addEventListener('chat-message-received', this.handleChatMessageReceived as EventListener);
+    }
+
     /**
      * Chat Item Added
      */
-    private handleChatItemAdded = (event: CustomEvent): void => {
+    private handleChatItemAdded = async (event: CustomEvent): Promise<void> => {
         const chatItem = event.detail;
-        
         const existingChatIndex = this.chatList.findIndex(chat => chat.id === chatItem.id);
         
         if(existingChatIndex === -1) {
             this.chatList.push(chatItem);
+            await this.subscribeToChat(chatItem.id, chatItem.type);
+            
+            if(chatItem.lastMessage) {
+                this.updateChatMessage({
+                    id: chatItem.id,
+                    userId: chatItem.userId || this.userId,
+                    messageId: `msg_${Date.now()}`,
+                    lastMessage: chatItem.lastMessage,
+                    sender: chatItem.sender || chatItem.name,
+                    timestamp: chatItem.timestamp || new Date().toISOString()
+                });
+            }
         } else {
             this.chatList[existingChatIndex] = {
                 ...this.chatList[existingChatIndex],
                 ...chatItem,
                 lastUpdated: new Date()
             };
+            
+            if(chatItem.lastMessage) {
+                this.updateChatMessage({
+                    id: chatItem.id,
+                    userId: chatItem.userId || this.userId,
+                    messageId: `msg_${Date.now()}`,
+                    lastMessage: chatItem.lastMessage,
+                    sender: chatItem.sender || chatItem.name,
+                    timestamp: chatItem.timestamp || new Date().toISOString()
+                });
+            }
         }
 
         this.sortChats(this.chatList);
@@ -125,12 +155,25 @@ export class ChatManager {
         this.updateChatList();
     }
 
-    private setupEventListeners(): void {
-        window.addEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
-        window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
-        window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
-        window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
-        window.addEventListener('chat-message-received', this.handleChatMessageReceived as EventListener);
+    public async subscribeToChat(chatId: string, chatType: string): Promise<void> {
+        if(!this.chatController) {
+            console.error('Chat controller not available');
+            return;
+        }
+        
+        try {
+            const queuePattern = `/user/queue/messages/${chatType.toLowerCase()}/${chatId}`;
+            console.log('ChatManager: Subscribing to new chat queue:', queuePattern);
+            
+            await this.chatController.queueManager.subscribe(
+                queuePattern,
+                this.chatController.handleChatMessage.bind(this.chatController)
+            );
+            
+            console.log('ChatManager: Subscribed to new chat:', chatId);
+        } catch(err) {
+            console.error('ChatManager: Failed to subscribe to new chat:', chatId, err);
+        }
     }
 
     public handleChatMessageReceived = (event: CustomEvent): void => {
@@ -374,9 +417,17 @@ export class ChatManager {
             this.ensureChatExists(id, sender, timestamp, lastMessage);
             return;
         } else {
+            const formattedMessage = this.formattedMessage(
+                id,
+                lastMessage,
+                !isFromOtherUser,
+                sender,
+                false
+            );
+            
             this.chatList[chatIndex] = {
                 ...this.chatList[chatIndex],
-                lastMessage: lastMessage,
+                lastMessage: formattedMessage,
                 timestamp: now,
                 unreadCount: isFromOtherUser ? 
                     (this.chatList[chatIndex].unreadCount || 0) + 1 : 
@@ -417,7 +468,8 @@ export class ChatManager {
                 timestamp: new Date(timestamp),
                 unreadCount: 0,
                 members: [],
-                created: true
+                created: true,
+                sender: sender
             };
             
             this.chatList.push(newChat);
@@ -607,9 +659,13 @@ export class ChatManager {
             if(isDirect) {
                 formattedMessage = lastMessage;
             } else {
-                formattedMessage = isCurrentUser 
-                    ? `You: ${lastMessage}`
-                    : `${sender}: ${lastMessage}`;
+                if(lastMessage.startsWith('You: ') || lastMessage.includes(': ')) {
+                    formattedMessage = lastMessage;
+                } else {
+                    formattedMessage = isCurrentUser 
+                        ? `You: ${lastMessage}`
+                        : `${sender}: ${lastMessage}`;
+                }
             }
         }
 

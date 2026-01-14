@@ -28,7 +28,7 @@ public class EventTracker {
         String id = generateId();
         Date timestamp = new Date();
 
-        EventLog eventLogs = new EventLog(
+        EventLog eventLog = new EventLog(
             id, 
             eventName, 
             data, 
@@ -37,24 +37,28 @@ public class EventTracker {
             senderId, 
             username
         );
-        eventLogs.setId(id);
-        eventLogs.setEventName(eventName);
-        eventLogs.setData(data);
-        eventLogs.setTimestamp(timestamp);
-        eventLogs.setSenderId(senderId);
-        eventLogs.setUsername(username);
-        logs.add(eventLogs);
+        eventLog.setId(id);
+        eventLog.setEventName(eventName);
+        eventLog.setData(data);
+        eventLog.setTimestamp(timestamp);
+        eventLog.setSenderId(senderId);
+        eventLog.setUsername(username);
+        logs.add(eventLog);
 
         if(logs.size() > maxLogs) {
-            synchronized(eventLogs) {
+            synchronized(logs) {
                 if(logs.size() > maxLogs) {
                     int excess = logs.size() - maxLogs;
-                    logs.subList(0, excess).clear();
+                    for(int i = 0; i < excess; i++) {
+                        if(!logs.isEmpty()) {
+                            logs.remove(0);
+                        }
+                    }
                 }
             }
         }
 
-        emitMessageEvent(eventLogs);
+        emitMessageEvent(eventLog);
         //logToConsole(eventLogs);
     }
 

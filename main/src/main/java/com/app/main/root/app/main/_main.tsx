@@ -78,7 +78,7 @@ export class Main extends Component<any, State> {
         try {
             await new Promise(resolve => setTimeout(resolve, 0));
             setTimeout(() => {
-                if (this.canvasRef.current) {
+                if(this.canvasRef.current) {
                     //this.initRenderer();
                 }
             }, 100);

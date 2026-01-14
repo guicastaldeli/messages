@@ -766,7 +766,7 @@ public class EventList {
                             }
                             
                             processedFiles.add(processedFile);
-                        } catch (Exception fileErr) {
+                        } catch(Exception fileErr) {
                             System.err.println("Error decrypting file: " + fileErr.getMessage());
                             fileErr.printStackTrace();
                             Map<String, Object> errorFile = new HashMap<>(fileMap);
@@ -789,7 +789,7 @@ public class EventList {
                     );
                     
                     return response;
-                } catch (Exception err) {
+                } catch(Exception err) {
                     err.printStackTrace();
                     Map<String, Object> errRes = new HashMap<>();
                     errRes.put("error", "LOAD_DECRYPTED_FILES_FAILED");
@@ -1209,12 +1209,12 @@ public class EventList {
 
                     String inviterUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
                     String inviterUsername = serviceManager.getUserService().getUsernameBySessionId(sessionId);
-                    if (inviterUsername == null || inviterUsername.startsWith("user_")) {
+                    if(inviterUsername == null || inviterUsername.startsWith("user_")) {
                         inviterUsername = serviceManager.getUserService().getUsernameByUserId(inviterUserId);
                     }
                     
                     String username = serviceManager.getUserService().getUsernameByUserId(userId);
-                    if (username == null || username.trim().isEmpty()) {
+                    if(username == null || username.trim().isEmpty()) {
                         username = (String) data.get("username");
                         System.err.println("WARNING: Could not lookup username for added user: " + userId);
                     }

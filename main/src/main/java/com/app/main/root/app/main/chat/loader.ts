@@ -168,6 +168,7 @@ export class Loader {
                 if(lastItem.type === 'file') {
                     return lastItem.fileData?.originalFileName || 'file';
                 } else if(lastItem.type === 'system' || lastItem.isSystem) {
+                    console.log('SYSTEM>>>>', lastItem.content)
                     return lastItem.content || 'System message';
                 } else {
                     return lastItem.content || 'Message';
@@ -176,6 +177,9 @@ export class Loader {
             
             const lastMessageData = await this.chatManager.lastMessage(userId, chatId);
             if(!lastMessageData) return 'No messages yet';
+            if(lastMessageData.isSystem) {
+                return lastMessageData.content;
+            }
             
             const senderUsername = lastMessageData.senderUsername || lastMessageData.sender;
             const isCurrentUser = lastMessageData.sender === this.chatManager.userId;

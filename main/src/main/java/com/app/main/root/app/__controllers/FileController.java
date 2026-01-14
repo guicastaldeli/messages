@@ -30,13 +30,13 @@ public class FileController {
     private String getAuthenticatedUserId(HttpServletRequest request) {
         String sessionId = serviceManager.getSessionService().extractSessionId(request);
         if(sessionId != null) {
-            System.out.println("DEBUG - Found sessionId: " + sessionId);
+            //System.out.println("DEBUG - Found sessionId: " + sessionId);
             
             if(serviceManager.getSessionService().validateSession(sessionId)) {
                 SessionService.SessionData sessionData = serviceManager.getSessionService().getSession(sessionId);
                 if(sessionData != null) {
                     String userId = sessionData.getUserId();
-                    System.out.println("DEBUG - Found userId from session data: " + userId);
+                   // System.out.println("DEBUG - Found userId from session data: " + userId);
                     return userId;
                 }
             } else {
@@ -48,32 +48,32 @@ public class FileController {
         if(httpSession != null) {
             String userId = (String) httpSession.getAttribute("userId");
             if(userId != null) {
-                System.out.println("DEBUG - Found userId from HTTP session: " + userId);
+                //System.out.println("DEBUG - Found userId from HTTP session: " + userId);
                 return userId;
             }
         }
         
         String userIdFromCookies = extractUserIdFromCookies(request);
         if(userIdFromCookies != null) {
-            System.out.println("DEBUG - Found userId from cookies: " + userIdFromCookies);
+            //System.out.println("DEBUG - Found userId from cookies: " + userIdFromCookies);
             return userIdFromCookies;
         }
         
-        System.out.println("DEBUG - No userId found in session, HTTP session, or cookies");
+        //System.out.println("DEBUG - No userId found in session, HTTP session, or cookies");
         return null;
     }
 
     private String extractUserIdFromCookies(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if(cookies != null) {
-            System.out.println("DEBUG - Found " + cookies.length + " cookies");
+            //System.out.println("DEBUG - Found " + cookies.length + " cookies");
             
             String[] cookieNames = {"USER_INFO", "userId", "user_id", "AUTH_USER"};
             
-            for (Cookie cookie : cookies) {
-                System.out.println("DEBUG - Cookie: " + cookie.getName() + " = " + cookie.getValue());
+            for(Cookie cookie : cookies) {
+                //System.out.println("DEBUG - Cookie: " + cookie.getName() + " = " + cookie.getValue());
                 
-                for (String cookieName : cookieNames) {
+                for(String cookieName : cookieNames) {
                     if(cookieName.equals(cookie.getName())) {
                         try {
                             String value = cookie.getValue();
@@ -82,14 +82,14 @@ public class FileController {
                                 String[] parts = value.split(":");
                                 if(parts.length >= 2) {
                                     String userId = parts[1];
-                                    System.out.println("DEBUG - Extracted userId from USER_INFO: " + userId);
+                                    //System.out.println("DEBUG - Extracted userId from USER_INFO: " + userId);
                                     return userId;
                                 }
                             } else {
                                 System.out.println("DEBUG - Found direct userId in cookie: " + value);
                                 return value;
                             }
-                        } catch (Exception e) {
+                        } catch(Exception e) {
                             System.err.println("DEBUG - Error parsing cookie " + cookieName + ": " + e.getMessage());
                         }
                     }

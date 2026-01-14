@@ -310,7 +310,7 @@ export class NotificationControllerClient {
                     const timeB = dateB.getTime() || 0;
                     
                     return timeB - timeA;
-                } catch (err) {
+                } catch(err) {
                     console.error('Error sorting notifications:', err, { a, b });
                     return 0;
                 }

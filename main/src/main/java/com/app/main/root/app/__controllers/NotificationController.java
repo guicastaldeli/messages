@@ -53,7 +53,7 @@ public class NotificationController {
                 "success", true,
                 "notifications", data
             ));
-        } catch (SQLException err) {
+        } catch(SQLException err) {
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
                 "error", err.getMessage()
@@ -69,7 +69,7 @@ public class NotificationController {
         try {
             serviceManager.getNotificationService().markAsRead(notificationId);
             return ResponseEntity.ok(Map.of("success", true));
-        } catch (SQLException err) {
+        } catch(SQLException err) {
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
                 "error", err.getMessage()
@@ -82,7 +82,7 @@ public class NotificationController {
         try {
             serviceManager.getNotificationService().markAllAsRead(userId);
             return ResponseEntity.ok(Map.of("success", true));
-        } catch (SQLException err) {
+        } catch(SQLException err) {
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
                 "error", err.getMessage()
@@ -98,7 +98,7 @@ public class NotificationController {
         try {
             serviceManager.getNotificationService().deleteNotification(notificationId);
             return ResponseEntity.ok(Map.of("success", true));
-        } catch (SQLException err) {
+        } catch(SQLException err) {
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
                 "error", err.getMessage()
@@ -117,7 +117,7 @@ public class NotificationController {
                 "success", true,
                 "count", count
             ));
-        } catch (SQLException err) {
+        } catch(SQLException err) {
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
                 "error", err.getMessage()

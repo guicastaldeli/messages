@@ -534,7 +534,7 @@ export class ChatController {
                     console.log('[GROUP NOTIFICATION] Sending to recipients:', recipients);
                     
                     if(recipients.length > 0) {
-                        for (const recipientId of recipients) {
+                        for(const recipientId of recipients) {
                             const notificationData = {
                                 id: `notification_${tempMessageId}_${recipientId}`,
                                 userId: recipientId,
@@ -735,7 +735,6 @@ export class ChatController {
             await this.messageElementRenderer.setMessage(data, { ...analysis, direction });
         }
         
-
         this.chatManager.setLastMessage(
             data.chatId,
             data.senderId || data.userId,
@@ -771,7 +770,7 @@ export class ChatController {
                 
                 try {
                     await notificationController.addNotification(notificationData);
-                } catch (err) {
+                } catch(err) {
                     console.error('Failed to create notification:', err);
                 }
             }

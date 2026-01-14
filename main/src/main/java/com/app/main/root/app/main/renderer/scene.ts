@@ -148,7 +148,7 @@ export class Scene {
             }
 
             return instance;
-        } catch (error) {
+        } catch(error) {
             console.error(`Error creating ${el.type}:`, error);
             return null;
         }

@@ -24,51 +24,33 @@ public class ChatController {
 
     private String getAuthenticatedUserId(HttpServletRequest request) {
         String sessionId = serviceManager.getSessionService().extractSessionId(request);
-        if(sessionId != null) {
-            System.out.println("DEBUG - Found sessionId: " + sessionId);
-            
-            if(serviceManager.getSessionService().validateSession(sessionId)) {
-                SessionService.SessionData sessionData = serviceManager.getSessionService().getSession(sessionId);
-                if(sessionData != null) {
-                    String userId = sessionData.getUserId();
-                    System.out.println("DEBUG - Found userId from session data: " + userId);
-                    return userId;
-                }
-            } else {
-                System.out.println("DEBUG - Session is invalid or expired");
-            }
+        if(sessionId == null) {
+            throw new SecurityException("No session ID found");
         }
         
-        HttpSession httpSession = request.getSession(false);
-        if(httpSession != null) {
-            String userId = (String) httpSession.getAttribute("userId");
-            if(userId != null) {
-                System.out.println("DEBUG - Found userId from HTTP session: " + userId);
-                return userId;
-            }
+        if(!serviceManager.getSessionService().validateSession(sessionId)) {
+            throw new SecurityException("Invalid or expired session");
         }
         
-        String userIdFromCookies = extractUserIdFromCookies(request);
-        if(userIdFromCookies != null) {
-            System.out.println("DEBUG - Found userId from cookies: " + userIdFromCookies);
-            return userIdFromCookies;
+        SessionService.SessionData sessionData = serviceManager.getSessionService().getSession(sessionId);
+        if(sessionData == null) {
+            throw new SecurityException("Session data not found");
         }
         
-        System.out.println("DEBUG - No userId found in session, HTTP session, or cookies");
-        return null;
+        return sessionData.getUserId();
     }
 
     private String extractUserIdFromCookies(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if(cookies != null) {
-            System.out.println("DEBUG - Found " + cookies.length + " cookies");
+            //System.out.println("DEBUG - Found " + cookies.length + " cookies");
             
             String[] cookieNames = {"USER_INFO", "userId", "user_id", "AUTH_USER"};
             
-            for (Cookie cookie : cookies) {
-                System.out.println("DEBUG - Cookie: " + cookie.getName() + " = " + cookie.getValue());
+            for(Cookie cookie : cookies) {
+                //System.out.println("DEBUG - Cookie: " + cookie.getName() + " = " + cookie.getValue());
                 
-                for (String cookieName : cookieNames) {
+                for(String cookieName : cookieNames) {
                     if(cookieName.equals(cookie.getName())) {
                         try {
                             String value = cookie.getValue();
@@ -77,14 +59,14 @@ public class ChatController {
                                 String[] parts = value.split(":");
                                 if(parts.length >= 2) {
                                     String userId = parts[1];
-                                    System.out.println("DEBUG - Extracted userId from USER_INFO: " + userId);
+                                    //System.out.println("DEBUG - Extracted userId from USER_INFO: " + userId);
                                     return userId;
                                 }
                             } else {
                                 System.out.println("DEBUG - Found direct userId in cookie: " + value);
                                 return value;
                             }
-                        } catch (Exception e) {
+                        } catch(Exception e) {
                             System.err.println("DEBUG - Error parsing cookie " + cookieName + ": " + e.getMessage());
                         }
                     }
@@ -109,16 +91,31 @@ public class ChatController {
     ) {
         try {
             String authenticatedUserId = getAuthenticatedUserId(request);
+            if(!authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "error", "User ID mismatch",
+                        "message", "You can only access your own chat data"
+                    ));
+            }
+            
+            // Additional validation
+            if(!serviceManager.getChatService().userHasAccessToChat(authenticatedUserId, chatId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied to this chat"));
+            }
         
-            System.out.println("DEBUG - Requested userId: " + userId);
-            System.out.println("DEBUG - Authenticated userId: " + authenticatedUserId);
+            //System.out.println("DEBUG - Requested userId: " + userId);
+            //System.out.println("DEBUG - Authenticated userId: " + authenticatedUserId);
+            /*
             System.out.println("DEBUG - Session ID from cookies: " + 
                 serviceManager.getSessionService().extractSessionId(request));
-            
+                */
             if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                /*
                 System.out.println("DEBUG - Authentication failed: " + 
                     (authenticatedUserId == null ? "No authenticated user" : "User ID mismatch"));
-                
+                    */
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of(
                         "error", "Unauthorized access",

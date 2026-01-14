@@ -16,7 +16,7 @@ export const AddToCache = (cacheServiceParam?: CacheServiceClient) => {
          */
         addMessage: async (chatId: string, data: any): Promise<void> => {
             try {
-                if (!cacheService) {
+                if(!cacheService) {
                     console.error('Cache service not initialized');
                     return;
                 }
@@ -63,7 +63,7 @@ export const AddToCache = (cacheServiceParam?: CacheServiceClient) => {
          * Add File
          */
         addFile: async (chatId: string, data: any) => {
-            if (!cacheService) {
+            if(!cacheService) {
                 console.error('Cache service not initialized');
                 return;
             }
@@ -124,7 +124,7 @@ export const AddToCache = (cacheServiceParam?: CacheServiceClient) => {
          */
         addSystemMessage: async (chatId: string, data: any): Promise<void> => {
             try {
-                if (!cacheService) {
+                if(!cacheService) {
                     console.error('Cache service not initialized');
                     return;
                 }

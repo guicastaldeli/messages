@@ -110,10 +110,20 @@ export class Dashboard extends Component<Props, State> {
     }
 
     private checkChatItemsAdded() {
-        const currentCount = this.state.chatList.length;
+        const currentCount = this.state.chatList ? this.state.chatList.length : 0;
         const expectedCount = this.state.expectedChatCount;
+        
         const allChatsLoaded = expectedCount === 0 || currentCount >= expectedCount;
-        if(allChatsLoaded) this.setState({ chatItemsAdded: true });
+        
+        if(allChatsLoaded && this.state.chatStreamComplete) {
+            this.setState({ chatItemsAdded: true });
+            console.log('All chats loaded:', { 
+                currentCount, 
+                expectedCount,
+                chatStreamComplete: this.state.chatStreamComplete,
+                allChatsLoaded: allChatsLoaded
+            });
+        }
     }
 
     private async checkChatsCompleted() {
@@ -159,14 +169,10 @@ export class Dashboard extends Component<Props, State> {
         const filteredChatList = chatList.filter((chat: any) =>
             !this.removedChatIds.has(chat.id) && !this.removedChatIds.has(chat.groupId)
         );
-        this.setState({ chatList: filteredChatList });
         
-        if(this.state.chatStreamComplete && 
-           this.state.expectedChatCount > 0 && 
-           chatList.length >= this.state.expectedChatCount
-        ) {
-            this.setState({ chatItemsAdded: true });
-        }
+        this.setState({ chatList: filteredChatList }, () => {
+            this.checkChatItemsAdded();
+        });
         
         if(this.props.onChatListUpdate) {
             this.props.onChatListUpdate(filteredChatList);
@@ -285,34 +291,60 @@ export class Dashboard extends Component<Props, State> {
 
             const stream = await this.props.chatService.streamUserChats(this.state.userId);
             
+            const processedChats = new Set<string>();
+            
             stream.on('chat_data', async (data: any) => {
                 const chat = data.chat;
                 const chatId = chat.id || chat.chatId || chat.groupId;
+                if(processedChats.has(chatId)) {
+                    return;
+                }
                 
                 if(!currentIds.has(chatId) && !this.removedChatIds.has(chatId)) {
                     console.log('Polling Found new chat:', chatId);
+                    processedChats.add(chatId);
                     
                     await this.props.chatManager.subscribeToChat(chatId, chat.type || 'DIRECT');
+                    
+                    const chatDetail = {
+                        id: chatId,
+                        chatId: chatId,
+                        groupId: chatId,
+                        name: chat.name || chat.contactUsername,
+                        type: chat.type || 'DIRECT',
+                        lastMessage: chat.lastMessage || '',
+                        timestamp: new Date(chat.createdAt || Date.now()),
+                        members: chat.members || [],
+                        unreadCount: chat.unreadCount || 0,
+                        streamed: true,
+                        userId: chat.userId || this.state.userId,
+                        sender: chat.sender || chat.contactUsername
+                    };
+                    
                     const event = new CustomEvent('chat-item-added', {
-                        detail: {
-                            id: chatId,
-                            chatId: chatId,
-                            groupId: chatId,
-                            name: chat.name || chat.contactUsername,
-                            type: chat.type || 'DIRECT',
-                            lastMessage: chat.lastMessage,
-                            timestamp: new Date(chat.createdAt || Date.now()),
-                            members: chat.members || [],
-                            unreadCount: chat.unreadCount || 0,
-                            streamed: true
-                        }
+                        detail: chatDetail
                     });
                     window.dispatchEvent(event);
+                    
+                    if(chat.lastMessage) {
+                        const messageEvent = new CustomEvent('chat-message-received', {
+                            detail: {
+                                chatId: chatId,
+                                message: chat.lastMessage,
+                                sender: chat.sender || chat.contactUsername,
+                                timestamp: chat.lastMessageTimestamp || chat.createdAt || Date.now(),
+                                userId: chat.userId || this.state.userId
+                            }
+                        });
+                        window.dispatchEvent(messageEvent);
+                    }
                 }
             });
 
             await stream.start();
-        } catch (err) {
+            
+            setTimeout(() => processedChats.clear(), 2000);
+        } catch(err) {
             console.error('[Polling] Error:', err);
         }
     }
@@ -334,7 +366,11 @@ export class Dashboard extends Component<Props, State> {
             await this.checkChatsCompleted();
             
             await this.waitForChatList();
-            await this.subscribeToAllChats();
+            if(this.state.chatList && this.state.chatList.length > 0) {
+                await this.subscribeToAllChats();
+            } else {
+                console.log('No chats to subscribe to');
+            }
             
             this.setState({
                 contactService: this.contactService,
@@ -361,11 +397,27 @@ export class Dashboard extends Component<Props, State> {
     private async waitForChatList(): Promise<void> {
         return new Promise((resolve) => {
             const checkChatList = () => {
-                if (this.state.chatList && this.state.chatList.length > 0) {
-                    console.log('Chat list populated with', this.state.chatList.length, 'chats');
+                const currentCount = this.state.chatList ? this.state.chatList.length : 0;
+                const expectedCount = this.state.expectedChatCount;
+                const shouldBeLoaded = expectedCount === 0 || currentCount >= expectedCount;
+                
+                if(this.state.chatStreamComplete && 
+                    (this.state.chatItemsAdded || shouldBeLoaded)) {
+                    console.log('Chat list processing complete:', {
+                        chatListLength: this.state.chatList.length,
+                        expectedCount: this.state.expectedChatCount,
+                        chatItemsAdded: this.state.chatItemsAdded,
+                        shouldBeLoaded: shouldBeLoaded
+                    });
                     resolve();
                 } else {
-                    console.log('Waiting for chat list to populate...');
+                    console.log('Waiting for chat list to complete processing...', {
+                        chatStreamComplete: this.state.chatStreamComplete,
+                        chatItemsAdded: this.state.chatItemsAdded,
+                        expectedCount: this.state.expectedChatCount,
+                        currentCount: this.state.chatList.length,
+                        shouldBeLoaded: shouldBeLoaded
+                    });
                     setTimeout(checkChatList, 100);
                 }
             };
@@ -374,7 +426,7 @@ export class Dashboard extends Component<Props, State> {
     }
 
     private async subscribeToAllChats(): Promise<void> {
-        if (!this.props.chatController || !this.state.chatList.length) {
+        if(!this.props.chatController || !this.state.chatList.length) {
             console.log('No chats to subscribe to');
             return;
         }
@@ -395,7 +447,7 @@ export class Dashboard extends Component<Props, State> {
                 );
                 
                 console.log('Subscribed to queue:', queuePattern);
-            } catch (err) {
+            } catch(err) {
                 console.error('Failed to subscribe to chat:', chatId, err);
             }
         }
@@ -602,9 +654,10 @@ export class Dashboard extends Component<Props, State> {
      * Is Loaded
      */
     private isLoaded(): boolean {
-        return this.state.chatsLoaded && 
-            this.state.chatStreamComplete;
-    }
+    return this.state.chatsLoaded && 
+        this.state.chatStreamComplete &&
+        this.state.chatItemsAdded;
+}
 
     private renderChatLayout() {
         const { activeChat, chatList } = this.state;
@@ -893,7 +946,8 @@ export class Dashboard extends Component<Props, State> {
                                                                             <div id="chat-preview">
                                                                                 {typeof chat.lastMessage === 'object' 
                                                                                     ? chat.lastMessage.content 
-                                                                                    : chat.lastMessage}
+                                                                                    : chat.lastMessage
+                                                                                }
                                                                             </div>
                                                                         </div>
                                                                         {isUnread && (

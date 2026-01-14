@@ -60,7 +60,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
     }
 
     useEffect(() => {
-        if (token) {
+        if(token) {
             console.log("Token found, validating:", token);
             validateToken(token);
         } else {
@@ -88,7 +88,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
             
             console.log("Validation response:", res);
             
-            if (res && res.valid === true) {
+            if(res && res.valid === true) {
                 console.log("Token valid, moving to RESET step");
                 setStep(Step.RESET);
                 setMessage('Please enter your new password');
@@ -99,7 +99,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
                 setError(res?.error || 'This password reset link is invalid or has expired');
                 setMessage('');
             }
-        } catch (err: any) {
+        } catch(err: any) {
             console.error("Token validation error:", err);
             setStep(Step.REQUEST);
             setError('Failed to validate reset link: ' + err.message);
@@ -137,12 +137,12 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
             console.log("=== Response Received ===");
             console.log("Full response:", res);
             
-            if (res && res.success === true) {
+            if(res && res.success === true) {
                 console.log("Success path triggered");
                 setStep(Step.SUCCESS);
                 setMessage(res.message || 'Password reset link sent to your email');
                 setEmail(''); // Clear email after success
-            } else if (res && res.error) {
+            } else if(res && res.error) {
                 console.log("Error path triggered");
                 setError(res.error || 'Failed to send reset email');
             } else {
@@ -150,7 +150,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
                 setStep(Step.SUCCESS);
                 setMessage('If an account exists, a reset link has been sent');
             }
-        } catch (err: any) {
+        } catch(err: any) {
             console.error('Password reset request error:', err);
             setError('Failed to request password reset: ' + err.message);
         } finally {
@@ -195,7 +195,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
             
             console.log("Password reset response:", res);
             
-            if (res && res.success) {
+            if(res && res.success) {
                 setStep(Step.SUCCESS);
                 setMessage(res.message || 'Password reset successfully');
                 // Clear passwords
@@ -204,7 +204,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
             } else {
                 setError(res?.error || 'Failed to reset password');
             }
-        } catch (err: any) {
+        } catch(err: any) {
             console.error('Password reset error:', err);
             setError('Failed to reset password: ' + err.message);
         } finally {
@@ -213,7 +213,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
     }
 
     // Show loading state while validating token
-    if (isValidatingToken) {
+    if(isValidatingToken) {
         return (
             <div className="password-reset-container">
                 <div className="validating-message">
