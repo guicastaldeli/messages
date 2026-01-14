@@ -135,6 +135,8 @@ export class EventStream {
             return await this.processFileData(data);
         } else if(data.type === 'CHAT_DATA' && data.chat) {
             return await this.processChatData(data);
+        } else if(data.type === 'chat_data') {
+            return await this.processChatData(data);
         }
         return data;
     }
@@ -198,8 +200,10 @@ export class EventStream {
     }
 
     private async processChatData(data: any): Promise<any> {
+        const chatData = data.chat || data.chatData || data;
         return {
             ...data,
+            chat: chatData,
             processed: true
         };
     }

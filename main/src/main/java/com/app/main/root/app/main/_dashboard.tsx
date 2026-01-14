@@ -163,6 +163,8 @@ export class Dashboard extends Component<Props, State> {
         }
     }
 
+    private pollInterval: NodeJS.Timeout | null = null;
+
     async componentDidMount(): Promise<void> {
         this.setSession('MAIN_DASHBOARD');
 
@@ -203,6 +205,10 @@ export class Dashboard extends Component<Props, State> {
         if(userId) {
             this.setState({ userId });
             await this.loadData();
+            
+            this.pollInterval = setInterval(() => {
+                this.pollForNewChats();
+            }, 2000);
         } else {
             this.setState({
                 contactsLoaded: false,
@@ -224,12 +230,69 @@ export class Dashboard extends Component<Props, State> {
     }
 
     componentWillUnmount(): void {
+        if(this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+        }
+
         window.removeEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.removeEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
         window.removeEventListener('chat-stream-complete', () => {});
         window.removeEventListener('chats-stream-error', () => {});
         window.removeEventListener('chat-unread-updated', this.handleChatUnreadUpdated as EventListener);
         window.removeEventListener('chat-read', this.handleChatRead as EventListener);
+    }
+
+    /**
+     * Poll for New Chats
+     */
+    private async pollForNewChats(): Promise<void> {
+        if(!this.state.chatStreamComplete || !this.state.chatItemsAdded) {
+            console.log('[Polling] Skipping - chat processing not complete:', {
+                streamComplete: this.state.chatStreamComplete,
+                itemsAdded: this.state.chatItemsAdded
+            });
+            return;
+        }
+        
+        if(!this.state.userId || !this.props.chatService) return;
+
+        try {
+            const currentIds = new Set(
+                this.state.chatList.map((c: any) => c.id || c.chatId || c.groupId)
+            );
+
+            const stream = await this.props.chatService.streamUserChats(this.state.userId);
+            
+            stream.on('chat_data', async (data: any) => {
+                const chat = data.chat;
+                const chatId = chat.id || chat.chatId || chat.groupId;
+                
+                if(!currentIds.has(chatId) && !this.removedChatIds.has(chatId)) {
+                    console.log('Polling Found new chat:', chatId);
+                    
+                    const event = new CustomEvent('chat-item-added', {
+                        detail: {
+                            id: chatId,
+                            chatId: chatId,
+                            groupId: chatId,
+                            name: chat.name || chat.contactUsername,
+                            type: chat.type || 'DIRECT',
+                            lastMessage: chat.lastMessage,
+                            timestamp: new Date(chat.createdAt || Date.now()),
+                            members: chat.members || [],
+                            unreadCount: chat.unreadCount || 0,
+                            streamed: true
+                        }
+                    });
+                    window.dispatchEvent(event);
+                }
+            });
+
+            await stream.start();
+        } catch (err) {
+            console.error('[Polling] Error:', err);
+        }
     }
 
     componentDidUpdate(prevProps: Props): void {
@@ -478,11 +541,11 @@ export class Dashboard extends Component<Props, State> {
         const { activeChat, chatList } = this.state;
         const { chatController, chatManager } = this.props;
 
-        if (!activeChat || !chatManager) {
+        if(!activeChat || !chatManager) {
             const showCreationForm = this.currentState.showCreationForm;
             const showJoinForm = this.currentState.showJoinForm;
             
-            if (showCreationForm && chatManager?.getGroupManager()) {
+            if(showCreationForm && chatManager?.getGroupManager()) {
                 return (
                     <GroupLayout
                         chatController={chatController}

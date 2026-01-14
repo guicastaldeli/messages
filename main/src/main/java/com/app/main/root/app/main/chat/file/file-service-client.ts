@@ -42,10 +42,6 @@ export class FileServiceClient {
         }
         
         const fileId = actualFileData.file_id || actualFileData.fileId || actualFileData.id;
-        if(!fileId || !actualFileData.originalFileName) {
-            console.error('Invalid file data, skipping:', actualFileData);
-            return;
-        }
         
         if(!data.files.has(fileId)) {
             data.files.set(fileId, actualFileData);

@@ -4,10 +4,11 @@ import { SocketClientConnect } from "../socket-client-connect";
 import { MessageControllerClient } from "./messages/message-controller-client";
 import { FileControllerClient } from "./file/file-controller-client";
 import { EventStream } from "./event-stream";
+import { AnyARecord } from "dns";
 
 export class ChatService {
     private socketClientConnect: SocketClientConnect;
-    private apiClientController: ApiClientController;
+    public apiClientController: ApiClientController;
     private cacheServiceClient: CacheServiceClient;
     private messageControllerClient: MessageControllerClient;
     private fileControllerClient: FileControllerClient;
@@ -26,6 +27,16 @@ export class ChatService {
             this.apiClientController,
             this
         );
+    }
+
+    public async checkChatExists(userId: string, chatId: string): Promise<any> {
+        try {
+            const chatData = await this.getChatData(userId, chatId, 0, 1);
+            return chatData;
+        } catch(err) {
+            console.warn(`Chat ${chatId} does not exist or error:`, err);
+            return false;
+        }
     }
 
     public async getChatData(

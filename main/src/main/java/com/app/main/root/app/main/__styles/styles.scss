@@ -44,13 +44,15 @@ body {
 }
 
 .screen {
-    display: none;
-    
     &.active {
         display: flex;
         width: 100%;
         height: 100%;
     }
+}
+
+.timestamp {
+    color: black;
 }
 
 /* Main Dashboard Layout - THREE COLUMN */
@@ -853,7 +855,13 @@ body {
 .other-message {
     align-self: flex-start;
     background: white;
+    margin-right: auto;
+    max-width: 30%;
     box-shadow: 0 1.5px 2px rgba(0, 0, 0, 0.23);
+
+    .user {
+        color: rgba(255, 255, 255, 0.8);
+    }
 }
 
 .self-message {
@@ -881,12 +889,12 @@ body {
     color: var(--text-secondary);
     font-weight: 500;
     box-shadow: 0 1.5px 2px rgba(0, 0, 0, 0.112);
+    animation: messageSlideIn 0.05s ease;
 }
 
 /* File Messages */
 .file-message {
     background: white;
-    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 12px;
     max-width: 400px;
@@ -908,7 +916,7 @@ body {
 
 .file-icon {
     font-size: 32px;
-    color: var(--primary-color);
+    color: rgb(217, 239, 255);
 }
 
 .file-info {
@@ -916,6 +924,7 @@ body {
     min-width: 0;
     
     .file-name {
+        color: black;
         font-weight: 600;
         margin-bottom: 4px;
         font-size: 14px;
@@ -949,6 +958,36 @@ body {
     }
 }
 
+.join-group-form {
+    width: 20%;
+    height: 40%;
+
+    .form-content {
+        width: 80%;
+        display: flex;
+        
+        .btn-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+
+    .error-message {
+        top: -1.3rem;
+        display: flex;
+        position: relative;
+        color: rgb(209, 30, 30);
+        font-weight: 500;
+            font-size: 14px;
+    }
+}
+
+.group-info.form {
+    width: 20%;
+    height: 30%;
+}
+
 /* Group Forms */
 .group-info.form,
 .join-group-form {
@@ -957,8 +996,6 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 20%;
-    height: 30%;
     border-radius: 16px;
     padding: 32px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);

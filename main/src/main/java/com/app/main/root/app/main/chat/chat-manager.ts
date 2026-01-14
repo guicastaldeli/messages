@@ -85,6 +85,7 @@ export class ChatManager {
             username!
         );
         this.setState = setState;
+        this.setupPermanentListeners();
     }
 
     public setUpdateCallback(callback: (list: any[]) => void): void {
@@ -122,6 +123,13 @@ export class ChatManager {
         if(this.updateCallback) this.updateCallback([...this.chatList]);
 
         this.updateChatList();
+    }
+
+    private setupPermanentListeners(): void {
+        window.addEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
+        window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
+        window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
+        window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
     }
     
     private handleChatItemRemoved = (event: CustomEvent): void => {
@@ -303,56 +311,22 @@ export class ChatManager {
             sender !== this.userId &&
             sender !== this.username;
         
-        this.setState((prevState: State) => {
-            const chatIndex = prevState.chatList.findIndex(chat => 
-                chat.id === id || chat.chatId === id || chat.groupId === id
-            );
-            
-            if(chatIndex === -1) {
-                const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
-                const newItem: Item = {
-                    id: id,
-                    name: sender,
-                    type: chatType,
-                    lastMessage: this.formattedLastMessage(lastMessage),
-                    timestamp: now,
-                    unreadCount: isFromOtherUser ? 1 : 0
-                };
-                return { 
-                    chatList: [newItem, ...prevState.chatList] 
-                };
-            }
-
-            const updatedChatList = [...prevState.chatList];
-            const originalChat = updatedChatList[chatIndex];
-
-            const updatedChat = {
-                ...originalChat,
-                userId: userId,
-                messageId: messageId,
-                lastMessage: this.formattedLastMessage(lastMessage),
-                lastMessageSender: sender,
-                lastMessageTime: timestamp,
-                timestamp: now,
-                unreadCount: isFromOtherUser ?
-                    (originalChat.unreadCount || 0) + 1 :
-                    (originalChat.unreadCount || 0)
-            };
-
-            updatedChatList.splice(chatIndex, 1);
-            updatedChatList.unshift(updatedChat);
-            return { chatList: updatedChatList };
-        }, () => {
-            this.updateChatList();
-            if(this.updateCallback) {
-                this.updateCallback([...this.chatList]);
-            }
-        });
-        
         const chatIndex = this.chatList.findIndex(chat => 
             chat.id === id || chat.chatId === id || chat.groupId === id
         );
-        if(chatIndex !== -1) {
+        
+        if(chatIndex === -1) {
+            const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
+            const newItem: Item = {
+                id: id,
+                name: sender,
+                type: chatType,
+                lastMessage: this.formattedLastMessage(lastMessage),
+                timestamp: now,
+                unreadCount: isFromOtherUser ? 1 : 0
+            };
+            this.chatList.unshift(newItem);
+        } else {
             const updatedChat = {
                 ...this.chatList[chatIndex],
                 userId: userId,
@@ -367,17 +341,49 @@ export class ChatManager {
             };
             this.chatList.splice(chatIndex, 1);
             this.chatList.unshift(updatedChat);
-        } else {
-            const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
-            this.chatList.unshift({
-                id: id,
-                name: sender,
-                type: chatType,
-                lastMessage: this.formattedLastMessage(lastMessage),
-                timestamp: now,
-                unreadCount: isFromOtherUser ? 1 : 0
-            });
         }
+
+        this.setState((prevState: State) => {
+            const stateIndex = prevState.chatList.findIndex(chat => 
+                chat.id === id || chat.chatId === id || chat.groupId === id
+            );
+            
+            if(stateIndex === -1) {
+                const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
+                const newItem: Item = {
+                    id: id,
+                    name: sender,
+                    type: chatType,
+                    lastMessage: this.formattedLastMessage(lastMessage),
+                    timestamp: now,
+                    unreadCount: isFromOtherUser ? 1 : 0
+                };
+                return { chatList: [newItem, ...prevState.chatList] };
+            }
+
+            const updatedChatList = [...prevState.chatList];
+            const originalChat = updatedChatList[stateIndex];
+            const updatedChat = {
+                ...originalChat,
+                userId: userId,
+                messageId: messageId,
+                lastMessage: this.formattedLastMessage(lastMessage),
+                lastMessageSender: sender,
+                lastMessageTime: timestamp,
+                timestamp: now,
+                unreadCount: isFromOtherUser ?
+                    (originalChat.unreadCount || 0) + 1 :
+                    (originalChat.unreadCount || 0)
+            };
+            updatedChatList.splice(stateIndex, 1);
+            updatedChatList.unshift(updatedChat);
+            return { chatList: updatedChatList };
+        }, () => {
+            this.updateChatList();
+            if(this.updateCallback) {
+                this.updateCallback([...this.chatList]);
+            }
+        });
     }
 
     private ensureChatExists(

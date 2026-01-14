@@ -19,6 +19,11 @@ export const JoinGroupLayout: React.FC<Props> = ({
      * Group Preview
      */
     const handleGroupPreview = async () => {
+        if(!inviteCode.trim()) {
+            setError('Please enter an invite code');
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
 
@@ -100,41 +105,47 @@ export const JoinGroupLayout: React.FC<Props> = ({
         <>
             {mode === 'join' && (
                 <div className="join-group-form">
-                    <button onClick={handleClose} id="back-button">Back</button>
                     {!showGroupPreview ? (
                         <div className="form-content">
                             <div id="header">
-                                <h3 style={{ fontFamily: 'Comic Sans MS', color: '#4716c6ff' }}>Join Group</h3>
+                                <h3>Join Group</h3>
                             </div>
                             <div id="form-input">
-                                <label htmlFor="groupId" style={{ fontWeight: "bolder" }}>Link:</label>
                                 <div id="form-input">
                                     <label htmlFor="inviteCode">Invite Code: </label>
                                     <input 
                                         type="text"
                                         id="inviteCodeInput"
                                         value={inviteCode}
-                                        onChange={(e) => setInviteCode(e.target.value)}
+                                        onChange={(e) => {
+                                            setInviteCode(e.target.value);
+                                            setError(null);
+                                        }}
                                         placeholder="Enter Invite Code!"
                                         disabled={isLoading}
+                                        style={{ borderColor: error ? 'rgb(209, 30, 30)' : '' }}
+                                        className={error ? 'input-error' : ''}
                                     />
                                 </div>
+                                {error && (
+                                    <div className="error-message">
+                                        {error}
+                                    </div>
+                                )}
                             </div>
 
-                            {error && (
-                                <div className="error-message">
-                                    {error}
+                            <div className="btn-actions">
+                                <div className="form-actions">
+                                    <button
+                                        onClick={handleGroupPreview}
+                                        disabled={isLoading}
+                                        id="preview-button"
+                                    >
+                                        {isLoading ? 'Checking...' : 'Preview Group'}
+                                    </button>
                                 </div>
-                            )}
 
-                            <div className="form-actions">
-                                <button
-                                    onClick={handleGroupPreview}
-                                    disabled={isLoading}
-                                    id="preview-button"
-                                >
-                                    {isLoading ? 'Checking...' : 'Preview Group'}
-                                </button>
+                                <button onClick={handleClose} id="back-button">Back</button>
                             </div>
                         </div>
                     ) : (

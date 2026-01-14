@@ -80,7 +80,7 @@ export class Loader {
     /**
      * Process Chat Item
      */
-    private async processChatItem(chat: any, userId: string): Promise<void> {
+    public async processChatItem(chat: any, userId: string): Promise<void> {
         try {
             const shouldContinue = await this.setChatState(chat, userId);
             if(!shouldContinue) return;

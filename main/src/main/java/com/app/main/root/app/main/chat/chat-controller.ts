@@ -680,6 +680,22 @@ export class ChatController {
         this.lastMessageIds.set(messageType, data.messageId);
         const perspective = data._perspective;
         const direction = perspective?.direction || analysis.direction;
+        if(data.chatId && data.chatId.startsWith('direct_') && direction !== 'self') {
+            const chatManager = this.chatManager;
+            if(chatManager) {
+                const chatExists = await this.chatExists(data.chatId);
+                if(!chatExists) {
+                    chatManager.updateChatMessage({
+                        id: data.chatId,
+                        userId: data.senderId || data.userId,
+                        messageId: data.messageId || data.id,
+                        lastMessage: data.content,
+                        sender: data.senderName || data.username || 'Unknown',
+                        timestamp: new Date(data.timestamp || Date.now()).toISOString()
+                    });
+                }
+            }
+        }
 
         if(data.chatId && data.chatId.startsWith('direct_') && direction !== 'self') {
             const currentCount = this.chatStateManager.getMessageCount(data.chatId);
@@ -713,7 +729,7 @@ export class ChatController {
         );
         
         if(!isCurrentUserMessage && data.senderId !== this.userId) {
-            console.log('🔔 [CHAT CONTROLLER] Triggering notification for message from other user');
+            console.log('notification for message from other user');
             const notificationController = this.getNotificationController();
             if(notificationController) {
                 const notificationData = {
@@ -743,6 +759,24 @@ export class ChatController {
                 }
             }
         }
+    }
+
+    private async chatExists(chatId: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const checkExistence = () => {
+                const chatManager = this.chatManager;
+                if(chatManager) {
+                    const chatList = (chatManager as any).chatList;
+                    const exists = chatList.some((chat: any) => 
+                        chat.id === chatId || chat.chatId === chatId
+                    );
+                    resolve(exists);
+                } else {
+                    resolve(false);
+                }
+            };
+            checkExistence();
+        });
     }
 
     /**
