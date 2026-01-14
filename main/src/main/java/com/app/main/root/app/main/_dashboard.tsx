@@ -362,10 +362,26 @@ export class Dashboard extends Component<Props, State> {
 
     private handleChatUnreadUpdated = (e: CustomEvent): void => {
         const { chatId, unreadCount } = e.detail;
+        
         this.setState(prevState => {
             const newUnreadCounts = new Map(prevState.unreadCounts);
             newUnreadCounts.set(chatId, unreadCount);
-            return { unreadCounts: newUnreadCounts }
+            
+            const updatedChatList = prevState.chatList.map((chat: any) => {
+                const chatIdToCheck = chat.id || chat.chatId || chat.groupId;
+                if(chatIdToCheck === chatId) {
+                    return {
+                        ...chat,
+                        unreadCount: unreadCount
+                    };
+                }
+                return chat;
+            });
+            
+            return { 
+                unreadCounts: newUnreadCounts,
+                chatList: updatedChatList 
+            };
         });
     }
 
@@ -634,6 +650,18 @@ export class Dashboard extends Component<Props, State> {
         return null;
     }
 
+    private getChatColorIndex(chatId: string): number {
+        if(!chatId) return 0;
+        
+        let hash = 0;
+        for(let i = 0; i < chatId.length; i++) {
+            hash = ((hash << 5) - hash) + chatId.charCodeAt(i);
+            hash = hash & hash;
+        }
+        
+        return Math.abs(hash) % 10;
+    }
+
     render() {
         const sessionData = SessionManager.getUserInfo();
         const userId = sessionData?.userId;
@@ -779,6 +807,9 @@ export class Dashboard extends Component<Props, State> {
                                                             {chatList.map((chat: any, i: any) => {
                                                                 const unreadCount = this.getChatUnreadCount(chat.id || chat.chatId || chat.groupId);
                                                                 const isUnread = unreadCount > 0;
+                                                                const chatId = chat.id || chat.chatId || chat.groupId;
+                                                                const colorIndex = this.getChatColorIndex(chatId);
+
                                                                 return (
                                                                     <li
                                                                         key={chat.id || `${chat.type}_${i}`}
@@ -790,7 +821,8 @@ export class Dashboard extends Component<Props, State> {
                                                                     >
                                                                         <div 
                                                                             className={`chat-icon ${chat.type === 'DIRECT' ? 'direct-icon' : 'group-icon'}`}
-                                                                            data-chat-index={i}
+                                                                            data-chat-id={chatId}
+                                                                            data-color-index={colorIndex}
                                                                         >
                                                                             {chat.type === 'DIRECT' ? (
                                                                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

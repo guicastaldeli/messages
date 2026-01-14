@@ -609,37 +609,29 @@ body {
         }
 
         &.direct-icon {
-            &[data-chat-index="0"] { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-            &[data-chat-index="1"] { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-            &[data-chat-index="2"] { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-            &[data-chat-index="3"] { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-            &[data-chat-index="4"] { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-            &[data-chat-index="5"] { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
-            &[data-chat-index="6"] { background: linear-gradient(135deg, #5ee7df 0%, #b490ca 100%); }
-            &[data-chat-index="7"] { background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%); }
-            &[data-chat-index="8"] { background: linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%); }
-            &[data-chat-index="9"] { background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); }
-            
-            &[data-chat-index]:not([data-chat-index="0"]):not([data-chat-index="1"]):not([data-chat-index="2"]):not([data-chat-index="3"]):not([data-chat-index="4"]):not([data-chat-index="5"]):not([data-chat-index="6"]):not([data-chat-index="7"]):not([data-chat-index="8"]):not([data-chat-index="9"]) {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            }
+            &[data-color-index="0"] { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            &[data-color-index="1"] { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+            &[data-color-index="2"] { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+            &[data-color-index="3"] { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+            &[data-color-index="4"] { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+            &[data-color-index="5"] { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+            &[data-color-index="6"] { background: linear-gradient(135deg, #5ee7df 0%, #b490ca 100%); }
+            &[data-color-index="7"] { background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%); }
+            &[data-color-index="8"] { background: linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%); }
+            &[data-color-index="9"] { background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); }
         }
         
         &.group-icon {
-            &[data-chat-index="0"] { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
-            &[data-chat-index="1"] { background: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%); }
-            &[data-chat-index="2"] { background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%); }
-            &[data-chat-index="3"] { background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%); }
-            &[data-chat-index="4"] { background: linear-gradient(135deg, #f83600 0%, #f9d423 100%); }
-            &[data-chat-index="5"] { background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%); }
-            &[data-chat-index="6"] { background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); }
-            &[data-chat-index="7"] { background: linear-gradient(135deg, #3e5151 0%, #decba4 100%); }
-            &[data-chat-index="8"] { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-            &[data-chat-index="9"] { background: linear-gradient(135deg, #ff512f 0%, #f09819 100%); }
-            
-            &[data-chat-index]:not([data-chat-index="0"]):not([data-chat-index="1"]):not([data-chat-index="2"]):not([data-chat-index="3"]):not([data-chat-index="4"]):not([data-chat-index="5"]):not([data-chat-index="6"]):not([data-chat-index="7"]):not([data-chat-index="8"]):not([data-chat-index="9"]) {
-                background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-            }
+            &[data-color-index="0"] { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
+            &[data-color-index="1"] { background: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%); }
+            &[data-color-index="2"] { background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%); }
+            &[data-color-index="3"] { background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%); }
+            &[data-color-index="4"] { background: linear-gradient(135deg, #f83600 0%, #f9d423 100%); }
+            &[data-color-index="5"] { background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%); }
+            &[data-color-index="6"] { background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); }
+            &[data-color-index="7"] { background: linear-gradient(135deg, #3e5151 0%, #decba4 100%); }
+            &[data-color-index="8"] { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+            &[data-color-index="9"] { background: linear-gradient(135deg, #ff512f 0%, #f09819 100%); }
         }
     }
     

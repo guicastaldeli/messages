@@ -85,7 +85,7 @@ export class ChatManager {
             username!
         );
         this.setState = setState;
-        this.setupPermanentListeners();
+        this.setupEventListeners();
     }
 
     public setUpdateCallback(callback: (list: any[]) => void): void {
@@ -125,12 +125,50 @@ export class ChatManager {
         this.updateChatList();
     }
 
-    private setupPermanentListeners(): void {
+    private setupEventListeners(): void {
         window.addEventListener('chat-item-added', this.handleChatItemAdded as EventListener);
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.addEventListener('last-message-updated', this.handleLastMessage as EventListener);
         window.addEventListener('chat-activated', this.handleChatActivated as EventListener);
+        window.addEventListener('chat-message-received', this.handleChatMessageReceived as EventListener);
     }
+
+    private handleChatMessageReceived = (event: CustomEvent): void => {
+    const { chatId, message, sender, timestamp, isSystem } = event.detail;
+    
+    this.updateChatMessage({
+        id: chatId,
+        userId: sender,
+        messageId: `msg_${timestamp}`,
+        lastMessage: message,
+        sender: sender,
+        timestamp: new Date(timestamp).toISOString()
+    });
+    
+    const isFromCurrentUser = 
+        sender === this.userId || 
+        sender === this.username;
+    
+    // Check if this chat is currently active
+    const isChatActive = this.activeChat && 
+        (this.activeChat.id === chatId || 
+         this.activeChat.chatId === chatId || 
+         this.activeChat.groupId === chatId);
+    
+    if(!isFromCurrentUser && !isChatActive) {
+        const currentUnreadCount = this.chatController.getNotificationController().getChatUnreadCount(chatId);
+        const unreadEvent = new CustomEvent('chat-unread-updated', {
+            detail: {
+                chatId: chatId,
+                unreadCount: currentUnreadCount + 1,
+                message: message
+            }
+        });
+        window.dispatchEvent(unreadEvent);
+        
+        this.updateChatList();
+    }
+}
     
     private handleChatItemRemoved = (event: CustomEvent): void => {
         const { id, groupId, reason } = event.detail;
@@ -219,11 +257,23 @@ export class ChatManager {
      * Update Chat List
      */
     private updateChatList(): void {
-        if(this.dashboard) this.dashboard.updateChatList(this.chatList);
+        this.sortChats(this.chatList);
+        
+        if(this.dashboard) {
+            this.dashboard.updateChatList([...this.chatList]);
+        }
+        
         const event = new CustomEvent('chat-list-updated', {
-            detail: { chatList: this.chatList }
+            detail: { chatList: [...this.chatList] }
         });
         window.dispatchEvent(event);
+        
+        if(this.setState) {
+            this.setState({ chatList: [...this.chatList] });
+        }
+        if(this.updateCallback) {
+            this.updateCallback([...this.chatList]);
+        }
     }
 
     private processQueue(): void {

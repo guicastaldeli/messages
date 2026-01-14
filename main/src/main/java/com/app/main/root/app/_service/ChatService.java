@@ -121,7 +121,7 @@ public class ChatService {
         return allChats;
     }
 
-    private boolean userHasAccessToChat(String userId, String chatId) throws SQLException {
+    public boolean userHasAccessToChat(String userId, String chatId) throws SQLException {
         List<Map<String, Object>> directChats = serviceManager.getUserService().getUserDirect(userId);
         for(Map<String, Object> chat : directChats) {
             if(chatId.equals(chat.get("id"))) {

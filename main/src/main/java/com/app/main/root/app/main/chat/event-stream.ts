@@ -102,6 +102,12 @@ export class EventStream {
      */
     private setupEventHandlers(): void {
         this.socketClientConnect.onDestination(this.config.succssDestination, async (data: any) => {
+            if(!data || typeof data !== 'object') {
+                console.warn('Invalid data received from socket:', data);
+                this.emit('invalid-data', { data });
+                return;
+            }
+
             if(data.type === 'STREAM_COMPLETE') {
                 this.isComplete = true;
                 this.emit('complete', data);
@@ -111,12 +117,18 @@ export class EventStream {
 
             try {
                 const processedData = await this.processData(data);
-                this.emit(data.type.toLowerCase(), processedData);
+                
+                const eventType = data.type && typeof data.type === 'string' 
+                    ? data.type.toLowerCase() 
+                    : 'unknown';
+                    
+                this.emit(eventType, processedData);
             } catch(err) {
                 console.error('Failed to process stream data:', err);
                 this.emit('processing-error', { original: data, error: err });
             }
         });
+        
         this.socketClientConnect.onDestination(this.config.errDestination, (err: any) => {
             this.emit('error', err);
             this.cleanup();

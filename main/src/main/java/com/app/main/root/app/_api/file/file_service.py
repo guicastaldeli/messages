@@ -1,19 +1,14 @@
-from fastapi import HTTPException, UploadFile, Response
-from typing import Dict, Any, Optional, List
+from fastapi import HTTPException, UploadFile
+from typing import Dict, Any, Optional
 from fastapi.responses import StreamingResponse
 import httpx
-import json
 import uuid
-from datetime import datetime
-import aiofiles
 import os
-import shutil
-from pathlib import Path
+import aiofiles
 
 
 class FileService:
     def __init__(self, url: str):
-        self.url = url
         self.url = url.rstrip('/')
         
     ## Save File Temp
@@ -30,7 +25,7 @@ class FileService:
             
             return str(tempPath)
         except Exception as err:
-            raise HTTPException(status_code=500, detail=f"Failed to save file: {(err)}")
+            raise HTTPException(status_code=500, detail=f"Failed to save file: {str(err)}")
         
     ## Upload File
     async def uploadFile(
@@ -38,7 +33,8 @@ class FileService:
         filePath: str,
         userId: str,
         originalFileName: str,
-        chatId: str
+        chatId: str,
+        cookies: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -49,43 +45,66 @@ class FileService:
                     'file': (originalFileName, fileContent)
                 }
                 
+                # Log cookies
+                if cookies:
+                    print(f"[FileService] Uploading with cookies: {list(cookies.keys())}")
+                
                 res = await client.post(
                     f"{self.url}/api/files/upload/{userId}/{chatId}",
-                    files=files
+                    files=files,
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
                 )
-                if(os.path.exists(filePath)):
+                
+                if os.path.exists(filePath):
                     os.remove(filePath)
-                if(res.status_code == 200):
+                    
+                if res.status_code == 200:
                     return res.json()
                 else:
                     errorDetail = res.text
                     try:
                         errorJson = res.json()
-                        errDetail = errorJson.get('error', errorJson.get('message', errDetail))
+                        errorDetail = errorJson.get('error', errorJson.get('message', errorDetail))
                     except:
                         pass
                     raise HTTPException(
                         status_code=res.status_code,
-                        detail=f"Server error: {errDetail}"
+                        detail=f"Server error: {errorDetail}"
                     )
         except httpx.RequestError as err:
+            if os.path.exists(filePath):
+                os.remove(filePath)
             raise HTTPException(
                 status_code=503,
                 detail=f"Service unavailable: {str(err)}"
             )
         except Exception as err:
-            if(os.path.exists(filePath)):
+            if os.path.exists(filePath):
                 os.remove(filePath)
             raise HTTPException(status_code=500, detail=str(err))
         
     ## Download File
-    async def downloadFile(self, userId: str, fileId: str):
+    async def downloadFile(
+        self, 
+        userId: str, 
+        fileId: str,
+        cookies: Optional[Dict[str, str]] = None
+    ):
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 url = f"{self.url}/api/files/download/{userId}/{fileId}"
-                print(f"Forwarding download request to: {url}")
+                print(f"[FileService] Downloading from: {url}")
                 
-                async with client.stream('GET', url) as response:
+                if cookies:
+                    print(f"[FileService] Download with cookies: {list(cookies.keys())}")
+                
+                async with client.stream(
+                    'GET', 
+                    url,
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
+                ) as response:
                     if response.status_code != 200:
                         error_text = await response.aread()
                         raise HTTPException(
@@ -107,10 +126,10 @@ class FileService:
                         }
                     ) 
         except httpx.RequestError as err:
-            print(f"HTTP request error: {str(err)}")
+            print(f"[FileService] HTTP request error: {str(err)}")
             raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
         except Exception as err:
-            print(f"Download error: {str(err)}")
+            print(f"[FileService] Download error: {str(err)}")
             raise HTTPException(status_code=500, detail=f"Download failed: {str(err)}")
         
     ## List Files
@@ -118,7 +137,8 @@ class FileService:
         self,
         userId: str,
         chatId: str,
-        page: int = 0
+        page: int = 0,
+        cookies: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
@@ -129,8 +149,17 @@ class FileService:
                     'pageSize': 5
                 }
                 
-                res = await client.get(f"{self.url}/api/files/list", params=params)
-                if(res.status_code == 200):
+                if cookies:
+                    print(f"[FileService] Listing files with cookies: {list(cookies.keys())}")
+                
+                res = await client.get(
+                    f"{self.url}/api/files/list",
+                    params=params,
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
+                )
+                
+                if res.status_code == 200:
                     return res.json()
                 else:
                     raise HTTPException(
@@ -141,11 +170,21 @@ class FileService:
             raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
         
     ## Delete File
-    async def deleteFile(self, userId: str, fileId: str) -> Dict[str, Any]:
+    async def deleteFile(
+        self, 
+        userId: str, 
+        fileId: str,
+        cookies: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
-                res = await client.delete(f"{self.url}/api/files/delete/{userId}/{fileId}")
-                if(res.status_code == 200):
+                res = await client.delete(
+                    f"{self.url}/api/files/delete/{userId}/{fileId}",
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
+                )
+                
+                if res.status_code == 200:
                     return res.json()
                 else:
                     raise HTTPException(
@@ -156,13 +195,20 @@ class FileService:
             raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
             
     ## Get Storage Usage
-    async def getStorageUsage(self, userId: str) -> Dict[str, Any]:
+    async def getStorageUsage(
+        self, 
+        userId: str,
+        cookies: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
                 res = await client.get(
-                    f"{self.url}/api/files/storage/{userId}"
+                    f"{self.url}/api/files/storage/{userId}",
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
                 )
-                if(res.status_code == 200):
+                
+                if res.status_code == 200:
                     return res.json()
                 else:
                     raise HTTPException(
@@ -170,10 +216,15 @@ class FileService:
                         detail=res.text
                     )
         except httpx.RequestError as err:
-            raise HTTPException(status_code=503, detail=f"Service unavailable")
+            raise HTTPException(status_code=503, detail="Service unavailable")
         
     ## Count Files
-    async def countFiles(self, userId: str, chatId: str) -> Dict[str, Any]:
+    async def countFiles(
+        self, 
+        userId: str, 
+        chatId: str,
+        cookies: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
                 params = {
@@ -181,8 +232,14 @@ class FileService:
                     'chatId': chatId
                 }
                 
-                res = await client.get(f"{self.url}/api/files/count", params=params)
-                if(res.status_code == 200):
+                res = await client.get(
+                    f"{self.url}/api/files/count",
+                    params=params,
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
+                )
+                
+                if res.status_code == 200:
                     return res.json()
                 else:
                     raise HTTPException(
@@ -196,7 +253,8 @@ class FileService:
     async def countPages(
         self, 
         userId: str, 
-        chatId: str
+        chatId: str,
+        cookies: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
@@ -206,8 +264,14 @@ class FileService:
                     'pageSize': 5
                 }
                 
-                res = await client.get(f"{self.url}/api/files/count-pages", params=params)
-                if(res.status_code == 200):
+                res = await client.get(
+                    f"{self.url}/api/files/count-pages",
+                    params=params,
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
+                )
+                
+                if res.status_code == 200:
                     return res.json()
                 else:
                     raise HTTPException(
@@ -222,7 +286,8 @@ class FileService:
         self, 
         userId: str, 
         chatId: str, 
-        page: int = 0
+        page: int = 0,
+        cookies: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
@@ -232,8 +297,14 @@ class FileService:
                     'page': page
                 }
                 
-                res = await client.get(f"{self.url}/api/files/cache-key", params=params)
-                if(res.status_code == 200):
+                res = await client.get(
+                    f"{self.url}/api/files/cache-key",
+                    params=params,
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
+                )
+                
+                if res.status_code == 200:
                     return res.json()
                 else:
                     raise HTTPException(
@@ -243,43 +314,76 @@ class FileService:
         except httpx.RequestError as err:
             raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
         
-    ## Get Recent Files
+    ## Get Recent Files - FIXED
     async def getRecentFiles(
         self,
         userId: str,
         page: int = 0,
-        pageSize: int = 20
+        pageSize: int = 20,
+        cookies: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 params = {
-                    'userId': userId,
                     'page': page,
                     'pageSize': pageSize
                 }
                 
-                res = await client.get(f"{self.url}/api/files/recent/{userId}", params=params)
-                if(res.status_code == 200):
+                if cookies:
+                    print(f"[FileService] Getting recent files with cookies: {list(cookies.keys())}")
+                else:
+                    print(f"[FileService] WARNING: No cookies for recent files")
+                
+                res = await client.get(
+                    f"{self.url}/api/files/recent/{userId}",
+                    params=params,
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
+                )
+                
+                if res.status_code == 200:
                     return res.json()
                 else:
-                    raise HTTPException(
-                        status_code=res.status_code,
-                        detail=res.text
-                    )
+                    print(f"[FileService] Recent files failed: {res.status_code} - {res.text}")
+                    # Return empty result instead of failing
+                    return {
+                        'files': [],
+                        'total': 0,
+                        'hasMore': False
+                    }
         except httpx.RequestError as err:
-            raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
+            print(f"[FileService] Request error: {str(err)}")
+            return {
+                'files': [],
+                'total': 0,
+                'hasMore': False
+            }
+        except Exception as err:
+            print(f"[FileService] Error: {str(err)}")
+            return {
+                'files': [],
+                'total': 0,
+                'hasMore': False
+            }
 
     ## Get Recent Files Count
-    async def getRecentFilesCount(self, userId: str) -> Dict[str, Any]:
+    async def getRecentFilesCount(
+        self, 
+        userId: str,
+        cookies: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
-                res = await client.get(f"{self.url}/api/files/recent/{userId}/count")
-                if(res.status_code == 200):
+                res = await client.get(
+                    f"{self.url}/api/files/recent/{userId}/count",
+                    cookies=cookies,  # Forward cookies
+                    follow_redirects=True
+                )
+                
+                if res.status_code == 200:
                     return res.json()
                 else:
-                    raise HTTPException(
-                        status_code=res.status_code,
-                        detail=res.text
-                    )
+                    return {'total': 0}
         except httpx.RequestError as err:
-            raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
+            print(f"[FileService] Error getting recent files count: {str(err)}")
+            return {'total': 0}

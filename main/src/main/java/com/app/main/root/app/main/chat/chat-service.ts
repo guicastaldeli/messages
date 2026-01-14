@@ -39,6 +39,9 @@ export class ChatService {
         }
     }
 
+    /**
+     * Get Chat Data
+     */
     public async getChatData(
         userId: string,
         chatId: string,
@@ -62,8 +65,24 @@ export class ChatService {
         try {
             console.log(`Fetching unified chat data for ${chatId}, page ${page}`);
             
+            const cookies = document.cookie;
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            }
+            if(cookies) {
+                headers['Cookie'] = cookies;
+                console.log(`[ChatService] Forwarding cookies: ${cookies}`);
+            } else {
+                console.warn(`[ChatService] No cookies found for chat data request`);
+            }
+            
             const res = await fetch(
-                `${this.apiClientController.getUrl()}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`
+                `${this.apiClientController.getUrl()}/api/chat/${chatId}/data?userId=${userId}&page=${page}&pageSize=${pageSize}`,
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: headers
+                }
             );
             
             if(!res.ok) {
@@ -93,29 +112,29 @@ export class ChatService {
             };
 
             if(resData.data) {
-            const data = resData.data;
-            messages = Array.isArray(data.messages) ? data.messages : [];
-            files = Array.isArray(data.files) ? data.files : [];
-            timeline = Array.isArray(data.timeline) ? data.timeline : [];
-            
-            if(files.length === 0 && timeline.length > 0) {
-                const timelineFiles = timeline.filter((item: any) => item.type === 'file');
-                if(timelineFiles.length > 0) {
-                    console.log(`Extracting ${timelineFiles.length} files from timeline`);
-                    files = timelineFiles.map((item: any) => item.fileData || item);
+                const data = resData.data;
+                messages = Array.isArray(data.messages) ? data.messages : [];
+                files = Array.isArray(data.files) ? data.files : [];
+                timeline = Array.isArray(data.timeline) ? data.timeline : [];
+                
+                if(files.length === 0 && timeline.length > 0) {
+                    const timelineFiles = timeline.filter((item: any) => item.type === 'file');
+                    if(timelineFiles.length > 0) {
+                        console.log(`Extracting ${timelineFiles.length} files from timeline`);
+                        files = timelineFiles.map((item: any) => item.fileData || item);
+                    }
+                }
+                
+                if(data.pagination) {
+                    pagination = {
+                        ...pagination,
+                        ...data.pagination,
+                        totalMessages: data.pagination.totalMessages || data.pagination.total || 0,
+                        totalFiles: data.pagination.totalFiles || files.length, // Use actual files count
+                        totalTimeline: data.pagination.totalTimeline || data.pagination.totalItems || 0
+                    };
                 }
             }
-            
-            if(data.pagination) {
-                pagination = {
-                    ...pagination,
-                    ...data.pagination,
-                    totalMessages: data.pagination.totalMessages || data.pagination.total || 0,
-                    totalFiles: data.pagination.totalFiles || files.length, // Use actual files count
-                    totalTimeline: data.pagination.totalTimeline || data.pagination.totalItems || 0
-                };
-            }
-        }
 
             /* Messages */
             if(Array.isArray(messages) && messages.length > 0) {
@@ -136,6 +155,7 @@ export class ChatService {
                 }
                 messages = decryptedMessages.map((message: any) => ({ ...message }));
             }
+            
             /* Files */
             if(Array.isArray(files) && files.length > 0) {
                 const decryptedFiles = [];
@@ -163,6 +183,7 @@ export class ChatService {
                 }
                 files = decryptedFiles.map((file: any) => ({ ...file }));
             }
+            
             if(Array.isArray(files) && files.length > 0) {
                 const timelineFileIds = new Set(
                     timeline
@@ -197,6 +218,7 @@ export class ChatService {
                 
                 console.log(`Timeline now has ${timeline.length} total items`);
             }
+            
             /* Timeline */
             if(Array.isArray(timeline) && timeline.length > 0) {
                 const decryptedTimeline = [];

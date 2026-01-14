@@ -1,7 +1,7 @@
 from file.file_service import FileService
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Response, Request
 from fastapi.responses import StreamingResponse, JSONResponse
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 import httpx
 
@@ -12,14 +12,30 @@ class FileRoutes:
         self.setupRoutes()
         
     def setupRoutes(self):
+        ## Extract Cookies Helper
+        def extractCookies(req: Request) -> Dict[str, str]:
+            cookies = {}
+            for k, v in req.cookies.items():
+                cookies[k] = v
+            
+            if cookies:
+                print(f"[FileRoutes] Extracted cookies: {list(cookies.keys())}")
+            else:
+                print(f"[FileRoutes] WARNING: No cookies found in request!")
+            
+            return cookies
+        
         ## Upload File
         @self.router.post("/upload/{userId}/{chatId}")
         async def uploadFile(
             userId: str,
             chatId: str,
-            file: UploadFile = File(...)
+            file: UploadFile = File(...),
+            request: Request = None
         ):
             try:
+                cookies = extractCookies(request) if request else {}
+                
                 if(file.filename == ''):
                     raise HTTPException(status_code=400, detail="No file selected")
                 if(file.size > 1000 * 1024 * 1024):
@@ -31,6 +47,7 @@ class FileRoutes:
                     userId=userId,
                     originalFileName=file.filename,
                     chatId=chatId,
+                    cookies=cookies
                 )
                 return {
                     "success": True,
@@ -44,9 +61,11 @@ class FileRoutes:
         async def uploadMultipleFiles(
             userId: str,
             chatId: str,
-            files: List[UploadFile] = File(...)
+            files: List[UploadFile] = File(...),
+            request: Request = None
         ):
             try:
+                cookies = extractCookies(request) if request else {}
                 res = []
                 err = []
                 
@@ -61,7 +80,8 @@ class FileRoutes:
                             filePath=tempPath,
                             userId=userId,
                             originalFileName=file.filename,
-                            chatId=chatId
+                            chatId=chatId,
+                            cookies=cookies
                         )
                         res.append({
                             "fileName": file.filename,
@@ -90,39 +110,12 @@ class FileRoutes:
             response: Response
         ):
             try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    url = f"{self.fileService.url}/api/files/download/{userId}/{fileId}"
-                    headers = {}
-                    if("cookie" in request.headers):
-                        headers["cookie"] = request.headers["cookie"]
-                    
-                    serverRes = await client.get(url, headers=headers, follow_redirects=True)
-                    
-                    if serverRes.status_code != 200:
-                        return JSONResponse(
-                            content={"error": "Download failed", "details": serverRes.text},
-                            status_code=serverRes.status_code
-                        )
-                    
-                    content_type = serverRes.headers.get("content-type", "application/octet-stream")
-                    content_disposition = serverRes.headers.get(
-                        "content-disposition", 
-                        f'attachment; filename="{fileId}"'
-                    )
-                    
-                    response.headers["Content-Type"] = content_type
-                    response.headers["Content-Disposition"] = content_disposition
-                    response.headers["Content-Length"] = serverRes.headers.get("content-length", "")
-                    response.headers["Access-Control-Expose-Headers"] = "Content-Disposition, Content-Length"
-                    return Response(
-                        content=serverRes.content,
-                        media_type=content_type,
-                        headers={
-                            "Content-Disposition": content_disposition,
-                            "Content-Length": serverRes.headers.get("content-length", ""),
-                            "Access-Control-Expose-Headers": "Content-Disposition, Content-Length"
-                        }
-                    )
+                cookies = extractCookies(request)
+                return await self.fileService.downloadFile(
+                    userId=userId,
+                    fileId=fileId,
+                    cookies=cookies
+                )
             except Exception as err:
                 print(f"Download error: {str(err)}")
                 return JSONResponse(
@@ -135,13 +128,16 @@ class FileRoutes:
         async def listFiles(
             userId: str = Query(...),
             chatId: str = Query("root"),
-            page: int = Query(0, ge=0)
+            page: int = Query(0, ge=0),
+            request: Request = None
         ):
             try:
+                cookies = extractCookies(request) if request else {}
                 res = await self.fileService.listFiles(
                     userId=userId,
                     chatId=chatId,
-                    page=page
+                    page=page,
+                    cookies=cookies
                 )
                 return res
             except Exception as err:
@@ -149,9 +145,10 @@ class FileRoutes:
     
         ## Delete
         @self.router.delete("/delete/{userId}/{fileId}")
-        async def deleteFile(userId: str, fileId: str):
+        async def deleteFile(userId: str, fileId: str, request: Request = None):
             try:
-                res = await self.fileService.deleteFile(userId, fileId)
+                cookies = extractCookies(request) if request else {}
+                res = await self.fileService.deleteFile(userId, fileId, cookies=cookies)
                 return {
                     "success": True,
                     "message": "File deleted successfully",
@@ -162,9 +159,10 @@ class FileRoutes:
             
         ## Storage
         @self.router.get("/storage/{userId}")
-        async def getStorageUsage(userId: str):
+        async def getStorageUsage(userId: str, request: Request = None):
             try:
-                usage = await self.fileService.getStorageUsage(userId)
+                cookies = extractCookies(request) if request else {}
+                usage = await self.fileService.getStorageUsage(userId, cookies=cookies)
                 return {
                     "success": True,
                     "data": usage
@@ -177,14 +175,17 @@ class FileRoutes:
             userId: str = Query(...),
             query: str = Query(...),
             fileType: Optional[str] = Query(None),
-            page: int = Query(1, ge=1)
+            page: int = Query(1, ge=1),
+            request: Request = None
         ):
             try:
+                cookies = extractCookies(request) if request else {}
                 res = await self.fileService.searchFiles(
                     userId=userId,
                     query=query,
                     fileType=fileType,
-                    page=page
+                    page=page,
+                    cookies=cookies
                 )
                 return {
                     "success": True,
@@ -197,10 +198,12 @@ class FileRoutes:
         @self.router.get("/count")
         async def countFiles(
             userId: str = Query(...),
-            chatId: str = Query("root")
+            chatId: str = Query("root"),
+            request: Request = None
         ):
             try:
-                res = await self.fileService.countFiles(userId, chatId)
+                cookies = extractCookies(request) if request else {}
+                res = await self.fileService.countFiles(userId, chatId, cookies=cookies)
                 return res
             except Exception as err:
                 raise HTTPException(status_code=500, detail=f"Failed to count files: {str(err)}")
@@ -209,10 +212,12 @@ class FileRoutes:
         @self.router.get("/count-pages")
         async def countPages(
             userId: str = Query(...),
-            chatId: str = Query("root")
+            chatId: str = Query("root"),
+            request: Request = None
         ):
             try:
-                res = await self.fileService.countPages(userId, chatId)
+                cookies = extractCookies(request) if request else {}
+                res = await self.fileService.countPages(userId, chatId, cookies=cookies)
                 return res
             except Exception as err:
                 raise HTTPException(status_code=500, detail=f"Failed to count pages: {str(err)}")
@@ -222,10 +227,12 @@ class FileRoutes:
         async def getCacheKey(
             userId: str = Query(...),
             chatId: str = Query("root"),
-            page: int = Query(0, ge=0)
+            page: int = Query(0, ge=0),
+            request: Request = None
         ):
             try:
-                res = await self.fileService.getCacheKey(userId, chatId, page)
+                cookies = extractCookies(request) if request else {}
+                res = await self.fileService.getCacheKey(userId, chatId, page, cookies=cookies)
                 return res
             except Exception as err:
                 raise HTTPException(status_code=500, detail=f"Failed to generate cache key: {str(err)}")
@@ -235,10 +242,12 @@ class FileRoutes:
         async def getRecentFiles(
             userId: str,
             page: int = Query(0),
-            pageSize: int = Query(20)
+            pageSize: int = Query(20),
+            request: Request = None
         ):
             try:
-                result = await self.fileService.getRecentFiles(userId)
+                cookies = extractCookies(request) if request else {}
+                result = await self.fileService.getRecentFiles(userId, page, pageSize, cookies=cookies)
                 return {
                     "success": True,
                     "chats": result.get("files", []),
@@ -250,9 +259,10 @@ class FileRoutes:
 
         ## Get Recent Files Count
         @self.router.get("/recent/{userId}/count")
-        async def getRecentFilesCount(userId: str):
+        async def getRecentFilesCount(userId: str, request: Request = None):
             try:
-                result = await self.fileService.getRecentFilesCount(userId)
+                cookies = extractCookies(request) if request else {}
+                result = await self.fileService.getRecentFilesCount(userId, cookies=cookies)
                 return {
                     "success": True,
                     "count": result.get("total", 0)

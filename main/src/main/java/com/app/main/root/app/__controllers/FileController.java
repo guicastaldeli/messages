@@ -2,13 +2,19 @@ package com.app.main.root.app.__controllers;
 import com.app.main.root.app._cache.CacheService;
 import com.app.main.root.app._data.FileUploader;
 import com.app.main.root.app._service.ServiceManager;
+import com.app.main.root.app._service.SessionService;
 import com.app.main.root.app._types.File;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import java.net.URLEncoder;
 import java.util.*;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/files")
@@ -21,6 +27,80 @@ public class FileController {
         this.cacheService = cacheService;
     }
 
+    private String getAuthenticatedUserId(HttpServletRequest request) {
+        String sessionId = serviceManager.getSessionService().extractSessionId(request);
+        if(sessionId != null) {
+            System.out.println("DEBUG - Found sessionId: " + sessionId);
+            
+            if(serviceManager.getSessionService().validateSession(sessionId)) {
+                SessionService.SessionData sessionData = serviceManager.getSessionService().getSession(sessionId);
+                if(sessionData != null) {
+                    String userId = sessionData.getUserId();
+                    System.out.println("DEBUG - Found userId from session data: " + userId);
+                    return userId;
+                }
+            } else {
+                System.out.println("DEBUG - Session is invalid or expired");
+            }
+        }
+        
+        HttpSession httpSession = request.getSession(false);
+        if(httpSession != null) {
+            String userId = (String) httpSession.getAttribute("userId");
+            if(userId != null) {
+                System.out.println("DEBUG - Found userId from HTTP session: " + userId);
+                return userId;
+            }
+        }
+        
+        String userIdFromCookies = extractUserIdFromCookies(request);
+        if(userIdFromCookies != null) {
+            System.out.println("DEBUG - Found userId from cookies: " + userIdFromCookies);
+            return userIdFromCookies;
+        }
+        
+        System.out.println("DEBUG - No userId found in session, HTTP session, or cookies");
+        return null;
+    }
+
+    private String extractUserIdFromCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if(cookies != null) {
+            System.out.println("DEBUG - Found " + cookies.length + " cookies");
+            
+            String[] cookieNames = {"USER_INFO", "userId", "user_id", "AUTH_USER"};
+            
+            for (Cookie cookie : cookies) {
+                System.out.println("DEBUG - Cookie: " + cookie.getName() + " = " + cookie.getValue());
+                
+                for (String cookieName : cookieNames) {
+                    if(cookieName.equals(cookie.getName())) {
+                        try {
+                            String value = cookie.getValue();
+                            
+                            if(cookieName.equals("USER_INFO")) {
+                                String[] parts = value.split(":");
+                                if(parts.length >= 2) {
+                                    String userId = parts[1];
+                                    System.out.println("DEBUG - Extracted userId from USER_INFO: " + userId);
+                                    return userId;
+                                }
+                            } else {
+                                System.out.println("DEBUG - Found direct userId in cookie: " + value);
+                                return value;
+                            }
+                        } catch (Exception e) {
+                            System.err.println("DEBUG - Error parsing cookie " + cookieName + ": " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        } else {
+            System.out.println("DEBUG - No cookies found in request");
+        }
+        return null;
+    }
+
     /**
      * Upload
      */
@@ -28,9 +108,20 @@ public class FileController {
     public ResponseEntity<?> uploadFile(
         @RequestParam("file") MultipartFile file,
         @PathVariable String userId,
-        @PathVariable String chatId
+        @PathVariable String chatId,
+        HttpServletRequest request
     ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access",
+                        "message", "You can only upload files for your own account"
+                    ));
+            }
+            
             FileUploader res = serviceManager.getFileService()
                 .getFileUploader().upload(
                     userId, 
@@ -64,8 +155,17 @@ public class FileController {
      * Download
      */
     @GetMapping("/download/{userId}/{chatId}/{fileId}")
-    public ResponseEntity<byte[]> downloadFile(@PathVariable String userId, @PathVariable String fileId) {
+    public ResponseEntity<byte[]> downloadFile(
+        @PathVariable String userId, 
+        @PathVariable String fileId,
+        HttpServletRequest request
+    ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
             Map<String, Object> data = serviceManager.getFileService()
                 .getFileDownloader()
                 .download(userId, fileId);
@@ -104,9 +204,19 @@ public class FileController {
     public ResponseEntity<?> deleteFile(
         @PathVariable String userId,
         @PathVariable String chatId, 
-        @PathVariable String fileId
+        @PathVariable String fileId,
+        HttpServletRequest request
     ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+            
             boolean deleted = serviceManager.getFileService().deleteFile(userId, chatId, fileId);
             return ResponseEntity.ok(Map.of(
                 "success", deleted,
@@ -128,9 +238,19 @@ public class FileController {
     public ResponseEntity<?> getFileInfo( 
         @PathVariable String userId,
         @PathVariable String chatId,
-        @PathVariable String fileId
+        @PathVariable String fileId,
+        HttpServletRequest request
     ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+            
             String database = serviceManager.getFileService().findFileDatabase(userId, chatId, fileId);
             if(database != null) {
                 return ResponseEntity.ok(Map.of(
@@ -149,16 +269,26 @@ public class FileController {
     }
 
     /**
-     * List FIles
+     * List Files
      */
     @GetMapping("/list")
     public ResponseEntity<?> listFiles(
         @RequestParam String userId,
         @RequestParam String chatId,
         @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "5") int pageSize
+        @RequestParam(defaultValue = "5") int pageSize,
+        HttpServletRequest request
     ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+
             if(userId == null || userId.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
@@ -215,8 +345,20 @@ public class FileController {
      * Storage Usage
      */
     @GetMapping("/storage/{userId}")
-    public ResponseEntity<?> getStorageUsage(@PathVariable String userId) {
+    public ResponseEntity<?> getStorageUsage(
+        @PathVariable String userId,
+        HttpServletRequest request
+    ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+            
             Map<String, Object> usage = serviceManager.getFileService().getStorageUsage(userId);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -236,9 +378,19 @@ public class FileController {
     @GetMapping("/count")
     public ResponseEntity<?> countFiles(
         @RequestParam String userId,
-        @RequestParam String chatId
+        @RequestParam String chatId,
+        HttpServletRequest request
     ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+            
             int totalFiles = serviceManager.getFileService().countTotalFiles(userId, chatId);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -260,9 +412,19 @@ public class FileController {
     public ResponseEntity<?> countPages(
         @RequestParam String userId,
         @RequestParam String chatId,
-        @RequestParam(defaultValue = "5") int pageSize
+        @RequestParam(defaultValue = "5") int pageSize,
+        HttpServletRequest request
     ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+            
             int totalFiles = serviceManager.getFileService().countTotalFiles(userId, chatId);
             int totalPages = (int) Math.ceil((double) totalFiles / pageSize);
             int currentPage = 0;
@@ -289,9 +451,19 @@ public class FileController {
     public ResponseEntity<?> getCacheKey(
         @RequestParam String userId,
         @RequestParam String chatId,
-        @RequestParam(defaultValue = "0") int page
+        @RequestParam(defaultValue = "0") int page,
+        HttpServletRequest request
     ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+            
             String cacheKey = serviceManager.getFileService().getCacheKey(userId, chatId, page);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -315,9 +487,19 @@ public class FileController {
     public ResponseEntity<?> getRecentFiles(
         @PathVariable String userId,
         @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int pageSize
+        @RequestParam(defaultValue = "20") int pageSize,
+        HttpServletRequest request
     ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+
             if(userId == null || userId.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
@@ -370,8 +552,20 @@ public class FileController {
      * Get Files Count
      */
     @GetMapping("/recent/{userId}/count")
-    public ResponseEntity<?> getRecentFilesCount(@PathVariable String userId) {
+    public ResponseEntity<?> getRecentFilesCount(
+        @PathVariable String userId,
+        HttpServletRequest request
+    ) {
         try {
+            String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "Unauthorized access"
+                    ));
+            }
+            
             int totalFiles = serviceManager.getFileService().countTotalFiles(userId, "root");
             return ResponseEntity.ok(Map.of(
                 "success", true,

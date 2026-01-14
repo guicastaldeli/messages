@@ -328,19 +328,28 @@ public class EventList {
             (sessionId, payload, headerAccessor) -> {
                 try {
                     Map<String, Object> data = (Map<String, Object>) payload;
-                    String userId = (String) data.get("userId");
+                    String requestedUserId = (String) data.get("userId");
                     int page = (int) data.getOrDefault("page", 0);
                     int pageSize = (int) data.getOrDefault("pageSize", 20);
+
+                    String authenticatedUserId = serviceManager.getUserService().getUserIdBySession(sessionId);
+                    if(authenticatedUserId == null || !authenticatedUserId.equals(requestedUserId)) {
+                        Map<String, Object> errorEvent = new HashMap<>();
+                        errorEvent.put("type", "AUTH_ERROR");
+                        errorEvent.put("error", "Unauthorized access to user data");
+                        socketMethods.send(sessionId, "/queue/user-chats-stream-err", errorEvent);
+                        return Collections.emptyMap();
+                    }
 
                     List<Map<String, Object>> chats = 
                         serviceManager
                         .getChatService()
-                        .getUserChats(userId, page, pageSize);
+                        .getUserChats(authenticatedUserId, page, pageSize);
 
                     List<Map<String, Object>> allChats =
                         serviceManager
                         .getChatService()
-                        .getChats(userId);
+                        .getChats(authenticatedUserId);
                     int totalCount = allChats.size();
 
                     for(Map<String, Object> chat : chats) {
@@ -355,7 +364,7 @@ public class EventList {
 
                     Map<String, Object> completionEvent = new HashMap<>();
                     completionEvent.put("type", "STREAM_COMPLETE");
-                    completionEvent.put("userId", userId);
+                    completionEvent.put("userId", authenticatedUserId);
                     completionEvent.put("page", page);
                     completionEvent.put("total", totalCount);
 
