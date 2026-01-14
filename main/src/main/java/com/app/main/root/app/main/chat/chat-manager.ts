@@ -133,27 +133,34 @@ export class ChatManager {
         window.addEventListener('chat-message-received', this.handleChatMessageReceived as EventListener);
     }
 
-    private handleChatMessageReceived = (event: CustomEvent): void => {
-        const { chatId, message, sender, timestamp, isSystem } = event.detail;
+    public handleChatMessageReceived = (event: CustomEvent): void => {
+        console.log('ChatManager: chat-message-received event triggered!', event.detail);
+        
+        const { chatId, message, sender, timestamp, isSystem, userId, senderId } = event.detail;
+        
+        this.ensureChatExists(chatId, sender || senderId, timestamp, message);
+        
+        const actualUserId = userId || senderId;
+        const isFromCurrentUser = actualUserId === this.userId;
+        
+        console.log('Updating chat message for:', chatId, 'with message:', message);
         
         this.updateChatMessage({
             id: chatId,
-            userId: sender,
+            userId: actualUserId,
             messageId: `msg_${timestamp}`,
             lastMessage: message,
             sender: sender,
             timestamp: new Date(timestamp).toISOString()
         });
         
-        const isFromCurrentUser = 
-            sender === this.userId || 
-            sender === this.username;
-        
         const isChatActive = this.activeChat && 
             (this.activeChat.id === chatId || 
             this.activeChat.chatId === chatId || 
             this.activeChat.groupId === chatId);
+        
         if(!isFromCurrentUser && !isChatActive) {
+            console.log('Message from other user in inactive chat - incrementing unread');
             const currentUnreadCount = this.chatController.getNotificationController().getChatUnreadCount(chatId);
             const unreadEvent = new CustomEvent('chat-unread-updated', {
                 detail: {
@@ -364,73 +371,25 @@ export class ChatManager {
         );
         
         if(chatIndex === -1) {
-            const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
-            const newItem: Item = {
-                id: id,
-                name: sender,
-                type: chatType,
-                lastMessage: this.formattedLastMessage(lastMessage),
-                timestamp: now,
-                unreadCount: isFromOtherUser ? 1 : 0
-            };
-            this.chatList.unshift(newItem);
+            this.ensureChatExists(id, sender, timestamp, lastMessage);
+            return;
         } else {
-            const updatedChat = {
+            this.chatList[chatIndex] = {
                 ...this.chatList[chatIndex],
-                userId: userId,
-                messageId: messageId,
-                lastMessage: this.formattedLastMessage(lastMessage),
-                lastMessageSender: sender,
-                lastMessageTime: timestamp,
+                lastMessage: lastMessage,
                 timestamp: now,
                 unreadCount: isFromOtherUser ? 
                     (this.chatList[chatIndex].unreadCount || 0) + 1 : 
-                    (this.chatList[chatIndex].unreadCount || 0)
+                    this.chatList[chatIndex].unreadCount || 0
             };
-            this.chatList.splice(chatIndex, 1);
-            this.chatList.unshift(updatedChat);
         }
 
         this.setState((prevState: State) => {
-            const stateIndex = prevState.chatList.findIndex(chat => 
-                chat.id === id || chat.chatId === id || chat.groupId === id
-            );
-            
-            if(stateIndex === -1) {
-                const chatType = id.startsWith('direct_') ? 'DIRECT' : 'GROUP';
-                const newItem: Item = {
-                    id: id,
-                    name: sender,
-                    type: chatType,
-                    lastMessage: this.formattedLastMessage(lastMessage),
-                    timestamp: now,
-                    unreadCount: isFromOtherUser ? 1 : 0
-                };
-                return { chatList: [newItem, ...prevState.chatList] };
-            }
-
-            const updatedChatList = [...prevState.chatList];
-            const originalChat = updatedChatList[stateIndex];
-            const updatedChat = {
-                ...originalChat,
-                userId: userId,
-                messageId: messageId,
-                lastMessage: this.formattedLastMessage(lastMessage),
-                lastMessageSender: sender,
-                lastMessageTime: timestamp,
-                timestamp: now,
-                unreadCount: isFromOtherUser ?
-                    (originalChat.unreadCount || 0) + 1 :
-                    (originalChat.unreadCount || 0)
+            return {
+                chatList: [...this.chatList]
             };
-            updatedChatList.splice(stateIndex, 1);
-            updatedChatList.unshift(updatedChat);
-            return { chatList: updatedChatList };
         }, () => {
             this.updateChatList();
-            if(this.updateCallback) {
-                this.updateCallback([...this.chatList]);
-            }
         });
     }
 
@@ -440,45 +399,36 @@ export class ChatManager {
         timestamp: string,
         lastMessage: string
     ): void {
-        this.setState((prevState: State) => {
-            const chatExists = prevState.chatList.some(chat =>
-                chat.id === chatId ||
-                chat.chatId === chatId ||
-                chat.groupId === chatId
-            );
-            if(chatExists) {
-                const updatedChatList = prevState.chatList.map(chat => {
-                    if(
-                        chat.id === chatId ||
-                        chat.chatId === chatId ||
-                        chat.groupId === chatId
-                    ) {
-                        return {
-                            ...chat,
-                            lastMessage: lastMessage,
-                            timestamp: new Date(timestamp)
-                        }
-                    }
-                    return chat;
-                });
-                return { chatList: updatedChatList }
-            }
-            const chatType = chatId.startsWith('direct_') ? 'DIRECT' : 'GROUP';
-            const chatName = sender;
-            const isFromOtherUser = 
-                sender !== this.userId &&
-                sender !== this.username;
+        const chatExists = this.chatList.some(chat => 
+            chat.id === chatId || chat.chatId === chatId || chat.groupId === chatId
+        );
+        
+        if(!chatExists) {
+            console.log('Creating new chat entry for:', chatId);
             
-            const item: Item = {
+            const isGroupChat = chatId.startsWith('group_');
+            const newChat = {
                 id: chatId,
-                name: chatName,
-                type: chatType,
+                chatId: chatId,
+                groupId: isGroupChat ? chatId : undefined,
+                name: sender || 'New Chat',
+                type: isGroupChat ? 'GROUP' : 'DIRECT',
+                lastMessage: lastMessage,
                 timestamp: new Date(timestamp),
-                unreadCount: isFromOtherUser ? 1 : 0
-            }
+                unreadCount: 0,
+                members: [],
+                created: true
+            };
             
-            return { chatList: [item, ...prevState.chatList] }
-        });
+            this.chatList.push(newChat);
+            
+            const event = new CustomEvent('chat-item-added', {
+                detail: newChat
+            });
+            window.dispatchEvent(event);
+            
+            this.updateChatList();
+        }
     }
 
     public setLastMessage(

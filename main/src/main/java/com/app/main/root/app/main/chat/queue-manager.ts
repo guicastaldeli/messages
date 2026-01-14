@@ -18,7 +18,11 @@ export class QueueManager {
 
             'GROUP:*': '/user/queue/messages/group/$1',
             'GROUP:SELF': '/user/queue/messages/group/$1/self',
-            'GROUP:OTHERS': '/user/queue/messages/group/$1/others'
+            'GROUP:OTHERS': '/user/queue/messages/group/$1/others',
+
+            'TOPIC:CHAT': '/topic/chat',
+            'TOPIC:GROUP:*': '/topic/group/$1',
+            'TOPIC:DIRECT:*': '/topic/direct/$1'
         }
         if(patterns[pattern]) {
             return patterns[pattern]

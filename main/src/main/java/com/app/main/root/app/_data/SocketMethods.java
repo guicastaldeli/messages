@@ -29,7 +29,7 @@ public class SocketMethods {
                 return;
             }
             if(destination == null || destination.isEmpty()) {
-                System.out.println("Invalid destination, skipping message for session: " + sessionId);
+                //System.out.println("Invalid destination, skipping message for session: " + sessionId);
                 return;
             }
 

@@ -17,7 +17,7 @@ import { AddToCache, getAddToCache } from './add-to-cache';
 import { NotificationControllerClient } from './notification/notification-controller-client';
 
 export class ChatController {
-    private queueManager: QueueManager;
+    public queueManager: QueueManager;
     public socketClient: SocketClientConnect;
     private chatManager!: ChatManager;
     public chatService: ChatService;
@@ -132,7 +132,7 @@ export class ChatController {
     /**
      * Update Subscription
      */
-    private async updateSubscription(
+    public async updateSubscription(
         type?: string, 
         chatId?: string, 
         handlerType?: ChatType
@@ -641,7 +641,7 @@ export class ChatController {
     /**
      * Handle Chat Message
      */
-    private async handleChatMessage(data: any): Promise<void> {
+    public async handleChatMessage(data: any): Promise<void> {
         const analysis = this.messageAnalyzer.getPerspective().analyzeWithPerspective(data);
         const messageType = data.type || data.routingMetadata?.messageType || data.routingMetadata?.type;
         const isSystemMessage = messageType.includes('SYSTEM');
@@ -659,6 +659,23 @@ export class ChatController {
         } catch(err) {
             console.error('Failed to update cache:', err);
         }
+
+        const isCurrentUserMessage = data.senderId === this.userId;
+        const chatMessageEvent = new CustomEvent('chat-message-received', {
+            detail: {
+                chatId: data.chatId,
+                message: data.content,
+                sender: data.senderName || data.username || data.senderId,
+                userId: data.senderId || data.userId,
+                senderId: data.senderId || data.userId,
+                timestamp: data.timestamp || Date.now(),
+                isSystem: isSystemMessage,
+                messageId: data.messageId || data.id,
+                isCurrentUser: isCurrentUserMessage
+            }
+        });
+        window.dispatchEvent(chatMessageEvent);
+        console.log('Dispatched chat-message-received event:', chatMessageEvent.detail);
         
         if(isSystemMessage || isFileMessage) {
             const systemKey = `${data.event}_${data.content}_${data.timestamp}`;
@@ -718,7 +735,7 @@ export class ChatController {
             await this.messageElementRenderer.setMessage(data, { ...analysis, direction });
         }
         
-        const isCurrentUserMessage = data.senderId === this.userId;
+
         this.chatManager.setLastMessage(
             data.chatId,
             data.senderId || data.userId,
@@ -755,7 +772,7 @@ export class ChatController {
                 try {
                     await notificationController.addNotification(notificationData);
                 } catch (err) {
-                    console.error(' Failed to create notification:', err);
+                    console.error('Failed to create notification:', err);
                 }
             }
         }

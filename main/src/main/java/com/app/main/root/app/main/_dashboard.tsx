@@ -134,6 +134,14 @@ export class Dashboard extends Component<Props, State> {
      *  Chat List Update
      */
     public updateChatList(chatList: any[]): void {
+        console.log('Dashboard.updateChatList called with', chatList.length, 'chats');
+        console.log('Chat details:', chatList.map(c => ({
+            id: c.id,
+            name: c.name,
+            lastMessage: c.lastMessage,
+            timestamp: c.timestamp
+        })));
+        
         this.setState({ chatList });
         if(this.props.onChatListUpdate) {
             this.props.onChatListUpdate(chatList);
@@ -225,8 +233,7 @@ export class Dashboard extends Component<Props, State> {
         window.addEventListener('chat-read', this.handleChatRead as EventListener);
         window.addEventListener('chat-item-removed', this.handleChatItemRemoved as EventListener);
         window.addEventListener('chat-list-updated', this.handleChatListUpdated as EventListener);
-
-        this.handleCloseChatLayout();
+        window.addEventListener('chat-message-received', this.props.chatManager.handleChatMessageReceived as EventListener);
     }
 
     componentWillUnmount(): void {
@@ -241,6 +248,7 @@ export class Dashboard extends Component<Props, State> {
         window.removeEventListener('chats-stream-error', () => {});
         window.removeEventListener('chat-unread-updated', this.handleChatUnreadUpdated as EventListener);
         window.removeEventListener('chat-read', this.handleChatRead as EventListener);
+        window.removeEventListener('chat-message-received', this.props.chatManager.handleChatMessageReceived as EventListener);
     }
 
     /**
@@ -248,10 +256,12 @@ export class Dashboard extends Component<Props, State> {
      */
     private async pollForNewChats(): Promise<void> {
         if(!this.state.chatStreamComplete || !this.state.chatItemsAdded) {
+            /*
             console.log('[Polling] Skipping - chat processing not complete:', {
                 streamComplete: this.state.chatStreamComplete,
                 itemsAdded: this.state.chatItemsAdded
             });
+            */
             return;
         }
         
@@ -328,10 +338,15 @@ export class Dashboard extends Component<Props, State> {
             await this.handleChatStreamComplete();
             await this.checkChatsCompleted();
             
+            await this.waitForChatList();
+            await this.subscribeToAllChats();
+            
             this.setState({
                 contactService: this.contactService,
                 contactsLoaded: true,
                 chatsLoaded: true,
+                chatStreamComplete: true,
+                chatItemsAdded: true,
                 isLoading: false
             }, () => {
                 const event = new CustomEvent('dashboard-loaded');
@@ -346,6 +361,51 @@ export class Dashboard extends Component<Props, State> {
                 isLoading: false 
             });
         }
+    }
+
+    private async waitForChatList(): Promise<void> {
+        return new Promise((resolve) => {
+            const checkChatList = () => {
+                if (this.state.chatList && this.state.chatList.length > 0) {
+                    console.log('Chat list populated with', this.state.chatList.length, 'chats');
+                    resolve();
+                } else {
+                    console.log('Waiting for chat list to populate...');
+                    setTimeout(checkChatList, 100);
+                }
+            };
+            checkChatList();
+        });
+    }
+
+    private async subscribeToAllChats(): Promise<void> {
+        if (!this.props.chatController || !this.state.chatList.length) {
+            console.log('No chats to subscribe to');
+            return;
+        }
+        
+        console.log('Subscribing to all chats:', this.state.chatList.length);
+        
+        for(const chat of this.state.chatList) {
+            const chatId = chat.id || chat.chatId;
+            const chatType = chat.type === 'DIRECT' ? 'DIRECT' : 'GROUP';
+            
+            try {
+                const queuePattern = `/user/queue/messages/${chatType.toLowerCase()}/${chatId}`;
+                console.log('📡 Subscribing to queue:', queuePattern);
+                
+                await this.props.chatController.queueManager.subscribe(
+                    queuePattern,
+                    this.props.chatController.handleChatMessage.bind(this.props.chatController)
+                );
+                
+                console.log('Subscribed to queue:', queuePattern);
+            } catch (err) {
+                console.error('Failed to subscribe to chat:', chatId, err);
+            }
+        }
+        
+        console.log('✅ Subscribed to all chats');
     }
 
     private setSession = (session: SessionType): void => {
@@ -547,11 +607,10 @@ export class Dashboard extends Component<Props, State> {
      * Is Loaded
      */
     private isLoaded(): boolean {
-        return this.state.chatsLoaded && 
-            this.state.contactsLoaded &&
-            this.state.chatStreamComplete &&
-            this.state.chatItemsAdded;
-    }
+    // Only check if chats are loaded and stream is complete
+    // Remove the contactsLoaded and chatItemsAdded checks since they might not be needed
+    return this.state.chatsLoaded && this.state.chatStreamComplete;
+}
 
     private renderChatLayout() {
         const { activeChat, chatList } = this.state;
