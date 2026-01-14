@@ -352,6 +352,18 @@ export class GroupManager {
         const chatEvent = new CustomEvent('chat-item-added', { detail: chatItem });
         window.dispatchEvent(chatEvent);
 
+        if(this.dashboard) {
+            const currentChatList = this.dashboard.state.chatList || [];
+            const chatExists = currentChatList.some((chat: any) => 
+                chat.id === this.currentGroupId || chat.groupId === this.currentGroupId
+            );
+            
+            if (!chatExists) {
+                const updatedChatList = [...currentChatList, chatItem];
+                this.dashboard.updateChatList(updatedChatList);
+            }
+        }
+
         /* Activated Event */
         const chatActivationEvent = new CustomEvent('group-activated', { detail: data }); 
         window.dispatchEvent(chatActivationEvent);

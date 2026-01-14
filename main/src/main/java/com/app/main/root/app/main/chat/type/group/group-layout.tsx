@@ -259,7 +259,8 @@ export class GroupLayout extends Component<Props, State> {
             await new Promise(res => setTimeout(res, 500));
             const groupId = this.groupManager.currentGroupId;
             const link = await this.groupManager.getInviteCodeManager().generate(groupId);
-            const inviteCode = link.split('/').pop() || link;
+            const inviteCode = link.includes('=') ? link.split('=')[1] : link;
+            console.log("LINK", link)
             this.setState({ 
                 generatedLink: link,
                 inviteCode: inviteCode,
