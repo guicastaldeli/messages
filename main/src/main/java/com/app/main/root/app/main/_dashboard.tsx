@@ -607,10 +607,9 @@ export class Dashboard extends Component<Props, State> {
      * Is Loaded
      */
     private isLoaded(): boolean {
-    // Only check if chats are loaded and stream is complete
-    // Remove the contactsLoaded and chatItemsAdded checks since they might not be needed
-    return this.state.chatsLoaded && this.state.chatStreamComplete;
-}
+        return this.state.chatsLoaded && 
+            this.state.chatStreamComplete;
+    }
 
     private renderChatLayout() {
         const { activeChat, chatList } = this.state;
