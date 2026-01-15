@@ -262,7 +262,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                         disabled={!selectedContact || isLoading}
                                         className="btn-confirm-add"
                                     >
-                                        {isLoading ? 'Adding...' : 'Add to Group'}
+                                        {isLoading ? 'Adding...' : 'Add'}
                                     </button>
                                     <button 
                                         onClick={() => {

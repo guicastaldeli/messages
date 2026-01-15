@@ -100,7 +100,9 @@ export class GroupManager {
         this.currentGroupName = data.name;
         this.currentGroupId = data.id;
 
-        const lastMessage = await this.chatManager.lastMessage(this.userId!, this.currentGroupId);
+        const lastMessageData = await this.chatManager.lastMessage(this.userId!, this.currentGroupId);
+        const lastMessageContent = lastMessageData?.content || 'Group created';
+        
         chatState.setType('GROUP');
         await this.chatController.setCurrentChat(
             this.currentGroupId,
@@ -117,7 +119,7 @@ export class GroupManager {
             creator: data.creator,
             members: data.members,
             unreadCount: 0,
-            lastMessage: lastMessage,
+            lastMessage: lastMessageContent,
             lastMessageTime: time
         }
 
@@ -134,6 +136,7 @@ export class GroupManager {
         /* Activation Event */
         const chatActivationEvent = new CustomEvent('group-activated', { detail: eventData });
         window.dispatchEvent(chatActivationEvent);
+        this.closeCreationForm();
 
         setTimeout(async () => {
             try {
@@ -145,6 +148,30 @@ export class GroupManager {
         }, 50);
 
         if(this.onCreateSuccess) this.onCreateSuccess(data);
+    }
+
+    private closeCreationForm(): void {
+        if(this.root) {
+            setTimeout(() => {
+                try {
+                    this.root!.unmount();
+                    this.root = null;
+                    console.log('Creation form closed successfully');
+                } catch(err) {
+                    console.warn('Error unmounting creation form:', err);
+                }
+            }, 100);
+        }
+        
+        if(this.dashboard) {
+            this.dashboard.updateState({
+                showCreationForm: false,
+                showJoinForm: false,
+                showGroup: true,
+                hideGroup: false,
+                groupName: this.currentGroupName
+            });
+        }
     }
 
     private renderCreationLayout(
@@ -358,7 +385,7 @@ export class GroupManager {
                 chat.id === this.currentGroupId || chat.groupId === this.currentGroupId
             );
             
-            if(!chatExists) {
+            if (!chatExists) {
                 const updatedChatList = [...currentChatList, chatItem];
                 this.dashboard.updateChatList(updatedChatList);
             }

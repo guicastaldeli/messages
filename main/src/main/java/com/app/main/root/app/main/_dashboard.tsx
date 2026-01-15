@@ -185,20 +185,6 @@ export class Dashboard extends Component<Props, State> {
         const sessionData = SessionManager.getUserInfo();
         const userId = sessionData?.userId;
 
-        const savedActiveChat = localStorage.getItem('active-chat');
-        if(savedActiveChat) {
-            try {
-                const activeChat = JSON.parse(savedActiveChat);
-                console.log('Restored active chat from storage:', activeChat);
-                this.setState({ 
-                    activeChat,
-                    isLoading: false
-                });
-            } catch(err) {
-                console.error('Failed to parse saved active chat:', err);
-            }
-        }
-
         if(this.props.chatManager) {
             this.props.chatManager.setDashboard(this);
             this.props.chatManager.setUpdateCallback((updatedList) => { 

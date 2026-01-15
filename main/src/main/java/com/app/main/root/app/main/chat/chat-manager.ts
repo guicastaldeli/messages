@@ -417,19 +417,26 @@ export class ChatManager {
             this.ensureChatExists(id, sender, timestamp, lastMessage);
             return;
         } else {
+            const isSystemMessage = this.isSystemMessage({
+                isSystem: true,
+                messageId: messageId,
+                sender: sender,
+                userId: userId
+            });
+            
             const formattedMessage = this.formattedMessage(
                 id,
                 lastMessage,
                 !isFromOtherUser,
                 sender,
-                false
+                isSystemMessage
             );
             
             this.chatList[chatIndex] = {
                 ...this.chatList[chatIndex],
                 lastMessage: formattedMessage,
                 timestamp: now,
-                unreadCount: isFromOtherUser ? 
+                unreadCount: isFromOtherUser && !isSystemMessage ? 
                     (this.chatList[chatIndex].unreadCount || 0) + 1 : 
                     this.chatList[chatIndex].unreadCount || 0
             };
@@ -653,19 +660,15 @@ export class ChatManager {
 
         if(systemMessage) {
             formattedMessage = lastMessage;
-        } else if(lastMessage.includes('Shared:')) {
-            formattedMessage = lastMessage;
+            console.log('formatted', formattedMessage)
+            console.log('last', lastMessage);
         } else {
             if(isDirect) {
                 formattedMessage = lastMessage;
             } else {
-                if(lastMessage.startsWith('You: ') || lastMessage.includes(': ')) {
-                    formattedMessage = lastMessage;
-                } else {
-                    formattedMessage = isCurrentUser 
-                        ? `You: ${lastMessage}`
-                        : `${sender}: ${lastMessage}`;
-                }
+                formattedMessage = isCurrentUser 
+                    ? `You: ${lastMessage}`
+                    : `${sender}: ${lastMessage}`;
             }
         }
 
@@ -681,11 +684,21 @@ export class ChatManager {
      * System Message
      */
     private isSystemMessage(message: any): boolean {
+        if(message.messageId?.includes('sys_') || message.messageId?.startsWith('system_')) {
+            return true;
+        }
+        if(message.sender === 'System' || message.sender === 'system' || 
+            message.sender?.toLowerCase().includes('system')) {
+            return true;
+        }
+        if(message.userId === 'system' || message.userId === 'System') {
+            return true;
+        }
         if(message.isSystem === true) return true;
-        if(message.messageId?.includes('sys_')) return true;
         if(message.type === 'SYSTEM') return true;
         if(message.messageType?.includes('SYSTEM')) return true;
         if(message.event?.includes('SYSTEM') || message.event?.endsWith('_EVENT')) return true;
+        
         return false;
     }
 

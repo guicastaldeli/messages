@@ -18,7 +18,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
-
 @Component
 public class SystemMessageService {
     private final DataSourceService dataSourceService;
