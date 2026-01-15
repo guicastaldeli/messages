@@ -28,13 +28,26 @@ export class Loader {
             
             const stream = await this.chatService.streamUserChats(userId);
             stream.on('chat_data', (data: any) => {
-                this.processChatItem(data.chat, userId);
+                try {
+                    if(!data || typeof data !== 'object') {
+                        console.warn('Invalid chat_data received:', data);
+                        return;
+                    }
+                    if(!data.chat || typeof data.chat !== 'object') {
+                        console.warn('Missing or invalid chat object:', data);
+                        return;
+                    }
+                    this.processChatItem(data.chat, userId);
+                } catch (error) {
+                    console.error('Error handling chat_data event:', error);
+                }
             });
             stream.on('complete', (data: any) => {
+                console.log('Chat stream completed:', data);
                 this.emitStreamComplete('chat-stream-complete', {
                     userId,
-                    page: data.page,
-                    total: data.total
+                    page: data?.page,
+                    total: data?.total
                 });
             });
             stream.on('error', (err: any) => {
@@ -44,7 +57,11 @@ export class Loader {
             stream.on('processing-error', (err: any) => {
                 console.error('Chat processing error:', err.error);
                 if(err.original && err.original.chat) {
-                    this.processChatItem(err.original.chat, userId);
+                    try {
+                        this.processChatItem(err.original.chat, userId);
+                    } catch(fallbackError) {
+                        console.error('Fallback processing failed:', fallbackError);
+                    }
                 }
             });
 

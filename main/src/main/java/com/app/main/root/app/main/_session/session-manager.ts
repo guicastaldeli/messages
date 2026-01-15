@@ -100,6 +100,8 @@ export class SessionManager {
         rememberUser: boolean = false,
         addData?: Partial<UserSessionData>    
     ): void {
+        this.clearSession();
+        
         const dates = this.setDate(rememberUser);
         const data: UserSessionData = {
             ...userData,
@@ -116,11 +118,12 @@ export class SessionManager {
                 process.env.NODE_ENV === 'production' ||
                 process.env.NODE_ENV === 'development'
         });
+        
         CookieService.set(this.USER_INFO_KEY, JSON.stringify({
             userId: userData.userId,
             username: userData.username,
             email: userData.email,
-            sessioinId: sessionId
+            sessionId: sessionId 
         }), {
             days: rememberUser ? 7 : undefined,
             secure: 
@@ -257,29 +260,37 @@ export class SessionManager {
     } | null {
         try {
             const userCookie = CookieService.getValue(this.USER_INFO_KEY);
-            if(!userCookie) return null;
-            
-            //console.log('USER_INFO cookie:', userCookie);
+            if (!userCookie) return null;
             
             let value = userCookie.trim();
             if(value.startsWith('"') && value.endsWith('"')) {
                 value = value.slice(1, -1);
             }
-        
-            if(value.includes(':')) {
-                const parts = value.split(':');
-                if(parts.length >= 4) {
-                    return {
-                        sessionId: parts[0] || '', 
-                        userId: parts[1] || '',
-                        username: parts[2] || '',
-                        email: parts[3] || ''
-                    };
+            
+            try {
+                const parsed = JSON.parse(value);
+                return {
+                    sessionId: parsed.sessionId || parsed.sessioinId || '',
+                    userId: parsed.userId || '',
+                    username: parsed.username || '',
+                    email: parsed.email || ''
+                };
+            } catch (parseError) {
+                if(value.includes(':')) {
+                    const parts = value.split(':');
+                    if (parts.length >= 4) {
+                        return {
+                            sessionId: parts[0] || '', 
+                            userId: parts[1] || '',
+                            username: parts[2] || '',
+                            email: parts[3] || ''
+                        };
+                    }
                 }
             }
             
             return null;
-        } catch(err) {
+        } catch (err) {
             console.error('Error in getUserInfo:', err);
             return null;
         }

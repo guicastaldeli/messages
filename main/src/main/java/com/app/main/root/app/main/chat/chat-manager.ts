@@ -660,8 +660,6 @@ export class ChatManager {
 
         if(systemMessage) {
             formattedMessage = lastMessage;
-            console.log('formatted', formattedMessage)
-            console.log('last', lastMessage);
         } else {
             if(isDirect) {
                 formattedMessage = lastMessage;
@@ -684,8 +682,10 @@ export class ChatManager {
      * System Message
      */
     private isSystemMessage(message: any): boolean {
-        if(message.messageId?.includes('sys_') || message.messageId?.startsWith('system_')) {
-            return true;
+        if(typeof message.messageId === 'string') {
+            if (message.messageId.includes('sys_') || message.messageId.startsWith('system_')) {
+                return true;
+            }
         }
         if(message.sender === 'System' || message.sender === 'system' || 
             message.sender?.toLowerCase().includes('system')) {
@@ -696,8 +696,8 @@ export class ChatManager {
         }
         if(message.isSystem === true) return true;
         if(message.type === 'SYSTEM') return true;
-        if(message.messageType?.includes('SYSTEM')) return true;
-        if(message.event?.includes('SYSTEM') || message.event?.endsWith('_EVENT')) return true;
+        if(typeof message.messageType === 'string' && message.messageType.includes('SYSTEM')) return true;
+        if(typeof message.event === 'string' && (message.event.includes('SYSTEM') || message.event.endsWith('_EVENT'))) return true;
         
         return false;
     }

@@ -141,16 +141,44 @@ export class EventStream {
      * 
      */
     private async processData(data: any): Promise<any> {
-        if(data.type === 'MESSAGE_DATA' && data.message) {
-            return await this.processMessageData(data);
-        } else if(data.type === 'FILE_DATA' && data.file) {
-            return await this.processFileData(data);
-        } else if(data.type === 'CHAT_DATA' && data.chat) {
-            return await this.processChatData(data);
-        } else if(data.type === 'chat_data') {
-            return await this.processChatData(data);
+        if(!data || typeof data !== 'object') {
+            console.warn('Invalid data structure in processData:', data);
+            return { ...data, processingError: 'Invalid data structure' };
         }
-        return data;
+
+        try {
+            const type = (data.type || '').toLowerCase();
+            
+            switch (type) {
+                case 'message_data':
+                    if (data.message) {
+                        return await this.processMessageData(data);
+                    }
+                    break;
+                    
+                case 'file_data':
+                    if (data.file) {
+                        return await this.processFileData(data);
+                    }
+                    break;
+                    
+                case 'chat_data':
+                    return await this.processChatData(data);
+                    
+                default:
+                    console.log('Unknown data type:', type, data);
+                    return { ...data, processed: true, unknownType: type };
+            }
+            
+            return data;
+        } catch(error) {
+            console.error('Error processing data:', error, data);
+            return {
+                ...data,
+                processingError: error instanceof Error ? error.message : 'Unknown processing error',
+                processed: false
+            };
+        }
     }
 
     private async processMessageData(data: any): Promise<any> {
@@ -213,6 +241,17 @@ export class EventStream {
 
     private async processChatData(data: any): Promise<any> {
         const chatData = data.chat || data.chatData || data;
+        
+        if(!chatData.id && !chatData.chatId && !chatData.groupId) {
+            console.warn('Invalid chat data - missing identifier:', chatData);
+            return {
+                ...data,
+                chat: chatData,
+                processed: true,
+                validationWarning: 'Missing chat identifier'
+            };
+        }
+        
         return {
             ...data,
             chat: chatData,

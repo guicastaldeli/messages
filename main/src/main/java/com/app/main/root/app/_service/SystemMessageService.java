@@ -142,79 +142,17 @@ public class SystemMessageService {
         String username = (String) data.get("username");
         String groupName = (String) data.get("groupName");
         String inviterUsername = (String) data.get("inviterUsername");
-        String inviterUserId = (String) data.get("inviterUserId");
-        String userId = (String) data.get("userId");
-        
-        System.out.println("==================== setContent DEBUG ====================");
-        System.out.println("Template: " + template);
-        System.out.println("currentSessionId: " + currentSessionId);
-        System.out.println("targetSessionId: " + targetSessionId);
-        System.out.println("Data:");
-        System.out.println("  username (being acted on): " + username);
-        System.out.println("  userId (being acted on): " + userId);
-        System.out.println("  inviterUsername (doing action): " + inviterUsername);
-        System.out.println("  inviterUserId (doing action): " + inviterUserId);
-        
-        if("__NEUTRAL__".equals(targetSessionId) || "__NEUTRAL__".equals(currentSessionId)) {
-            String content = template;
-            String finalUsername = username != null ? username : "Unknown";
-            String finalInviterUsername = inviterUsername != null ? inviterUsername : "Unknown";
-            
-            content = content.replace("{username}", finalUsername);
-            content = content.replace("{inviterUsername}", finalInviterUsername);
-            if(groupName != null) {
-                content = content.replace("{group}", groupName);
-            }
-            
-            System.out.println("NEUTRAL MODE - Result: " + content);
-            System.out.println("=========================================================");
-            return content;
-        }
-        
-        String currentUserId = serviceManager.getUserService().getUserIdBySession(targetSessionId);
-        
-        System.out.println("  currentUserId (from targetSession): " + currentUserId);
-        
-        boolean isInviterCurrentUser = 
-            currentUserId != null && 
-            inviterUserId != null && 
-            currentUserId.equals(inviterUserId);
-        
-        boolean isAboutCurrentUser = 
-            currentUserId != null && 
-            userId != null && 
-            currentUserId.equals(userId);
-        
-        System.out.println("Perspective checks:");
-        System.out.println("  isInviterCurrentUser: " + isInviterCurrentUser + " (should replace {inviterUsername} with 'You')");
-        System.out.println("  isAboutCurrentUser: " + isAboutCurrentUser + " (should replace {username} with 'You')");
         
         String content = template;
         String finalUsername = username != null ? username : "Unknown";
         String finalInviterUsername = inviterUsername != null ? inviterUsername : "Unknown";
         
-        if(isAboutCurrentUser) {
-            content = content.replace("{username}", "You");
-            System.out.println("  Replacing {username} with 'You'");
-        } else {
-            content = content.replace("{username}", finalUsername);
-            System.out.println("  Replacing {username} with '" + finalUsername + "'");
-        }
-        
-        if(isInviterCurrentUser) {
-            content = content.replace("{inviterUsername}", "You");
-            System.out.println("  Replacing {inviterUsername} with 'You'");
-        } else {
-            content = content.replace("{inviterUsername}", finalInviterUsername);
-            System.out.println("  Replacing {inviterUsername} with '" + finalInviterUsername + "'");
-        }
+        content = content.replace("{username}", finalUsername);
+        content = content.replace("{inviterUsername}", finalInviterUsername);
         
         if(groupName != null) {
             content = content.replace("{group}", groupName);
         }
-        
-        System.out.println("Final content: " + content);
-        System.out.println("=========================================================");
         
         return content;
     }

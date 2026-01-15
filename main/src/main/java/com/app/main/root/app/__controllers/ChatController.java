@@ -24,20 +24,32 @@ public class ChatController {
 
     private String getAuthenticatedUserId(HttpServletRequest request) {
         String sessionId = serviceManager.getSessionService().extractSessionId(request);
-        if(sessionId == null) {
-            throw new SecurityException("No session ID found");
+        if(sessionId != null) {
+            if(serviceManager.getSessionService().validateSession(sessionId)) {
+                SessionService.SessionData sessionData = serviceManager.getSessionService().getSession(sessionId);
+                if(sessionData != null) {
+                    String userId = sessionData.getUserId();
+                    return userId;
+                }
+            } else {
+                System.out.println("DEBUG - Session is invalid or expired");
+            }
         }
         
-        if(!serviceManager.getSessionService().validateSession(sessionId)) {
-            throw new SecurityException("Invalid or expired session");
+        HttpSession httpSession = request.getSession(false);
+        if(httpSession != null) {
+            String userId = (String) httpSession.getAttribute("userId");
+            if(userId != null) {
+                return userId;
+            }
         }
         
-        SessionService.SessionData sessionData = serviceManager.getSessionService().getSession(sessionId);
-        if(sessionData == null) {
-            throw new SecurityException("Session data not found");
+        String userIdFromCookies = extractUserIdFromCookies(request);
+        if(userIdFromCookies != null) {
+            return userIdFromCookies;
         }
         
-        return sessionData.getUserId();
+        return null;
     }
 
     private String extractUserIdFromCookies(HttpServletRequest request) {
@@ -91,46 +103,19 @@ public class ChatController {
     ) {
         try {
             String authenticatedUserId = getAuthenticatedUserId(request);
+            if(authenticatedUserId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Not authenticated"));
+            }
             if(!authenticatedUserId.equals(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of(
-                        "error", "User ID mismatch",
-                        "message", "You can only access your own chat data"
-                    ));
+                    .body(Map.of("error", "User ID mismatch"));
             }
             
-            // Additional validation
-            if(!serviceManager.getChatService().userHasAccessToChat(authenticatedUserId, chatId)) {
+            boolean hasAccess = serviceManager.getChatService().userHasAccessToChat(authenticatedUserId, chatId);
+            if(!hasAccess) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Access denied to this chat"));
-            }
-        
-            //System.out.println("DEBUG - Requested userId: " + userId);
-            //System.out.println("DEBUG - Authenticated userId: " + authenticatedUserId);
-            /*
-            System.out.println("DEBUG - Session ID from cookies: " + 
-                serviceManager.getSessionService().extractSessionId(request));
-                */
-            if(authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
-                /*
-                System.out.println("DEBUG - Authentication failed: " + 
-                    (authenticatedUserId == null ? "No authenticated user" : "User ID mismatch"));
-                    */
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of(
-                        "error", "Unauthorized access",
-                        "message", "You can only access your own chat data",
-                        "requestedUserId", userId,
-                        "authenticatedUserId", authenticatedUserId != null ? authenticatedUserId : "none"
-                    ));
-            }
-            
-            if(!serviceManager.getChatService().userHasAccessToChat(authenticatedUserId, chatId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of(
-                        "error", "Access denied",
-                        "message", "You don't have access to this chat"
-                    ));
             }
             
             Map<String, Object> data = serviceManager.getChatService().getChatData(
@@ -143,7 +128,6 @@ public class ChatController {
             if(data == null) {
                 data = new HashMap<>();
             }
-
             if(data.get("timeline") == null) {
                 data.put("timeline", new ArrayList<>());
             }
@@ -153,20 +137,21 @@ public class ChatController {
             if(data.get("files") == null) {
                 data.put("files", new ArrayList<>());
             }
-                
+            
             Map<String, Object> response = new HashMap<>();
             response.put("chatId", chatId);
             response.put("data", data);
             response.put("success", true);
-                
+            
             return ResponseEntity.ok(response);
-        } catch(Exception err) {
-            err.printStackTrace();
-            Map<String, Object> errRes = new HashMap<>();
-            errRes.put("chatId", chatId);
-            errRes.put("error", err.getMessage());
-            errRes.put("success", false);
-            return ResponseEntity.status(500).body(errRes);
+        } catch (Exception err) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "chatId", chatId,
+                    "error", "Failed to load chat data for " + chatId + ": " + err.getMessage(),
+                    "success", false,
+                    "errorType", err.getClass().getSimpleName()
+                ));
         }
     }
 

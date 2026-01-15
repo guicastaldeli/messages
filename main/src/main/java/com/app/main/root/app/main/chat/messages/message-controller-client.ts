@@ -252,7 +252,7 @@ export class MessageControllerClient {
         try {
             const [countData, pageData] = await Promise.all([
                 this.messageService.getMessageCountByChatId(chatId),
-                this.chatService.getChatData(userId, chatId, 0)
+                this.chatService.getChatData(userId, chatId, 0, 20)
             ]);
 
             const cacheService = await this.chatService.getCacheServiceClient();

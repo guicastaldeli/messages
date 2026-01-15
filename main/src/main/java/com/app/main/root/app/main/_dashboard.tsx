@@ -397,6 +397,7 @@ export class Dashboard extends Component<Props, State> {
                     });
                     resolve();
                 } else {
+                    /*
                     console.log('Waiting for chat list to complete processing...', {
                         chatStreamComplete: this.state.chatStreamComplete,
                         chatItemsAdded: this.state.chatItemsAdded,
@@ -404,6 +405,7 @@ export class Dashboard extends Component<Props, State> {
                         currentCount: this.state.chatList.length,
                         shouldBeLoaded: shouldBeLoaded
                     });
+                    */
                     setTimeout(checkChatList, 100);
                 }
             };

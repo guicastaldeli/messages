@@ -88,6 +88,24 @@ export class Main extends Component<any, State> {
             const userInfo = SessionManager.getUserInfo();
             console.log('Loaded user info from cookies:', userInfo);
             if(userInfo) {
+                try {
+                    const authService = await this.apiClientController.getAuthService();
+                    const validation = await authService.validateSession();
+                    
+                    if(validation.user && validation.user.userId !== userInfo.userId) {
+                        console.error('Session user mismatch!');
+                        console.error('  Cookie userId:', userInfo.userId);
+                        console.error('  Server userId:', validation.user.userId);
+                        SessionManager.clearSession();
+                        this.setState({ isLoading: false });
+                        return;
+                    }
+                } catch(err) {
+                    console.error('Session validation failed:', err);
+                    SessionManager.clearSession();
+                    this.setState({ isLoading: false });
+                    return;
+                }
                 this.setState({
                     userId: userInfo.userId,
                     sessionId: userInfo.sessionId,
