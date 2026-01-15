@@ -36,7 +36,7 @@ export class ChatManager {
     private socketClient: SocketClientConnect;
     public dashboard: Dashboard;
 
-    private chatList: any[] = [];
+    public chatList: any[] = [];
     private activeChat: any = null;
     private container!: HTMLElement;
 
@@ -683,7 +683,7 @@ export class ChatManager {
      */
     private isSystemMessage(message: any): boolean {
         if(typeof message.messageId === 'string') {
-            if (message.messageId.includes('sys_') || message.messageId.startsWith('system_')) {
+            if(message.messageId.includes('sys_') || message.messageId.startsWith('system_')) {
                 return true;
             }
         }

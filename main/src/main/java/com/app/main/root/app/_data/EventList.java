@@ -1503,7 +1503,7 @@ public class EventList {
                     Map<String, Object> data = (Map<String, Object>) payload;
                     String groupId = (String) data.get("groupId");
                     String userId = serviceManager.getUserService().getUserIdBySession(sessionId);
-                    System.out.println(serviceManager.getUserService().getUserIdBySession(sessionId));
+                    //System.out.println(serviceManager.getUserService().getUserIdBySession(sessionId));
                     boolean isMember = serviceManager.getGroupService().isUserGroupMember(groupId, userId);
                     if(!isMember) {
                         throw new Exception("User: " + userId + " is not a member!");
@@ -1610,9 +1610,9 @@ public class EventList {
                         memberInfo.put("id", member.getId());
                         memberInfo.put("username", member.getUsername());
                         members.add(memberInfo);
-                        System.out.println(memberInfo);
+                        //System.out.println(memberInfo);
                     }
-                    System.out.println(members);
+                    //System.out.println(members);
                     Map<String, Object> res = new HashMap<>();
                     res.put("members", members);
                     res.put("count", members.size());

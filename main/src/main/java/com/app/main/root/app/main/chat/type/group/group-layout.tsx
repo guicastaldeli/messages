@@ -3,7 +3,7 @@ import React from 'react';
 import { Component, createRef } from 'react';
 import { ChatController } from '../../chat-controller';
 import { GroupManager } from './group-manager';
-import { GroupMembersInterface } from './layout/group-members-interface';
+import { GroupMembersInterface } from "./group-members-interface";
 import { FileUploader } from "../../file/file-uploader";
 
 export interface Props {

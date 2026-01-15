@@ -148,6 +148,7 @@ public class EventTracker {
     }
 
     private void logToConsole(EventLog log) {
+        /*
         String timestamp = new java.text.SimpleDateFormat("HH:mm:ss").format(log.getTimestamp());
         String direction = log.getDirection() == EventDirection.SENT ? "SENT" : "RECEIVED";
         String userInfo = log.getUsername() != null ? "(" + log.getUsername() + ")" : "no user";
@@ -157,5 +158,6 @@ public class EventTracker {
             "%s%s %s %s @ %s\u001B[0m%n", 
             colorCode, direction, log.getEventName(), userInfo, timestamp
         );
+        */
     }
 }

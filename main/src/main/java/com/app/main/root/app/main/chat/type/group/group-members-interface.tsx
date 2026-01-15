@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { GroupManager } from "../group-manager";
+import { GroupManager } from "./group-manager";
 
 interface GroupMember {
     id: string;
@@ -29,8 +29,6 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
     const [selectedContact, setSelectedContact] = useState<string>('');
     const [currentUserId, setCurrentUserId] = useState<string>('');
     const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-
-    const isLoading = loading || pollingLoading;
 
     useEffect(() => {
         console.log('GroupMembersInterface mounted for group:', groupId);
@@ -200,7 +198,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                         <button 
                             className="btn-add-member"
                             onClick={() => setShowAddUser(true)}
-                            disabled={isLoading}
+                            disabled={pollingLoading}
                         >
                             Add Members
                         </button>
@@ -211,10 +209,14 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                             <div key={member.id} className="member-item">
                                 <div className="member-info">
                                     <span className="username">
-                                        {member.username || member.id}
+                                        {member.id !== currentUserId && (
+                                            <span className="user-badge">
+                                                {member.username || member.id}
+                                            </span>
+                                        )}
                                     </span>
                                     {member.id === currentUserId && (
-                                        <span className="you-badge">(You)</span>
+                                        <span className="you-badge">You</span>
                                     )}
                                 </div>
                                 <div className="member-actions">
@@ -222,7 +224,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                         <button 
                                             className="btn-remove-member"
                                             onClick={() => handleRemoveUser(member.id, member.username || member.id)}
-                                            disabled={isLoading}
+                                            disabled={pollingLoading}
                                         >
                                             Remove
                                         </button>
@@ -246,7 +248,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                     value={selectedContact}
                                     onChange={(e) => setSelectedContact(e.target.value)}
                                     className="contact-select"
-                                    disabled={isLoading}
+                                    disabled={pollingLoading}
                                 >
                                     <option value="">Select a contact...</option>
                                     {availableContacts.map(contact => (
@@ -259,10 +261,10 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                 <div className="add-user-actions">
                                     <button 
                                         onClick={handleAddUser}
-                                        disabled={!selectedContact || isLoading}
+                                        disabled={!selectedContact || pollingLoading}
                                         className="btn-confirm-add"
                                     >
-                                        {isLoading ? 'Adding...' : 'Add'}
+                                        Add
                                     </button>
                                     <button 
                                         onClick={() => {
@@ -270,7 +272,7 @@ export const GroupMembersInterface: React.FC<GroupMembersInterfaceProps> = ({
                                             setSelectedContact('');
                                         }}
                                         className="btn-cancel-add"
-                                        disabled={isLoading}
+                                        disabled={pollingLoading}
                                     >
                                         Cancel
                                     </button>
