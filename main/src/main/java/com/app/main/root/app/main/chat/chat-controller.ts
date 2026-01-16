@@ -11,7 +11,7 @@ import { MessageElementRenderer } from "./messages/message-element-renderer";
 import { ChunkRenderer } from "./chunk-renderer";
 import { ChatStateManager } from '../chat/chat-state-manager';
 import { ChatService } from './chat-service';
-import { Item } from './file/file-item';
+import { FileItem, Item } from './file/file-item';
 import { SessionManager } from '../_session/session-manager';
 import { AddToCache, getAddToCache } from './add-to-cache';
 import { NotificationControllerClient } from './notification/notification-controller-client';
@@ -54,6 +54,10 @@ export class ChatController {
     public isLoadingHistory: boolean = false;
     public scrollHandler: ((e: Event) => void) | null = null;
 
+    private fileItem: FileItem | null = null;
+    private fileItemContainer: HTMLDivElement | null = null;
+    private fileItemRoot: ReactDOM.Root | null = null;
+
     constructor(
         socketClient: SocketClientConnect, 
         apiClientController: ApiClientController, 
@@ -78,6 +82,22 @@ export class ChatController {
 
         this.appEl = document.querySelector<HTMLDivElement>('.app');
         this.messageElementRenderer.setApp(this.appEl!);
+        const sessionData = SessionManager.getCurrentSession();
+        const userId = sessionData?.userId || this.userId || '';
+        this.fileItem = new FileItem({
+            chatService: this.chatService,
+            userId: userId,
+            onFileSelect: (file) => {
+                console.log('File selected:', file);
+            },
+            onFileDelete: (fileId) => {
+                console.log('File deleted:', fileId);
+            },
+            onRefresh: () => {
+                console.log('Refresh requested');
+            }
+        });
+        this.messageComponent.setFileItemRef(this.fileItem);
 
         this.setupMessageHandling();
         await this.socketClient.connect();
@@ -321,6 +341,15 @@ export class ChatController {
         const cacheService = await this.chatService.getCacheServiceClient(); 
         const isCached = cacheService.isChatCached(chatId);
         const isDataLoaded = this.chatService.isDataLoaded(chatId, 0);
+        if(isCached && isDataLoaded) {
+            console.log(`Using cached data for ${chatId}, skipping fetch`);
+            await this.renderAllCachedMessages(chatId);
+        } else {
+            const userIdToUse = this.userId || this.chatManager?.userId;
+            if(userIdToUse) {
+                await this.loadHistory(chatId, userIdToUse);
+            }
+        }
         
         if(isCached) {
             const cacheData = cacheService.getCacheData(chatId);
@@ -798,7 +827,7 @@ export class ChatController {
     /**
      * Send File Message
      */
-    public async sendFileMessage(file: Item): Promise<boolean> {
+    public async sendFileMessage(file: Item, userId: string): Promise<boolean> {
         const time = Date.now();
         const currentChat = this.chatRegistry.getCurrentChat();
         const chatId = currentChat?.id || currentChat?.chatId;
@@ -883,7 +912,14 @@ export class ChatController {
 
                 const addToCache = getAddToCache();
                 await addToCache.addFile(chatId, fileToCache);
-                await fileService.addFile(chatId, fileToCache);
+                
+                const actualFile = file.file;
+                if(!actualFile) {
+                    console.error('No File object found in Item:', file);
+                    throw new Error('File object not available');
+                }
+                
+                await fileService.uploadFile(actualFile, this.userId, chatId);
             } catch(err) {
                 console.error('Failed to cache file :(', err);
                 const fileToCache = {
@@ -903,7 +939,13 @@ export class ChatController {
 
                 const addToCache = getAddToCache();
                 await addToCache.addFile(chatId, fileToCache);
-                await fileService.addFile(chatId, fileToCache);
+                
+                const actualFile = file.file;
+                if(actualFile) {
+                    await fileService.uploadFile(actualFile, this.userId, chatId);
+                } else {
+                    console.error('No File object available for upload');
+                }
             }
             
             if(isDirectChat) this.chatManager.getDirectManager().createItem(chatId);

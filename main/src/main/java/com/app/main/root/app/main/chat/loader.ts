@@ -38,7 +38,7 @@ export class Loader {
                         return;
                     }
                     this.processChatItem(data.chat, userId);
-                } catch (error) {
+                } catch(error) {
                     console.error('Error handling chat_data event:', error);
                 }
             });

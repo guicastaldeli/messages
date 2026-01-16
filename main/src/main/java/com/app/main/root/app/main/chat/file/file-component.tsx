@@ -39,6 +39,8 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
 
     const messageColor = getMessageColor();
 
+    
+
     const getFileIcon = (fileType: string, mimeType: string): string => {
         if(mimeType) {
             if(mimeType.startsWith('image/')) return 'IMG';
@@ -79,8 +81,10 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
     };
 
     const handleDownload = async (e: React.MouseEvent) => {
+        console.log('tststts')
         e.stopPropagation();
         if(onDownload) {
+            console.log('tsstststst')
             await onDownload(fileData);
         }
     };

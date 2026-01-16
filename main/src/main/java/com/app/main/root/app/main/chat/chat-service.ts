@@ -138,14 +138,6 @@ export class ChatService {
                 files = Array.isArray(data.files) ? data.files : [];
                 timeline = Array.isArray(data.timeline) ? data.timeline : [];
                 
-                if(files.length === 0 && timeline.length > 0) {
-                    const timelineFiles = timeline.filter((item: any) => item.type === 'file');
-                    if(timelineFiles.length > 0) {
-                        console.log(`Extracting ${timelineFiles.length} files from timeline`);
-                        files = timelineFiles.map((item: any) => item.fileData || item);
-                    }
-                }
-                
                 if(data.pagination) {
                     pagination = {
                         ...pagination,
@@ -184,11 +176,17 @@ export class ChatService {
                 for(let i = 0; i < files.length; i += chunkSize) {
                     const chunk = files.slice(i, i + chunkSize);
                     const chunkPromises = chunk.map(async (file) => {
+                        if(file.isDecrypted || file.decryptedData) {
+                            return file;
+                        }
+                        
                         try {
                             const fileService = await this.getFileController().getFileService(); 
                             const fileArray = Array.isArray(file) ? file : [file];
                             const decryptedFileArray = await fileService.decryptFile(chatId, fileArray);
-                            return decryptedFileArray && decryptedFileArray.length > 0 ? decryptedFileArray[0] : file;
+                            const decrypted = decryptedFileArray && decryptedFileArray.length > 0 ? decryptedFileArray[0] : file;
+                            decrypted.isDecrypted = true;
+                            return decrypted;
                         } catch(err) {
                             console.error('Failed to decrypt file:', err);
                             return file; 
@@ -202,42 +200,7 @@ export class ChatService {
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
                 }
-                files = decryptedFiles.map((file: any) => ({ ...file }));
-            }
-            
-            if(Array.isArray(files) && files.length > 0) {
-                const timelineFileIds = new Set(
-                    timeline
-                        .filter((item: any) => item.type === 'file')
-                        .map((item: any) => item.fileData?.fileId || item.fileId || item.id)
-                );
-                
-                console.log(`Timeline has ${timelineFileIds.size} file entries, files array has ${files.length} files`);
-                
-                files.forEach(file => {
-                    const fileId = file.fileId || file.file_id || file.id;
-                    
-                    if(!timelineFileIds.has(fileId)) {
-                        console.log(`Adding missing file ${fileId} to timeline`);
-                        const timelineItem = {
-                            id: `file_${fileId}`,
-                            messageId: `file_${fileId}`,
-                            type: 'file',
-                            fileId: fileId,
-                            chatId: chatId,
-                            senderId: file.senderId,
-                            userId: file.senderId,
-                            username: file.username,
-                            timestamp: new Date(file.uploadedAt || file.createdAt || Date.now()).getTime(),
-                            createdAt: file.uploadedAt || file.createdAt,
-                            fileData: file,
-                            content: file.originalFileName
-                        };
-                        timeline.push(timelineItem);
-                    }
-                });
-                
-                console.log(`Timeline now has ${timeline.length} total items`);
+                files = decryptedFiles.map((file: any) => ({ ...file, isDecrypted: true }));
             }
             
             /* Timeline */
@@ -293,7 +256,7 @@ export class ChatService {
                                         ...item,
                                         hasDecryptionError: true,
                                         decryptionError: 'Decryption returned no results'
-                                    };
+                                    }
                                 }
                                 
                                 const decryptedFileItem = decryptedFiles[0];
@@ -545,6 +508,16 @@ export class ChatService {
         });
 
         /* Files */
+        const fileIdsInTimeline = new Set();
+        if(Array.isArray(timeline)) {
+            timeline.forEach(item => {
+                if(item.type === 'file' && item.fileData) {
+                    const fileId = item.fileData.fileId || item.fileData.file_id || item.fileData.id;
+                    if(fileId) fileIdsInTimeline.add(fileId);
+                }
+            });
+        }
+
         const sortedFiles = Array.isArray(files) ? files.sort((a, b) => {
             const tA = a.timestamp || a.createdAt || 0;
             const tB = b.timestamp || b.createdAt || 0;
@@ -563,9 +536,12 @@ export class ChatService {
                         f.fileData.id
                     )
                 );
-            
             if(!fileId) {
                 console.warn('File missing ID, skipping:', f);
+                return;
+            }
+            if(fileIdsInTimeline.has(fileId)) {
+                console.log(`Skipping file ${fileId} - already exists in timeline`);
                 return;
             }
             

@@ -8,13 +8,18 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import java.net.URLEncoder;
-import java.util.*;
+import org.springframework.http.MediaType;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.net.URLEncoder;
+import java.util.*;
+
 
 @RestController
 @RequestMapping("/api/files")
@@ -154,7 +159,7 @@ public class FileController {
     /**
      * Download
      */
-    @GetMapping("/download/{userId}/{chatId}/{fileId}")
+    @GetMapping("/download/{userId}/{fileId}")
     public ResponseEntity<byte[]> downloadFile(
         @PathVariable String userId, 
         @PathVariable String fileId,
@@ -166,6 +171,8 @@ public class FileController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
             
+            System.out.println("Starting download for fileId: " + fileId + ", userId: " + userId);
+            
             Map<String, Object> data = serviceManager.getFileService()
                 .getFileDownloader()
                 .download(userId, fileId);
@@ -173,6 +180,14 @@ public class FileController {
             byte[] content = (byte[]) data.get("content");
             String filename = (String) data.get("filename");
             String mimeType = (String) data.get("mimeType");
+            
+            if(content == null || content.length == 0) {
+                System.err.println("ERROR: Downloaded content is null or empty for fileId: " + fileId);
+                return ResponseEntity.notFound().build();
+            }
+            
+            System.out.println("Content validated: " + content.length + " bytes");
+            
             String filenameData = filename != null && !filename.isEmpty()
                 ? filename
                 : fileId;
@@ -186,14 +201,26 @@ public class FileController {
                     "filename*=UTF-8''" + 
                     URLEncoder.encode(filenameData, "UTF-8").replace("+", "%20");
             }
-            return ResponseEntity.ok()
-                .header("Content-Type", mimeType)
-                .header("Content-Disposition", contentDisposition)
-                .header("Content-Length", String.valueOf(content.length))
-                .header("Access-Control-Expose-Headers", "Content-Disposition, Content-Length")
-                .body(content);
+            
+            System.out.println("Sending file: " + filenameData + 
+                            ", Content-Length: " + content.length + 
+                            ", MIME: " + mimeType);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(mimeType));
+            headers.setContentDisposition(ContentDisposition.parse(contentDisposition));
+            headers.setContentLength(content.length);
+            headers.setCacheControl(CacheControl.noCache().getHeaderValue());
+            headers.set("Access-Control-Expose-Headers", "Content-Disposition, Content-Length");
+            
+            System.out.println("Response headers set, returning content");
+            
+            return new ResponseEntity<>(content, headers, HttpStatus.OK);
+            
         } catch(Exception err) {
-            return ResponseEntity.notFound().build();
+            System.err.println("Download error for fileId " + fileId + ": " + err.getMessage());
+            err.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -551,9 +578,10 @@ public class FileController {
     /**
      * Get Files Count
      */
-    @GetMapping("/recent/{userId}/count")
+    @GetMapping("/recent/{userId}/{chatId}/count")
     public ResponseEntity<?> getRecentFilesCount(
         @PathVariable String userId,
+        @PathVariable String chatId,
         HttpServletRequest request
     ) {
         try {
@@ -566,7 +594,7 @@ public class FileController {
                     ));
             }
             
-            int totalFiles = serviceManager.getFileService().countTotalFiles(userId, "root");
+            int totalFiles = serviceManager.getFileService().countTotalFiles(userId, chatId);
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "count", totalFiles

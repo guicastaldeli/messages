@@ -26,18 +26,68 @@ public class BufferConfig {
             return false;
         }
         message = message.trim();
-
-        int openBraces = 0;
-        int openBrackets = 0;
-
-        for(char c : message.toCharArray()) {
-            if(c == '{') openBraces++;
-            if(c == '}') openBraces--;
-            if(c == '[') openBrackets++;
-            if(c == ']') openBrackets--;
+        
+        if(!message.startsWith("{") && !message.startsWith("[")) {
+            return false;
         }
 
-        return openBraces == 0 && openBrackets == 0;
+        return isValidJsonStructure(message);
+    }
+
+    private boolean isValidJsonStructure(String message) {
+        int length = message.length();
+        int index = 0;
+        boolean inString = false;
+        boolean escaped = false;
+        char stringDelimiter = '\0';
+        
+        java.util.Stack<Character> stack = new java.util.Stack<>();
+
+        while(index < length) {
+            char c = message.charAt(index);
+            
+            if(escaped) {
+                escaped = false;
+                index++;
+                continue;
+            }
+
+            if(inString) {
+                if(c == '\\') {
+                    escaped = true;
+                } else if(c == stringDelimiter) {
+                    inString = false;
+                    stringDelimiter = '\0';
+                }
+                index++;
+                continue;
+            }
+
+            switch (c) {
+                case '"':
+                case '\'':
+                    inString = true;
+                    stringDelimiter = c;
+                    break;
+                case '{':
+                case '[':
+                    stack.push(c);
+                    break;
+                case '}':
+                    if(stack.isEmpty() || stack.pop() != '{') {
+                        return false;
+                    }
+                    break;
+                case ']':
+                    if(stack.isEmpty() || stack.pop() != '[') {
+                        return false;
+                    }
+                    break;
+            }
+            index++;
+        }
+
+        return stack.isEmpty() && !inString;
     }
 
     public void clearBuffer(String sessionId) {

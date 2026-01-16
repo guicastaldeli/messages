@@ -260,7 +260,7 @@ export class SessionManager {
     } | null {
         try {
             const userCookie = CookieService.getValue(this.USER_INFO_KEY);
-            if (!userCookie) return null;
+            if(!userCookie) return null;
             
             let value = userCookie.trim();
             if(value.startsWith('"') && value.endsWith('"')) {
@@ -275,10 +275,10 @@ export class SessionManager {
                     username: parsed.username || '',
                     email: parsed.email || ''
                 };
-            } catch (parseError) {
+            } catch(parseError) {
                 if(value.includes(':')) {
                     const parts = value.split(':');
-                    if (parts.length >= 4) {
+                    if(parts.length >= 4) {
                         return {
                             sessionId: parts[0] || '', 
                             userId: parts[1] || '',
@@ -290,7 +290,7 @@ export class SessionManager {
             }
             
             return null;
-        } catch (err) {
+        } catch(err) {
             console.error('Error in getUserInfo:', err);
             return null;
         }

@@ -16,14 +16,25 @@ type SortType =
 
 export interface Item {
     fileId: string;
+    userId?: string;
     originalFileName: string;
     fileSize: number;
     mimeType: string;
     fileType: FileType;
     chatId: string;
     uploadedAt: string;
-    lastModified: string;
-    isDeleted?: boolean; 
+    lastModified: string | number;
+    isDeleted?: boolean;
+    file?: File;
+    name?: string;
+    webkitRelativePath?: string;
+    size?: number;
+    type?: string;
+
+    previewUrl?: string;
+    previewData?: string;
+    duration?: string;
+    thumbnailUrl?: string;
 }
 
 export interface Response {
@@ -79,8 +90,10 @@ export class FileItem extends Component<Props, State> {
     private observer: IntersectionObserver | null = null;
     private sentinelRef = React.createRef<HTMLDivElement>();
     private containerRef = React.createRef<HTMLDivElement>();
+
     private hasMore = true;
     private isLoadingMore = false;
+    public _isMounted = false;
     
     constructor(props: Props) {
         super(props);
@@ -113,6 +126,7 @@ export class FileItem extends Component<Props, State> {
     }
 
     async componentDidMount() {
+        this._isMounted = true;
         await this.loadFiles();
         this.setupIntersectionObserver();
     }
@@ -126,6 +140,7 @@ export class FileItem extends Component<Props, State> {
     }
 
     componentWillUnmount() {
+        this._isMounted = false;
         if(this.observer) {
             this.observer.disconnect();
         }
@@ -161,7 +176,9 @@ export class FileItem extends Component<Props, State> {
     /**
      * Handle Download
      */
-    private async handleDownloadFile(file: Item): Promise<void> {
+    public async handleDownloadFile(file: Item): Promise<void> {
+        console.log('FileItem.handleDownloadFile called for:', file.fileId);
+        
         try {
             const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.downloadFile(this.props.userId, file.fileId);
@@ -195,6 +212,7 @@ export class FileItem extends Component<Props, State> {
             }
         } catch(err: any) {
             console.error('Error downloading file:', err);
+            throw err;
         }
     }
 
@@ -501,7 +519,7 @@ export class FileItem extends Component<Props, State> {
     /**
      * Handle File Preview
      */
-    private async handlePreviewFile(file: Item): Promise<void> {
+    public async handlePreviewFile(file: Item): Promise<void> {
         this.setState({
             previewFile: file,
             previewLoading: true,
@@ -590,7 +608,7 @@ export class FileItem extends Component<Props, State> {
             } else {
                 throw new Error(res.error || 'Failed to download file');
             }
-        } catch(err: any) {
+        } catch (err: any) {
             console.error('Error previewing file:', err);
             this.setState({
                 previewError: err.message || 'Failed to load file for preview',
@@ -813,7 +831,7 @@ export class FileItem extends Component<Props, State> {
                             try {
                                 const fileService = await this.chatService.getFileController().getFileService();
                                 await fileService.downloadFile(this.props.userId, file.fileId);
-                            } catch(err) {
+                            } catch (err) {
                                 console.error('Error downloading file:', err);
                             }
                         }}

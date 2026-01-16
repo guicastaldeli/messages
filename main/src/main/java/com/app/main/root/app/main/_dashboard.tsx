@@ -642,10 +642,10 @@ export class Dashboard extends Component<Props, State> {
      * Is Loaded
      */
     private isLoaded(): boolean {
-    return this.state.chatsLoaded && 
-        this.state.chatStreamComplete &&
-        this.state.chatItemsAdded;
-}
+        return this.state.chatsLoaded && 
+            this.state.chatStreamComplete &&
+            this.state.chatItemsAdded;
+    }
 
     private renderChatLayout() {
         const { activeChat, chatList } = this.state;

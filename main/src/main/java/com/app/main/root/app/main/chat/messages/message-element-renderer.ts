@@ -42,7 +42,10 @@ export class MessageElementRenderer {
             existingMessageIds.add(messageId);
         });
 
-        const sortedTimeline = timeline.sort((a, b) => {
+        // Deduplicate timeline items before rendering
+        const deduplicatedTimeline = this.deduplicateTimeline(timeline);
+        
+        const sortedTimeline = deduplicatedTimeline.sort((a, b) => {
             const timeA = a.timestamp || new Date(a.createdAt || 0).getTime() || 0;
             const timeB = b.timestamp || new Date(b.createdAt || 0).getTime() || 0;
             return timeA - timeB;
@@ -53,7 +56,7 @@ export class MessageElementRenderer {
             return !existingMessageIds.has(id);
         });
         
-        console.log(`Rendering ${newItems.length} new timeline items`);
+        console.log(`Rendering ${newItems.length} new timeline items (after deduplication)`);
         console.log('Timeline items:', newItems.map(item => ({
             id: item.id || item.messageId,
             type: item.type,
@@ -68,6 +71,39 @@ export class MessageElementRenderer {
         }
         
         this.restoreScrollPos(container);
+    }
+
+    private deduplicateTimeline(timeline: any[]): any[] {
+        const seenItems = new Set<string>();
+        const deduplicated: any[] = [];
+        
+        timeline.forEach(item => {
+            const itemKey = this.getTimelineItemKey(item);
+            if(!seenItems.has(itemKey)) {
+                seenItems.add(itemKey);
+                deduplicated.push(item);
+            } else {
+                console.warn(`Skipping duplicate timeline item: ${itemKey}`);
+            }
+        });
+        
+        console.log(`Deduplicated timeline: ${timeline.length} -> ${deduplicated.length} items`);
+        return deduplicated;
+    }
+
+    private getTimelineItemKey(item: any): string {
+        if(item.type === 'file') {
+            const fileData = item.fileData || item;
+            const fileId = fileData.fileId || fileData.file_id || fileData.id;
+            const timestamp = item.timestamp || fileData.timestamp || fileData.createdAt || fileData.uploadedAt || '0';
+            const filename = fileData.originalFileName || fileData.original_filename || item.content || '';
+            return `file_${fileId}_${timestamp}_${filename}`;
+        } else {
+            const id = item.id || item.messageId;
+            const timestamp = item.timestamp || item.createdAt || '0';
+            const content = item.content || '';
+            return `${id}_${timestamp}_${content.substring(0, 50)}`;
+        }
     }
 
     private restoreScrollPos(container: HTMLDivElement): void {

@@ -173,6 +173,43 @@ public class FileEncoderWrapper {
         }
     }
 
+    public boolean encryptFile(String inputPath, String outputPath) {
+        if(nativePtr == 0) {
+            throw new IllegalStateException("Encoder not initialized");
+        }
+        return encryptFile(nativePtr, inputPath, outputPath);
+    }
+
+    public byte[] encryptData(byte[] data, byte[] key) {
+        synchronized(lock) {
+            try {
+                if(data == null || key == null) {
+                    throw new IllegalArgumentException("Data or key is null");
+                }
+                
+                FileEncoderWrapper tempEncoder = new FileEncoderWrapper();
+                tempEncoder.initEncoder(key, EncryptionAlgorithm.AES_256_GCM);
+                
+                byte[] result = tempEncoder.encrypt(data);
+                tempEncoder.cleanup();
+                
+                if(result != null) {
+                    System.out.println("Encrypted data length: " + result.length);
+                } else {
+                    System.err.println("Encryption failed - returned null");
+                }
+                
+                return result;
+            } catch(Exception err) {
+                System.err.println("ERROR: Encryption failed: " + err.getMessage());
+                throw new RuntimeException("Encryption failed", err);
+            }
+        }
+    }
+    
+    /**
+     * Decrypt
+     */
     public byte[] decrypt(byte[] encryptedData) {
         synchronized(lock) {
             if(nativePtr == 0) {
@@ -184,24 +221,38 @@ public class FileEncoderWrapper {
         }
     }
     
-    /**
-     * Encrypt file
-     */
-    public boolean encryptFile(String inputPath, String outputPath) {
-        if(nativePtr == 0) {
-            throw new IllegalStateException("Encoder not initialized");
-        }
-        return encryptFile(nativePtr, inputPath, outputPath);
-    }
-    
-    /**
-     * Decrypt file
-     */
     public boolean decryptFile(String inputPath, String outputPath) {
         if(nativePtr == 0) {
             throw new IllegalStateException("Encoder not initialized");
         }
         return decryptFile(nativePtr, inputPath, outputPath);
+    }
+
+    public byte[] decryptData(byte[] encryptedData, byte[] key) {
+        synchronized(lock) {
+            try {
+                if(encryptedData == null || key == null) {
+                    throw new IllegalArgumentException("Encrypted data or key is null");
+                }
+                
+                FileEncoderWrapper tempEncoder = new FileEncoderWrapper();
+                tempEncoder.initEncoder(key, EncryptionAlgorithm.AES_256_GCM);
+                
+                byte[] result = tempEncoder.decrypt(encryptedData);
+                tempEncoder.cleanup();
+                
+                if(result != null) {
+                    System.out.println("Decrypted data length: " + result.length);
+                } else {
+                    System.err.println("Decryption failed - returned null");
+                }
+                
+                return result;
+            } catch(Exception err) {
+                System.err.println("ERROR: Decryption failed: " + err.getMessage());
+                throw new RuntimeException("Decryption failed", err);
+            }
+        }
     }
     
     /**

@@ -55,49 +55,28 @@ export class FileUploader extends Component<Props, State> {
                 console.error('No active chat selected!');
                 return;
             }
-
-            const fileService = await this.props.chatService.getFileController().getFileService();
-            const res = await fileService.uploadFile(
-                file,
-                sessionData.userId,
-                currentChatId
-            );
-            
-            if(res.success) {
-                console.log('FILE UPLOADED!', res);
-                
-                const fileItem: Item = {
-                    fileId: res.data.fileId,
-                    originalFileName: file.name,
-                    fileSize: file.size,
-                    mimeType: file.type,
-                    chatId: currentChatId,
-                    fileType: this.getFileType(file.type),
-                    uploadedAt: new Date().toISOString(),
-                    lastModified: new Date().toISOString()
-                };
-                
-                console.log('Sending file message with fileId:', fileItem.fileId);
-                
-                if(this.props.chatController) {
-                    await this.props.chatController.sendFileMessage(fileItem);
-                }
-                
-                if(this.props.onFileSharedInChat) {
-                    this.props.onFileSharedInChat(fileItem);
-                }
-                
-                if(this.props.onUploadSuccess) {
-                    this.props.onUploadSuccess(res);
-                }
-            } else {
-                const error = new Error(`Upload failed: ${res.error}`);
-                if(this.props.onUploadError) {
-                    this.props.onUploadError(error);
-                }
-                throw error;
+            const fileItem: Item = {
+                fileId: '',
+                originalFileName: file.name,
+                fileSize: file.size,
+                mimeType: file.type,
+                chatId: currentChatId,
+                fileType: this.getFileType(file.type),
+                uploadedAt: new Date().toISOString(),
+                lastModified: new Date().toISOString(),
+                userId: sessionData.userId,
+                file: file
             }
-
+            
+            console.log('Sending file message with file:', fileItem.originalFileName);
+            
+            if(this.props.chatController && this.props.chatController.sendFileMessage) {
+                await this.props.chatController.sendFileMessage(fileItem, sessionData.userId);
+            }
+            if(this.props.onFileSharedInChat) {
+                this.props.onFileSharedInChat(fileItem);
+            }
+            
             e.target.value = '';
         } catch(err) {
             console.error('Upload error', err);

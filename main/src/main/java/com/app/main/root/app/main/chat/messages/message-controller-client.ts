@@ -231,7 +231,7 @@ export class MessageControllerClient {
             const preloadPromises = validChats.map(async (chat) => {
                 const chatId = chat.id || chat.chatId || chat.groupId;
                 try {
-                    await this.preloadData(chatId, userId);
+                    await this.preloadData(userId, chatId);
                 } catch(err) {
                     console.error(`Failed to preload ${chatId}:`, err);
                 }

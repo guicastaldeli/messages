@@ -105,11 +105,11 @@ public class ChatController {
             String authenticatedUserId = getAuthenticatedUserId(request);
             if(authenticatedUserId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Not authenticated"));
+                    .body(Map.of("error", "Not authorized"));
             }
             if(!authenticatedUserId.equals(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "User ID mismatch"));
+                    .body(Map.of("error", "Forbidden"));
             }
             
             boolean hasAccess = serviceManager.getChatService().userHasAccessToChat(authenticatedUserId, chatId);
@@ -144,7 +144,7 @@ public class ChatController {
             response.put("success", true);
             
             return ResponseEntity.ok(response);
-        } catch (Exception err) {
+        } catch(Exception err) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of(
                     "chatId", chatId,

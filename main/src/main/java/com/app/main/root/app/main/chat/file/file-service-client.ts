@@ -1,5 +1,5 @@
-import { SocketClientConnect } from "../../socket-client-connect";
-import { ChatService } from "../chat-service";
+import { ChatService } from '../chat-service';
+import { SocketClientConnect } from '../../socket-client-connect';
 
 export interface DecryptedFile {
     hasDecryptionError?: boolean;
@@ -10,79 +10,36 @@ export interface DecryptedFile {
 
 export class FileServiceClient {
     private url: string | undefined;
-    private chatService: ChatService
+    private chatService: ChatService;
     private socketClient: SocketClientConnect;
+    private decryptionQueue: Array<{chatId: string, files: any[], resolve: Function, reject: Function}> = [];
+    private isProcessingQueue = false;
 
-    constructor(url: string | undefined, chatService: ChatService, socketClient: SocketClientConnect) {
+    constructor(
+        url: string | undefined, 
+        chatService: ChatService, 
+        socketClient: SocketClientConnect
+    ) {
         this.url = url;
         this.chatService = chatService;
         this.socketClient = socketClient;
     }
 
-    /**
-     * Add File
-     */
-    public async addFile(chatId: string, fileData: any): Promise<void> {
-        try {
-            const res = await fetch(`${this.url}/api/files/add`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ chatId, fileData })
-            });
-            if(!res.ok) throw new Error('Failed to add file');
-        } catch(err) {
-            console.error('Error adding file:', err);
-            throw err;
+    private async waitForConnection(timeoutMs: number = 30000): Promise<boolean> {
+        const startTime = Date.now();
+        let attempt = 0;
+        
+        while(!this.socketClient.isConnected && (Date.now() - startTime) < timeoutMs) {
+            attempt++;
+            const waitTime = Math.min(1000 * Math.pow(1.5, attempt - 1), 5000);
+            
+            console.log(`Connection wait attempt ${attempt}, waiting ${waitTime}ms...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
         }
-    }
-
-    /**
-     * Decrypt File
-     */
-    public async decryptFile(chatId: string, fileDataArray: any[]): Promise<DecryptedFile[]> {
-        return new Promise(async (res, rej) => {
-            const successDestination = '/queue/decrypted-files-scss';
-            const errDestination = '/queue/decrypted-files-err';
-
-            const handleSuccess = (response: any) => {
-                this.socketClient.offDestination(successDestination, handleSuccess);
-                this.socketClient.offDestination(errDestination, handleErr);
-                if(response.files && response.files.length > 0) {
-                    res(response.files);
-                } else {
-                    rej(new Error('No decrypted files returned'));
-                }
-            };
-
-            const handleErr = (error: any) => {
-                this.socketClient.offDestination(successDestination, handleSuccess);
-                this.socketClient.offDestination(errDestination, handleErr);
-                rej(new Error(error.message || 'Failed to decrypt files'));
-            };
-
-            try {
-                this.socketClient.onDestination(successDestination, handleSuccess);
-                this.socketClient.onDestination(errDestination, handleErr);
-                
-                const payload = { 
-                    files: fileDataArray,
-                    chatId: chatId
-                };
-
-                await this.socketClient.sendToDestination(
-                    '/app/get-decrypted-files',
-                    payload,
-                    successDestination
-                );
-            } catch(err) {
-                this.socketClient.offDestination(successDestination, handleSuccess);
-                this.socketClient.offDestination(errDestination, handleErr);
-                rej(err);
-            }
-        });
+        
+        const connected = this.socketClient.isConnected;
+        console.log(`Connection wait result: ${connected ? 'CONNECTED' : 'TIMEOUT'}`);
+        return connected;
     }
 
     /**
@@ -109,7 +66,7 @@ export class FileServiceClient {
                 }
             );
             
-            if(!res.ok) throw new Error('Upload failed');
+            if(!res.ok) throw new Error(`Upload failed with status: ${res.status}`);
             return await res.json();
         } catch(err) {
             console.error('Upload error:', err);
@@ -129,11 +86,7 @@ export class FileServiceClient {
                     'Content-Type': 'application/json',
                 }
             });
-            if(!res.ok) {
-                const errorText = await res.text();
-                console.error('Delete failed with status:', res.status, 'res:', errorText);
-                throw new Error(`Failed to delete file: ${res.statusText}`);
-            }
+            if(!res.ok) throw new Error(`Delete failed with status: ${res.status}`);
             return await res.json();
         } catch(err) {
             console.error('Error deleting file:', err);
@@ -163,9 +116,7 @@ export class FileServiceClient {
                     'Content-Type': 'application/json'
                 }
             });
-            if(!res.ok) {
-                throw new Error(`Failed to list files: ${res.statusText}`);
-            }
+            if(!res.ok) throw new Error(`List files failed with status: ${res.status}`);
             return await res.json();
         } catch(err) {
             console.error(err);
@@ -185,9 +136,7 @@ export class FileServiceClient {
                     'Content-Type': 'application/json'
                 }
             });
-            if(!res.ok) {
-                throw new Error(`Failed to get storage usage: ${res.statusText}`);
-            }
+            if(!res.ok) throw new Error(`Storage usage failed with status: ${res.status}`);
             return await res.json();
         } catch(err) {
             console.error(err);
@@ -207,9 +156,7 @@ export class FileServiceClient {
                     'Content-Type': 'application/json'
                 }
             });
-            if(!res.ok) {
-                throw new Error(`Failed top get file info: ${res.statusText}`);
-            }
+            if(!res.ok) throw new Error(`File info failed with status: ${res.status}`);
             return await res.json();
         } catch(err) {
             console.error(err);
@@ -222,18 +169,15 @@ export class FileServiceClient {
      */
     public async countFiles(userId: string, chatId: string): Promise<any> {
         try {
-            const params = new URLSearchParams({ userId, chatId });
-            const res = await fetch(`${this.url}/api/files/count?${params}`, {
+            const res = await fetch(`${this.url}/api/files/count/${userId}/${chatId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
-            if(!res.ok) {
-                throw new Error(`Failed to count files: ${res.statusText}`);
-            }
-            return await res.json(); 
+            if(!res.ok) throw new Error(`Count files failed with status: ${res.status}`);
+            return await res.json();
         } catch(err) {
             console.error(err);
             throw err;
@@ -245,29 +189,15 @@ export class FileServiceClient {
      */
     public async countPages(userId: string, chatId: string): Promise<any> {
         try {
-            const params = new URLSearchParams({ 
-                userId, 
-                chatId
-            });
-            const res = await fetch(`${this.url}/api/files/count-pages?${params}`, {
+            const res = await fetch(`${this.url}/api/files/pages/${userId}/${chatId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
-            if(!res.ok) {
-                throw new Error(`Failed to count files: ${res.statusText}`);
-            }
-            const data = await res.json();
-            return {
-                success: data.success,
-                current: data.current,
-                total: data.total,
-                hasMore: data.hasMore,
-                pageSize: data.pageSize,
-                totalFiles: data.totalFiles
-            }; 
+            if(!res.ok) throw new Error(`Count pages failed with status: ${res.status}`);
+            return await res.json();
         } catch(err) {
             console.error(err);
             throw err;
@@ -283,22 +213,14 @@ export class FileServiceClient {
         page: number
     ): Promise<any> {
         try {
-            const params = new URLSearchParams({ 
-                userId, 
-                chatId, 
-                page: page.toString() 
-            });
-
-            const res = await fetch(`${this.url}/api/files/cache-key?${params}`, {
+            const res = await fetch(`${this.url}/api/files/cache/${userId}/${chatId}/${page}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
-            if(!res.ok) {
-                throw new Error(`Failed to get cache key: ${res.statusText}`);
-            }
+            if(!res.ok) throw new Error(`Cache key failed with status: ${res.status}`);
             return await res.json();
         } catch(err) {
             console.error(err);
@@ -322,73 +244,61 @@ export class FileServiceClient {
         hasMore: boolean;
     }> {
         try {
-            const res = await fetch(
-                `${this.url}/api/files/recent/${userId}?page=${page}&pageSize=${pageSize}`,
-                {
-                    credentials: 'include'
+            const params = new URLSearchParams({
+                page: page.toString(),
+                pageSize: pageSize.toString()
+            });
+
+            const res = await fetch(`${this.url}/api/files/recent/${userId}?${params}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            );
-            if(!res.ok) throw new Error('Failed to fetch recent files');
+            });
             
-            const data = await res.json();
+            if(!res.ok) {
+                throw new Error(`Recent files failed with status: ${res.status}`);
+            }
+            
+            return await res.json();
+        } catch(err) {
+            console.error('Error getting recent files:', err);
+            
             return {
-                chats: data.chats || data || [],
+                chats: [],
                 currentPage: page,
                 pageSize: pageSize,
-                totalChats: data.total || data.chats?.length || 0,
-                totalPages: Math.ceil((data.total || data.chats?.length || 0) / pageSize),
-                hasMore: data.hasMore !== false
+                totalChats: 0,
+                totalPages: 0,
+                hasMore: false
             };
-        } catch(err) {
-            console.error('Failed to fetch recent files:', err);
-            throw err;
         }
     }
 
     /**
-     * Get Files Count By Chat Id
+     * Files Count by Chat Id
      */
     public async getFilesCountByChatId(chatId: string, userId: string): Promise<number> {
         try {
-            const params = new URLSearchParams({
-                userId: userId,
-                chatId: chatId
-            });
-
-            const url = `${this.url}/api/files/count?${params.toString()}`;
-            console.log(`Fetching files count from: ${url}`);
-            
-            const res = await fetch(url, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error(`Failed to fetch files count: ${res.status}`);
-            
-            const contentType = res.headers.get('content-type');
-            let count = 0;
-            
-            if(contentType && contentType.includes('application/json')) {
-                const data = await res.json();
-                console.log(`Files count response:`, data);
-                if(typeof data === 'number') {
-                    count = data;
-                } else {
-                    count = data.total || data.count || data.totalFiles || data.total_count || 0;
+            const res = await fetch(`${this.url}/api/files/count-by-chat/${userId}/${chatId}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            } else {
-                const text = await res.text();
-                count = parseInt(text) || 0;
-            }
-            
-            console.log(`Parsed files count: ${count}`);
-            return count;
+            });
+            if(!res.ok) throw new Error(`Files count by chat failed with status: ${res.status}`);
+            const data = await res.json();
+            return data.count || 0;
         } catch(err) {
-            console.error(`Error fetching files count for chat ${chatId}:`, err);
+            console.error(err);
             throw err;
         }
     }
 
     /**
-     * Download File
+     * Download
      */
     public async downloadFile(userId: string, fileId: string): Promise<{ 
         data?: any, 
@@ -396,467 +306,322 @@ export class FileServiceClient {
         error?: any 
     }> {
         try {
-            const res = await fetch(
-                `${this.url}/api/files/download/${userId}/${fileId}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json, application/octet-stream, */*',
-                    },
-                    credentials: 'include'
-                }
-            );
+            const res = await fetch(`${this.url}/api/files/download/${userId}/${fileId}`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
             if(!res.ok) {
-                throw new Error(`Download failed!: ${res.statusText}`);
-            }
-
-            const contentType = res.headers.get('content-type');
-            if(contentType && contentType.includes('application/json')) {
-                const data = await res.json();
                 return {
-                    success: true,
-                    data: data
-                };
-            } else {
-                const arrayBuffer = await res.arrayBuffer();
-                const contentDisposition = res.headers.get('content-disposition');
-                let filename = fileId;
-                if(contentDisposition) {
-                    const match = contentDisposition.match(/filename="?(.+?)"?$/);
-                    if(match) filename = match[1];
-                }
-                
-                return {
-                    success: true,
-                    data: {
-                        content: new Uint8Array(arrayBuffer),
-                        filename: filename,
-                        mimeType: contentType || 'application/octet-stream'
-                    }
+                    success: false,
+                    error: `Download failed with status: ${res.status}`
                 };
             }
+            
+            const data = await res.blob();
+            return {
+                data: data,
+                success: true
+            };
         } catch(error: any) {
-            console.error('Download error:', error);
             return {
                 success: false,
-                error: error.file
+                error: error.message
             };
         }
     }
 
     /**
-     * Get Recent Files Count
+     * Recent Files Count
      */
-    public async getRecentFilesCount(userId: string): Promise<number> {
+    public async getRecentFilesCount(userId: string, chatId: string): Promise<number> {
         try {
-            const res = await fetch(`${this.url}/api/files/recent/${userId}/count`, {
-                credentials: 'include'
+            const res = await fetch(`${this.url}/api/files/recent-count/${userId}/${chatId}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
-            if(!res.ok) throw new Error('Failed to fetch recent files count');
-
+            if(!res.ok) throw new Error(`Recent files count failed with status: ${res.status}`);
             const data = await res.json();
             return data.count || 0;
         } catch(err) {
-            console.error('Failed to fetch recent files count:', err);
+            console.error(err);
             throw err;
         }
     }
 
     /**
-     * Get Files By User Id
+     * Get Fles by User Id
      */
     public async getFilesByUserId(userId: string): Promise<any[]> {
         try {
             const res = await fetch(`${this.url}/api/files/user/${userId}`, {
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
-            if(!res.ok) throw new Error('Failed to fetch user files');
-            return await res.json();
+            if(!res.ok) throw new Error(`Files by user failed with status: ${res.status}`);
+            const data = await res.json();
+            return data.files || [];
         } catch(err) {
-            console.error('Failed to fetch user files:', err);
+            console.error(err);
             throw err;
         }
     }
 
     /**
-     * Get File Stats
+     * File Stats
      */
     public async getFileStats(): Promise<any[]> {
         try {
             const res = await fetch(`${this.url}/api/files/stats`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to fetch file stats');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to fetch file stats:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Search Files
-     */
-    public async searchFiles(query: string, userId: string): Promise<any[]> {
-        try {
-            const res = await fetch(
-                `${this.url}/api/files/search?q=${encodeURIComponent(query)}&userId=${userId}`,
-                {
-                    credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            );
-            if(!res.ok) throw new Error('Failed to search files');
-            return await res.json();
+            });
+            if(!res.ok) throw new Error(`File stats failed with status: ${res.status}`);
+            const data = await res.json();
+            return data.stats || [];
         } catch(err) {
-            console.error('Failed to search files:', err);
+            console.error(err);
             throw err;
         }
     }
 
     /**
-     * Get File Preview
+     * 
+     * Decryption
+     * 
      */
-    public async getFilePreview(fileId: string, userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/preview/${userId}/${fileId}`, {
-                credentials: 'include'
+    public async decryptFile(
+        chatId: string, 
+        fileDataArray: any[],
+        batchSize: number = 2,
+        delayBetweenBatches: number = 500
+    ): Promise<DecryptedFile[]> {
+        return new Promise((resolve, reject) => {
+            this.decryptionQueue.push({
+                chatId,
+                files: fileDataArray,
+                resolve,
+                reject
             });
-            if(!res.ok) throw new Error('Failed to get file preview');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to get file preview:', err);
-            throw err;
-        }
+            
+            if(!this.isProcessingQueue) {
+                this.processDecryptionQueue();
+            }
+        });
     }
 
-    /**
-     * Update File Metadata
-     */
-    public async updateFileMetadata(fileId: string, userId: string, metadata: any): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/metadata/${userId}/${fileId}`, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(metadata)
-            });
-            if(!res.ok) throw new Error('Failed to update file metadata');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to update file metadata:', err);
-            throw err;
+    private async processDecryptionQueue(): Promise<void> {
+        if(this.isProcessingQueue || this.decryptionQueue.length === 0) {
+            return;
         }
+
+        this.isProcessingQueue = true;
+
+        while(this.decryptionQueue.length > 0) {
+            const task = this.decryptionQueue[0];
+            
+            try {
+                console.log(`Processing decryption queue: ${this.decryptionQueue.length} tasks remaining`);
+                const result = await this.processDecryptionTask(task.chatId, task.files);
+                
+                this.decryptionQueue.shift();
+                task.resolve(result);
+                
+                if(this.decryptionQueue.length > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            } catch(error) {
+                this.decryptionQueue.shift();
+                task.reject(error);
+                
+                if((error as Error).message.includes('connection')) {
+                    console.warn('Connection error in queue, waiting before next task...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+        }
+
+        this.isProcessingQueue = false;
     }
 
-    /**
-     * Share File
-     */
-    public async shareFile(fileId: string, userId: string, targetUserId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/share/${userId}/${fileId}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ targetUserId })
-            });
-            if(!res.ok) throw new Error('Failed to share file');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to share file:', err);
-            throw err;
+    private async processDecryptionTask(
+        chatId: string, 
+        fileDataArray: any[],
+        batchSize: number = 2,
+        delayBetweenBatches: number = 500
+    ): Promise<DecryptedFile[]> {
+        const alreadyDecrypted: DecryptedFile[] = [];
+        const filesToDecrypt = fileDataArray.filter(file => {
+            if(file.isDecrypted || file.decryptedData) {
+                alreadyDecrypted.push(file);
+                return false;
+            }
+            return true;
+        });
+        
+        if(filesToDecrypt.length === 0) {
+            console.log('All files already decrypted, skipping');
+            return fileDataArray;
         }
+        
+        console.log(`Starting decryption of ${filesToDecrypt.length} files out of ${fileDataArray.length} total (${alreadyDecrypted.length} already decrypted)`);
+        
+        const allDecryptedFiles: DecryptedFile[] = [...alreadyDecrypted];
+        
+        if(!this.socketClient.isConnected) {
+            const connected = await this.waitForConnection(15000);
+            if(!connected) {
+                throw new Error('Cannot start decryption reconnection attempt');
+            }
+        }
+        
+        for(let i = 0; i < filesToDecrypt.length; i += batchSize) {
+            const batch = filesToDecrypt.slice(i, i + batchSize);
+            const batchNumber = Math.floor(i / batchSize) + 1;
+            const totalBatches = Math.ceil(filesToDecrypt.length / batchSize);
+            
+            let batchAttempt = 0;
+            const maxBatchAttempts = 3;
+            let batchSuccess = false;
+            
+            while(batchAttempt < maxBatchAttempts && !batchSuccess) {
+                batchAttempt++;
+                
+                try {
+                    if(!this.socketClient.isConnected) {
+                        console.warn(`[Batch ${batchNumber}/${totalBatches}] Socket disconnected, aggressive reconnection...`);
+                        const connected = await this.waitForConnection(10000);
+                        if(!connected) {
+                            if(batchAttempt === maxBatchAttempts) {
+                                throw new Error(`[Batch ${batchNumber}/${totalBatches}] Socket reconnection failed after ${maxBatchAttempts} attempts`);
+                            }
+                            continue;
+                        }
+                    }
+                    
+                    console.log(`[Batch ${batchNumber}/${totalBatches}] Attempt ${batchAttempt}/${maxBatchAttempts} - Decrypting ${batch.length} files...`);
+                    
+                    const decryptedBatch = await this.decryptFileBatch(chatId, batch);
+                    allDecryptedFiles.push(...decryptedBatch);
+                    
+                    console.log(`[Batch ${batchNumber}/${totalBatches}] Successfully decrypted ${decryptedBatch.length} files`);
+                    batchSuccess = true;
+                    
+                } catch(batchErr) {
+                    console.error(`[Batch ${batchNumber}/${totalBatches}] Attempt ${batchAttempt}/${maxBatchAttempts} failed:`, batchErr);
+                    
+                    if(batchAttempt === maxBatchAttempts) {
+                        const failedFiles = batch.map(file => ({
+                            ...file,
+                            hasDecryptionError: true,
+                            decryptionError: `Failed after ${maxBatchAttempts} attempts: ${(batchErr as Error).message}`,
+                            isDecrypted: false
+                        }));
+                        
+                        allDecryptedFiles.push(...failedFiles);
+                        
+                        console.warn(`[Batch ${batchNumber}/${totalBatches}] All attempts failed, marking batch as errored`);
+                    } else {
+                        const retryDelay = 1000 * batchAttempt;
+                        console.warn(`[Batch ${batchNumber}/${totalBatches}] Waiting ${retryDelay}ms before retry...`);
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    }
+                }
+            }
+            
+            if(i + batchSize < filesToDecrypt.length && batchSuccess) { 
+                console.log(`[Batch ${batchNumber}/${totalBatches}] Waiting ${delayBetweenBatches}ms before next batch...`);
+                await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+            }
+        }
+        
+        return allDecryptedFiles;
     }
 
-    /**
-     * Get Shared Files
-     */
-    public async getSharedFiles(userId: string): Promise<any[]> {
-        try {
-            const res = await fetch(`${this.url}/api/files/shared/${userId}`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to get shared files');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to get shared files:', err);
-            throw err;
-        }
-    }
+    private async decryptFileBatch(chatId: string, fileDataArray: any[]): Promise<DecryptedFile[]> {
+        const maxRetries = 3;
+        
+        for(let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                if(!this.socketClient.isConnected) {
+                    const connected = await this.waitForConnection(5000);
+                    if(!connected) {
+                        if(attempt === maxRetries) {
+                            throw new Error('Socket connection unavailable after retries');
+                        }
+                        continue;
+                    }
+                }
+                
+                return await new Promise(async (res, rej) => {
+                    const successDestination = '/queue/decrypted-files-scss';
+                    const errDestination = '/queue/decrypted-files-err';
 
-    /**
-     * Get File Permissions
-     */
-    public async getFilePermissions(fileId: string, userId: string): Promise<any[]> {
-        try {
-            const res = await fetch(`${this.url}/api/files/permissions/${userId}/${fileId}`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to get file permissions');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to get file permissions:', err);
-            throw err;
-        }
-    }
+                    const handleSuccess = (response: any) => {
+                        this.socketClient.offDestination(successDestination, handleSuccess);
+                        this.socketClient.offDestination(errDestination, handleErr);
+                        if(response.files && response.files.length > 0) {
+                            res(response.files);
+                        } else {
+                            rej(new Error('No decrypted files returned'));
+                        }
+                    };
 
-    /**
-     * Set File Permissions
-     */
-    public async setFilePermissions(fileId: string, userId: string, permissions: any): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/permissions/${userId}/${fileId}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(permissions)
-            });
-            if(!res.ok) throw new Error('Failed to set file permissions');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to set file permissions:', err);
-            throw err;
-        }
-    }
+                    const handleErr = (error: any) => {
+                        this.socketClient.offDestination(successDestination, handleSuccess);
+                        this.socketClient.offDestination(errDestination, handleErr);
+                        rej(new Error(error.message || 'Failed to decrypt files'));
+                    };
 
-    /**
-     * Get File Versions
-     */
-    public async getFileVersions(fileId: string, userId: string): Promise<any[]> {
-        try {
-            const res = await fetch(`${this.url}/api/files/versions/${userId}/${fileId}`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to get file versions');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to get file versions:', err);
-            throw err;
-        }
-    }
+                    try {
+                        if(!this.socketClient.isConnected) {
+                            rej(new Error('Socket connection lost during setup'));
+                            return;
+                        }
+                        
+                        await this.socketClient.onDestination(successDestination, handleSuccess);
+                        await this.socketClient.onDestination(errDestination, handleErr);
+                        
+                        const payload = { 
+                            files: fileDataArray,
+                            chatId: chatId
+                        };
 
-    /**
-     * Restore File Version
-     */
-    public async restoreFileVersion(fileId: string, userId: string, versionId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/versions/${userId}/${fileId}/restore/${versionId}`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to restore file version');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to restore file version:', err);
-            throw err;
+                        const sent = await this.socketClient.sendToDestination(
+                            '/app/get-decrypted-files',
+                            payload,
+                            successDestination
+                        );
+                        
+                        if(!sent) {
+                            rej(new Error('Failed to send decryption request'));
+                        }
+                    } catch(err) {
+                        this.socketClient.offDestination(successDestination, handleSuccess);
+                        this.socketClient.offDestination(errDestination, handleErr);
+                        rej(err);
+                    }
+                });
+            } catch(err) {
+                console.error(`Decryption batch attempt ${attempt}/${maxRetries} failed:`, err);
+                
+                if(attempt === maxRetries) {
+                    throw err;
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            }
         }
-    }
-
-    /**
-     * Archive File
-     */
-    public async archiveFile(fileId: string, userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/archive/${userId}/${fileId}`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to archive file');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to archive file:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Restore File
-     */
-    public async restoreFile(fileId: string, userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/restore/${userId}/${fileId}`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to restore file');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to restore file:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Get Archived Files
-     */
-    public async getArchivedFiles(userId: string): Promise<any[]> {
-        try {
-            const res = await fetch(`${this.url}/api/files/archived/${userId}`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to get archived files');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to get archived files:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Get File Analytics
-     */
-    public async getFileAnalytics(userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/analytics/${userId}`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to get file analytics');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to get file analytics:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Export Files
-     */
-    public async exportFiles(userId: string, format: string = 'json'): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/export/${userId}?format=${format}`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to export files');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to export files:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Import Files
-     */
-    public async importFiles(userId: string, files: any[]): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/import/${userId}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ files })
-            });
-            if(!res.ok) throw new Error('Failed to import files');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to import files:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Cleanup Files
-     */
-    public async cleanupFiles(userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/cleanup/${userId}`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to cleanup files');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to cleanup files:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Get File Sync Status
-     */
-    public async getFileSyncStatus(userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/sync/${userId}`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to get file sync status');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to get file sync status:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Sync Files
-     */
-    public async syncFiles(userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/sync/${userId}/start`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to sync files');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to sync files:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Get File Backup
-     */
-    public async getFileBackup(userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/backup/${userId}`, {
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to get file backup');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to get file backup:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Create File Backup
-     */
-    public async createFileBackup(userId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/backup/${userId}/create`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to create file backup');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to create file backup:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Restore File Backup
-     */
-    public async restoreFileBackup(userId: string, backupId: string): Promise<any> {
-        try {
-            const res = await fetch(`${this.url}/api/files/backup/${userId}/restore/${backupId}`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if(!res.ok) throw new Error('Failed to restore file backup');
-            return await res.json();
-        } catch(err) {
-            console.error('Failed to restore file backup:', err);
-            throw err;
-        }
+        
+        throw new Error('All decryption batch attempts failed');
     }
 }

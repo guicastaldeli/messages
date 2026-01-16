@@ -45,14 +45,13 @@ class FileService:
                     'file': (originalFileName, fileContent)
                 }
                 
-                # Log cookies
                 if cookies:
                     print(f"[FileService] Uploading with cookies: {list(cookies.keys())}")
                 
                 res = await client.post(
                     f"{self.url}/api/files/upload/{userId}/{chatId}",
                     files=files,
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
@@ -102,7 +101,7 @@ class FileService:
                 async with client.stream(
                     'GET', 
                     url,
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 ) as response:
                     if response.status_code != 200:
@@ -111,20 +110,40 @@ class FileService:
                             status_code=response.status_code,
                             detail=f"Backend error: {error_text.decode() if error_text else 'Unknown error'}"
                         )
+                    
+                    content_chunks = []
+                    total_size = 0
+                    async for chunk in response.aiter_bytes():
+                        content_chunks.append(chunk)
+                        total_size += len(chunk)
+
+                    content = b''.join(content_chunks)
                     headers = dict(response.headers)
                     
+                    filtered_headers = {}
+                    for key, value in headers.items():
+                        if key.lower() != 'content-length':
+                            filtered_headers[key] = value
+                    
+                    filtered_headers['Content-Length'] = str(total_size)
+                    content_disposition = headers.get(
+                        'content-disposition', 
+                        f'attachment; filename="{fileId}"'
+                    )
+                    
+                    media_type = headers.get('content-type', 'application/octet-stream')
+                    
+                    print(f"[FileService] Download successful: {total_size} bytes, type: {media_type}")
+                    
                     return StreamingResponse(
-                        response.aiter_bytes(),
-                        media_type=headers.get('content-type', 'application/octet-stream'),
+                        iter([content]),
+                        media_type=media_type,
                         headers={
-                            'Content-Disposition': headers.get(
-                                'content-disposition', 
-                                f'attachment; filename="{fileId}"'
-                            ),
-                            'Content-Length': headers.get('content-length', ''),
+                            'Content-Disposition': content_disposition,
+                            'Content-Length': str(total_size),
                             'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length'
                         }
-                    ) 
+                    )
         except httpx.RequestError as err:
             print(f"[FileService] HTTP request error: {str(err)}")
             raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
@@ -149,13 +168,13 @@ class FileService:
                     'pageSize': 5
                 }
                 
-                if cookies:
+                if(cookies):
                     print(f"[FileService] Listing files with cookies: {list(cookies.keys())}")
                 
                 res = await client.get(
                     f"{self.url}/api/files/list",
                     params=params,
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
@@ -180,7 +199,7 @@ class FileService:
             async with httpx.AsyncClient() as client:
                 res = await client.delete(
                     f"{self.url}/api/files/delete/{userId}/{fileId}",
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
@@ -204,7 +223,7 @@ class FileService:
             async with httpx.AsyncClient() as client:
                 res = await client.get(
                     f"{self.url}/api/files/storage/{userId}",
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
@@ -235,7 +254,7 @@ class FileService:
                 res = await client.get(
                     f"{self.url}/api/files/count",
                     params=params,
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
@@ -267,7 +286,7 @@ class FileService:
                 res = await client.get(
                     f"{self.url}/api/files/count-pages",
                     params=params,
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
@@ -300,7 +319,7 @@ class FileService:
                 res = await client.get(
                     f"{self.url}/api/files/cache-key",
                     params=params,
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
@@ -314,7 +333,7 @@ class FileService:
         except httpx.RequestError as err:
             raise HTTPException(status_code=503, detail=f"Service unavailable: {str(err)}")
         
-    ## Get Recent Files - FIXED
+    ## Get Recent Files
     async def getRecentFiles(
         self,
         userId: str,
@@ -329,7 +348,7 @@ class FileService:
                     'pageSize': pageSize
                 }
                 
-                if cookies:
+                if(cookies):
                     print(f"[FileService] Getting recent files with cookies: {list(cookies.keys())}")
                 else:
                     print(f"[FileService] WARNING: No cookies for recent files")
@@ -337,7 +356,7 @@ class FileService:
                 res = await client.get(
                     f"{self.url}/api/files/recent/{userId}",
                     params=params,
-                    cookies=cookies,  # Forward cookies
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
@@ -345,7 +364,6 @@ class FileService:
                     return res.json()
                 else:
                     print(f"[FileService] Recent files failed: {res.status_code} - {res.text}")
-                    # Return empty result instead of failing
                     return {
                         'files': [],
                         'total': 0,
@@ -370,20 +388,21 @@ class FileService:
     async def getRecentFilesCount(
         self, 
         userId: str,
+        chatId: str,
         cookies: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient() as client:
                 res = await client.get(
-                    f"{self.url}/api/files/recent/{userId}/count",
-                    cookies=cookies,  # Forward cookies
+                    f"{self.url}/api/files/recent/{userId}/{chatId}/count",
+                    cookies=cookies,
                     follow_redirects=True
                 )
                 
-                if res.status_code == 200:
+                if(res.status_code == 200):
                     return res.json()
                 else:
-                    return {'total': 0}
+                    return { 'total': 0 }
         except httpx.RequestError as err:
             print(f"[FileService] Error getting recent files count: {str(err)}")
-            return {'total': 0}
+            return { 'total': 0 }

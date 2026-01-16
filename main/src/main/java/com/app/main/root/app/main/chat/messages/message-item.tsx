@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserColorGenerator } from "@/app/utils/UserColorGenerator";
 import { FileMessageWrapper } from '../file/file-component';
+import { FileItem } from '../file/file-item';
 
 export interface MessageProps {
     username: string | null;
@@ -72,9 +73,15 @@ MessageWrapper.displayName = 'MessageWrapper';
 
 export class MessageComponentGetter {
     private currentUserId: string | undefined;
+    private fileItemRef: FileItem | null = null;
 
     public setCurrentUserId(userId: string) {
+        console.log(this.currentUserId)
         this.currentUserId = userId;
+    }
+
+    public setFileItemRef(fileItem: FileItem) {
+        this.fileItemRef = fileItem;
     }
 
     __message(data: any): React.ReactElement {
@@ -128,13 +135,19 @@ export class MessageComponentGetter {
                 direction={props.direction}
                 userColor={props.userColor}
                 chatType={props.chatType}
-                currentUserId={props.currentUserId}
+                currentUserId={this.currentUserId}
                 fileData={props.fileData}
                 onDownload={async (file) => {
                     console.log('Download file:', file);
+                    if(this.fileItemRef) {
+                        await this.fileItemRef.handleDownloadFile(file);
+                    }
                 }}
                 onPreview={async (file) => {
                     console.log('Preview file:', file);
+                    if(this.fileItemRef) {
+                        await this.fileItemRef.handlePreviewFile(file);
+                    }
                 }}
             />
         );

@@ -138,32 +138,34 @@ export class CacheServiceClient {
         const cacheData = this.cache.get(chatId);
         if(!cacheData) return;
         
-        let removedCount = 0;
-        const validMessageIds: string[] = [];
-        const validTimelineIds: string[] = [];
+        console.log(`[validateCache] Starting validation for ${chatId}: ${cacheData.files.size} files, ${cacheData.timeline.size} timeline items`);
         
-        cacheData.messageOrder.forEach(messageId => {
-            const message = cacheData.messages.get(messageId);
+        const validFileIds: string[] = [];
+        const seenFileKeys = new Set<string>();
+        
+        cacheData.fileOrder.forEach(fileId => {
+            const file = cacheData.files.get(fileId);
             
-            if(!message) {
-                console.warn(`[validateCache] Message ${messageId} in order but not in map`);
+            if(!file) {
+                console.warn(`[validateCache] File ${fileId} in order but not in map`);
                 return;
             }
             
-            const messageChatId = message.chatId;
-            
-            if(messageChatId && messageChatId !== chatId) {
-                console.warn(`[validateCache] Removing message ${messageId} from ${chatId} - belongs to ${messageChatId}`);
-                cacheData.messages.delete(messageId);
-                removedCount++;
+            const fileKey = this.getFileKey(file);
+            if(seenFileKeys.has(fileKey)) {
+                console.warn(`[validateCache] Removing duplicate file: ${fileId} (${fileKey})`);
+                cacheData.files.delete(fileId);
             } else {
-                if(!message.chatId) {
-                    message.chatId = chatId;
-                }
-                validMessageIds.push(messageId);
+                seenFileKeys.add(fileKey);
+                validFileIds.push(fileId);
             }
         });
-
+        
+        cacheData.fileOrder = validFileIds;
+        
+        const validTimelineIds: string[] = [];
+        const seenTimelineKeys = new Set<string>();
+        
         cacheData.timelineOrder.forEach(timelineId => {
             const timelineItem = cacheData.timeline.get(timelineId);
             
@@ -172,27 +174,65 @@ export class CacheServiceClient {
                 return;
             }
             
-            const timelineChatId = timelineItem.chatId;
-            
-            if(timelineChatId && timelineChatId !== chatId) {
-                console.warn(`[validateCache] Removing timeline item ${timelineId} from ${chatId} - belongs to ${timelineChatId}`);
-                cacheData.timeline.delete(timelineId);
-                removedCount++;
-            } else {
-                if(!timelineItem.chatId) {
-                    timelineItem.chatId = chatId;
+            if(timelineItem.type === 'file') {
+                const timelineKey = this.getTimelineFileKey(timelineItem);
+                if(seenTimelineKeys.has(timelineKey)) {
+                    console.warn(`[validateCache] Removing duplicate timeline file: ${timelineId} (${timelineKey})`);
+                    cacheData.timeline.delete(timelineId);
+                    return;
                 }
-                validTimelineIds.push(timelineId);
+                seenTimelineKeys.add(timelineKey);
             }
+            
+            validTimelineIds.push(timelineId);
         });
-
-        cacheData.messageOrder = validMessageIds;
+        
         cacheData.timelineOrder = validTimelineIds;
         
-        if(removedCount > 0) {
-            console.log(`[validateCache] Cleaned ${removedCount} invalid items from ${chatId}`);
-            console.log(`[validateCache] ${cacheData.messages.size} valid messages, ${cacheData.timeline.size} valid timeline items remain`);
-        }
+        this.removeOverlappingFiles(cacheData);
+        
+        console.log(`[validateCache] After cleanup: ${cacheData.files.size} files, ${cacheData.timeline.size} timeline items`);
+    }
+
+    private getFileKey(file: any): string {
+        const fileId = file.fileId || file.file_id || file.id;
+        const timestamp = file.timestamp || file.createdAt || file.uploadedAt || '0';
+        const filename = file.originalFileName || file.original_filename || '';
+        return `${fileId}_${timestamp}_${filename}`;
+    }
+
+    private getTimelineFileKey(timelineItem: any): string {
+        if(timelineItem.type !== 'file') return timelineItem.id || timelineItem.messageId;
+        
+        const fileData = timelineItem.fileData || timelineItem;
+        const fileId = fileData.fileId || fileData.file_id || fileData.id;
+        const timestamp = timelineItem.timestamp || fileData.timestamp || fileData.createdAt || fileData.uploadedAt || '0';
+        const filename = fileData.originalFileName || fileData.original_filename || timelineItem.content || '';
+        return `${fileId}_${timestamp}_${filename}`;
+    }
+
+    private removeOverlappingFiles(cacheData: CacheData): void {
+        const timelineFileKeys = new Set<string>();
+        cacheData.timeline.forEach((timelineItem, timelineId) => {
+            if(timelineItem.type === 'file') {
+                const key = this.getTimelineFileKey(timelineItem);
+                timelineFileKeys.add(key);
+            }
+        });
+        
+        const filesToRemove: string[] = [];
+        cacheData.files.forEach((file, fileId) => {
+            const fileKey = this.getFileKey(file);
+            if(timelineFileKeys.has(fileKey)) {
+                console.warn(`[removeOverlappingFiles] Removing file ${fileId} - already exists in timeline`);
+                filesToRemove.push(fileId);
+            }
+        });
+        
+        filesToRemove.forEach(fileId => {
+            cacheData.files.delete(fileId);
+            cacheData.fileOrder = cacheData.fileOrder.filter(id => id !== fileId);
+        });
     }
 
     /**

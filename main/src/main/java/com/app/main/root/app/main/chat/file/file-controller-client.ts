@@ -19,8 +19,8 @@ export class FileControllerClient {
         this.chatService = chatService;
         this.fileService = new FileServiceClient(
             this.apiClientController.getUrl(), 
-            this.socketClientConnect,
-            chatService
+            chatService,
+            this.socketClientConnect
         );
     }
 

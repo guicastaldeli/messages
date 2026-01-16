@@ -151,13 +151,13 @@ export class EventStream {
             
             switch (type) {
                 case 'message_data':
-                    if (data.message) {
+                    if(data.message) {
                         return await this.processMessageData(data);
                     }
                     break;
                     
                 case 'file_data':
-                    if (data.file) {
+                    if(data.file) {
                         return await this.processFileData(data);
                     }
                     break;
