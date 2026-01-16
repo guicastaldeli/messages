@@ -1,5 +1,7 @@
 struct Material {
     useTexture: f32,
+    isChat: f32,
+    baseColor: vec3<f32>,
     specularPower: f32,
     specularIntensity: f32,
     padding: f32
@@ -41,13 +43,19 @@ struct VertexOutput {
 fn calculateDirectionalLight(
     light: DirectionalLight, 
     normal: vec3<f32>, 
-    viewDir: vec3<f32>
+    viewDir: vec3<f32>,
+    specularPower: f32,
+    specularIntensity: f32
 ) -> vec3<f32> {
     let lightDir = normalize(-light.direction);
     let diff = max(dot(normal, lightDir), 0.0);
     let diffuse = diff * light.color * light.intensity;
     
-    return diffuse;
+    let reflectDir = reflect(-lightDir, normal);
+    let spec = pow(max(dot(viewDir, reflectDir), 0.0), specularPower) * specularIntensity;
+    let specular = spec * light.color * light.intensity;
+    
+    return diffuse + specular;
 }
 
 @fragment
@@ -57,11 +65,16 @@ fn main(input: VertexOutput) -> @location(0) vec4<f32> {
 
     var baseColor: vec3<f32>;
     if(material.useTexture > 0.5) {
-        baseColor = textureSample(
+        let texColor = textureSample(
             baseColorTexture,
             textureSampler,
             input.texCoord
         ).rgb;
+        if(material.isChat > 0.5) {
+            baseColor = texColor * material.baseColor;
+        } else {
+            baseColor = texColor;
+        }
     } else {
         baseColor = input.color;
     }
@@ -73,11 +86,12 @@ fn main(input: VertexOutput) -> @location(0) vec4<f32> {
         directional = calculateDirectionalLight(
             lightning.directional,
             normal,
-            viewDir
+            viewDir,
+            material.specularPower,
+            material.specularIntensity
         );
     }
 
     let finalColor = baseColor * (ambient + directional);
     return vec4<f32>(finalColor, 1.0);
-
 }

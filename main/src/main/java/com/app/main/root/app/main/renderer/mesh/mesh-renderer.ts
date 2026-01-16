@@ -1,4 +1,5 @@
 import { TextureData, TextureLoader } from "../resource/texture-loader";
+import { getRandomColor } from "../utils/random-color";
 import { Transform } from "../utils/transform";
 import { MeshData, PrimitiveType, Type } from "./mesh-data";
 import { MeshLoader } from "./mesh-loader";
@@ -21,6 +22,7 @@ export class MeshRenderer {
     private meshRenderers: Map<string, MeshRenderer> = new Map();
     private textureLoader: TextureLoader;
     private useTexture: boolean = false;
+    private isChat: boolean = false;
     
     constructor(device: GPUDevice, uniformBuffer: GPUBuffer) {
         this.device = device;
@@ -137,13 +139,31 @@ export class MeshRenderer {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         this.materialBuffer = this.device.createBuffer({
-            size: 32,
+            size: 48,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
-        const materialData = new Float32Array([
+
+        if(this.meshData.name.includes('chat') && 
+        !this.meshData.name.includes('chatdot')) {
+            this.isChat = true;
+        } else {
+            this.isChat = false;
+        }
+        let color: [number, number, number];
+        if (this.isChat) {
+            color = getRandomColor();
+        } else {
+            color = [1.0, 1.0, 1.0];
+        }
+        
+        const materialData = new Float32Array(12);
+        materialData.set([
             this.useTexture ? 1.0 : 0.0,
-            32.0, 
-            0.5, 
+            this.isChat ? 1.0 : 0.0, 
+            color[0], color[1], color[2], 
+            0.0,
+            1.0, 
+            0.5,
             0.0
         ]);
 

@@ -80,12 +80,16 @@ export class RotationBox {
         ]
     ): void {
         const currentRotation = meshRenderer.transform.rotation;
+        const originalRotation = this.originalRotations.get(meshRenderer);
+        if(!originalRotation) return;
+
         const [targetX, targetY, targetZ] = targetRotation;
+        const [origX, origY, origZ] = originalRotation;
 
         const newRotation: [number, number, number] = [
-            currentRotation[0] + (targetX - currentRotation[0]) * this.rotationSpeed,
-            currentRotation[1] + (targetY - currentRotation[1]) * this.rotationSpeed,
-            currentRotation[2] + (targetZ - currentRotation[2]) * this.rotationSpeed
+            currentRotation[0] + ((targetX + origX) - currentRotation[0]) * this.rotationSpeed,
+            currentRotation[1] + ((targetY + origY) - currentRotation[1]) * this.rotationSpeed,
+            currentRotation[2] + ((targetZ + origZ) - currentRotation[2]) * this.rotationSpeed
         ];
 
         meshRenderer.transform.setRotation(

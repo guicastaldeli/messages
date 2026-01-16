@@ -11,6 +11,8 @@ export enum Type {
     PYRAMID = 'pyramid',
     TREE = 'tree0',
     DINO = 'dino',
+    CHAT = 'chat',
+    CHATDOT = 'chatdot',
     SKYBOX = 'skybox',
     STARS = 'stars'
 }

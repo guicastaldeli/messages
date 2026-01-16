@@ -48,8 +48,16 @@ export class Scene {
         this.registerHandler({
             type: 'camera',
             create: async (config: any) => {
-                this.camera.setPosition(config['position-x'], config['position-y'], config['position-z']);
-                this.camera.setTarget(config['target-x'], config['target-y'], config['target-z']);
+                this.camera.setPosition(
+                    config['position-x'], 
+                    config['position-y'], 
+                    config['position-z']
+                );
+                this.camera.setTarget(
+                    config['target-x'], 
+                    config['target-y'], 
+                    config['target-z']
+                );
                 return this.camera;
             }
         });
@@ -57,9 +65,22 @@ export class Scene {
             type: 'mesh',
             create: async (config: any) => {
                 const meshRenderer = new MeshRenderer(this.device, this.camera.getUniformBuffer());
-                meshRenderer.transform.setPosition(config['position-x'], config['position-y'], config['position-z']);
-                meshRenderer.transform.setRotation(config['rotation-x'], config['rotation-y'], config['rotation-z']);
-                meshRenderer.transform.setScale(config['scale-x'], config['scale-y'], config['scale-z']);
+                meshRenderer.transform.setPosition(
+                    config['position-x'], 
+                    config['position-y'], 
+                    config['position-z']
+                );
+                meshRenderer.transform.setRotation(
+                    config['rotation-x'], 
+                    config['rotation-y'], 
+                    config['rotation-z']
+                );
+                meshRenderer.transform.setScale(
+                    config['scale-x'], 
+                    config['scale-y'], 
+                    config['scale-z']
+                );
+                
                 await meshRenderer.set(config.type as Type, config.texture);
 
                 const meshData = meshRenderer.getMeshData();

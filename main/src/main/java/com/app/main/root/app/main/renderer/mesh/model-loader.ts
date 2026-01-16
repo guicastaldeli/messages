@@ -212,15 +212,12 @@ export class ModelLoader {
         faceNormal: number[] | null
     ): number {
         const key = `${indices.v}/${indices.vt}/${indices.vn}`;
-        
         const existingIndex = mesh.vertexMap.get(key);
         if(existingIndex !== undefined) {
             return existingIndex;
         }
 
         const vertexData: number[] = [];
-
-
         if(indices.v >= 0 && indices.v < vertices.length) {
             vertexData.push(...vertices[indices.v]);
         } else {
@@ -243,7 +240,6 @@ export class ModelLoader {
         const newIndex = mesh.vertices.length;
         mesh.vertices.push(vertexData);
         mesh.vertexMap.set(key, newIndex);
-        
         return newIndex;
     }
 
