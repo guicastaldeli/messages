@@ -21,7 +21,7 @@ export class LightningController {
      */
     private createLightningBuffer(): void {
         this.lightningBuffer = this.device.createBuffer({
-            size: 80,
+            size: 84,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 

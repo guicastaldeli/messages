@@ -2,6 +2,8 @@ import { Stars } from "@/public/data/mesh/stars";
 import { Mesh, PrimitiveType, MeshData, Type } from "./mesh-data";
 import { ModelLoader } from "./model-loader";
 import { Sphere } from "@/public/data/mesh/sphere";
+import { Clouds } from "@/public/data/mesh/clouds";
+import { Fresnel } from "@/public/data/mesh/fresnel";
 
 export class MeshLoader {
     private static readonly URL = './data/mesh/'; 
@@ -35,7 +37,11 @@ export class MeshLoader {
             console.log(`Loading ${meshTypes.length} mesh types:`, meshTypes);
 
             const loadPromises = meshTypes.map(async (t) => {
-                if(t === Type.STARS || t === Type.SPHERE) {
+                if(t === Type.STARS || 
+                    t === Type.SPHERE || 
+                    t === Type.CLOUDS ||
+                    t === Type.FRESNEL
+                ) {
                     return await this.loadFile(t);
                 }
 
@@ -65,6 +71,16 @@ export class MeshLoader {
             }
             if(t === Type.SPHERE) {
                 const data = Sphere.generate();
+                this.loadedMeshes.set(t, data);
+                return data;
+            }
+            if(t === Type.CLOUDS) {
+                const data = Clouds.generate();
+                this.loadedMeshes.set(t, data);
+                return data;
+            }
+            if(t === Type.FRESNEL) {
+                const data = Fresnel.generate();
                 this.loadedMeshes.set(t, data);
                 return data;
             }
@@ -124,6 +140,12 @@ export class MeshLoader {
                     break;
                 case Type.SPHERE:
                     meshData = Sphere.generate();
+                    break;
+                case Type.CLOUDS:
+                    meshData = Clouds.generate();
+                    break;
+                case Type.FRESNEL:
+                    meshData = Fresnel.generate();
                     break;
                 default:
                     throw new Error(`No generator for type: ${t}`);

@@ -19,7 +19,7 @@ struct VertexOutput {
 fn main(input: VertexOutput) -> @location(0) vec4<f32> {
     if(material.useTexture > 0.5) {
         var texColor = textureSample(baseColorTexture, textureSampler, input.texCoord);
-        return vec4<f32>(texColor.rgb, 1.0);
+        return vec4<f32>(texColor.rgb, texColor.a);
     } else {
         return vec4<f32>(input.color, 1.0);
     }

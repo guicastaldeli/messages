@@ -88,6 +88,12 @@ export class Scene {
                     meshData.setFollowRotation(config.followRotation);
                     meshData.setAutoRotate(config.autoRotate);
                     meshData.setRotationSpeed(config.rotationSpeed);
+
+                    meshRenderer.setFloatingProps(
+                        config.floating,
+                        config.floatingSpeed,
+                        config.floatingHeight
+                    );
                 }
                 return meshRenderer;
             }
@@ -198,6 +204,7 @@ export class Scene {
                     mesh.transform.rotate(0.0, speed, 0.0);
                 }
             }
+            mesh.update();
         }
     }
 

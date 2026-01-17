@@ -31,7 +31,7 @@
     13, 14, 15
   ],
   "vertexLayout": {
-    "stride": 11,
+    "stride": 12,
     "attributes": [
       {
         "name": "position",
@@ -53,7 +53,7 @@
       },
       {
         "name": "color",
-        "components": 3,
+        "components": 4,
         "offset": 8,
         "type": "float32"
       }

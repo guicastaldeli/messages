@@ -53,7 +53,10 @@ export class DocParser {
             followRotation: { type: 'boolean', defaultValue: false },
             autoRotate: { type: 'boolean', defaultValue: false },
             rotationSpeed: { type: 'number', defaultValue: 1.0 },
-            visible: { type: 'boolean', defaultValue: true }
+            visible: { type: 'boolean', defaultValue: true },
+            floating: { type: 'boolean', defaultValue: false },
+            floatingSpeed: { type: 'number', defaultValue: 0.5 },
+            floatingHeight: { type: 'number', defaultValue: 0.1 }
         },
         light: {
             type: { type: 'string', required: false },

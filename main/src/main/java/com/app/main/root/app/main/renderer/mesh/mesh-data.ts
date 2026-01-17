@@ -8,6 +8,8 @@ export enum PrimitiveType {
 export enum Type {
     CUBE = 'cube',
     SPHERE = 'sphere',
+    CLOUDS = 'clouds',
+    FRESNEL = 'fresnel',
     PYRAMID = 'pyramid',
     TREE = 'tree0',
     DINO = 'dino',

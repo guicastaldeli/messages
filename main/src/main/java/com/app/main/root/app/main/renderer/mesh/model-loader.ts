@@ -34,7 +34,7 @@ export class ModelLoader {
             const parts = line.split(/\s+/);
             const keyword = parts[0];
 
-            switch (keyword) {
+            switch(keyword) {
                 case 'v':
                     const vertex = [
                         parseFloat(parts[1]),

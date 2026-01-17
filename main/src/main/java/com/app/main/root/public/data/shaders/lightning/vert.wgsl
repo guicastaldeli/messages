@@ -1,6 +1,7 @@
 struct Uniforms {
     viewProjection: mat4x4<f32>,
     cameraPosition: vec3<f32>,
+    time: f32,
     padding: f32
 }
 

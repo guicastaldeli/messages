@@ -265,12 +265,15 @@ export class Main extends Component<any, State> {
 
                             return (
                                 <>
-                                    <div className='renderer'>
+                                    <div className='renderer' style={{ width: '300%', height: '50%' }}>
                                         <canvas 
                                             id='ctx'
                                             ref={this.canvasRef}
-                                            width={700}
-                                            height={500}
+                                            style={{ 
+                                                width: '100%', 
+                                                height: '100%', 
+                                                display: 'block' 
+                                            }}
                                         >
                                         </canvas>
                                     </div>

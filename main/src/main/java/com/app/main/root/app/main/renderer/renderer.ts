@@ -20,10 +20,54 @@ export class Renderer {
     private isRunning: boolean = false;
     private lastTime: number = 0;
 
+    private resizeObserver: ResizeObserver | null = null;
+
     constructor() {
         this.tick = new Tick();
         this.shaderLoader = new ShaderLoader();
         ShaderConfig.getInstance();
+    }
+
+    private updateCanvasSize(): void {
+        if(!this.canvas) return;
+
+        const container = this.canvas.parentElement;
+        if(!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const width = Math.floor(rect.width);
+        const height = Math.floor(rect.height);
+
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = width * dpr;
+        this.canvas.height = height * dpr;
+
+        this.canvas.style.width = `${width}px`;
+        this.canvas.style.height = `${height}px`;
+    }
+
+    private setupResizeObserver(): void {
+        if(!this.canvas || !('ResizeObserver' in window)) return;
+
+        const container = this.canvas.parentElement;
+        if(!container) return;
+
+        this.resizeObserver = new ResizeObserver(() => {
+            this.handleResize();
+        })
+        this.resizeObserver.observe(container);
+    }
+
+    private handleResize(): void {
+        this.updateCanvasSize();
+
+        if(this.camera && this.canvas) {
+            const aspect = this.canvas.width / this.canvas.height;
+            this.camera.updateAspect(aspect);
+        }
+        if(this.isRunning) {
+            this.render();
+        }
     }
 
     /**
@@ -67,6 +111,18 @@ export class Renderer {
         const bindGroupLayouts = [bindGroupLayout];
 
         /* Lightning */
+        const lightningBlend: GPUBlendState = {
+            color: {
+                srcFactor: 'src-alpha',
+                dstFactor: 'one-minus-src-alpha',
+                operation: 'add'
+            },
+            alpha: {
+                srcFactor: 'one',
+                dstFactor: 'one-minus-src-alpha',
+                operation: 'add'
+            }
+        }
         const lightningBindGroupLayout = this.lightningController.getBindGroupLayout();
         if(lightningBindGroupLayout) {
             bindGroupLayouts.push(lightningBindGroupLayout);
@@ -81,18 +137,32 @@ export class Renderer {
             ShaderConfig.get().vertexBufferLayouts,
             [navigator.gpu.getPreferredCanvasFormat()],
             ShaderConfig.get().depthStencil,
-            ShaderConfig.get().primitiveState
+            ShaderConfig.get().primitiveState,
+            lightningBlend
         );
         this.pipelines.set('lightning', lightningPipeline);
 
         /* Main */
+        const mainBlend: GPUBlendState = {
+            color: {
+                srcFactor: 'src-alpha',
+                dstFactor: 'one-minus-src-alpha',
+                operation: 'add'
+            },
+            alpha: {
+                srcFactor: 'one',
+                dstFactor: 'one-minus-src-alpha',
+                operation: 'add'
+            }
+        }
         const mainPipeline = this.shaderLoader.createRenderPipeline(
             'MAIN',
             layout,
             ShaderConfig.get().vertexBufferLayouts,
             [navigator.gpu.getPreferredCanvasFormat()],
             ShaderConfig.get().depthStencil,
-            ShaderConfig.get().primitiveState
+            ShaderConfig.get().primitiveState,
+            mainBlend
         );
         this.pipelines.set('main', mainPipeline);
 
@@ -138,6 +208,9 @@ export class Renderer {
     public async setup(canvasId: string): Promise<void> {
         this.canvas = document.querySelector(`#${canvasId}`);
         if(!this.canvas) throw new Error('Canvas err');
+
+        this.updateCanvasSize();
+        this.setupResizeObserver();
 
         this.ctx = this.canvas.getContext('webgpu');
         if(!this.ctx) throw new Error('webgpu err');
@@ -278,8 +351,10 @@ export class Renderer {
 
     public async run(): Promise<void> {
         try {
-            const aspect = this.canvas!.width / this.canvas!.height;
-            if(this.camera) this.camera.updateAspect(aspect);
+            if(this.camera && this.canvas) {
+                const aspect = this.canvas.width / this.canvas.height;
+                this.camera.updateAspect(aspect);
+            }
         }  catch(err) {
             console.error('Failed to init shaders:', err);
             throw err;
