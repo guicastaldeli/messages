@@ -1,10 +1,11 @@
 struct Material {
     useTexture: f32,
     isChat: f32,
-    baseColor: vec3<f32>,
+    padding0: vec2<f32>,
+    baseColor: vec4<f32>,
     specularPower: f32,
     specularIntensity: f32,
-    padding: f32
+    padding1: vec2<f32>
 }
 
 struct DirectionalLight {
@@ -70,8 +71,9 @@ fn main(input: VertexOutput) -> @location(0) vec4<f32> {
             textureSampler,
             input.texCoord
         ).rgb;
+        
         if(material.isChat > 0.5) {
-            baseColor = texColor * material.baseColor;
+            baseColor = texColor * material.baseColor.rgb;
         } else {
             baseColor = texColor;
         }

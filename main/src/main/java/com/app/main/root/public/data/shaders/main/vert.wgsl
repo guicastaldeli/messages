@@ -2,16 +2,16 @@ struct Uniforms {
     viewProjection: mat4x4<f32>,
     cameraPosition: vec3<f32>,
     padding: f32
-};
+}
 
 struct Model {
     matrix: mat4x4<f32>
-};
+}
 
 struct Material {
     useTexture: f32,
     padding: vec3<f32>
-};
+}
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<uniform> model: Model;

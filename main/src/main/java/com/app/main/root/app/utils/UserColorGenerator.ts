@@ -1,5 +1,5 @@
 export class UserColorGenerator {
-    private static readonly COLOR_PALETTE = [
+    public static readonly COLOR_PALETTE = [
         { name: 'red', value: '#FF6B6B' },
         { name: 'green', value: '#4ECDC4' },
         { name: 'blue', value: '#45B7D1' },

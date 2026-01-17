@@ -1,5 +1,5 @@
 import { TextureData, TextureLoader } from "../resource/texture-loader";
-import { getRandomColor } from "../utils/random-color";
+import { getRandomColor } from "../utils/RandomColor";
 import { Transform } from "../utils/transform";
 import { MeshData, PrimitiveType, Type } from "./mesh-data";
 import { MeshLoader } from "./mesh-loader";
@@ -159,12 +159,12 @@ export class MeshRenderer {
         const materialData = new Float32Array(12);
         materialData.set([
             this.useTexture ? 1.0 : 0.0,
-            this.isChat ? 1.0 : 0.0, 
-            color[0], color[1], color[2], 
+            this.isChat ? 1.0 : 0.0,
+            0.0, 0.0,
+            color[0], color[1], color[2],
             0.0,
-            1.0, 
-            0.5,
-            0.0
+            1.0,
+            0.0, 0.0
         ]);
 
         this.device.queue.writeBuffer(this.materialBuffer, 0, materialData.buffer);
