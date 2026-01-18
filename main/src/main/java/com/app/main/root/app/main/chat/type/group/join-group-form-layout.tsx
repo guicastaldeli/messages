@@ -85,18 +85,12 @@ export const JoinGroupLayout: React.FC<Props> = ({
             hideGroup: false,
             groupName: ''
         });
-
         if(groupManager.dashboard) {
             groupManager.dashboard.setState({ activeChat: null });
         }
-        
         if(groupManager.root) {
             groupManager.root.unmount();
             groupManager.root = null;
-        }
-        
-        if(groupManager.container) {
-            groupManager.container.innerHTML = '';
         }
     }
     
