@@ -207,14 +207,6 @@ export class Main extends Component<any, State> {
         }
     }
 
-    componentWillUnmount(): void {
-        /*
-        this.hello.fontChangeIntervals.forEach(interval => clearInterval(interval));
-        this.hello.fontChangeIntervals = [];
-        this.hello.el = [];
-        */
-    }
-
     private async connect(): Promise<void> {
         if(!this.socketClientConnect) return;
         await this.socketClientConnect.connect();
