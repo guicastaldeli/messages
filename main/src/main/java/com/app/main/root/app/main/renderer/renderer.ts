@@ -38,7 +38,7 @@ export class Renderer {
         const width = Math.floor(rect.width);
         const height = Math.floor(rect.height);
 
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = window.devicePixelRatio;
         this.canvas.width = width * dpr;
         this.canvas.height = height * dpr;
 
@@ -315,7 +315,7 @@ export class Renderer {
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
                 view: texView,
-                clearValue: { r: 0.1, g: 0.2, b: 0.2, a: 1.0 },
+                clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
                 loadOp: 'clear',
                 storeOp: 'store'
             }],

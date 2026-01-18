@@ -102,7 +102,7 @@ export class ModelLoader {
                     });
                     
                     let faceNormal: number[] | null = null;
-                    if(normals.length === 0 || faceIndices.every(fi => fi.vn < 0)) {
+                    if(normals.length === 0 || faceIndices.some(fi => fi.vn < 0)) {
                         faceNormal = this.calculateFaceNormal(
                             vertices,
                             faceIndices[0].v,
@@ -218,23 +218,27 @@ export class ModelLoader {
         }
 
         const vertexData: number[] = [];
+        
         if(indices.v >= 0 && indices.v < vertices.length) {
             vertexData.push(...vertices[indices.v]);
         } else {
             vertexData.push(0, 0, 0);
         }
+        
         if(indices.vn >= 0 && indices.vn < normals.length) {
             vertexData.push(...normals[indices.vn]);
         } else if(faceNormal) {
             vertexData.push(...faceNormal);
         } else {
-            vertexData.push(0, 1, 0);
+            vertexData.push(0, 0, 1);
         }
+        
         if(indices.vt >= 0 && indices.vt < texCoords.length) {
             vertexData.push(texCoords[indices.vt][0], texCoords[indices.vt][1]);
         } else {
             vertexData.push(0, 0);
         }
+        
         vertexData.push(1.0, 1.0, 1.0);
         
         const newIndex = mesh.vertices.length;

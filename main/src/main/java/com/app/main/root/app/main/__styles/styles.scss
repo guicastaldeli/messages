@@ -2,6 +2,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
 }
 
 :root {
@@ -36,6 +37,16 @@ body {
 
 /* Main Layout */
 .app {
+    width: 100%;
+    height: 100%;
+}
+
+.app-main {
+    width: 100%;
+    height: 100%;
+}
+
+.app-dashboard {
     border-radius: 0.3rem;
     width: 80%;
     height: 95vh;
@@ -1900,6 +1911,36 @@ body {
 .unsupported-preview button:hover,
 .generic-preview button:hover {
   background: #2563eb !important;
+}
+
+/* Join Screen */
+header {
+    width: 100%;
+    height: 6%;
+    //position: relative;
+    background-color: rgb(28, 28, 28);
+}
+
+.screen.join-screen {
+    display: none;
+    top: 30%;
+    left: 10%;
+
+    width: 30vw;
+    height: 55vh;
+    position: absolute;
+    background-color: rgb(126, 126, 126);
+}
+
+.renderer {
+    width: 100%; 
+    height: 57%;
+}
+
+canvas {
+    width: 100%; 
+    height: 100%; 
+    display: 'block'; 
 }
 
 /* Responsive Design */

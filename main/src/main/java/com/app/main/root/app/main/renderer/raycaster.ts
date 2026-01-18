@@ -22,12 +22,12 @@ export class Raycaster {
         this.rotationBox = new RotationBox(
             this,
             {
-                x: this.camera.getPosition().x + 70.0,
-                y: this.camera.getPosition().y + 50.0,
-                width: 550,
-                height: 350
+                x: this.canvas.width - (this.canvas.width / 1.5),
+                y: 0,
+                width: this.canvas.width / 1.5,
+                height: this.canvas.height
             }
-        )
+        );
 
         this.setupEventListeners();
     }

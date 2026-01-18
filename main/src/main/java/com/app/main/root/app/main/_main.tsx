@@ -265,100 +265,101 @@ export class Main extends Component<any, State> {
 
                             return (
                                 <>
-                                    <div className='renderer' style={{ width: '300%', height: '50%' }}>
-                                        <canvas 
-                                            id='ctx'
-                                            ref={this.canvasRef}
-                                            style={{ 
-                                                width: '100%', 
-                                                height: '100%', 
-                                                display: 'block' 
-                                            }}
-                                        >
-                                        </canvas>
-                                    </div>
-                                    {sessionContext.currentSession === 'LOGIN' && (
-                                        <div className='screen join-screen'>
-                                            <div className='form'>
-                                                <div className="form-input">
-                                                    <h2>Login</h2>
-                                                    <label>Email</label>
-                                                    <input 
-                                                        type="email" 
-                                                        ref={this.auth.loginEmailRef}
-                                                    />
-                                                    <label>Password</label>
-                                                    <input 
-                                                        type="password"
-                                                        ref={this.auth.loginPasswordRef}
-                                                    />
-                                                    <div className='form-input'>
-                                                        <button 
-                                                            onClick={() => this.auth.join(sessionContext, false)}
-                                                        >
-                                                            Login
-                                                        </button>
-                                                        <button 
-                                                            type="button"
-                                                            className="forgot-password-btn"
-                                                            onClick={() => this.auth.handlePasswordReset(sessionContext)}
-                                                        >
-                                                            Forgot Password?
-                                                        </button>
+                                    <div className="app-main">
+                                        <header id='main-header'>
+                                        </header>
+                                        <div className='renderer'>
+                                            <canvas 
+                                                id='ctx'
+                                                ref={this.canvasRef}
+                                            >
+                                            </canvas>
+                                        </div>
+                                        {sessionContext.currentSession === 'LOGIN' && (
+                                            <div className='screen join-screen'>
+                                                <div className='form'>
+                                                    <div className="form-input">
+                                                        <h2>Login</h2>
+                                                        <label>Email</label>
+                                                        <input 
+                                                            type="email" 
+                                                            ref={this.auth.loginEmailRef}
+                                                        />
+                                                        <label>Password</label>
+                                                        <input 
+                                                            type="password"
+                                                            ref={this.auth.loginPasswordRef}
+                                                        />
+                                                        <div className='form-input'>
+                                                            <button 
+                                                                onClick={() => this.auth.join(sessionContext, false)}
+                                                            >
+                                                                Login
+                                                            </button>
+                                                            <button 
+                                                                type="button"
+                                                                className="forgot-password-btn"
+                                                                onClick={() => this.auth.handlePasswordReset(sessionContext)}
+                                                            >
+                                                                Forgot Password?
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                
-                                                <div className="form-input">
-                                                    <h2>Create Account</h2>
-                                                    <label>Email</label>
-                                                    <input 
-                                                        type="email" 
-                                                        ref={this.auth.createEmailRef}
-                                                    />
-                                                    <label>Username</label>
-                                                    <input 
-                                                        type="text" 
-                                                        ref={this.auth.createUsernameRef}
-                                                    />
-                                                    <label>Password</label>
-                                                    <input 
-                                                        type="password"
-                                                        ref={this.auth.createPasswordRef}
-                                                    />
-                                                    <div className='form-input'>
-                                                        <button 
-                                                            onClick={() => this.auth.join(sessionContext, true)}
-                                                        >
-                                                            Create Account
-                                                        </button>
+                                                    
+                                                    <div className="form-input">
+                                                        <h2>Create Account</h2>
+                                                        <label>Email</label>
+                                                        <input 
+                                                            type="email" 
+                                                            ref={this.auth.createEmailRef}
+                                                        />
+                                                        <label>Username</label>
+                                                        <input 
+                                                            type="text" 
+                                                            ref={this.auth.createUsernameRef}
+                                                        />
+                                                        <label>Password</label>
+                                                        <input 
+                                                            type="password"
+                                                            ref={this.auth.createPasswordRef}
+                                                        />
+                                                        <div className='form-input'>
+                                                            <button 
+                                                                onClick={() => this.auth.join(sessionContext, true)}
+                                                            >
+                                                                Create Account
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
-                                    {sessionContext.currentSession === 'PASSWORD_RESET' && (
-                                        <PasswordResetController
-                                            apiClientController={this.apiClientController}
-                                            socketClientConnect={this.socketClientConnect}
-                                            onBackToLogin={() => this.auth.handleBackToLogin(sessionContext)}
-                                            token={this.state.passwordResetToken}
-                                        />
-                                    )}
+                                        )}
+                                        {sessionContext.currentSession === 'PASSWORD_RESET' && (
+                                            <PasswordResetController
+                                                apiClientController={this.apiClientController}
+                                                socketClientConnect={this.socketClientConnect}
+                                                onBackToLogin={() => this.auth.handleBackToLogin(sessionContext)}
+                                                token={this.state.passwordResetToken}
+                                            />
+                                        )}
+                                    </div>
                                     {sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                         <>
                                             {!this.chatManager ? (
                                                 <div>Initializing chat manager...</div>
                                             ) : (
-                                                <Dashboard 
-                                                    ref={this.setDashboardRef}
-                                                    chatController={this.chatController}
-                                                    chatManager={chatManager!}
-                                                    chatService={this.chatService}
-                                                    chatList={chatList}
-                                                    activeChat={activeChat}
-                                                    main={this}
-                                                    onLogout={() => this.auth.logout(sessionContext)}
-                                                />
+                                                <div className="app-dashboard">
+                                                    <Dashboard 
+                                                        ref={this.setDashboardRef}
+                                                        chatController={this.chatController}
+                                                        chatManager={chatManager!}
+                                                        chatService={this.chatService}
+                                                        chatList={chatList}
+                                                        activeChat={activeChat}
+                                                        main={this}
+                                                        onLogout={() => this.auth.logout(sessionContext)}
+                                                    />
+                                                </div>
                                             )}
                                         </>
                                     )}

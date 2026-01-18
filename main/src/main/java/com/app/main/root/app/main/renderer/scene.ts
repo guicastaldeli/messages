@@ -224,7 +224,6 @@ export class Scene {
         lightningBindGroup: GPUBindGroup
     ): Promise<void> {
         const meshes = this.getElementsByType<MeshRenderer>('mesh');
-        
         for(const renderer of meshes) {
             const meshData = renderer.getMeshData();
             if(meshData.name !== 'stars') {

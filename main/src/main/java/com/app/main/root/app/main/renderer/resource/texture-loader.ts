@@ -83,7 +83,10 @@ export class TextureLoader {
             const res = await fetch(fullUrl);
             const blob = await res.blob();
             const imgBitmap = await createImageBitmap(
-                blob, { imageOrientation: 'flipY' }
+                blob, { 
+                    imageOrientation: 'flipY',
+                    premultiplyAlpha: 'premultiply'
+                }
             );
 
             const tex = this.device.createTexture({
