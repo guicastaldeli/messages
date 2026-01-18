@@ -1,6 +1,15 @@
 import { MeshData, PrimitiveType, VertexLayout } from "@/app/main/renderer/mesh/mesh-data";
 
 export class Fresnel {
+    public static set(data: any, isFresnel: boolean): { isFresnel: boolean } {
+        if(data.name.includes('fresnel')) {
+            isFresnel = true;
+        } else {
+            isFresnel = false;
+        }
+        return { isFresnel }
+    }
+
     public static generate(): MeshData {
         const vertices: number[][] = [];
         const indices: number[] = [];

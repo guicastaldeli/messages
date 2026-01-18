@@ -1,9 +1,12 @@
+import { Chat } from "@/public/data/mesh/chat";
 import { TextureData, TextureLoader } from "../resource/texture-loader";
 import { Tick } from "../tick";
 import { getRandomColor } from "../utils/RandomColor";
 import { Transform } from "../utils/transform";
 import { MeshData, PrimitiveType, Type } from "./mesh-data";
 import { MeshLoader } from "./mesh-loader";
+import { Fresnel } from "@/public/data/mesh/fresnel";
+import { Custom } from "../utils/custom";
 
 export class MeshRenderer {
     private device: GPUDevice;
@@ -24,16 +27,7 @@ export class MeshRenderer {
     private textureData!: TextureData;
     private meshRenderers: Map<string, MeshRenderer> = new Map();
     private textureLoader: TextureLoader;
-
     private useTexture: boolean = false;
-    private isChat: boolean = false;
-    private isFresnel: boolean = false;
-
-    private floatingEnabled: boolean = false;
-    private floatingSpeed: number = 1.0;
-    private floatingHeight: number = 0.2;
-    private floatingTime: number = 0.0;
-    private originalY: number = 0.0;
 
     constructor(device: GPUDevice, uniformBuffer: GPUBuffer) {
         this.device = device;
@@ -118,37 +112,6 @@ export class MeshRenderer {
         this.device.queue.writeBuffer(this.modelBuffer, 0, modelMatrix.buffer);
     }
 
-    public setFloatingProps(
-        enabled: boolean, 
-        speed: number, 
-        height: number
-    ): void {
-        this.floatingEnabled = enabled;
-        this.floatingSpeed = speed;
-        this.floatingHeight = height;
-        this.originalY = this.transform.position[1];
-    }
-
-    private chatMeshProps(): void {
-        if(this.meshData.name.includes('chat')) {
-            this.floatingEnabled = true;
-        }
-        if(this.meshData.name.includes('chat') && 
-        !this.meshData.name.includes('chatdot')) {
-            this.isChat = true;
-        } else {
-            this.isChat = false;
-        }
-    }
-
-    private fresnelMeshProps(): void {
-        if(this.meshData.name.includes('fresnel')) {
-            this.isFresnel = true;
-        } else {
-            this.isFresnel = false;
-        }
-    }
-
     /**
      * Setup
      */
@@ -189,23 +152,14 @@ export class MeshRenderer {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
-        this.originalY = this.transform.position[1];
-
-        this.chatMeshProps();
-        this.fresnelMeshProps();
-
-        let color: [number, number, number];
-        if (this.isChat) {
-            color = getRandomColor();
-        } else {
-            color = [1.0, 1.0, 1.0];
-        }
+        let color: [number, number, number] = [1.0, 1.0, 1.0];
+        Custom.init(this.meshData, color, this.transform);
         
         const materialData = new Float32Array(16);
         materialData.set([
             this.useTexture ? 1.0 : 0.0,
-            this.isChat ? 1.0 : 0.0,
-            this.isFresnel ? 1.0 : 0.0,
+            Custom.isChat ? 1.0 : 0.0,
+            Custom.isFresnel ? 1.0 : 0.0,
             0.0,
             color[0], color[1], color[2],
             0.0,
@@ -259,6 +213,13 @@ export class MeshRenderer {
     }
 
     /**
+     * Init Custom Mesh Props
+     */
+    public initCustomProps(meshes: MeshRenderer[]): void {
+        Chat.assignRandomProps(meshes);
+    }
+
+    /**
      * Init
      */
     public async init(): Promise<void> {
@@ -281,19 +242,8 @@ export class MeshRenderer {
         this.device.queue.writeBuffer(this.uniformBuffer, 0, timeData.buffer)
     }
 
-    private updateFloating(): void {
-        if(!this.floatingEnabled) return;
-
-        this.floatingTime += Tick.getDeltaTime() * this.floatingSpeed;
-
-        const offsetY = Math.sin(this.floatingTime) * this.floatingHeight;
-
-        const [x, _, z] = this.transform.position;
-        this.transform.setPosition(x, this.originalY + offsetY, z);
-    }
-
     public update(): void {
         this.updateTime();
-        this.updateFloating();
+        Custom.update(this.transform);
     }
 }

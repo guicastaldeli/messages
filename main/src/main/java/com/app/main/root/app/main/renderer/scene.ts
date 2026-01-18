@@ -1,10 +1,11 @@
 import { MeshRenderer } from "./mesh/mesh-renderer";
-import { PrimitiveType, Type } from "./mesh/mesh-data";
+import { Type } from "./mesh/mesh-data";
 import { Camera } from "./camera";
 import { MeshLoader } from "./mesh/mesh-loader";
 import { Tick } from "./tick";
 import { Raycaster } from "./raycaster";
 import { DocParser, ParsedElement, SceneConfig } from "./doc-parser";
+import { Custom } from "./utils/custom";
 
 export interface ElementHandler {
     type: string;
@@ -89,7 +90,8 @@ export class Scene {
                     meshData.setAutoRotate(config.autoRotate);
                     meshData.setRotationSpeed(config.rotationSpeed);
 
-                    meshRenderer.setFloatingProps(
+                    Custom.set(
+                        meshRenderer.transform,
                         config.floating,
                         config.floatingSpeed,
                         config.floatingHeight
@@ -142,6 +144,11 @@ export class Scene {
         
         for(const el of sortedEl) {
             await this.createEl(el);
+        }
+
+        const meshes = this.getElementsByType<MeshRenderer>('mesh');
+        for(const mesh of meshes) {
+            //mesh.initCustomProps(meshes);
         }
     }
     
