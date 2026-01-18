@@ -56,34 +56,31 @@ export class Chat {
         meshes.forEach(m => {
             const data = m.getMeshData();
             if(data && 
-                (data.name.includes('chat') || 
-                data.name.includes('chatdot'))
+                data.name.includes('chat') ||
+                data.name.includes('chatdot')
             ) {
                 const posKey = 
                     `${m.transform.position[0]},
                     ${m.transform.position[1]},
                     ${m.transform.position[2]}`;
                 if(!pairs.has(posKey)) {
-                    pairs.set(posKey, [])
+                    pairs.set(posKey, []);
                 }
                 pairs.get(posKey)!.push(m);
             }
         });
-        pairs.forEach(p => {
+        pairs.forEach(mg => {
             const floatingSpeed = 0.2 + Math.random() * 0.6;
             const floatingHeight = 0.05 + Math.random() * 0.1;
-            p.forEach(m => {
-                const data = m.getMeshData();
-                if(data) {
-                    this.setFloatingProps(
-                        m.transform,
-                        true,
-                        floatingSpeed,
-                        floatingHeight
-                    );
-                }
+            mg.forEach(m => {
+                m.custom.set(
+                    m.transform,
+                    true,
+                    floatingSpeed,
+                    floatingHeight
+                )
             });
-        });
+        })
     }
 
     /**

@@ -148,7 +148,7 @@ export class Scene {
 
         const meshes = this.getElementsByType<MeshRenderer>('mesh');
         for(const mesh of meshes) {
-            //mesh.initCustomProps(meshes);
+            mesh.custom.assign(meshes);
         }
     }
     

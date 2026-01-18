@@ -32,9 +32,6 @@
         followRotation="true"
         autoRotate="false"
         rotationSpeed="1.0"
-        floating="true"
-        floatingSpeed="0.5"
-        floatingHeight="0.1"
     />
     <mesh 
         type="chatdot" 
@@ -45,9 +42,6 @@
         followRotation="true"
         autoRotate="false"
         rotationSpeed="1.0"
-        floating="true"
-        floatingSpeed="0.5"
-        floatingHeight="0.1"
     /> <!-- First Mesh -->
     <mesh 
         type="chat" 
@@ -58,9 +52,6 @@
         followRotation="true"
         autoRotate="false"
         rotationSpeed="1.0"
-        floating="true"
-        floatingSpeed="0.5"
-        floatingHeight="0.1"
     />
     <mesh 
         type="chatdot" 
@@ -71,9 +62,6 @@
         followRotation="true"
         autoRotate="false"
         rotationSpeed="1.0"
-        floating="true"
-        floatingSpeed="0.5"
-        floatingHeight="0.1"
     /> <!-- Second Mesh -->
     <mesh 
         type="chat" 
@@ -84,9 +72,7 @@
         followRotation="true"
         autoRotate="false"
         rotationSpeed="1.0"
-        floating="true"
-        floatingSpeed="0.5"
-        floatingHeight="0.1"
+
     />
     <mesh 
         type="chatdot" 
@@ -97,9 +83,6 @@
         followRotation="true"
         autoRotate="false"
         rotationSpeed="1.0"
-        floating="true"
-        floatingSpeed="0.5"
-        floatingHeight="0.1"
     /> <!-- Third Mesh --> 
     
     <!--

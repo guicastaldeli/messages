@@ -2,6 +2,7 @@ import { Chat } from "@/public/data/mesh/chat";
 import { Fresnel } from "@/public/data/mesh/fresnel";
 import { MeshData } from "../mesh/mesh-data";
 import { Transform } from "./transform";
+import { MeshRenderer } from "../mesh/mesh-renderer";
 
 export class Custom {
     private chat: Chat;
@@ -70,5 +71,12 @@ export class Custom {
             speed,
             height
         );
+    }
+
+    /**
+     * Assign
+     */
+    public assign(meshes: MeshRenderer[]): void {
+        this.chat.assignRandomProps(meshes);
     }
 }
