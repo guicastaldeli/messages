@@ -557,9 +557,6 @@ export class Dashboard extends Component<Props, State> {
     }
 
     private handleCloseChatLayout = (): void => {
-        if(this.chatContainerRef.current) {
-            this.chatContainerRef.current.innerHTML = '';
-        }
         localStorage.removeItem('active-chat');
         this.setState({
             activeChat: null
@@ -756,6 +753,13 @@ export class Dashboard extends Component<Props, State> {
         return Math.abs(hash) % 10;
     }
 
+    private canSwitchView(): boolean {
+        return this.state.chatsLoaded && 
+            this.state.chatStreamComplete && 
+            this.state.chatItemsAdded &&
+            !this.state.isLoading;
+    }
+
     render() {
         const sessionData = SessionManager.getUserInfo();
         const userId = sessionData?.userId;
@@ -852,40 +856,45 @@ export class Dashboard extends Component<Props, State> {
                                                         <button 
                                                             id="action-create-group"
                                                             onClick={() => {
-                                                                this.setState({ activeChat: null });
-                                                                localStorage.removeItem('active-chat');
+                                                                if (!this.canSwitchView()) return;
                                                                 
-                                                                this.props.chatController.setCurrentChat(null, null, []);
-                                                                
-                                                                this.updateState({
-                                                                    showCreationForm: true,
-                                                                    showJoinForm: false,
-                                                                    showGroup: false,
-                                                                    hideGroup: false,
-                                                                    groupName: ''
+                                                                this.setState({ activeChat: null }, () => {
+                                                                    localStorage.removeItem('active-chat');
+                                                                    this.props.chatController.setCurrentChat(null, null, []);
+                                                                    
+                                                                    this.updateState({
+                                                                        showCreationForm: true,
+                                                                        showJoinForm: false,
+                                                                        showGroup: false,
+                                                                        hideGroup: false,
+                                                                        groupName: ''
+                                                                    });
                                                                 });
                                                             }}
-                                                            disabled={!this.props.chatManager}
+                                                            disabled={!this.props.chatManager || !this.canSwitchView()}
                                                         >
                                                             Create Group
                                                         </button>
+
                                                         <button 
                                                             id="action-join-group"
                                                             onClick={() => {
-                                                                this.setState({ activeChat: null });
-                                                                localStorage.removeItem('active-chat');
+                                                                if (!this.canSwitchView()) return;
                                                                 
-                                                                this.props.chatController.setCurrentChat(null, null, []);
-                                                                
-                                                                this.updateState({
-                                                                    showCreationForm: false,
-                                                                    showJoinForm: true,
-                                                                    showGroup: false,
-                                                                    hideGroup: false,
-                                                                    groupName: ''
+                                                                this.setState({ activeChat: null }, () => {
+                                                                    localStorage.removeItem('active-chat');
+                                                                    this.props.chatController.setCurrentChat(null, null, []);
+                                                                    
+                                                                    this.updateState({
+                                                                        showCreationForm: false,
+                                                                        showJoinForm: true,
+                                                                        showGroup: false,
+                                                                        hideGroup: false,
+                                                                        groupName: ''
+                                                                    });
                                                                 });
                                                             }}
-                                                            disabled={!this.props.chatManager}
+                                                            disabled={!this.props.chatManager || !this.canSwitchView()}
                                                         >
                                                             Join Group
                                                         </button>
