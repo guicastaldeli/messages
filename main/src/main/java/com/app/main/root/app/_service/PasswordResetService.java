@@ -148,7 +148,10 @@ public class PasswordResetService {
                 System.out.println("Password is not strong enough!");
                 return Map.of(
                     "success", false, 
-                    "error", "Password does not meet strength requirements"
+                    "error", "Password does not meet strength requirements:\n" +
+                            "- Minimum length is 8.\n" +
+                            "- At least one capital letter.\n" +
+                            "- Numbers (0-9)."
                 );
             }
 

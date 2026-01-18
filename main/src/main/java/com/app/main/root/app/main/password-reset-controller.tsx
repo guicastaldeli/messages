@@ -79,7 +79,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
     }, [socketClientConnect]);
 
     useEffect(() => {
-        if (token && isSocketReady && step === Step.REQUEST) {
+        if(token && isSocketReady && step === Step.REQUEST) {
             console.log("Auto-validating token:", token);
             validateToken(token);
         }

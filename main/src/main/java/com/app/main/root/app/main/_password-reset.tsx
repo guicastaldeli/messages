@@ -158,8 +158,6 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({
                             setNewPassword(e.target.value);
                         }}
                         placeholder="Enter new password"
-                        required
-                        minLength={8}
                         autoComplete="new-password"
                     />
                 </div>
@@ -175,8 +173,6 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({
                             setConfirmPassword(e.target.value);
                         }}
                         placeholder="Confirm new password"
-                        required
-                        minLength={8}
                         autoComplete="new-password"
                     />
                 </div>
@@ -204,7 +200,13 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({
     return (
         <div className="password-reset-container">
             {message && <div className="message">{message}</div>}
-            {error && <div className="error">{error}</div>}
+            {error && (
+                <div className="error">
+                    {error.split('\n').map((line, i) => (
+                        <div key={i}>{line}</div>
+                    ))}
+                </div>
+            )}
             
             {step === Step.REQUEST && renderRequestStep()}
             {step === Step.RESET && renderResetStep()}

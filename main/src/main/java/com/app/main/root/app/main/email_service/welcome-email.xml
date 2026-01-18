@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <welcome-email>
     <metadata>
-        <div class="metadata">
-            <div class="name">Welcome Email</div>
-            <div class="version">1.0</div>
-            <div class="type">onboarding</div>
-        </div>
+        <name>Welcome Email</name>
+        <version>1.0</version>
+        <type>onboarding</type>
     </metadata>
     <content>
-        <div class="subject">Welcome to {{appName}}, {{username}}!</div>
-        <div class="preheader">Your account is ready. Let's get started!</div>
-        <div class="layout">
-            <div class="email-wrapper">
+        <subject>Welcome to {{appName}}, {{username}}!</subject>
+        <preheader>Your account is ready. Let's get started!</preheader>
+        <layout>
+            <container class="email-wrapper">
                 <div class="hero-section">
                     <h1 class="welcome-title">Welcome to {{appName}}!</h1>
                     <p class="welcome-subtitle">Your account has been successfully created and is ready to use.</p>
@@ -33,7 +31,7 @@
                         <a class="footer-link" href="{{webUrl}}">Home</a>
                     </div>
                 </div>
-            </div>
-        </div>
+            </container>
+        </layout>
     </content>
 </welcome-email>
