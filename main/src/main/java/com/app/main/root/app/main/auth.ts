@@ -310,6 +310,11 @@ export class Auth {
             }
                     
             console.log('Logged out successfully');
+            
+            setTimeout(() => {
+                this.main.initRenderer();
+                this.main.hello.init();
+            }, 100);
         } catch(err) {
             console.error('Logout failed:', err);
             SessionManager.clearSession();

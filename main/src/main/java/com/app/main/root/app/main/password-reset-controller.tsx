@@ -39,6 +39,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
     const [error, setError] = useState('');
     const [step, setStep] = useState<Step>(Step.REQUEST);
     const [isValidatingToken, setIsValidatingToken] = useState(!!token);
+    const [isSocketReady, setIsSocketReady] = useState(false);
 
     const passwordReset = {
         email,
@@ -60,19 +61,39 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
     }
 
     useEffect(() => {
-        if(token) {
-            console.log("Token found, validating:", token);
+        const checkSocketConnection = async () => {
+            if (socketClientConnect) {
+                try {
+                    if(!socketClientConnect.isConnected) {
+                        await socketClientConnect.connect();
+                    }
+                    setIsSocketReady(true);
+                } catch (err) {
+                    console.error('Failed to connect socket:', err);
+                    setError('Connection error. Please try again.');
+                }
+            }
+        };
+
+        checkSocketConnection();
+    }, [socketClientConnect]);
+
+    useEffect(() => {
+        if (token && isSocketReady && step === Step.REQUEST) {
+            console.log("Auto-validating token:", token);
             validateToken(token);
-        } else {
-            console.log("No token found, showing request form");
-            setStep(Step.REQUEST);
         }
-    }, [token]);
+    }, [token, isSocketReady, step]);
 
     /**
      * Validate Token
      */
     const validateToken = async (tokenToValidate: string) => {
+        if(!isSocketReady || !socketClientConnect) {
+            setError('Connection not ready. Please wait...');
+            return;
+        }
+
         console.log("Starting token validation");
         setIsValidatingToken(true);
         setError('');
@@ -114,6 +135,11 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
      */
     const handleRequestReset = async (e: React.FormEvent) => {
         e.preventDefault();
+        if(!isSocketReady || !socketClientConnect) {
+            setError('Connection not ready. Please wait...');
+            return;
+        }
+
         setIsLoading(true);
         setError('');
 
@@ -211,6 +237,16 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
         }
     }
 
+    if(!isSocketReady) {
+        return (
+            <div className="password-reset-container">
+                <div className="validating-message">
+                    <h2>Connecting...</h2>
+                    <p>Please wait while we establish connection.</p>
+                </div>
+            </div>
+        );
+    }
     if(isValidatingToken) {
         return (
             <div className="password-reset-container">
