@@ -90,7 +90,7 @@ export class Scene {
                     meshData.setAutoRotate(config.autoRotate);
                     meshData.setRotationSpeed(config.rotationSpeed);
 
-                    Custom.set(
+                    meshRenderer.custom.set(
                         meshRenderer.transform,
                         config.floating,
                         config.floatingSpeed,

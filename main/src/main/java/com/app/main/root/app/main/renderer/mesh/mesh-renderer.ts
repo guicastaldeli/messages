@@ -29,12 +29,15 @@ export class MeshRenderer {
     private textureLoader: TextureLoader;
     private useTexture: boolean = false;
 
+    public custom: Custom;
+
     constructor(device: GPUDevice, uniformBuffer: GPUBuffer) {
         this.device = device;
         this.uniformBuffer = uniformBuffer;
         this.transform = new Transform();
         this.textureLoader = TextureLoader.getInstance();
         this.textureLoader.setDevice(device);
+        this.custom = new Custom();
     }
 
     /**
@@ -153,13 +156,13 @@ export class MeshRenderer {
         });
 
         let color: [number, number, number] = [1.0, 1.0, 1.0];
-        Custom.init(this.meshData, color, this.transform);
+        color = this.custom.init(this.meshData, color, this.transform);
         
         const materialData = new Float32Array(16);
         materialData.set([
             this.useTexture ? 1.0 : 0.0,
-            Custom.isChat ? 1.0 : 0.0,
-            Custom.isFresnel ? 1.0 : 0.0,
+            this.custom.isChat ? 1.0 : 0.0,
+            this.custom.isFresnel ? 1.0 : 0.0,
             0.0,
             color[0], color[1], color[2],
             0.0,
@@ -213,13 +216,6 @@ export class MeshRenderer {
     }
 
     /**
-     * Init Custom Mesh Props
-     */
-    public initCustomProps(meshes: MeshRenderer[]): void {
-        Chat.assignRandomProps(meshes);
-    }
-
-    /**
      * Init
      */
     public async init(): Promise<void> {
@@ -244,6 +240,6 @@ export class MeshRenderer {
 
     public update(): void {
         this.updateTime();
-        Custom.update(this.transform);
+        this.custom.update(this.transform);
     }
 }

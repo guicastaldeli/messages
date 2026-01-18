@@ -13,21 +13,21 @@ import { Transform } from "@/app/main/renderer/utils/transform";
  */
 
 export class Chat {
-    public static floatingEnabled: boolean = false;
-    public static floatingSpeed: number = 1.0;
-    public static floatingHeight: number = 0.2;
-    public static floatingTime: number = 0.0;
-    public static originalY: number = 0.0;
+    public floatingEnabled: boolean = false;
+    public floatingSpeed: number = 1.0;
+    public floatingHeight: number = 0.2;
+    public floatingTime: number = 0.0;
+    public originalY: number = 0.0;
 
     /**
      * Set Mesh Config
      */
-    public static set(
+    public set(
         data: MeshData, 
         isChat: boolean,
         color: [number, number, number],
         transform: Transform
-    ): { isChat: boolean } {
+    ): { isChat: boolean, color: [number, number, number] } {
         this.originalY = transform.position[1];
 
         if(data.name.includes('chat')) {
@@ -44,13 +44,13 @@ export class Chat {
             color = getRandomColor();
         }
 
-        return { isChat }
+        return { isChat, color }
     }
     
     /**
      * Assign Random Props
      */
-    public static assignRandomProps(meshes: MeshRenderer[]): void {
+    public assignRandomProps(meshes: MeshRenderer[]): void {
         const pairs: Map<string, MeshRenderer[]> = new Map();
 
         meshes.forEach(m => {
@@ -89,7 +89,7 @@ export class Chat {
     /**
      * Floating Props
      */
-    public static setFloatingProps(
+    public setFloatingProps(
         transform: Transform,
         enabled: boolean, 
         speed: number, 
@@ -104,7 +104,7 @@ export class Chat {
     /**
      * Update
      */
-    public static update(transform: Transform): void {
+    public update(transform: Transform): void {
         if(!this.floatingEnabled) return;
 
         this.floatingTime += Tick.getDeltaTime() * this.floatingSpeed;

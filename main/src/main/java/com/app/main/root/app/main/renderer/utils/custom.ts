@@ -4,25 +4,33 @@ import { MeshData } from "../mesh/mesh-data";
 import { Transform } from "./transform";
 
 export class Custom {
-    public static isChat: boolean = false;
-    public static isFresnel: boolean = false;
+    private chat: Chat;
+
+    public isChat: boolean = false;
+    public isFresnel: boolean = false;
+
+    constructor() {
+        this.chat = new Chat();
+    }
 
     /**
      * Chat
      */
-    private static setChat(
+    private setChat(
         data: MeshData, 
         color: [number, number, number], 
         transform: Transform
-    ): void {
-        const cRes = Chat.set(data, this.isChat, color, transform);
+    ): [number, number, number] {
+        const cRes = this.chat.set(data, this.isChat, color, transform);
         this.isChat = cRes.isChat;
+        return cRes.color;
     }
+
 
     /**
      * Fresnel
      */
-    private static setFresnel(data: MeshData): void {
+    private setFresnel(data: MeshData): void {
         const fRes = Fresnel.set(data, this.isFresnel);
         this.isFresnel = fRes.isFresnel;
     }
@@ -30,32 +38,33 @@ export class Custom {
     /**
      * Init
      */
-    public static init(
+    public init(
         data: MeshData, 
         color: [number, number, number], 
         transform: Transform
-    ): void {
-        this.setChat(data, color, transform);
+    ): [number, number, number] {
+        color = this.setChat(data, color, transform);
         this.setFresnel(data);
+        return color;
     }
 
     /**
      * Update
      */
-    public static update(transform: Transform): void {
-        Chat.update(transform);
+    public update(transform: Transform): void {
+        this.chat.update(transform);
     }
 
     /**
      * Set
      */
-    public static set(
+    public set(
         transform: Transform,
         enabled: boolean, 
         speed: number, 
         height: number
     ): void {
-        Chat.setFloatingProps(
+        this.chat.setFloatingProps(
             transform,
             enabled,
             speed,
