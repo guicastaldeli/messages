@@ -15,6 +15,7 @@ import { CookieService } from './_session/cookie-service';
 import { PasswordResetController } from './password-reset-controller';
 import { Renderer } from './renderer/renderer';
 import { Auth } from './auth';
+import { Hello } from './hello';
 
 interface State {
     chatManager: ChatManager | null;
@@ -26,6 +27,7 @@ interface State {
     showPasswordReset: boolean;
     passwordResetToken?: string;
     renderer: Renderer | null;
+    activeTab: 'login' | 'register';
 }
 
 export class Main extends Component<any, State> {
@@ -40,6 +42,8 @@ export class Main extends Component<any, State> {
     public appContainerRef = React.createRef<HTMLDivElement>();
     private canvasRef = React.createRef<HTMLCanvasElement>();
     private dashboardInstance: Dashboard | null = null;
+
+    private hello: Hello;
 
     constructor(props: any) {
         super(props);
@@ -76,8 +80,11 @@ export class Main extends Component<any, State> {
             rememberUser: rememberUserCookie,
             showPasswordReset: false,
             passwordResetToken: undefined,
-            renderer: null
+            renderer: null,
+            activeTab: 'login'
         }
+
+        this.hello = new Hello();
     }
 
     async componentDidMount(): Promise<void> {
@@ -88,6 +95,7 @@ export class Main extends Component<any, State> {
                     this.initRenderer();
                 }
             }, 100);
+            this.hello.init();
 
             await this.connect();
 
@@ -199,6 +207,14 @@ export class Main extends Component<any, State> {
         }
     }
 
+    componentWillUnmount(): void {
+        /*
+        this.hello.fontChangeIntervals.forEach(interval => clearInterval(interval));
+        this.hello.fontChangeIntervals = [];
+        this.hello.el = [];
+        */
+    }
+
     private async connect(): Promise<void> {
         if(!this.socketClientConnect) return;
         await this.socketClientConnect.connect();
@@ -248,8 +264,14 @@ export class Main extends Component<any, State> {
         }
     }
 
+    private switchTab = (tab: 'login' | 'register'): void => {
+        this.setState({ activeTab: tab });
+    }
+
     render() {
-        const { chatList, activeChat, chatManager } = this.state;
+        const { chatList, activeChat, chatManager, activeTab } = this.state;
+        const LOGO_PATH = './data/resource/img/logo.png';
+        const REPO_LINK = 'https://github.com/guicastaldeli/messages';
 
         return (
             <div className='app' ref={this.appContainerRef}>
@@ -267,6 +289,15 @@ export class Main extends Component<any, State> {
                                 <>
                                     <div className="app-main">
                                         <header id='main-header'>
+                                            <div id="header-content">
+                                                <img 
+                                                    src={LOGO_PATH} 
+                                                    alt="messages"
+                                                    onClick={() => window.location.href = ''} 
+                                                    title='Home'
+                                                />
+                                                <a href={REPO_LINK} target='_blank'>Repository</a>
+                                            </div>
                                         </header>
                                         <div className='renderer'>
                                             <canvas 
@@ -276,63 +307,107 @@ export class Main extends Component<any, State> {
                                             </canvas>
                                         </div>
                                         {sessionContext.currentSession === 'LOGIN' && (
-                                            <div className='screen join-screen'>
-                                                <div className='form'>
-                                                    <div className="form-input">
-                                                        <h2>Login</h2>
-                                                        <label>Email</label>
-                                                        <input 
-                                                            type="email" 
-                                                            ref={this.auth.loginEmailRef}
-                                                        />
-                                                        <label>Password</label>
-                                                        <input 
-                                                            type="password"
-                                                            ref={this.auth.loginPasswordRef}
-                                                        />
-                                                        <div className='form-input'>
-                                                            <button 
-                                                                onClick={() => this.auth.join(sessionContext, false)}
-                                                            >
-                                                                Login
-                                                            </button>
-                                                            <button 
-                                                                type="button"
-                                                                className="forgot-password-btn"
-                                                                onClick={() => this.auth.handlePasswordReset(sessionContext)}
-                                                            >
-                                                                Forgot Password?
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="form-input">
-                                                        <h2>Create Account</h2>
-                                                        <label>Email</label>
-                                                        <input 
-                                                            type="email" 
-                                                            ref={this.auth.createEmailRef}
-                                                        />
-                                                        <label>Username</label>
-                                                        <input 
-                                                            type="text" 
-                                                            ref={this.auth.createUsernameRef}
-                                                        />
-                                                        <label>Password</label>
-                                                        <input 
-                                                            type="password"
-                                                            ref={this.auth.createPasswordRef}
-                                                        />
-                                                        <div className='form-input'>
-                                                            <button 
-                                                                onClick={() => this.auth.join(sessionContext, true)}
-                                                            >
-                                                                Create Account
-                                                            </button>
+                                            <>
+                                                <div className='screen join-screen'>
+                                                    <div className='form'>
+                                                        <div className="tab-container">
+                                                            {/* Tab Headers */}
+                                                            <div className="tab-headers">
+                                                                <div 
+                                                                    className={`tab-header ${activeTab === 'login' ? 'active' : ''}`}
+                                                                    onClick={() => this.switchTab('login')}
+                                                                >
+                                                                    Login
+                                                                </div>
+                                                                <div 
+                                                                    className={`tab-header ${activeTab === 'register' ? 'active' : ''}`}
+                                                                    onClick={() => this.switchTab('register')}
+                                                                >
+                                                                    Register
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* Tab Content */}
+                                                            <div className="tab-content">
+                                                                {/* Login Tab */}
+                                                                <div className={`tab-panel ${activeTab === 'login' ? 'active' : ''}`}>
+                                                                    <div className="form-input">
+                                                                        <h2>Login</h2>
+                                                                        <label>Email</label>
+                                                                        <input 
+                                                                            type="email" 
+                                                                            ref={this.auth.loginEmailRef}
+                                                                            placeholder="Enter your email"
+                                                                        />
+                                                                        <label>Password</label>
+                                                                        <input 
+                                                                            type="password"
+                                                                            ref={this.auth.loginPasswordRef}
+                                                                            placeholder="Enter your password"
+                                                                        />
+                                                                        <div className="login-input">
+                                                                            <button 
+                                                                                onClick={() => this.auth.join(sessionContext, false)}
+                                                                            >
+                                                                                Login
+                                                                            </button>
+                                                                            <button 
+                                                                                type="button"
+                                                                                className="forgot-password-btn"
+                                                                                onClick={() => this.auth.handlePasswordReset(sessionContext)}
+                                                                            >
+                                                                                Forgot Password?
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {/* Register Tab */}
+                                                                <div className={`tab-panel ${activeTab === 'register' ? 'active' : ''}`}>
+                                                                    <div className="form-input">
+                                                                        <h2>Create Account</h2>
+                                                                        <label>Email</label>
+                                                                        <input 
+                                                                            type="email" 
+                                                                            ref={this.auth.createEmailRef}
+                                                                            placeholder="Enter your email"
+                                                                        />
+                                                                        <label>Username</label>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            ref={this.auth.createUsernameRef}
+                                                                            placeholder="Choose a username"
+                                                                        />
+                                                                        <label>Password</label>
+                                                                        <input 
+                                                                            type="password"
+                                                                            ref={this.auth.createPasswordRef}
+                                                                            placeholder="Create a password"
+                                                                        />
+                                                                        <div className='register-input'>
+                                                                            <button 
+                                                                                onClick={() => this.auth.join(sessionContext, true)}
+                                                                            >
+                                                                                Create Account
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                                <div className="letter-container"></div>
+                                                <div className='info'>
+                                                    <div className="border-info"></div>
+                                                    <div className="text-info">
+                                                        <p>
+                                                            Messages 2026. Fork on
+                                                            <a href={REPO_LINK} target='_blank'> GitHub</a>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </>
                                         )}
                                         {sessionContext.currentSession === 'PASSWORD_RESET' && (
                                             <PasswordResetController

@@ -5,7 +5,7 @@ export class Stars {
         const vertices: number[][] = [];
         const indices: number[] = [];
 
-        const minRadius = 30.0;
+        const minRadius = 50.0;
         const maxRadius = 200.0;
         const count = 2000;
 

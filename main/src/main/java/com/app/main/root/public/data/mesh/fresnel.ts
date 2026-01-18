@@ -14,8 +14,8 @@ export class Fresnel {
         const vertices: number[][] = [];
         const indices: number[] = [];
 
-        const segments = 16;
-        const rings = 16;
+        const segments = 64;
+        const rings = 64;
 
         for(let ring = 0; ring <= rings; ring++) {
             const theta = ring * Math.PI / rings;

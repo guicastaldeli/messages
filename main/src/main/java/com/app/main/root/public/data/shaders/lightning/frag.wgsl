@@ -89,9 +89,9 @@ fn applyFresnel(
     totalEffect = clamp(totalEffect, 0.0, 1.0);
 
     let pulse = sin(uTime * 0.5) * 0.05 + 0.95;
-    let atmosphereCore = vec3<f32>(0.0, 0.1, 0.9);
-    let atmosphereMid = vec3<f32>(0.0, 0.4, 1.2); 
-    let atmosphereEdge = vec3<f32>(0.2, 0.6, 1.4);
+    let atmosphereCore = vec3<f32>(0.0, 0.02, 1.5);
+    let atmosphereMid = vec3<f32>(0.0, 0.1, 2.2);
+    let atmosphereEdge = vec3<f32>(0.05, 0.2, 2.8);   
 
     var atmosphereColor: vec3<f32>;
     if(totalEffect < 0.5) {

@@ -815,7 +815,6 @@ export class Dashboard extends Component<Props, State> {
                                                 </div>
                                             </div>
                                             <div className="user-options">
-                                                
                                                 <button 
                                                     id="logout-actn" 
                                                     onClick={() => this.props.main.auth.logout(sessionContext)}
