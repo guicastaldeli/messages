@@ -336,5 +336,9 @@ export class Auth {
         if(sessionContext && sessionContext.setSession) {
             sessionContext.setSession('LOGIN');
         }
+        setTimeout(() => {
+            this.main.initRenderer();
+            this.main.hello.init();
+        }, 100);
     }
 }

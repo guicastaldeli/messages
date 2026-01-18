@@ -343,6 +343,9 @@ export class GroupLayout extends Component<Props, State> {
             showGroup,
             groupName 
         } = this.state.managerState;
+
+        const SEND_MSG_ICON_PATH = './data/resource/img/send.png';
+        const SEND_FILE_ICON_PATH = './data/resource/img/file.png';
         
         return (
             <>
@@ -427,10 +430,10 @@ export class GroupLayout extends Component<Props, State> {
                         <div className="typebox">
                             <input type="text" id="message-input" />
                             <button id="send-message">
-                                Send
+                                <img src={SEND_MSG_ICON_PATH} alt="Send" />
                             </button>
                             <button id="send-file" onClick={this.handleFileUpload}>
-                                Send
+                                <img src={SEND_FILE_ICON_PATH} alt="File" />
                             </button>
                         </div>
                     </div>
@@ -457,14 +460,14 @@ export class GroupLayout extends Component<Props, State> {
                                         readOnly
                                         className="invite-code-input"
                                     />
+                                </div>
+                                <div className="invite-dialog-actions">
                                     <button 
                                         onClick={this.handleCopyInviteCode}
                                         className="copy-button"
                                     >
                                         Copy
                                     </button>
-                                </div>
-                                <div className="invite-dialog-actions">
                                     <button 
                                         onClick={this.handleCloseInviteDialog}
                                         className="close-dialog-button"

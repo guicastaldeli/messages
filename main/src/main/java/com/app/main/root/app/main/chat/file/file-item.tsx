@@ -519,25 +519,26 @@ export class FileItem extends Component<Props, State> {
     /**
      * Handle File Preview
      */
-    public async handlePreviewFile(file: Item): Promise<void> {
-        this.setState({
-            previewFile: file,
-            previewLoading: true,
-            previewError: null,
-            previewContent: null
-        });
+    public async handlePreviewFile(file: Item): Promise<string | null> {
+        if(this._isMounted) {
+            this.setState({
+                previewFile: file,
+                previewLoading: true,
+                previewError: null,
+                previewContent: null
+            });
+        }
 
         try {
             const fileService = await this.chatService.getFileController().getFileService();
             const res = await fileService.downloadFile(this.props.userId, file.fileId);
             
             if(res.success && res.data) {
+                let base64Content: string | null = null;
+                
                 if(res.data.content) {
                     if(typeof res.data.content === 'string') {
-                        this.setState({
-                            previewContent: res.data.content,
-                            previewLoading: false
-                        });
+                        base64Content = res.data.content;
                     } else if(
                         res.data.content instanceof ArrayBuffer || 
                         res.data.content instanceof Uint8Array
@@ -550,32 +551,21 @@ export class FileItem extends Component<Props, State> {
                         }
                         
                         const binaryString = uint8Array.reduce(
-                            (data, byte) => data + 
-                            String.fromCharCode(byte),
+                            (data, byte) => data + String.fromCharCode(byte),
                             ''
                         );
-                        const base64Content = btoa(binaryString);
-                        
-                        this.setState({
-                            previewContent: base64Content,
-                            previewLoading: false
-                        });
+                        base64Content = btoa(binaryString);
                     } else if(res.data.content instanceof Blob) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const base64data = reader.result as string;
-                            const base64Content = base64data.split(',')[1] || base64data;
-                            this.setState({
-                                previewContent: base64Content,
-                                previewLoading: false
-                            });
-                        };
-                        reader.readAsDataURL(res.data.content);
-                    } else {
-                        this.setState({
-                            previewContent: String(res.data.content),
-                            previewLoading: false
+                        base64Content = await new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                const base64data = reader.result as string;
+                                resolve(base64data.split(',')[1] || base64data);
+                            };
+                            reader.readAsDataURL(res.data.content);
                         });
+                    } else {
+                        base64Content = String(res.data.content);
                     }
                 } else {
                     if(res.data instanceof ArrayBuffer || 
@@ -592,28 +582,42 @@ export class FileItem extends Component<Props, State> {
                             (data, byte) => data + String.fromCharCode(byte),
                             ''
                         );
-                        const base64Content = btoa(binaryString);
-                        
-                        this.setState({
-                            previewContent: base64Content,
-                            previewLoading: false
+                        base64Content = btoa(binaryString);
+                    } else if(res.data instanceof Blob) {
+                        base64Content = await new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                const base64data = reader.result as string;
+                                resolve(base64data.split(',')[1] || base64data);
+                            };
+                            reader.readAsDataURL(res.data);
                         });
                     } else {
-                        this.setState({
-                            previewContent: String(res.data),
-                            previewLoading: false
-                        });
+                        base64Content = String(res.data);
                     }
                 }
+                if(this._isMounted) {
+                    this.setState({
+                        previewContent: base64Content,
+                        previewLoading: false
+                    });
+                }
+                
+                return base64Content;
             } else {
                 throw new Error(res.error || 'Failed to download file');
             }
         } catch (err: any) {
             console.error('Error previewing file:', err);
-            this.setState({
-                previewError: err.message || 'Failed to load file for preview',
-                previewLoading: false
-            });
+            
+            if(this._isMounted) {
+                this.setState({
+                    previewError: err.message || 'Failed to load file for preview',
+                    previewLoading: false
+                });
+            }
+            
+            return null;
         }
     }
 

@@ -146,8 +146,9 @@ export class MessageComponentGetter {
                 onPreview={async (file) => {
                     console.log('Preview file:', file);
                     if(this.fileItemRef) {
-                        await this.fileItemRef.handlePreviewFile(file);
+                        return await this.fileItemRef.handlePreviewFile(file);
                     }
+                    return null;
                 }}
             />
         );

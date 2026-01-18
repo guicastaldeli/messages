@@ -141,7 +141,7 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
                 console.log("Success path triggered");
                 setStep(Step.SUCCESS);
                 setMessage(res.message || 'Password reset link sent to your email');
-                setEmail(''); // Clear email after success
+                setEmail('');
             } else if(res && res.error) {
                 console.log("Error path triggered");
                 setError(res.error || 'Failed to send reset email');
@@ -198,7 +198,6 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
             if(res && res.success) {
                 setStep(Step.SUCCESS);
                 setMessage(res.message || 'Password reset successfully');
-                // Clear passwords
                 setNewPassword('');
                 setConfirmPassword('');
             } else {
@@ -212,7 +211,6 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
         }
     }
 
-    // Show loading state while validating token
     if(isValidatingToken) {
         return (
             <div className="password-reset-container">

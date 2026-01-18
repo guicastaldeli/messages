@@ -121,7 +121,7 @@ export const Preview: React.FC<Props> = ({
             <div className="preview-modal-content">
                 <div className="preview-modal-header">
                     <div className="preview-modal-title">
-                        <span className="file-icon">
+                        <span className="file-icon-c">
                             {getFileIcon(file.fileType, file.mimeType)}
                         </span>
                         <span className="file-name">{file.originalFileName}</span>

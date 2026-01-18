@@ -1,17 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageProps } from '../messages/message-item';
 import { Item } from './file-item';
 import { UserColorGenerator } from '@/app/utils/UserColorGenerator';
+import { Preview } from './preview';
 
 export interface FileMessageProps extends MessageProps {
     fileData: Item;
     onDownload?: (file: Item) => Promise<void>;
-    onPreview?: (file: Item) => Promise<void>;
+    onPreview?: (file: Item) => Promise<string | null>;
 }
 
 export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
     username,
-    content,
     timestamp,
     messageId,
     type,
@@ -28,6 +28,10 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
     onDownload,
     onPreview
 }) => {
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewContent, setPreviewContent] = useState<string | null>(null);
+    const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
     const isSelf = direction === 'self';
     const selfColor = UserColorGenerator.getColor('softBlue')?.value;
 
@@ -35,11 +39,9 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
         if(isSelf) return { backgroundColor: selfColor };
         if(userColor) return { backgroundColor: userColor };
         return { backgroundColor: '#f0f0f0' };
-    };
+    }
 
     const messageColor = getMessageColor();
-
-    
 
     const getFileIcon = (fileType: string, mimeType: string): string => {
         if(mimeType) {
@@ -48,7 +50,7 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
             if(mimeType.startsWith('audio/')) return 'AUD';
             if(mimeType.includes('pdf')) return 'DOC';
             if(mimeType.includes('word') || mimeType.includes('document')) return 'DOC';
-            if(mimeType.includes('text')) return 'TXT';
+            if(mimeType.includes('text')) return 'TEXT';
         }
         switch(fileType.toLowerCase()) {
             case 'image':
@@ -68,9 +70,9 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
             case 'txt':
                 return 'TXT';
             default:
-                return 'OTH';
+                return 'DOC';
         }
-    };
+    }
 
     const formatFileSize = (bytes: number): string => {
         if(bytes === 0) return '0 Bytes';
@@ -78,75 +80,94 @@ export const FileMessageWrapper: React.FC<FileMessageProps> = React.memo(({
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
+    }
 
     const handleDownload = async (e: React.MouseEvent) => {
-        console.log('tststts')
         e.stopPropagation();
         if(onDownload) {
-            console.log('tsstststst')
             await onDownload(fileData);
         }
-    };
+    }
 
     const handlePreview = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if(onPreview) {
-            await onPreview(fileData);
+        
+        setIsLoadingPreview(true);
+        try {
+            if(onPreview) {
+                const content = await onPreview(fileData);
+                setPreviewContent(content);
+                setShowPreview(true);
+            }
+        } finally {
+            setIsLoadingPreview(false);
         }
-    };
+    }
 
     return (
-        <div 
-            className={`message file-message ${isSelf ? 'self-message' : 'other-message'}`}
-            style={messageColor}
-            data-message-id={messageId}
-            data-direction={direction}
-            data-type="file"
-        >
-            <div className="message-header">
-                {perspective.showUsername && (
-                    <div className="username">{username}</div>
-                )}
-                <div className="timestamp">
-                    {new Date(timestamp).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })}
-                </div>
-            </div>
-            
-            <div className="file-message-content">
-                <div className="file-icon">
-                    {getFileIcon(fileData.fileType || '', fileData.mimeType || '')}
-                </div>
-                
-                <div className="file-info">
-                    <div className="file-name">{fileData.originalFileName}</div>
-                    <div className="file-details">
-                        <span className="file-size">{formatFileSize(fileData.fileSize)}</span>
-                        <span className="file-type">{fileData.fileType}</span>
+        <>
+            <div 
+                className={`message file-message ${isSelf ? 'self-message' : 'other-message'}`}
+                style={messageColor}
+                data-message-id={messageId}
+                data-direction={direction}
+                data-type="file"
+            >
+                <div className="message-header">
+                    {perspective?.showUsername && (
+                        <div className="username">{username}</div>
+                    )}
+                    <div className="timestamp">
+                        {new Date(timestamp).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
                     </div>
                 </div>
                 
-                <div className="file-actions">
-                    <button 
-                        className="file-action-btn preview-btn"
-                        onClick={handlePreview}
-                        title="Preview"
-                    >
-                        P
-                    </button>
-                    <button 
-                        className="file-action-btn download-btn"
-                        onClick={handleDownload}
-                        title="Download"
-                    >
-                        ⬇
-                    </button>
+                <div className="file-message-content">
+                    <div className="file-icon">
+                        {getFileIcon(fileData.fileType || '', fileData.mimeType || '')}
+                    </div>
+                    
+                    <div className="file-info">
+                        <div className="file-name">{fileData.originalFileName}</div>
+                        <div className="file-details">
+                            <span className="file-size">{formatFileSize(fileData.fileSize)}</span>
+                        </div>
+                    </div>
+                    
+                    <div className="file-actions">
+                        <button 
+                            className="file-action-btn preview-btn"
+                            onClick={handlePreview}
+                            disabled={isLoadingPreview}
+                            title="Preview"
+                        >
+                            {isLoadingPreview ? 'Loading' : 'P'}
+                        </button>
+                        <button 
+                            className="file-action-btn download-btn"
+                            onClick={handleDownload}
+                            title="Download"
+                        >
+                            ⬇
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {showPreview && (
+                <Preview
+                    file={fileData}
+                    content={previewContent}
+                    isLoading={false}
+                    error={null}
+                    onClose={() => setShowPreview(false)}
+                    onDownload={onDownload || (async () => {})}
+                />
+            )}
+        </>
     );
 });
 
@@ -162,7 +183,6 @@ export class FileMessageComponentGetter {
     public getFileMessage(data: any): React.ReactElement {
         const {
             username,
-            content,
             timestamp,
             messageId,
             type,
@@ -182,7 +202,7 @@ export class FileMessageComponentGetter {
         return (
             <FileMessageWrapper
                 username={username}
-                content={content}
+                content=""
                 timestamp={timestamp}
                 messageId={messageId}
                 type={type}

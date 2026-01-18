@@ -330,9 +330,13 @@ export class SessionProvider extends Component<Props, State> {
     render() {
         if(this.state.isLoading) {
             return (
-                <div className="session-loading">
-                    <div className="loading-spinner"></div>
-                    <p>Loading session...</p>
+                <div className="session-loading-overlay">
+                    <div className="session-loading-content">
+                        <div>Loading session...</div>
+                        <div className="session-loading-status">
+                            <span>Initializing application</span>
+                        </div>
+                    </div>
                 </div>
             );
         }
