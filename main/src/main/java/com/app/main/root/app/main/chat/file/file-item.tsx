@@ -607,7 +607,7 @@ export class FileItem extends Component<Props, State> {
             } else {
                 throw new Error(res.error || 'Failed to download file');
             }
-        } catch (err: any) {
+        } catch(err: any) {
             console.error('Error previewing file:', err);
             
             if(this._isMounted) {
@@ -835,7 +835,7 @@ export class FileItem extends Component<Props, State> {
                             try {
                                 const fileService = await this.chatService.getFileController().getFileService();
                                 await fileService.downloadFile(this.props.userId, file.fileId);
-                            } catch (err) {
+                            } catch(err) {
                                 console.error('Error downloading file:', err);
                             }
                         }}

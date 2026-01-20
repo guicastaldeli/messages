@@ -62,13 +62,13 @@ export const PasswordResetController: React.FC<PasswordResetProps> = ({
 
     useEffect(() => {
         const checkSocketConnection = async () => {
-            if (socketClientConnect) {
+            if(socketClientConnect) {
                 try {
                     if(!socketClientConnect.isConnected) {
                         await socketClientConnect.connect();
                     }
                     setIsSocketReady(true);
-                } catch (err) {
+                } catch(err) {
                     console.error('Failed to connect socket:', err);
                     setError('Connection error. Please try again.');
                 }
