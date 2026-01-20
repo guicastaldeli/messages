@@ -20,7 +20,12 @@ public class PasswordResetService {
     private final DataSourceService dataSourceService;
     private final ServiceManager serviceManager;
 
-    public PasswordResetService(DataSourceService dataSourceService, ServiceManager serviceManager, PasswordEncoderWrapper passwordEncoderWrapper, MessagePerspectiveDetector messagePerspectiveDetector) {
+    public PasswordResetService(
+        DataSourceService dataSourceService, 
+        ServiceManager serviceManager, 
+        PasswordEncoderWrapper passwordEncoderWrapper, 
+        MessagePerspectiveDetector messagePerspectiveDetector
+    ) {
         this.dataSourceService = dataSourceService;
         this.serviceManager = serviceManager;
         this.passwordEncoderWrapper = passwordEncoderWrapper;

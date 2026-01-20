@@ -28,6 +28,15 @@ interface State {
     passwordResetToken?: string;
     renderer: Renderer | null;
     activeTab: 'login' | 'register';
+    authState: AuthState;
+}
+
+interface AuthState {
+    userId: string | null;
+    sessionId: string | null;
+    username: string | null;
+    message: string;
+    error: string;
 }
 
 export class Main extends Component<any, State> {
@@ -81,7 +90,8 @@ export class Main extends Component<any, State> {
             showPasswordReset: false,
             passwordResetToken: undefined,
             renderer: null,
-            activeTab: 'login'
+            activeTab: 'login',
+            authState: { ...this.auth.state }
         }
 
         this.hello = new Hello();
@@ -89,6 +99,14 @@ export class Main extends Component<any, State> {
 
     async componentDidMount(): Promise<void> {
         try {
+            const originalSetState = this.auth.setState.bind(this.auth);
+            this.auth.setState = (newState: any, cb?: () => void) => {
+                originalSetState(newState, cb);
+                this.setState({
+                    authState: { ...this.auth.state }
+                });
+            }
+
             await new Promise(resolve => setTimeout(resolve, 0));
             setTimeout(() => {
                 if(this.canvasRef.current) {
@@ -265,13 +283,19 @@ export class Main extends Component<any, State> {
     }
 
     private switchTab = (tab: 'login' | 'register'): void => {
+        this.auth.clearMessages();
         this.setState({ activeTab: tab });
     }
 
     render() {
-        const { chatList, activeChat, chatManager, activeTab, isLoading } = this.state;
+        const { chatList, activeChat, chatManager, activeTab, isLoading, authState } = this.state;
         const LOGO_PATH = './data/resource/img/logo.png';
         const REPO_LINK = 'https://github.com/guicastaldeli/messages';
+
+        const hasMessages = authState.message || authState.error;
+        const joinScreenClass = hasMessages ? 'screen join-screen expanded' : 'screen join-screen';
+
+        const clearMessages = () => this.auth.clearMessages();
 
         return (
             <div className='app' ref={this.appContainerRef}>
@@ -317,7 +341,7 @@ export class Main extends Component<any, State> {
                                                     >
                                                     </canvas>
                                                 </div>
-                                                <div className='screen join-screen'>
+                                                <div className={joinScreenClass}>
                                                     <div className='form'>
                                                         <div className="tab-container">
                                                             {/* Tab Headers */}
@@ -336,6 +360,22 @@ export class Main extends Component<any, State> {
                                                                 </div>
                                                             </div>
                                                                     
+                                                            <div className="auth-content" style={{ display: hasMessages ? 'flex' : 'none' }}>
+                                                                {authState.message && (
+                                                                    <div className="auth-message">
+                                                                        {authState.message.split('\n').map((line, i) => (
+                                                                            <div key={i}>{line}</div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                                {authState.error && (
+                                                                    <div className="auth-error">
+                                                                        {authState.error.split('\n').map((line, i) => (
+                                                                            <div key={i}>{line}</div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                             {/* Tab Content */}
                                                             <div className="tab-content">
                                                                 {/* Login Tab */}
@@ -347,12 +387,14 @@ export class Main extends Component<any, State> {
                                                                             type="email" 
                                                                             ref={this.auth.loginEmailRef}
                                                                             placeholder="Enter your email"
+                                                                            onChange={clearMessages}
                                                                         />
                                                                         <label>Password</label>
                                                                         <input 
                                                                             type="password"
                                                                             ref={this.auth.loginPasswordRef}
                                                                             placeholder="Enter your password"
+                                                                            onChange={clearMessages}
                                                                         />
                                                                         <div className="login-input">
                                                                             <button 
@@ -380,18 +422,21 @@ export class Main extends Component<any, State> {
                                                                             type="email" 
                                                                             ref={this.auth.createEmailRef}
                                                                             placeholder="Enter your email"
+                                                                            onChange={clearMessages}
                                                                         />
                                                                         <label>Username</label>
                                                                         <input 
                                                                             type="text" 
                                                                             ref={this.auth.createUsernameRef}
                                                                             placeholder="Choose a username"
+                                                                            onChange={clearMessages}
                                                                         />
                                                                         <label>Password</label>
                                                                         <input 
                                                                             type="password"
                                                                             ref={this.auth.createPasswordRef}
                                                                             placeholder="Create a password"
+                                                                            onChange={clearMessages}
                                                                         />
                                                                         <div className='register-input'>
                                                                             <button 

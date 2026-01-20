@@ -12,6 +12,8 @@ export interface State {
     userId: string | null;
     sessionId: string | null;
     username: string | null;
+    message: string;
+    error: string;
 }
 
 export class Auth {
@@ -53,13 +55,22 @@ export class Auth {
         this.state = {
             userId: null,
             sessionId: null,
-            username: null
+            username: null,
+            message: '',
+            error: ''
         }
     }
 
     public setState(newState: Partial<State>, cb?: () => void): void {
         this.state = { ...this.state, ...newState }
         if(cb) cb();
+    }
+
+    public clearMessages(): void {
+        this.setState({
+            message: '',
+            error: ''
+        });
     }
 
     public join = async (sessionContext: any, isCreateAccount: boolean = false): Promise<void> => {
@@ -77,7 +88,15 @@ export class Auth {
                 email = this.createEmailRef.current.value.trim();
                 username = this.createUsernameRef.current.value.trim();
                 password = this.createPasswordRef.current.value.trim();
-                if(!email || !username || !password) return;
+                const missingFields = [];
+                if(!email) missingFields.push('Email');
+                if(!username) missingFields.push('Username');
+                if(!password) missingFields.push('Password');
+                if(missingFields.length > 0) {
+                    const fieldNames = missingFields.join(', ');
+                    const text = missingFields.length === 1 ? 'is' : 'are'
+                    this.setState({ error: `${fieldNames} ${text} required` });
+                }
 
                 try {
                     const userService = await this.apiClientController.getUserService();
@@ -86,7 +105,6 @@ export class Auth {
                     if(usernameExists) return;
                     const emailExists = await userService.checkUserExists(email);
                     if(emailExists) return;
-
                 } catch(err) {
                     console.error('Error checking', err);
                 }
@@ -98,7 +116,15 @@ export class Auth {
 
                 email = this.loginEmailRef.current.value.trim();
                 password = this.loginPasswordRef.current.value.trim();
-                if(!email || !password) return;
+                
+                const missingFields = [];
+                if(!email) missingFields.push('Email');
+                if(!password) missingFields.push('Password');
+                if(missingFields.length > 0) {
+                    const fieldNames = missingFields.join(' and ');
+                    const text = missingFields.length === 1 ? 'is' : 'are';
+                    this.setState({ error: `${fieldNames} ${text} required` });
+                }
             }
 
             try {
@@ -106,7 +132,6 @@ export class Auth {
                 const userInfo = SessionManager.getUserInfo();
                         
                 if(isSessionValid && userInfo && userInfo.email === email) {
-                    console.log('Valid session exists for this user, skipping login API');
                     this.setState({ 
                         username: userInfo.username,
                         userId: userInfo.userId,
@@ -160,8 +185,7 @@ export class Auth {
         
                 await this.doLogin(sessionContext, email, password, isCreateAccount, username);
             } catch(err: any) {
-                console.error('Authentication error:', err);
-                alert(`Authentication failed: ${err.message}`);
+                this.setState({ error: err.message || 'Login failed!' });
             }
         } catch(err) {
             console.error('Join error');
@@ -287,9 +311,9 @@ export class Auth {
                 throw new Error('Invalid response from server - missing user data');
             }
         } catch(err: any) {
-            console.error('Authentication API error:', err);
-            alert(`Authentication failed: ${err.message}`);
-            throw err;
+            console.error(err);
+            this.setState({ error: err.message || 'Login failed!' });
+            return;
         }
     }
     

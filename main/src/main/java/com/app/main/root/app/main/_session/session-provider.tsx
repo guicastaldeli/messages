@@ -132,6 +132,15 @@ export class SessionProvider extends Component<Props, State> {
             return;
         }
 
+        if(session === 'LOGIN') {
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has('token') || urlParams.has('action')) {
+                const newUrl = window.location.pathname;
+                window.history.replaceState(null, '', newUrl);
+                console.log('Cleared URL parameters for login');
+            }
+        }
+
         this.setState({ currentSession: session });
         if(this.state.sessionData) {
             const updatedSession = {
