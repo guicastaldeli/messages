@@ -7,6 +7,7 @@ import { SocketClientConnect } from "./socket-client-connect";
 import { ChatService } from "./chat/chat-service";
 import { ChatController } from "./chat/chat-controller";
 import { Main } from "./_main";
+import InputSanitizer, { TypeMap } from "../utils/input-sanitizer";
 
 export interface State {
     userId: string | null;
@@ -93,9 +94,10 @@ export class Auth {
                     return;
                 }
                         
-                email = this.createEmailRef.current.value.trim();
-                username = this.createUsernameRef.current.value.trim();
-                password = this.createPasswordRef.current.value.trim();
+                email = InputSanitizer.sanitizeRefValue(this.createEmailRef, TypeMap.EMAIL);
+                username = InputSanitizer.sanitizeRefValue(this.createUsernameRef, TypeMap.USERNAME);
+                password = InputSanitizer.sanitizeRefValue(this.createPasswordRef, TypeMap.PASSWORD);
+
                 const missingFields = [];
                 if(!email) missingFields.push('Email');
                 if(!username) missingFields.push('Username');

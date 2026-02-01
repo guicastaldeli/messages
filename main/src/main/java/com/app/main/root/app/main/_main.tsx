@@ -16,6 +16,7 @@ import { PasswordResetController } from './password-reset-controller';
 import { Renderer } from './renderer/renderer';
 import { Auth } from './auth';
 import { Hello } from './hello';
+import InputSanitizer from '../utils/input-sanitizer';
 
 interface State {
     chatManager: ChatManager | null;
@@ -100,6 +101,9 @@ export class Main extends Component<any, State> {
 
     async componentDidMount(): Promise<void> {
         try {
+            InputSanitizer.sanitizeAllInputs();
+            InputSanitizer.addLiveSanitizationToAll();
+            
             const originalSetState = this.auth.setState.bind(this.auth);
             this.auth.setState = (newState: any, cb?: () => void) => {
                 originalSetState(newState, cb);

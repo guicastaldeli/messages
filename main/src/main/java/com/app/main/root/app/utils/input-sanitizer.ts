@@ -9,18 +9,12 @@
  * 
  */
 
-enum TypeMap {
+export enum TypeMap {
     EMAIL = 'email', 
     USERNAME = 'username', 
     PASSWORD = 'password', 
     TEXT = 'text'
 }
-
-type Ref =
-    'email' | 
-    'username' | 
-    'password' | 
-    'text';
 
 class InputSanitizer {
     /**
@@ -304,87 +298,23 @@ class InputSanitizer {
      * Sanitize and get value from a ref
      */
     public static sanitizeRefValue(
-        ref: React.RefObject<HTMLInputElement | HTMLTextAreaElement>,
-        type: Ref
+        ref: React.RefObject<HTMLInputElement | null>,
+        type: TypeMap
     ): string {
         if(!ref.current) return '';
 
         const value = ref.current.value;
         switch (type) {
-            case 'email':
+            case TypeMap.EMAIL:
                 return this.sanitizeEmail(value);
-            case 'username':
+            case TypeMap.USERNAME:
                 return this.sanitizeUsername(value);
-            case 'password':
+            case TypeMap.PASSWORD:
                 return this.sanitizePassword(value);
-            case 'text':
+            case TypeMap.TEXT:
             default:
                 return this.sanitizeText(value);
         }
-    }
-
-    /**
-     * Validate Email Format
-     */
-    public static validateEmail(email: string): { valid: boolean; error?: string } {
-        const sanitized = this.sanitizeEmail(email);
-        if(!sanitized) {
-            return { valid: false, error: 'Email is required' };
-        }
-
-        const emailRegex = /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(sanitized)) {
-            return { valid: false, error: 'Please enter a valid email address' };
-        }
-
-        if (sanitized.length > 254) {
-            return { valid: false, error: 'Email is too long' };
-        }
-
-        const parts = sanitized.split('@');
-        if(parts.length !== 2) {
-            return { valid: false, error: 'Email must contain exactly one @ symbol' };
-        }
-
-        const [localPart, domain] = parts;
-        if(!localPart || !domain) {
-            return { valid: false, error: 'Invalid email format' };
-        }
-
-        if(!domain.includes('.')) {
-            return { valid: false, error: 'Email domain must contain a dot' };
-        }
-
-        return { valid: true };
-    }
-
-    /**
-     * Validate username
-     */
-    public static validateUsername(username: string): { valid: boolean; error?: string } {
-        const sanitized = this.sanitizeUsername(username);
-        
-        if(!sanitized) {
-            return { valid: false, error: 'Username is required' };
-        }
-        if(!/^[a-zA-Z0-9_-]+$/.test(sanitized)) {
-            return { valid: false, error: 'Username can only contain letters, numbers, underscore, and hyphen' };
-        }
-
-        return { valid: true };
-    }
-
-    /**
-     * Validate password
-     */
-    public static validatePassword(password: string): { valid: boolean; error?: string } {
-        const sanitized = this.sanitizePassword(password);
-        
-        if(!sanitized) {
-            return { valid: false, error: 'Password is required' };
-        }
-
-        return { valid: true };
     }
 
     /**
@@ -420,7 +350,7 @@ class InputSanitizer {
      */
     public static SanitizeObject<T extends Record<string, any>>(obj: T, typeMap?: Partial<Record<keyof T, TypeMap>>) {
         const sanitized = { ...obj };
-        
+
         for(const key in sanitized) {
             if(typeof sanitized[key] === 'string') {
                 const type = typeMap?.[key] || TypeMap.TEXT;
@@ -446,3 +376,5 @@ class InputSanitizer {
         return sanitized;
     }
 }
+
+export default InputSanitizer;
