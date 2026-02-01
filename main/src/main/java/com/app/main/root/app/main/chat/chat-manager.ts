@@ -85,6 +85,9 @@ export class ChatManager {
             username!
         );
         this.setState = setState;
+        
+        this.loader = new Loader(this.socketClient, this.chatService, this);
+        
         this.setupEventListeners();
     }
 
@@ -293,9 +296,8 @@ export class ChatManager {
             window.addEventListener('chats-stream-complete', handleStreamComplete as EventListener);
             window.addEventListener('chats-stream-error', handleStreamError as EventListener);
 
-            const chatService = new ChatService(this.socketClient, this.apiClientController);
-            const loader = new Loader(this.socketClient, chatService, this);
-            await loader.loadChatItems(userId);
+            // Use the existing loader instance instead of creating a new one
+            await this.loader.loadChatItems(userId);
         } catch(err) {
             console.error('Failed to load chats via events:', err);
         }

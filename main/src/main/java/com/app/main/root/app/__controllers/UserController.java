@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.app.main.root.app._service.ServiceManager;
 import com.app.main.root.app._types.User;
-import java.util.*;
 import java.util.stream.Collectors;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/users")

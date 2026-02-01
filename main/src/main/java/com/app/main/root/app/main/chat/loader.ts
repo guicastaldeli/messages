@@ -24,7 +24,14 @@ export class Loader {
      */
     public async loadChatItems(userId: string): Promise<void> {
         try {
-            console.log(`[Loader.loadChatItems] Loading chat items for userId: ${userId}`);
+            const sessionId = await this.waitForSocketConnection();
+            if(!sessionId) {
+                console.error('[Loader] No socket session ID available, cannot load chats');
+                this.emitStreamError('chats-stream-error', new Error('No socket session ID'));
+                return;
+            }
+            
+            console.log(`[Loader.loadChatItems] Loading chat items for userId: ${userId}, sessionId: ${sessionId}`);
             
             const stream = await this.chatService.streamUserChats(userId);
             stream.on('chat_data', (data: any) => {
@@ -70,6 +77,34 @@ export class Loader {
             console.error('Failed to stream chat items:', err);
             this.emitStreamError('chats-stream-error', err);
         }
+    }
+
+    /**
+     * Wait for socket connection
+     */
+    private async waitForSocketConnection(): Promise<string | null> {
+        const maxRetries = 20;
+        const retryDelay = 500;
+        
+        for(let i = 0; i < maxRetries; i++) {
+            try {
+                const sessionId = await this.socketClient.getSocketId();
+                if(sessionId) {
+                    console.log(`[Loader] Socket connection established with sessionId: ${sessionId}`);
+                    return sessionId;
+                }
+            } catch(err) {
+                console.warn(`[Loader] Socket connection attempt ${i + 1}/${maxRetries} failed:`, err);
+            }
+            
+            if(i < maxRetries - 1) {
+                console.log(`[Loader] Waiting ${retryDelay}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+        }
+        
+        console.error('[Loader] Failed to establish socket connection after all retries');
+        return null;
     }
 
     private async createChatItem(chat: any, userId: string): Promise<any> {

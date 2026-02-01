@@ -14,6 +14,7 @@ export interface State {
     username: string | null;
     message: string;
     error: string;
+    isAuthenticating: boolean;
 }
 
 export class Auth {
@@ -57,7 +58,8 @@ export class Auth {
             sessionId: null,
             username: null,
             message: '',
-            error: ''
+            error: '',
+            isAuthenticating: false
         }
     }
 
@@ -74,6 +76,12 @@ export class Auth {
     }
 
     public join = async (sessionContext: any, isCreateAccount: boolean = false): Promise<void> => {
+        this.setState({
+            isAuthenticating: true,
+            error: '',
+            message: ''
+        });
+
         try {
             let email: any;
             let username: any;
@@ -95,16 +103,25 @@ export class Auth {
                 if(missingFields.length > 0) {
                     const fieldNames = missingFields.join(', ');
                     const text = missingFields.length === 1 ? 'is' : 'are'
-                    this.setState({ error: `${fieldNames} ${text} required` });
+                    this.setState({ 
+                        error: `${fieldNames} ${text} required`,
+                        isAuthenticating: false 
+                    });
                 }
 
                 try {
                     const userService = await this.apiClientController.getUserService();
 
                     const usernameExists = await userService.checkUsernameExists(username);
-                    if(usernameExists) return;
+                    if(usernameExists) {
+                        this.setState({ isAuthenticating: false });
+                        return;
+                    }
                     const emailExists = await userService.checkUserExists(email);
-                    if(emailExists) return;
+                    if(emailExists) {
+                        this.setState({ isAuthenticating: false });
+                        return;
+                    }
                 } catch(err) {
                     console.error('Error checking', err);
                 }
@@ -123,7 +140,11 @@ export class Auth {
                 if(missingFields.length > 0) {
                     const fieldNames = missingFields.join(' and ');
                     const text = missingFields.length === 1 ? 'is' : 'are';
-                    this.setState({ error: `${fieldNames} ${text} required` });
+                    this.setState({ 
+                        error: `${fieldNames} ${text} required`,
+                        isAuthenticating: false 
+                    });
+                    return;
                 }
             }
 
@@ -173,7 +194,10 @@ export class Auth {
                             }
                         } catch(err: any) {
                             console.error('Error in existing session flow:', err);
-                            alert('Session error: ' + err.message);
+                            this.setState({ 
+                                error: 'Session error: ' + err.message,
+                                isAuthenticating: false 
+                            });
                         }
                     });
 
@@ -185,10 +209,14 @@ export class Auth {
         
                 await this.doLogin(sessionContext, email, password, isCreateAccount, username);
             } catch(err: any) {
-                this.setState({ error: err.message || 'Login failed!' });
+                this.setState({ 
+                    error: err.message || 'Login failed!', 
+                    isAuthenticating: false 
+                });
             }
         } catch(err) {
             console.error('Join error');
+            this.setState({ isAuthenticating: false });
             return;
         }
     }
@@ -248,6 +276,14 @@ export class Auth {
                 if(typeof localStorage !== 'undefined') {
                     localStorage.setItem('LAST_SOCKET_ID', socketId);
                 }
+
+                await new Promise<void>((res) => {
+                    this.setState({
+                        username: authData.username,
+                        userId: authData.userId,
+                        sessionId: authData.sessionId
+                    }, res);
+                });
     
                 this.chatManager = new ChatManager(
                     this.chatService,
@@ -264,6 +300,12 @@ export class Auth {
                 );
     
                 this.chatController.setChatManager(this.chatManager);
+                await new Promise<void>((resolve) => {
+                    this.main.setState({ 
+                        chatManager: this.chatManager,
+                        isLoading: false 
+                    }, resolve);
+                });
                 this.chatManager.loadChats(authData.userId);
                         
                 this.setState({ 
@@ -292,6 +334,12 @@ export class Auth {
                         await cacheService.initCache(authData.userId);
                                 
                         if(this.dashboardInstance) {
+                            const dashboardProps = {
+                                ...this.dashboardInstance.props,
+                                chatManager: this.chatManager
+                            };
+                            Object.assign(this.dashboardInstance.props, dashboardProps);
+                            
                             await this.dashboardInstance.getUserData(
                                 authData.sessionId,
                                 authData.userId,
@@ -303,7 +351,11 @@ export class Auth {
                         console.log('Successfully logged in and switched to dashboard');
                     } catch(err: any) {
                         console.error('Error in post-login setup:', err);
-                        alert('Login successful but setup failed: ' + err.getMessage());
+                        this.setState({ 
+                            error: err.message,
+                            isAuthenticating: false 
+                        });
+                        sessionContext.setSession('MAIN_DASHBOARD');
                     }
                 });
             } else {
@@ -312,7 +364,10 @@ export class Auth {
             }
         } catch(err: any) {
             console.error(err);
-            this.setState({ error: err.message || 'Login failed!' });
+            this.setState({ 
+                error: err.message,
+                isAuthenticating: false 
+            });
             return;
         }
     }
@@ -365,6 +420,7 @@ export class Auth {
         if(sessionContext && sessionContext.setSession) {
             sessionContext.setSession('LOGIN');
         }
+        this.setState({ isAuthenticating: false });
         setTimeout(() => {
             this.main.initRenderer();
             this.main.hello.init();

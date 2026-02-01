@@ -2196,6 +2196,12 @@ header {
                                 background: var(--text-secondary);
                                 cursor: not-allowed;
                             }
+
+                            &.auth {
+                                cursor: not-allowed;
+                                background: #b6cadc !important;
+                                color: var(--primary-color);
+                            }
                         }
                         
                         .forgot-password-btn {

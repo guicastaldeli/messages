@@ -337,8 +337,21 @@ export class Dashboard extends Component<Props, State> {
 
     private async loadData(): Promise<void> {
         try {
-            this.setState({ isLoading: true }); 
-            await this.props.main.loadData(this.state.userId!);
+            this.setState({ isLoading: true });
+            
+            console.log('Waiting for socket connection...');
+            const sessionId = await this.waitForSocketConnection();
+            if(!sessionId) {
+                console.error('Failed to get sessionId, cannot load data');
+                this.setState({
+                    contactsLoaded: false,
+                    chatsLoaded: false,
+                    chatStreamComplete: false,
+                    isLoading: false
+                });
+                return;
+            }
+            console.log('Socket connected with sessionId:', sessionId);
 
             this.contactService = new ContactServiceClient({
                 socketClient: this.props.chatController.socketClient,
@@ -378,6 +391,28 @@ export class Dashboard extends Component<Props, State> {
                 isLoading: false 
             });
         }
+    }
+
+    private async waitForSocketConnection(): Promise<string | null> {
+        const maxRetries = 10;
+        const retryDelay = 500;
+        
+        for(let i = 0; i < maxRetries; i++) {
+            try {
+                const sessionId = await this.props.chatController.socketClient.getSocketId();
+                if(sessionId) {
+                    return sessionId;
+                }
+            } catch(err) {
+                console.warn(`Socket connection attempt ${i + 1}/${maxRetries} failed:`, err);
+            }
+            
+            if(i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+        }
+        
+        return null;
     }
 
     private async waitForChatList(): Promise<void> {
@@ -759,10 +794,6 @@ export class Dashboard extends Component<Props, State> {
         const { chatList, activeSidebarTab } = this.state;
         const { activeChat } = this.state;
         const { chatController, chatManager } = this.props
-
-        if(!userId) {
-            return <div>Loading user data...</div>;
-        }
         
         const loadingOverlay = (this.state.isLoading || !this.isLoaded()) ? (
             <div className="dashboard-loading-overlay">

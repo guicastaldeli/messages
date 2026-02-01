@@ -37,6 +37,7 @@ interface AuthState {
     username: string | null;
     message: string;
     error: string;
+    isAuthenticating: boolean;
 }
 
 export class Main extends Component<any, State> {
@@ -145,7 +146,6 @@ export class Main extends Component<any, State> {
                 });
             
                 const rememberUser = CookieService.getValue(SessionManager.REMEMBER_USER) === 'true';
-                console.log('Remember user from cookie:', rememberUser);
     
                 this.chatManager = new ChatManager(
                     this.chatService,
@@ -212,12 +212,15 @@ export class Main extends Component<any, State> {
                         }
                     }
                 }
-                this.loadData(userInfo.userId);
                 this.setState({ 
                     chatManager: this.chatManager,
                     isLoading: false,
                     rememberUser: rememberUser
                 });
+
+                await this.loadData(userInfo.userId);
+            } else {
+                this.setState({ isLoading: false });
             }
         } catch(err) {
             console.error('Error in componentDidMount:', err);
@@ -240,12 +243,35 @@ export class Main extends Component<any, State> {
     }
 
     public async loadData(userId: string): Promise<any> {
-        const loader = this.chatManager.getLoader();
+        if(!this.state.chatManager) {
+            console.warn('ChatManager not initialized yet, skipping loadData');
+            return;
+        }
+        
+        try {
+            const sessionId = await this.socketClientConnect.getSocketId();
+            if(!sessionId) {
+                console.error('No sessionId available, waiting for connection...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const retrySessionId = await this.socketClientConnect.getSocketId();
+                if(!retrySessionId) {
+                    console.error('Still no sessionId after retry, skipping loadData');
+                    return;
+                }
+            }
+            console.log('SessionId available, loading chat items for userId:', userId);
+        } catch(err) {
+            console.error('Error getting sessionId:', err);
+            return;
+        }
+        
+        const loader = this.state.chatManager.getLoader();
         if(loader) await loader.loadChatItems(userId);
     }
 
     private setDashboardRef = (instance: Dashboard | null): void => {
         this.dashboardInstance = instance;
+        this.auth.dashboardInstance = instance!;
         if(instance && this.auth.state.userId && this.auth.state.username) {
             this.socketClientConnect.getSocketId().then((sessionId) => {
                 if(sessionId) {
@@ -294,6 +320,7 @@ export class Main extends Component<any, State> {
 
         const hasMessages = authState.message || authState.error;
         const joinScreenClass = hasMessages ? 'screen join-screen expanded' : 'screen join-screen';
+        const isAuthenticating = authState.isAuthenticating;
 
         const clearMessages = () => this.auth.clearMessages();
 
@@ -398,9 +425,10 @@ export class Main extends Component<any, State> {
                                                                         />
                                                                         <div className="login-input">
                                                                             <button 
+                                                                                className={`login-input-btn ${isAuthenticating === true ? 'auth' : 'default'}`}
                                                                                 onClick={() => this.auth.join(sessionContext, false)}
                                                                             >
-                                                                                Login
+                                                                                {isAuthenticating ? 'Logging in...' : 'Login'}
                                                                             </button>
                                                                             <button 
                                                                                 type="button"
@@ -440,9 +468,10 @@ export class Main extends Component<any, State> {
                                                                         />
                                                                         <div className='register-input'>
                                                                             <button 
+                                                                                className={`register-input-btn ${isAuthenticating === true ? 'auth' : 'default'}`}
                                                                                 onClick={() => this.auth.join(sessionContext, true)}
                                                                             >
-                                                                                Create Account
+                                                                                {isAuthenticating ? 'Creating Account...' : 'Create Account'}
                                                                             </button>
                                                                         </div>
                                                                     </div>
@@ -475,10 +504,9 @@ export class Main extends Component<any, State> {
                                         )}
                                         {sessionContext.currentSession === 'MAIN_DASHBOARD' && (
                                             <>
-                                                {!this.chatManager ? (
+                                                {!this.state.chatManager ? (
                                                     <div className="chat-manager-loading-overlay">
                                                         <div className="chat-manager-loading-content">
-                                                            <div>Initializing chat manager...</div>
                                                             <div className="chat-manager-loading-status">
                                                                 <span>Loading your conversations</span>
                                                             </div>

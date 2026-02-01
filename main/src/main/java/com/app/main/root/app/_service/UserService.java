@@ -531,7 +531,7 @@ public class UserService {
             }
         }
 
-        throw new SecurityException("Invalid credentials");
+        throw new SecurityException("Wrong credentials");
     }
 
     /**

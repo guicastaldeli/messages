@@ -2062,6 +2062,11 @@ header {
   background: var(--text-secondary);
   cursor: not-allowed;
 }
+.screen.join-screen .form .tab-container .tab-content .tab-panel .form-input button.auth {
+  cursor: not-allowed;
+  background: #b6cadc !important;
+  color: var(--primary-color);
+}
 .screen.join-screen .form .tab-container .tab-content .tab-panel .form-input .forgot-password-btn {
   background: #b6cadc;
   color: var(--primary-color);
