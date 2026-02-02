@@ -2,44 +2,44 @@
 <html xmlns:th="http://www.thymeleaf.org" th:fragment="content">
 <head>
     <title>Server</title>
-    <!-- <link rel="stylesheet" href="../main/__styles/interface.css"> -->
     <link rel="stylesheet" href="/main/styles/interface.css">
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        window.API_GATEWAY_URL = /*[[${apiGateway}]]*/ 'http://localhost:3002';
-        window.SERVER_API_URL = /*[[${serverUrl}]]*/ 'http://localhost:3001/main';
-        /*]]>*/
+    <script>
+        window.configReady = new Promise((resolve) => {
+            window.configResolve = resolve;
+        });
     </script>
     <script th:inline="javascript" src="/main/public/api-url.js"></script>
-    <script src="/main/public/time-updater.js"></script>
+    <script src="/main/public/update-time-status.js"></script>
+    <script src="/main/public/update-uptime.js"></script>
+    <script src="/main/public/update-connections.js"></script>
+    <script src="/main/public/check-client-status.js"></script>
+    <script>
+        function updateConnections() {
+            fetch('/api/connection-tracker/connections/count/active')
+                .then(response => response.text())
+                .then(count => {
+                    document.getElementById('connections-display').textContent = count;
+                })
+                .catch(error => {
+                    console.error('Error fetching connections count:', error);
+                });
+        }
+
+        updateConnections();
+        setInterval(updateConnections, 5000);
+    </script>
 </head>
 <body>
     <div id="container">
-        <p id="ms--wel" th:text="${welcome}">Welcome to Server! :)</p>
-        <p id="ms--version" th:text="${version}">Messages Server v1.0</p>
+        <p id="ms--wel" th:text="${welcome}">------ Welcome to Server! :) ------</p>
+        <p id="ms--version" th:text="${version}">--------- Messages Server ---------</p>
         <div id="ms--time" data-auto-time-update th:attr="data-server-time=${serverTime}">
             <p>Time:&nbsp;</p><span th:text="${currentTime}"></span>
         </div>
         <div id="ms--status">
-            <p>STATUS: </p>
-            <p>UPTIME: <span th:text="${uptime}"></span></p>
-            <p>CONNECTIONS: <span th:text="${connections}"></span></p>
-        </div>
-        <div id="ms--route">
-            <div>ROUTES: 
-                <div>
-                    <span>- Web:</span> 
-                    <a th:text="${webUrl}"></a>
-                </div>
-                <div>
-                    <span>- Server:</span> 
-                    <a th:text="${serverUrl}"></a>
-                </div>
-                <div>
-                    <span>- API:</span> 
-                    <a th:text="${apiGateway}"></a>
-                </div>
-            </div>
+            <p>CLIENT STATUS: <b id="client-status">Checking...</b></p>
+            <p>UPTIME: <span id="uptime-display">0s</span></p>
+            <p>CONNECTIONS: <span id="connections-display">0</span></p>
         </div>
         <div id="api-status">
             <p>API Gateway: <b id="api-gateway-status">Checking...</b></p>

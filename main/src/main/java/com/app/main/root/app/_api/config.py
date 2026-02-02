@@ -24,7 +24,10 @@ class Config:
         load_dotenv(envFile)
         
         self.WEB_URL = os.getenv('WEB_URL')
-        self.SERVER_URL = os.getenv('SERVER_ALT_URL')
+        self.SERVER_URL = os.getenv('SERVER_URL')
+        self.SERVER_ALT_URL = os.getenv('SERVER_ALT_URL')
+        self.SERVER_INSTANCES = os.getenv('SERVER_INSTANCES')
+        self.SERVER_DEF_HTTP_URL = os.getenv('SERVER_DEF_HTTP_URL')
         self.API_URL = os.getenv('API_URL')
         self.TEST = os.getenv('TEST')
         

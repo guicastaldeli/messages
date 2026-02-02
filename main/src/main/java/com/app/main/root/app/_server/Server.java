@@ -7,7 +7,6 @@ import com.app.main.root.app._service.SessionService;
 import com.app.main.root.app._data.SocketMethods;
 import com.app.main.root.app.main.chat.messages.MessageTracker;
 import com.app.main.root.app.utils.ColorConverter;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Lazy;

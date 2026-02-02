@@ -1,8 +1,8 @@
 class TimeUpdater {
     constructor() {
         this.updateIntervals = new Map();
-        this.serverApiUrl = SERVER_API_URL;
-        this.apiGatewayUrl = API_GATEWAY_URL;
+        this.serverApiUrl = window.SERVER_API_URL;
+        this.apiGatewayUrl = window.API_GATEWAY_URL;
     }
 
     async fetchServerTime() {

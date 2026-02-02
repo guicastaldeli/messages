@@ -108,6 +108,14 @@ public class ConnectionTrackerController {
     }
 
     /**
+     * Active Connections
+     */
+    @GetMapping("/connections/count/active")
+    public int getActiveConnectionsCount() {
+        return connectionTracker.getActiveConnectionsCount();
+    }
+
+    /**
      * Clear
      */
     @DeleteMapping("/connections/clear")
