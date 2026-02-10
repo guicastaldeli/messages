@@ -42,7 +42,7 @@ function HomeContent() {
     //return <div>Connecting...</div>;
   }
   if(!socketClientConnect) {
-    //return <div>Failed to connect. Please refresh the page.</div>;
+    //return <div>Failed to connect. Please refresh the page.</div>;//
   }
 
   const apiClientController = new ApiClientController(socketClientConnect!);
