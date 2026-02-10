@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd src/main/java/com/app/main/root && npm run build",
+  "installCommand": "cd src/main/java/com/app/main/root && npm install",
+  "outputDirectory": "src/main/java/com/app/main/root/.next"
+}
