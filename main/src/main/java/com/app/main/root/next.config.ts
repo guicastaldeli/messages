@@ -12,13 +12,11 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
-  experimental: {
-    turbo: {
-      rules: {
-        '*.wgsl': {
-          loaders: ['raw-loader'],
-          as: '*.txt'
-        }
+  turbopack: {
+    rules: {
+      '*.wgsl': {
+        loaders: ['raw-loader'],
+        as: '*.txt'
       }
     }
   },

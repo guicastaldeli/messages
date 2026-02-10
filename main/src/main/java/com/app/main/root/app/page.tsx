@@ -4,9 +4,9 @@ import { PasswordResetController } from "./main/password-reset-controller";
 import { ApiClientController } from "./main/_api-client/api-client-controller";
 import { SocketClientConnect } from "./main/socket-client-connect";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const action = searchParams.get('action');
@@ -45,13 +45,13 @@ export default function Home() {
     //return <div>Failed to connect. Please refresh the page.</div>;
   }
 
-  const apiClientController = new ApiClientController(socketClientConnect);
+  const apiClientController = new ApiClientController(socketClientConnect!);
 
   if(token && action === 'reset') {
     return (
       <PasswordResetController 
         apiClientController={apiClientController}
-        socketClientConnect={socketClientConnect}
+        socketClientConnect={socketClientConnect!}
         onBackToLogin={() => window.location.href = '/'}
         token={token}
       />
@@ -62,5 +62,13 @@ export default function Home() {
     <>
       <Main />
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

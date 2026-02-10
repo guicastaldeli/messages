@@ -4,9 +4,9 @@
 //
 
 window.ENCRYPTED_CONFIG = {
-    apiGateway: '96fbea058d178cb6d524bdb1bb4259cc:50a23ab7b5ecade3847b831213fe1d2bffe9a4ec49317e9dc8469b2eb25264d3',
-    serverApi: '6963079d15e205f72ec242fb9c82b5ee:caa9669f9de5d9f825f8a90f6592664df34d0f04dcfbf83762045e2ca6ab8b95',
-    webUrl: '0d4d461f11661f1ff0f616d6cbec5c41:5286bb43f144ad072ffb0bede70af5e64c28d6e7647013b3e722bd23cc7ebff1',
+    apiGateway: '8b2e97076d01af119163a38ddee3f2bf:c071ab07980f2cdfec7d1475d6b86c0275099130e3b8190888ee7e110630efcc',
+    serverApi: 'ea151ab95ecf01784f20eeee33c18e12:df0efe8d9ac8c8cca371b7cb41436e660e1c797d5c24aaa002f239ceaebafd7b',
+    webUrl: '6f26a386a09d4782498e6722cfecf0fc:7bda69eacc18c2b20dd24abf0f67cbfafc621e007eac9e3105798d18b1ebb9a5',
     key: 'x63uuphvQo1qCK4Y3kh2f77iRVwnUtXckI+eeUJgGng='
 };
 

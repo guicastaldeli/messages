@@ -116,12 +116,18 @@ export class Auth {
 
                     const usernameExists = await userService.checkUsernameExists(username);
                     if(usernameExists) {
-                        this.setState({ isAuthenticating: false });
+                        this.setState({ 
+                            error: 'Username already exists',
+                            isAuthenticating: false
+                        });
                         return;
                     }
                     const emailExists = await userService.checkUserExists(email);
                     if(emailExists) {
-                        this.setState({ isAuthenticating: false });
+                        this.setState({ 
+                            error: 'Email already registered',
+                            isAuthenticating: false 
+                        });
                         return;
                     }
                 } catch(err) {
@@ -133,8 +139,8 @@ export class Auth {
                     return;
                 }
 
-                email = this.loginEmailRef.current.value.trim();
-                password = this.loginPasswordRef.current.value.trim();
+                email = InputSanitizer.sanitizeRefValue(this.loginEmailRef, TypeMap.EMAIL);
+                password = InputSanitizer.sanitizeRefValue(this.loginPasswordRef, TypeMap.PASSWORD);
                 
                 const missingFields = [];
                 if(!email) missingFields.push('Email');
@@ -382,6 +388,7 @@ export class Auth {
                     
             SessionManager.clearSession();
             sessionContext.setSession('LOGIN');
+            this.setState({ isAuthenticating: false });
                     
             if(sessionContext && sessionContext.clearSession) {
                 await sessionContext.clearSession();

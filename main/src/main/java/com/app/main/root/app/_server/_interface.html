@@ -13,21 +13,6 @@
     <script src="/main/public/update-uptime.js"></script>
     <script src="/main/public/update-connections.js"></script>
     <script src="/main/public/check-client-status.js"></script>
-    <script>
-        function updateConnections() {
-            fetch('/api/connection-tracker/connections/count/active')
-                .then(response => response.text())
-                .then(count => {
-                    document.getElementById('connections-display').textContent = count;
-                })
-                .catch(error => {
-                    console.error('Error fetching connections count:', error);
-                });
-        }
-
-        updateConnections();
-        setInterval(updateConnections, 5000);
-    </script>
 </head>
 <body>
     <div id="container">
