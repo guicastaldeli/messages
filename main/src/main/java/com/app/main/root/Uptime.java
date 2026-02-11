@@ -24,7 +24,7 @@ public class Uptime {
         }
     }
 
-    @GetMapping("/api/uptime")
+    @GetMapping("/api/uptime")//
     public String get() {
         return set();
     }
