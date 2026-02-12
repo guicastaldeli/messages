@@ -3,16 +3,19 @@
 <head>
     <title>Server</title>
     <link rel="stylesheet" href="/main/styles/interface.css">
-    <script src="/main/public/url.js"></script>
-    <script>
-        if(window.configResolve) window.configResolve();
-    </script>
     <script>
         window.configReady = new Promise((resolve) => {
             window.configResolve = resolve;
         });
     </script>
+    <script src="/main/public/url.js"></script>
     <script th:inline="javascript" src="/main/public/api-url.js"></script>
+    <script>
+        if (typeof window.configResolve === 'function') {
+            console.log('Configurations loaded, resolving promise...');
+            window.configResolve();
+        }
+    </script>
     <script src="/main/public/update-time-status.js"></script>
     <script src="/main/public/update-uptime.js"></script>
     <script src="/main/public/update-connections.js"></script>
