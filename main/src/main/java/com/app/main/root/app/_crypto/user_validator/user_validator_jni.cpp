@@ -1,3 +1,4 @@
+﻿#include "jni_macros.h"
 #include "user_validator.h"
 #include <jni.h>
 #include <iostream>
@@ -6,7 +7,7 @@
 extern "C" {
 #endif
 
-__declspec(dllexport) JNIEXPORT jlong JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_createNativeObject(
+JNI_EXPORT JNIEXPORT jlong JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_createNativeObject(
     JNIEnv *env,
     jobject obj
 ) {
@@ -22,7 +23,7 @@ __declspec(dllexport) JNIEXPORT jlong JNICALL Java_com_app_main_root_app__1crypt
     }
 }
 
-__declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_destroyNativeObject(
+JNI_EXPORT JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_destroyNativeObject(
     JNIEnv *env,
     jobject obj,
     jlong nativePtr
@@ -39,7 +40,7 @@ __declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto
     }
 }
 
-__declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_validateRegistrationNative(
+JNI_EXPORT JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_validateRegistrationNative(
     JNIEnv *env,
     jobject obj,
     jlong nativePtr,
@@ -108,7 +109,7 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
     }
 }
 
-__declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_validateLoginNative(
+JNI_EXPORT JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_validateLoginNative(
     JNIEnv *env,
     jobject obj,
     jlong nativePtr,
@@ -168,7 +169,7 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
     }
 }
 
-__declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_recordRegistrationAttemptNative(
+JNI_EXPORT JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_recordRegistrationAttemptNative(
     JNIEnv *env,
     jobject obj,
     jlong nativePtr,
@@ -193,7 +194,7 @@ __declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto
     }
 }
 
-__declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_recordLoginAttemptNative(
+JNI_EXPORT JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_recordLoginAttemptNative(
     JNIEnv *env,
     jobject obj,
     jlong nativePtr,
@@ -218,7 +219,7 @@ __declspec(dllexport) JNIEXPORT void JNICALL Java_com_app_main_root_app__1crypto
     }
 }
 
-__declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_isRegistrationRateLimitedNative(
+JNI_EXPORT JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_isRegistrationRateLimitedNative(
     JNIEnv *env,
     jobject obj,
     jlong nativePtr,
@@ -247,7 +248,7 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
     }
 }
 
-__declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_isLoginRateLimitedNative(
+JNI_EXPORT JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_user_1validator_UserValidatorWrapper_isLoginRateLimitedNative(
     JNIEnv *env,
     jobject obj,
     jlong nativePtr,
@@ -279,3 +280,4 @@ __declspec(dllexport) JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1cr
 #ifdef __cplusplus
 }
 #endif
+

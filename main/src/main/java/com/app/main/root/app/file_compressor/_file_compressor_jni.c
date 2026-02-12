@@ -1,3 +1,4 @@
+﻿#include "jni_macros.h"
 #include "_main.h"
 #include "comp.h"
 #include <jni.h>

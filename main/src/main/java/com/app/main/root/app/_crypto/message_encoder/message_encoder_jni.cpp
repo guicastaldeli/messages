@@ -1,3 +1,4 @@
+﻿#include "jni_macros.h"
 #include "message_encoder.h"
 #include <jni.h>
 #include <string>
@@ -543,3 +544,4 @@ JNIEXPORT jboolean JNICALL Java_com_app_main_root_app__1crypto_message_1encoder_
 #ifdef __cplusplus
 }
 #endif
+

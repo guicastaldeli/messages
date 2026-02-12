@@ -15,6 +15,26 @@ public class MessageEncoderWrapper {
     
     private static void loadNativeLibraries() {
         try {
+            String osName = System.getProperty("os.name").toLowerCase();
+            boolean isWindows = osName.contains("win");
+            boolean isLinux = osName.contains("nix") || osName.contains("nux") || osName.contains("aix");
+            System.out.println("Detected OS: " + osName);
+            
+            if (isWindows) {
+                loadWindowsLibraries();
+            } else if (isLinux) {
+                loadLinuxLibraries();
+            } else {
+                throw new RuntimeException("Unsupported OS: " + osName);
+            }
+        } catch(Exception err) {
+            err.printStackTrace();
+            throw new RuntimeException("Failed to load native libraries: " + err.getMessage(), err);
+        }
+    }
+    
+    private static void loadWindowsLibraries() {
+        try {
             Path directory = Paths.get(DLL_PATH);
             if(!Files.exists(directory)) {
                 throw new RuntimeException("DLL directory does not exist: " + directory.toAbsolutePath());
@@ -22,7 +42,7 @@ public class MessageEncoderWrapper {
             
             String[] libraries = {
                 "libcrypto-3-x64.dll",
-                "libssl-3-x64.dll", 
+                "libssl-3-x64.dll",
                 "message_encoder.dll"
             };
             
@@ -35,7 +55,30 @@ public class MessageEncoderWrapper {
                 System.out.println("Loaded native library: " + lib);
             }
         } catch(Exception err) {
-            throw new RuntimeException("Failed to load native libraries: " + err.getMessage());
+            err.printStackTrace();
+            throw new RuntimeException("Windows library load failed: " + err.getMessage(), err);
+        }
+    }
+    
+    private static void loadLinuxLibraries() {
+        try {
+            // Try system library first
+            try {
+                System.loadLibrary("message_encoder");
+                System.out.println("Loaded message_encoder from system path");
+            } catch(UnsatisfiedLinkError e) {
+                // Fall back to local .so file
+                Path soPath = Paths.get(DLL_PATH + "libmessage_encoder.so");
+                if(Files.exists(soPath)) {
+                    System.load(soPath.toAbsolutePath().toString());
+                    System.out.println("Loaded message_encoder from local path: " + soPath);
+                } else {
+                    throw new RuntimeException("libmessage_encoder.so not found in system or at: " + soPath);
+                }
+            }
+        } catch(Exception err) {
+            err.printStackTrace();
+            throw new RuntimeException("Linux library load failed: " + err.getMessage(), err);
         }
     }
     

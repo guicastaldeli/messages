@@ -14,22 +14,43 @@ public class PasswordEncoderWrapper {
     
     private static void loadNativeLibraries() {
         try {
+            String osName = System.getProperty("os.name").toLowerCase();
+            boolean isWindows = osName.contains("win");
+            boolean isLinux = osName.contains("nix") || osName.contains("nux") || osName.contains("aix");
+            System.out.println("Detected OS: " + osName);
+            
+            if (isWindows) {
+                loadWindowsLibraries();
+            } else if (isLinux) {
+                loadLinuxLibraries();
+            } else {
+                throw new RuntimeException("Unsupported OS: " + osName);
+            }
+        } catch(Exception err) {
+            err.printStackTrace();
+            throw new RuntimeException("Failed to load native libraries: " + err.getMessage(), err);
+        }
+    }
+    
+    private static void loadWindowsLibraries() {
+        try {
             Path directory = Paths.get(DLL_PATH);
             if(!Files.exists(directory)) {
-                throw new RuntimeException("dll directory does not exist: " + directory.toAbsolutePath());
+                throw new RuntimeException("DLL directory does not exist: " + directory.toAbsolutePath());
             }
+            
             System.out.println("Files in dll directory:");
             try {
                 Files.list(directory)
                     .filter(path -> path.toString().toLowerCase().endsWith(".dll"))
                     .forEach(path -> System.out.println("  - " + path.getFileName()));
             } catch(Exception err) {
-                System.out.println("error directory" + err.getMessage());
+                System.out.println("Error listing directory: " + err.getMessage());
             }
 
             String[] libraries = {
                 "libcrypto-3-x64.dll",
-                "libssl-3-x64.dll", 
+                "libssl-3-x64.dll",
                 "passwordencoder.dll"
             };
             
@@ -41,6 +62,7 @@ public class PasswordEncoderWrapper {
                 }
                 System.out.println("Found: " + libPath.toAbsolutePath());
             }
+            
             for(String lib : libraries) {
                 Path libPath = directory.resolve(lib);
                 try {
@@ -54,7 +76,27 @@ public class PasswordEncoderWrapper {
             }
         } catch(Exception err) {
             err.printStackTrace();
-            throw new RuntimeException("Failed to load native libraries: " + err.getMessage());
+            throw new RuntimeException("Windows library load failed: " + err.getMessage(), err);
+        }
+    }
+    
+    private static void loadLinuxLibraries() {
+        try {
+            try {
+                System.loadLibrary("passwordencoder");
+                System.out.println("Loaded passwordencoder from system path");
+            } catch(UnsatisfiedLinkError e) {
+                Path soPath = Paths.get(DLL_PATH + "libpasswordencoder.so");
+                if(Files.exists(soPath)) {
+                    System.load(soPath.toAbsolutePath().toString());
+                    System.out.println("Loaded passwordencoder from local path: " + soPath);
+                } else {
+                    throw new RuntimeException("libpasswordencoder.so not found in system or at: " + soPath);
+                }
+            }
+        } catch(Exception err) {
+            err.printStackTrace();
+            throw new RuntimeException("Linux library load failed: " + err.getMessage(), err);
         }
     }
     
