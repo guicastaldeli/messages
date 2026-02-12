@@ -37,7 +37,7 @@ export class SocketClientConnect {
             this.rejConnection = rej;
 
             try {
-                const url = process.env.NEXT_PUBLIC_SERVER_DEF_HTTP_URL;
+                const url = process.env.NEXT_PUBLIC_SERVER_ALT_URL;
                 if(!url) throw new Error("SERVER URL not avaliable. FATAL ERR.");
                 console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', url);
                 

@@ -14,6 +14,8 @@ target/maven-archiver/
 **/.next/
 **/node_modules/
 node_modules/
+_api/
+**/_api/
 
 # IDE files
 .idea/
