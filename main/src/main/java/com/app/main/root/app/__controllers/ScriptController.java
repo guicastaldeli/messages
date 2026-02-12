@@ -38,6 +38,22 @@ public class ScriptController {
         }
     }
 
+    @GetMapping(value = "/public/url.js", produces = "application/javascript")
+    @ResponseBody
+    public ResponseEntity<String> getUrl() {
+        try {
+            String content = loadFile("com/app/main/root/public/url.js");
+            return ResponseEntity.ok()
+                    .contentType(MediaType.valueOf("application/javascript"))
+                    .body(content);
+        } catch(Exception err) {
+            System.out.println(err);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Failed to load");
+        }
+    }
+
     /**
      * Time Updater
      */

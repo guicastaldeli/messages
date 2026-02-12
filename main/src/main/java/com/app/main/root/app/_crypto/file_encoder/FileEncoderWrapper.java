@@ -14,22 +14,43 @@ public class FileEncoderWrapper {
     
     private static void loadNativeLibraries() {
         try {
+            String osName = System.getProperty("os.name").toLowerCase();
+            boolean isWindows = osName.contains("win");
+            boolean isLinux = osName.contains("nix") || osName.contains("nux") || osName.contains("aix");
+            System.out.println("Detected OS: " + osName);
+            
+            if (isWindows) {
+                loadWindowsLibraries();
+            } else if (isLinux) {
+                loadLinuxLibraries();
+            } else {
+                throw new RuntimeException("Unsupported OS: " + osName);
+            }
+        } catch(Exception err) {
+            err.printStackTrace();
+            throw new RuntimeException("Failed to load native libraries: " + err.getMessage(), err);
+        }
+    }
+    
+    private static void loadWindowsLibraries() {
+        try {
             Path directory = Paths.get(DLL_PATH);
             if(!Files.exists(directory)) {
-                throw new RuntimeException("dll directory does not exist: " + directory.toAbsolutePath());
+                throw new RuntimeException("DLL directory does not exist: " + directory.toAbsolutePath());
             }
+            
             System.out.println("Files in dll directory:");
             try {
                 Files.list(directory)
                     .filter(path -> path.toString().toLowerCase().endsWith(".dll"))
                     .forEach(path -> System.out.println("  - " + path.getFileName()));
             } catch(Exception err) {
-                System.out.println("error directory" + err.getMessage());
+                System.out.println("Error listing directory: " + err.getMessage());
             }
 
             String[] libraries = {
                 "libcrypto-3-x64.dll",
-                "libssl-3-x64.dll", 
+                "libssl-3-x64.dll",
                 "fileencoder.dll"
             };
             
@@ -41,6 +62,7 @@ public class FileEncoderWrapper {
                 }
                 System.out.println("Found: " + libPath.toAbsolutePath());
             }
+            
             for(String lib : libraries) {
                 Path libPath = directory.resolve(lib);
                 try {
@@ -54,7 +76,29 @@ public class FileEncoderWrapper {
             }
         } catch(Exception err) {
             err.printStackTrace();
-            throw new RuntimeException("Failed to load native libraries: " + err.getMessage());
+            throw new RuntimeException("Windows library load failed: " + err.getMessage(), err);
+        }
+    }
+    
+    private static void loadLinuxLibraries() {
+        try {
+            // Try system library first
+            try {
+                System.loadLibrary("fileencoder");
+                System.out.println("Loaded fileencoder from system path");
+            } catch(UnsatisfiedLinkError e) {
+                // Fall back to local .so file
+                Path soPath = Paths.get(DLL_PATH + "libfileencoder.so");
+                if(Files.exists(soPath)) {
+                    System.load(soPath.toAbsolutePath().toString());
+                    System.out.println("Loaded fileencoder from local path: " + soPath);
+                } else {
+                    throw new RuntimeException("libfileencoder.so not found in system or at: " + soPath);
+                }
+            }
+        } catch(Exception err) {
+            err.printStackTrace();
+            throw new RuntimeException("Linux library load failed: " + err.getMessage(), err);
         }
     }
     
@@ -151,9 +195,6 @@ public class FileEncoderWrapper {
     private native byte[] deriveKey(String password, byte[] salt, int keyLength);
     private native int getEncryptedSize(int inputSize, int algorithm);
     
-    /**
-     * Encrypt
-     */
     public byte[] encrypt(byte[] data) {
         synchronized(lock) {
             if(nativePtr == 0) {
@@ -207,9 +248,6 @@ public class FileEncoderWrapper {
         }
     }
     
-    /**
-     * Decrypt
-     */
     public byte[] decrypt(byte[] encryptedData) {
         synchronized(lock) {
             if(nativePtr == 0) {
@@ -255,9 +293,6 @@ public class FileEncoderWrapper {
         }
     }
     
-    /**
-     * Generate random IV
-     */
     public byte[] generateIV() {
         if(nativePtr == 0) {
             throw new IllegalStateException("Encoder not initialized");
@@ -265,18 +300,12 @@ public class FileEncoderWrapper {
         return generateIV(nativePtr);
     }
     
-    /**
-     * Generate random salt
-     */
     public static byte[] generateSalt(int length) {
         byte[] salt = new byte[length];
         new SecureRandom().nextBytes(salt);
         return salt;
     }
     
-    /**
-     * Generate random key
-     */
     public static byte[] generateKey(int length) {
         byte[] key = new byte[length];
         new SecureRandom().nextBytes(key);
