@@ -47,7 +47,12 @@ export class SocketClientConnect {
                 }
 
                 this.client = new Client({
-                    webSocketFactory: () => new SockJS(url),
+                    webSocketFactory: () => {
+                        let wsUrl = url;
+                        wsUrl = wsUrl.replace(/^https:\/\//i, 'http://');
+                        console.log('Connecting to SockJS over HTTP:', wsUrl);
+                        return new SockJS(wsUrl);
+                    },
                     reconnectDelay: 5000,
                     heartbeatIncoming: 4000,
                     heartbeatOutgoing: 4000,
