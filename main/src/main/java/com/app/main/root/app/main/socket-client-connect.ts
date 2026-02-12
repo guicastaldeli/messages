@@ -37,11 +37,7 @@ export class SocketClientConnect {
             this.rejConnection = rej;
 
             try {
-                const baseUrl = process.env.NEXT_PUBLIC_SERVER_ALT_URL;
-                if(!baseUrl) throw new Error("SERVER URL not available. FATAL ERR.");
-                let url = baseUrl;
-                url = url.replace(/^https:\/\//i, 'http://');
-                console.log('Connecting to SockJS over HTTP:', url);
+                const url = process.env.NEXT_PUBLIC_SERVER_ALT_URL;
                 if(!url) throw new Error("SERVER URL not avaliable. FATAL ERR.");
                 console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', url);
                 
