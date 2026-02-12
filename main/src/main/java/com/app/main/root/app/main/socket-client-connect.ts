@@ -37,7 +37,11 @@ export class SocketClientConnect {
             this.rejConnection = rej;
 
             try {
-                const url = process.env.NEXT_PUBLIC_SERVER_ALT_URL;
+                const baseUrl = process.env.NEXT_PUBLIC_SERVER_ALT_URL;
+                if(!baseUrl) throw new Error("SERVER URL not available. FATAL ERR.");
+                let url = baseUrl;
+                url = url.replace(/^https:\/\//i, 'http://');
+                console.log('Connecting to SockJS over HTTP:', url);
                 if(!url) throw new Error("SERVER URL not avaliable. FATAL ERR.");
                 console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', url);
                 
@@ -47,12 +51,7 @@ export class SocketClientConnect {
                 }
 
                 this.client = new Client({
-                    webSocketFactory: () => {
-                        let wsUrl = url;
-                        wsUrl = wsUrl.replace(/^https:\/\//i, 'http://');
-                        console.log('Connecting to SockJS over HTTP:', wsUrl);
-                        return new SockJS(wsUrl);
-                    },
+                    webSocketFactory: () => new SockJS(url),
                     reconnectDelay: 5000,
                     heartbeatIncoming: 4000,
                     heartbeatOutgoing: 4000,
