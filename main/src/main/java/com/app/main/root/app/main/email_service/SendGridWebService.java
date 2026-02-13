@@ -21,7 +21,7 @@ public class SendGridWebService {
     public void init() {
         String apiKey = System.getenv("SENDGRID_API_KEY");
         if (apiKey != null && !apiKey.isEmpty()) {
-            sendGridClient = new SendGrid(apiKey, true);
+            sendGridClient = new SendGrid(apiKey);
             System.out.println("✅ SendGrid client initialized successfully");
             System.out.println("   From email: " + fromEmail);
         } else {
