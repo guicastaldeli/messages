@@ -1,5 +1,30 @@
-# Create enhanced compilation helper script with FIXED find command
 FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+
+COPY . .
+
+# Install ALL build dependencies including OpenSSL
+RUN apt-get update && \
+    apt-get install -y \
+        g++ \
+        make \
+        cmake \
+        libssl-dev \
+        pkg-config \
+        tree \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create build directories
+RUN mkdir -p \
+    main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build \
+    main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build \
+    main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build \
+    main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build \
+    main/src/main/java/com/app/main/root/app/file_compressor/.build
+
+# Create enhanced compilation helper script with FIXED find command
 RUN echo '#!/bin/bash\n\
 set -e\n\
 compile_native() {\n\
@@ -204,3 +229,161 @@ compile_native() {\n\
     echo ""\n\
 }\n\
 ' > /usr/local/bin/compile_native.sh && chmod +x /usr/local/bin/compile_native.sh
+
+# Compile message_encoder
+RUN echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "🚀 STARTING COMPILATION: message_encoder" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "" && \
+    /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/_crypto/message_encoder \
+    main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so && \
+    echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "✅ COMPLETED: message_encoder" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo ""
+
+# Compile file_encoder
+RUN echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "🚀 STARTING COMPILATION: file_encoder" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "" && \
+    /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/_crypto/file_encoder \
+    main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/libfileencoder.so && \
+    echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "✅ COMPLETED: file_encoder" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo ""
+
+# Compile password_encoder
+RUN echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "🚀 STARTING COMPILATION: password_encoder" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "" && \
+    /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/_crypto/password_encoder \
+    main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so && \
+    echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "✅ COMPLETED: password_encoder" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo ""
+
+# Compile user_validator
+RUN echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "🚀 STARTING COMPILATION: user_validator" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "" && \
+    /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/_crypto/user_validator \
+    main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build/libuser_validator.so && \
+    echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "✅ COMPLETED: user_validator" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo ""
+
+# Compile file_compressor
+RUN echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "🚀 STARTING COMPILATION: file_compressor" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "" && \
+    /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/file_compressor \
+    main/src/main/java/com/app/main/root/app/file_compressor/.build/libfile_compressor.so && \
+    echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "✅ COMPLETED: file_compressor" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo ""
+
+# Build the Spring Boot application
+RUN echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "🚀 BUILDING SPRING BOOT APPLICATION" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "" && \
+    cd main && mvn clean package -DskipTests && \
+    echo "" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo "✅ SPRING BOOT BUILD COMPLETED" && \
+    echo "═══════════════════════════════════════════════════════════" && \
+    echo ""
+
+# Final stage
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        nodejs \
+        libssl3 \
+        libstdc++6 \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create directories INCLUDING the sessions keys directory
+RUN mkdir -p \
+    /app/lib/native/linux \
+    /app/src/main/java/com/app/main/root/public \
+    /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys && \
+    chmod -R 777 /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys
+
+# Copy the freshly built native libraries
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so /usr/local/lib/
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/libfileencoder.so /usr/local/lib/
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so /usr/local/lib/
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build/libuser_validator.so /usr/local/lib/
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/file_compressor/.build/libfile_compressor.so /usr/local/lib/
+
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so /app/lib/native/linux/
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/libfileencoder.so /app/lib/native/linux/
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so /app/lib/native/linux/
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build/libuser_validator.so /app/lib/native/linux/
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/file_compressor/.build/libfile_compressor.so /app/lib/native/linux/
+
+# Copy SQL files and config scripts
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_db/src/*.sql /app/src/main/java/com/app/main/root/app/_db/src/
+COPY --from=build /app/main/src/main/java/com/app/main/root/public/generate-config.js /app/src/main/java/com/app/main/root/public/
+COPY --from=build /app/main/src/main/java/com/app/main/root/public/encrypt-url.js /app/src/main/java/com/app/main/root/public/
+
+# Copy existing session-keys.dat if it exists
+RUN if [ -f /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat ]; then \
+    cp /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/; \
+    fi
+
+# Copy the jar file
+COPY --from=build /app/main/target/main-0.0.1-SNAPSHOT.jar server.jar
+
+# Set library paths
+ENV LD_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux:$LD_LIBRARY_PATH
+ENV JAVA_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux
+
+EXPOSE 3001
+
+# Run config generation then start server
+CMD ["/bin/sh", "-c", "\
+    echo '=== Starting Application ===' && \
+    echo 'Environment: $APP_ENV' && \
+    echo 'Checking session-keys directory...' && \
+    ls -la /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/ || echo 'Directory not accessible' && \
+    if [ \"$APP_ENV\" = \"prod\" ] || [ \"$APP_ENV\" = \"production\" ]; then \
+        echo 'Generating production config...' && \
+        cd /app && \
+        node src/main/java/com/app/main/root/public/generate-config.js && \
+        echo 'Config generated successfully'; \
+    fi && \
+    echo 'Starting Spring Boot server...' && \
+    exec java -Djava.library.path=/usr/local/lib:/app/lib/native/linux -jar /app/server.jar \
+"]
