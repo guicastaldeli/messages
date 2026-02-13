@@ -16,8 +16,27 @@ class AuthRoutes:
         ## Extract Cookies
         def extractCookies(req: Request) -> Dict[str, str]:
             cookies = {}
-            for k, v in req.cookies.items():
-                cookies[k] = v
+            
+            # Method 1: Try req.cookies (works when client sends cookies properly)
+            if req.cookies:
+                cookies.update(req.cookies)
+                print(f"[Routes] Extracted {len(cookies)} cookies from req.cookies")
+            
+            # Method 2: Try Cookie header (fallback for some clients)
+            cookie_header = req.headers.get('cookie') or req.headers.get('Cookie')
+            if cookie_header and not cookies:
+                # Parse Cookie header manually
+                for item in cookie_header.split(';'):
+                    item = item.strip()
+                    if '=' in item:
+                        key, value = item.split('=', 1)
+                        cookies[key.strip()] = value.strip()
+                print(f"[Routes] Extracted {len(cookies)} cookies from Cookie header")
+            
+            if not cookies:
+                print(f"[Routes] WARNING: No cookies found!")
+                print(f"[Routes] Headers: {dict(req.headers)}")  # Debug: print all headers
+            
             return cookies
         
         ## Set Cookies
