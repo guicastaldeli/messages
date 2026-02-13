@@ -36,9 +36,7 @@ public class KeyManagerService {
      */
     private SecretKey initMasterKey() {
         try {
-            String masterKeyStr = masterKeyEnv != null && !masterKeyEnv.isEmpty()
-                ? masterKeyEnv
-                : ENCRYPTION_MASTER_KEY;
+            String masterKeyStr = ENCRYPTION_MASTER_KEY;
             if(masterKeyStr == null || masterKeyStr.isEmpty()) {
                 System.err.println("No master key configured");
                 return generateMasterKey();
