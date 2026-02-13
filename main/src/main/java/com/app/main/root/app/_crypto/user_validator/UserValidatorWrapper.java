@@ -82,12 +82,10 @@ public class UserValidatorWrapper {
     
     private static void loadLinuxLibraries() {
         try {
-            // Try system library first
             try {
                 System.loadLibrary("user_validator");
                 System.out.println("Loaded user_validator from system path");
             } catch(UnsatisfiedLinkError e) {
-                // Fall back to local .so file
                 Path soPath = Paths.get(DLL_PATH + "libuser_validator.so");
                 if(Files.exists(soPath)) {
                     System.load(soPath.toAbsolutePath().toString());

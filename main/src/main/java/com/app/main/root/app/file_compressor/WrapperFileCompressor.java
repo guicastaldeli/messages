@@ -88,12 +88,10 @@ public class WrapperFileCompressor {
     
     private static void loadLinuxLibraries() {
         try {
-            // Try system library first
             try {
                 System.loadLibrary("file_compressor");
                 System.out.println("Loaded file_compressor from system path");
             } catch(UnsatisfiedLinkError e) {
-                // Fall back to local .so file
                 Path soPath = Paths.get(DLL_PATH + "libfile_compressor.so");
                 if(Files.exists(soPath)) {
                     System.load(soPath.toAbsolutePath().toString());
@@ -171,7 +169,7 @@ public class WrapperFileCompressor {
             return new WithCompressionResult(data, 0);
         }
         
-        if(size < 5 * 1024 * 1024) { // < 5MB
+        if(size < 5 * 1024 * 1024) {
             byte[] data = readFully(inputStream);
             return compress(data);
         }

@@ -82,12 +82,10 @@ public class PasswordEncoderWrapper {
     
     private static void loadLinuxLibraries() {
         try {
-            // Try system library first
             try {
                 System.loadLibrary("passwordencoder");
                 System.out.println("Loaded passwordencoder from system path");
             } catch(UnsatisfiedLinkError e) {
-                // Fall back to local .so file
                 Path soPath = Paths.get(DLL_PATH + "libpasswordencoder.so");
                 if(Files.exists(soPath)) {
                     System.load(soPath.toAbsolutePath().toString());

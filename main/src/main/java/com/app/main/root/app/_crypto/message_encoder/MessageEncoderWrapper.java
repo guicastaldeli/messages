@@ -62,12 +62,10 @@ public class MessageEncoderWrapper {
     
     private static void loadLinuxLibraries() {
         try {
-            // Try system library first
             try {
                 System.loadLibrary("message_encoder");
                 System.out.println("Loaded message_encoder from system path");
             } catch(UnsatisfiedLinkError e) {
-                // Fall back to local .so file
                 Path soPath = Paths.get(DLL_PATH + "libmessage_encoder.so");
                 if(Files.exists(soPath)) {
                     System.load(soPath.toAbsolutePath().toString());

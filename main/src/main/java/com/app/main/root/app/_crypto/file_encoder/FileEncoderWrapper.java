@@ -82,12 +82,10 @@ public class FileEncoderWrapper {
     
     private static void loadLinuxLibraries() {
         try {
-            // Try system library first
             try {
                 System.loadLibrary("fileencoder");
                 System.out.println("Loaded fileencoder from system path");
             } catch(UnsatisfiedLinkError e) {
-                // Fall back to local .so file
                 Path soPath = Paths.get(DLL_PATH + "libfileencoder.so");
                 if(Files.exists(soPath)) {
                     System.load(soPath.toAbsolutePath().toString());
