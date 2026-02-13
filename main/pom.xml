@@ -114,6 +114,7 @@
 					<include>**/*.sql</include>
 					<include>**/*.dat</include>
 					<include>**/*.dll</include>
+					<include>**/*.so</include>
 				</includes>
 			</resource>
 		</resources>
