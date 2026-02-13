@@ -235,12 +235,15 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create directories
+# Create directories - CRITICAL: Create database directories with proper permissions
 RUN mkdir -p \
     /app/lib/native/linux \
-    /app/src/main/java/com/app/main/root/public \
-    /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys && \
-    chmod -R 777 /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys
+    /app/public \
+    /app/db/data \
+    /app/db/src \
+    /app/keys && \
+    chmod -R 777 /app/db && \
+    chmod -R 777 /app/keys
 
 # Copy native libraries to BOTH locations
 COPY --from=build /usr/local/lib/libmessage_encoder.so /usr/local/lib/
@@ -255,10 +258,12 @@ COPY --from=build /usr/local/lib/libpasswordencoder.so /app/lib/native/linux/
 COPY --from=build /usr/local/lib/libuser_validator.so /app/lib/native/linux/
 COPY --from=build /usr/local/lib/libfile_compressor.so /app/lib/native/linux/
 
-# Copy SQL files and config scripts
-COPY --from=build /app/main/src/main/java/com/app/main/root/app/_db/src/*.sql /app/src/main/java/com/app/main/root/app/_db/src/
-COPY --from=build /app/main/src/main/java/com/app/main/root/public/generate-config.js /app/src/main/java/com/app/main/root/public/
-COPY --from=build /app/main/src/main/java/com/app/main/root/public/encrypt-url.js /app/src/main/java/com/app/main/root/public/
+# Copy SQL files to the new standardized location
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_db/src/*.sql /app/db/src/
+
+# Copy config scripts to public directory
+COPY --from=build /app/main/src/main/java/com/app/main/root/public/generate-config.js /app/public/
+COPY --from=build /app/main/src/main/java/com/app/main/root/public/encrypt-url.js /app/public/
 
 # Copy the jar file
 COPY --from=build /app/main/target/main-0.0.1-SNAPSHOT.jar server.jar
@@ -267,16 +272,25 @@ COPY --from=build /app/main/target/main-0.0.1-SNAPSHOT.jar server.jar
 ENV LD_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux:$LD_LIBRARY_PATH
 ENV JAVA_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux
 
+# Set database paths for Docker environment
+ENV DB_DATA_DIR=/app/db/data/
+ENV DB_SQL_DIR=/app/db/src/
+
 EXPOSE 3001
 
 # Run config generation then start server
 CMD ["/bin/sh", "-c", "\
     echo '=== Starting Application ===' && \
     echo 'Environment: $APP_ENV' && \
+    echo 'Database paths:' && \
+    echo '  DATA_DIR: $DB_DATA_DIR' && \
+    echo '  SQL_DIR: $DB_SQL_DIR' && \
+    echo 'Checking SQL files...' && \
+    ls -la /app/db/src/ && \
     if [ \"$APP_ENV\" = \"prod\" ] || [ \"$APP_ENV\" = \"production\" ]; then \
         echo 'Generating production config...' && \
         cd /app && \
-        node src/main/java/com/app/main/root/public/generate-config.js && \
+        node public/generate-config.js && \
         echo 'Config generated successfully'; \
     fi && \
     echo 'Starting Spring Boot server...' && \

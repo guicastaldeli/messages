@@ -1,12 +1,13 @@
 //
-// Auto-generated from .env - DO NOT EDIT MANUALLY
+// Auto-generated from .env.dev - DO NOT EDIT MANUALLY
 // Values are encrypted
+// Generated at: 2026-02-13T20:30:23.920Z
 //
 
 window.ENCRYPTED_CONFIG = {
-    apiGateway: 'd476e7962e649327a30e760db5a7efd1:13855c452c20b025eaecfffded4cdb8a1ad18ef071ebf72c0228a4dc4da0d8a5',
-    serverApi: 'af0e0800e05fef32e3a8d6375e64bdba:bd007c3c40d93efe4a3465fd80020e1a38745b7b2f9cceb27892bbba89b341bb',
-    webUrl: '34942b05415bc796da4931a99c4bb7a9:fa68b1dacf7e410769ae266376ffacf93a55f440e50c8f2d013a0cfa44b5c2c8',
+    apiGateway: 'a15f713fac7000d5ea7beca878a3efee:7b500133724e3228309baeb2b1416979083f3a4c34bb43c83292e368159ebd9d',
+    serverApi: '0e3483296a27af4ac1935aef7563bd39:88c315c0193cb77f767c574c4e1fcd365037cf509a45fbaa6f57e9f2a42b730e',
+    webUrl: 'd26cecfaa3f707a820a00a1ad3a2d418:7d71e48bed1e1c7b0d31eb3c924446aa3147ff5d8238da040a6da9f1bd3ac499',
     key: 'x63uuphvQo1qCK4Y3kh2f77iRVwnUtXckI+eeUJgGng='
 };
 
@@ -65,6 +66,12 @@ window.ENCRYPTED_CONFIG = {
             window.API_URL = await decrypt(window.ENCRYPTED_CONFIG.apiGateway);
             window.SERVER_URL = await decrypt(window.ENCRYPTED_CONFIG.serverApi);
             window.WEB_URL = await decrypt(window.ENCRYPTED_CONFIG.webUrl);
+            
+            console.log('Config decrypted successfully');
+            console.log('WEB_URL:', window.WEB_URL);
+            console.log('API_URL:', window.API_URL);
+            console.log('SERVER_URL:', window.SERVER_URL);
+            
             if(window.configResolve) window.configResolve();
             
             delete window.ENCRYPTED_CONFIG;
