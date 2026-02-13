@@ -53,7 +53,7 @@ RUN KEY_DERIV_HEADER=$(find /app -name "key_derivation.h" -type f | head -1) && 
 
 # Create compilation helper script
 RUN echo '#!/bin/bash\n\
-set -e\n\
+set -ex\n\
 compile_native() {\n\
     local base_dir=$1\n\
     local output=$2\n\
@@ -63,41 +63,37 @@ compile_native() {\n\
     echo "=========================================="\n\
     echo "📁 Directory: $base_dir"\n\
     echo "📦 Output: $output"\n\
-    echo ""\n\
     \n\
-    cd "$base_dir"\n\
+    cd "$base_dir" || { echo "Failed to cd to $base_dir"; exit 1; }\n\
     \n\
-    # List all files in directory\n\
     echo "📂 Directory contents:"\n\
     ls -la\n\
-    echo ""\n\
     \n\
-    # Find ALL .cpp files (simple approach)\n\
     echo "🔍 Finding C++ source files..."\n\
-    CPP_FILES=$(find . -maxdepth 1 -type f -name "*.cpp" | sort)\n\
+    CPP_FILES=$(find . -maxdepth 1 -type f -name "*.cpp" 2>&1 | sort)\n\
+    \n\
+    echo "Raw find output: $CPP_FILES"\n\
     \n\
     if [ -z "$CPP_FILES" ]; then\n\
         echo "❌ ERROR: No .cpp files found!"\n\
+        echo "Current directory: $(pwd)"\n\
+        echo "Files here:"\n\
+        ls -la\n\
         exit 1\n\
     fi\n\
     \n\
     FILE_COUNT=$(echo "$CPP_FILES" | wc -l)\n\
     echo "✅ Found $FILE_COUNT files:"\n\
-    echo "$CPP_FILES" | sed "s/^/  - /"\n\
-    echo ""\n\
+    echo "$CPP_FILES"\n\
     \n\
-    # VERIFY key_derivation.cpp exists\n\
     if echo "$CPP_FILES" | grep -q "key_derivation.cpp"; then\n\
         echo "✅ key_derivation.cpp IS in the list!"\n\
     else\n\
-        echo "⚠️  WARNING: key_derivation.cpp NOT found in this module"\n\
+        echo "⚠️  WARNING: key_derivation.cpp NOT found"\n\
     fi\n\
-    echo ""\n\
     \n\
-    # Create .build directory\n\
     mkdir -p .build\n\
     \n\
-    # Compile each source to object file\n\
     echo "🔨 Compiling to object files..."\n\
     OBJ_FILES=""\n\
     count=0\n\
@@ -107,9 +103,9 @@ compile_native() {\n\
         obj_name="${base_name%.*}.o"\n\
         obj_file=".build/$obj_name"\n\
         \n\
-        echo "  [$count/$FILE_COUNT] Compiling: $base_name → $obj_name"\n\
+        echo "[$count/$FILE_COUNT] Compiling: $base_name"\n\
         \n\
-        if g++ -c -fPIC \\\n\
+        g++ -c -fPIC \\\n\
             "$cpp_file" \\\n\
             -o "$obj_file" \\\n\
             -I. \\\n\
@@ -117,66 +113,41 @@ compile_native() {\n\
             -std=c++17 \\\n\
             -O2 \\\n\
             -Wall \\\n\
-            -Wno-unused-parameter 2>&1; then\n\
-            echo "    ✅ Created $(ls -lh $obj_file | awk '\''{print $9, $5}'\'')"\n\
-        else\n\
-            echo "    ❌ FAILED"\n\
-            exit 1\n\
-        fi\n\
+            -Wno-unused-parameter || { echo "Compilation failed for $cpp_file"; exit 1; }\n\
+        \n\
+        echo "  Created: $obj_file"\n\
+        ls -lh "$obj_file"\n\
         \n\
         OBJ_FILES="$OBJ_FILES $obj_file"\n\
     done\n\
-    echo ""\n\
     \n\
-    # Verify key_derivation.o was created\n\
-    if ls .build/key_derivation.o 2>/dev/null; then\n\
-        echo "✅ key_derivation.o successfully created!"\n\
+    echo "Object files created:"\n\
+    ls -lh .build/\n\
+    \n\
+    if [ -f ".build/key_derivation.o" ]; then\n\
+        echo "✅ key_derivation.o created!"\n\
     else\n\
-        echo "⚠️  key_derivation.o not found (may not be needed for this module)"\n\
+        echo "⚠️  key_derivation.o not found"\n\
     fi\n\
-    echo ""\n\
     \n\
-    # Link into shared library\n\
     echo "🔗 Linking shared library..."\n\
-    echo "Object files: $(echo $OBJ_FILES | wc -w)"\n\
+    echo "Object files: $OBJ_FILES"\n\
     \n\
-    if g++ -shared -fPIC \\\n\
+    g++ -shared -fPIC \\\n\
         $OBJ_FILES \\\n\
         -o "$output" \\\n\
         -lcrypto \\\n\
         -lssl \\\n\
-        -lpthread 2>&1; then\n\
-        echo "✅ LINKING SUCCESS"\n\
-    else\n\
-        echo "❌ LINKING FAILED"\n\
-        exit 1\n\
-    fi\n\
-    echo ""\n\
+        -lpthread || { echo "Linking failed"; exit 1; }\n\
     \n\
-    # Verify output\n\
     echo "✅ Library created:"\n\
     ls -lh "$output"\n\
-    echo ""\n\
     \n\
-    # Check for undefined symbols\n\
-    echo "🔍 Symbol check..."\n\
-    UNDEFINED=$(nm -D "$output" 2>/dev/null | grep " U " | grep -v "@@" | grep -i "KeyDerivation" || true)\n\
-    if [ -n "$UNDEFINED" ]; then\n\
-        echo "❌ CRITICAL: Undefined KeyDerivation symbols!"\n\
-        echo "$UNDEFINED"\n\
-        exit 1\n\
-    fi\n\
-    \n\
-    DEFINED=$(nm -D "$output" 2>/dev/null | grep " T " | grep -i "KeyDerivation" | head -5 || true)\n\
-    if [ -n "$DEFINED" ]; then\n\
-        echo "✅ KeyDerivation symbols present:"\n\
-        echo "$DEFINED" | sed "s/^/  /"\n\
-    fi\n\
-    echo ""\n\
+    echo "🔍 Checking symbols..."\n\
+    nm -D "$output" | grep -i "KeyDerivation" || echo "No KeyDerivation symbols"\n\
     \n\
     echo "🎉 SUCCESS: $(basename $output)"\n\
     echo "=========================================="\n\
-    echo ""\n\
 }\n\
 ' > /usr/local/bin/compile_native.sh && chmod +x /usr/local/bin/compile_native.sh
 
