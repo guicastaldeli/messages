@@ -37,28 +37,26 @@ export class CookieService {
      * Get Value
      */
     public static getValue(name: string): string | null {
-        if(typeof document === 'undefined') return null;
+    if(typeof document === 'undefined') return null;
+    
+    console.log('=== CookieService.getValue DEBUG ===');
+    console.log(`[CookieService] Looking for: ${name}`);
+    console.log(`[CookieService] All cookies:`, document.cookie);
 
-        /*
-        console.log('=== CookieService.getValue DEBUG ===');
-        console.log('Looking for cookie:', name);
-        console.log('All cookies string:', document.cookie);
-        */
-        
-        const cookies = document.cookie.split(';');
-        //console.log('Split cookies:', cookies);
-        
-        for(let cookie of cookies) {
-            const [cookieName, cookieVal] = cookie.trim().split('=');
-            //console.log('Checking:', cookieName, 'value:', cookieVal);
-            if(cookieName === name) {
-                //console.log('Found cookie:', name, 'value:', cookieVal);
-                return decodeURIComponent(cookieVal);
-            }
+    console.log('====-----------------------------===');
+    
+    const cookies = document.cookie.split(';');
+    for(let cookie of cookies) {
+        const [cookieName, cookieVal] = cookie.trim().split('=');
+        if(cookieName === name) {
+            const value = decodeURIComponent(cookieVal);
+            console.log(`[CookieService] Found ${name}:`, value);
+            return value;
         }
-        //console.log('Cookie not found:', name);
-        return null;
     }
+    console.log(`[CookieService] Cookie not found: ${name}`);
+    return null;
+}
 
     /**
      * Delete Cookie
