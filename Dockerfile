@@ -27,6 +27,8 @@ COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/user_val
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so /usr/local/lib/
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so /usr/local/lib/
 
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_db/src/*.sql /app/src/main/java/com/app/main/root/app/_db/src/
+
 # Set library paths
 ENV LD_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux:$LD_LIBRARY_PATH
 ENV JAVA_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux

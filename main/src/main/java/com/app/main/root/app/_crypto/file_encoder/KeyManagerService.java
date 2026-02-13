@@ -3,7 +3,6 @@ import com.app.main.root.EnvConfig;
 import com.app.main.root.app._db.CommandQueryManager;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import java.util.Map;
 import java.util.List;
 import java.util.Base64;
