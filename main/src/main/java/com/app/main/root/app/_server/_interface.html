@@ -8,10 +8,10 @@
             window.configResolve = resolve;
         });
     </script>
-    <script src="/main/public/url.js"></script>
+    <script th:inline="javascript" src="/main/public/url.js"></script>
     <script th:inline="javascript" src="/main/public/api-url.js"></script>
     <script>
-        if (typeof window.configResolve === 'function') {
+        if(typeof window.configResolve === 'function') {
             console.log('Configurations loaded, resolving promise...');
             window.configResolve();
         }
