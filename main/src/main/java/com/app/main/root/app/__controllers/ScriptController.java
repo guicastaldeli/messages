@@ -28,7 +28,6 @@ public class ScriptController {
     @ResponseBody
     public ResponseEntity<String> getApiUrl() {
         try {
-            // Try external file first (runtime generated)
             File externalFile = new File("/app/src/main/java/com/app/main/root/public/api-url.js");
             if (externalFile.exists()) {
                 System.out.println("✅ Serving api-url.js from external file: " + externalFile.getAbsolutePath());
@@ -38,14 +37,13 @@ public class ScriptController {
                         .body(content);
             }
             
-            // Fallback to classpath (bundled)
-            System.out.println("⚠️  External file not found, serving from classpath");
+            System.out.println("External file not found, serving from classpath");
             String content = loadFile("com/app/main/root/public/api-url.js");
             return ResponseEntity.ok()
                     .contentType(MediaType.valueOf("application/javascript"))
                     .body(content);
         } catch(Exception err) {
-            System.out.println("❌ Error loading api-url.js: " + err.getMessage());
+            System.out.println("Error loading api-url.js: " + err.getMessage());
             err.printStackTrace();
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
