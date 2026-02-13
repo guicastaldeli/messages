@@ -4,7 +4,6 @@ import com.app.main.root.app._data.CommandSystemMessageList;
 import com.app.main.root.app._types.File;
 import com.app.main.root.app._types.Message;
 import com.app.main.root.app._types.User;
-
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import java.sql.SQLException;
