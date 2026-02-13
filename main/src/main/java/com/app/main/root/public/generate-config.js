@@ -2,7 +2,24 @@ const path = require('path');
 const fs = require('fs');
 const { encrypt } = require('./encrypt-url');
 
-const envPath = path.join(__dirname, '..', '.env-config', '.env.dev');
+const appEnv = process.env.APP_ENV || 'dev';
+const envPath = path.join(__dirname, '..', '.env-config', `.env.${appEnv}`);
+
+console.log('APP_ENV:', appEnv);
+console.log('Looking for .env at:', envPath);
+console.log('.env exists?', fs.existsSync(envPath));
+
+if(!fs.existsSync(envPath)) {
+    if (!process.env.ENCRYPTION_MASTER_KEY || !process.env.API_URL || 
+        !process.env.SERVER_URL || !process.env.WEB_URL) {
+        console.error('ERROR: Required environment variables not set');
+        console.error('Required: ENCRYPTION_MASTER_KEY, API_URL, SERVER_URL, WEB_URL');
+        process.exit(1);
+    }
+} else {
+    require('dotenv').config({ path: envPath });
+}
+
 
 console.log('Looking for .env at:', envPath);
 console.log('.env exists?', fs.existsSync(envPath));
