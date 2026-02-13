@@ -49,19 +49,18 @@ class AuthRoutes:
             for k, v in cookies.items():
                 encoded_value = urllib.parse.quote(str(v), safe='')
                 
-                # Use SameSite=Lax instead of None - more compatible
+                # CRITICAL: Use SameSite=None for cross-origin requests
+                # This allows cookies to be sent from vercel.app to onrender.com
                 res.set_cookie(
                     key=k,
                     value=encoded_value,
                     httponly=k in ["JSESSIONID", "SESSION_ID", "auth_token"],
-                    secure=True,  # Keep secure for HTTPS
-                    samesite="lax",  # CHANGE from "none" to "lax"
-                    # REMOVE domain - let browser set to current domain
-                    # domain=".onrender.com",  # COMMENT THIS OUT
+                    secure=True,      # MUST be True for SameSite=None
+                    samesite="none",  # ← CHANGED from "lax" to "none"
                     path="/",
                     max_age=7 * 24 * 60 * 60 if k in ["JSESSIONID", "REMEMBER_USER"] else None
                 )
-                print(f"[Auth] Set cookie {k} with samesite=lax")
+                print(f"[Auth] Set cookie {k} with samesite=none, secure=true")
         
         ## Register
         @self.router.post("/register")
@@ -219,6 +218,3 @@ class AuthRoutes:
                     return { "authenticated": False }
             except Exception as err:
                 return { "authenticated": False }
-                
-    
-            
