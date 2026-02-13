@@ -20,36 +20,29 @@ class AuthRoutes:
             return cookies
         
         ## Set Cookies
-        import urllib.parse
-
         def setCookies(res: Response, cookies: Dict[str, Any]):
             if not cookies:
-                print("[Auth] No cookies to set!")
                 return
             
-            print(f"[Auth] Setting {len(cookies)} cookies in browser: {list(cookies.keys())}")
-            
-            # FORCE production settings since we're on Render
-            is_production = True
+            print(f"[Auth] Setting cookies in browser: {list(cookies.keys())}")
             
             for k, v in cookies.items():
-                # URL encode the cookie value to handle special characters
                 encoded_value = urllib.parse.quote(str(v), safe='')
                 
-                is_http_only = k in ["JSESSIONID", "SESSION_ID", "auth_token"]
-                
+                # Use SameSite=Lax instead of None - more compatible
                 res.set_cookie(
                     key=k,
-                    value=encoded_value,  # Use encoded value!
-                    httponly=is_http_only,
-                    secure=True,
-                    samesite="none",
-                    domain=".onrender.com",
+                    value=encoded_value,
+                    httponly=k in ["JSESSIONID", "SESSION_ID", "auth_token"],
+                    secure=True,  # Keep secure for HTTPS
+                    samesite="lax",  # CHANGE from "none" to "lax"
+                    # REMOVE domain - let browser set to current domain
+                    # domain=".onrender.com",  # COMMENT THIS OUT
                     path="/",
                     max_age=7 * 24 * 60 * 60 if k in ["JSESSIONID", "REMEMBER_USER"] else None
                 )
-                print(f"[Auth] Set cookie {k} (encoded) with domain=.onrender.com, secure=True, samesite=none")
-                
+                print(f"[Auth] Set cookie {k} with samesite=lax")
+        
         ## Register
         @self.router.post("/register")
         async def registerUser(
