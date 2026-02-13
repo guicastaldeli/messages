@@ -21,16 +21,49 @@ class AuthRoutes:
         
         ## Set Cookies
         def setCookies(res: Response, cookies: Dict[str, Any]):
-            if(cookies):
-                for k, v in cookies.items():
+            if not cookies:
+                print("[Auth] No cookies to set!")
+                return
+            
+            print(f"[Auth] Setting {len(cookies)} cookies in browser: {list(cookies.keys())}")
+            
+            for k, v in cookies.items():
+                # For debugging - try a non-HttpOnly version first
+                is_http_only = k in ["SESSION_ID", "auth_token"]
+                
+                # Try multiple cookie setting strategies
+                cookie_kwargs = {
+                    "key": k,
+                    "value": v,
+                    "httponly": is_http_only,
+                    "secure": False,  # Temporarily False for debugging
+                    "samesite": "lax",
+                    "path": "/",
+                    "max_age": 7 * 24 * 60 * 60 if k == "SESSION_ID" else None
+                }
+                
+                # Set the cookie
+                res.set_cookie(**cookie_kwargs)
+                print(f"[Auth] Set cookie {k} (HttpOnly: {is_http_only})")
+                
+                # Also try setting without HttpOnly as a backup for debugging
+                if is_http_only:
                     res.set_cookie(
-                        key=k,
+                        key=f"{k}_DEBUG",
                         value=v,
-                        httponly=k in ["SESSION_ID", "auth_token"],
+                        httponly=False,
                         secure=False,
                         samesite="lax",
-                        max_age=7 * 24 * 60 * 60 if k == "SESSION_ID" else None
+                        path="/"
                     )
+                    print(f"[Auth] Also set debug cookie {k}_DEBUG")
+            
+            # Force the cookies to be written by modifying headers directly
+            # This is a more direct approach
+            for k, v in cookies.items():
+                cookie_str = f"{k}={v}; Path=/; SameSite=Lax"
+                res.headers.append("Set-Cookie", cookie_str)
+                print(f"[Auth] Added raw cookie header: {cookie_str}")
         
         ## Register
         @self.router.post("/register")
