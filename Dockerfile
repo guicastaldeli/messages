@@ -220,31 +220,29 @@ RUN /usr/local/bin/compile_native.sh
 RUN cd main && mvn clean package -DskipTests && \
     echo "✅ SPRING BOOT BUILD COMPLETED"
 
-# Final runtime stage - using slim JRE for smaller image size
-FROM eclipse-temurin:21-jre-jammy
+# Final runtime stage
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y \
         curl \
+        nodejs \
         libssl3 \
         libstdc++6 \
-        sqlite3 \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create directories with proper permissions for Render
+# Create directories
 RUN mkdir -p \
     /app/lib/native/linux \
     /app/src/main/java/com/app/main/root/public \
-    /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys \
-    /app/data/db \
-    /app/sql && \
-    chmod -R 755 /app/data/db
+    /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys && \
+    chmod -R 777 /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys
 
-# Copy native libraries
+# Copy native libraries to BOTH locations
 COPY --from=build /usr/local/lib/libmessage_encoder.so /usr/local/lib/
 COPY --from=build /usr/local/lib/libfileencoder.so /usr/local/lib/
 COPY --from=build /usr/local/lib/libpasswordencoder.so /usr/local/lib/
@@ -257,53 +255,30 @@ COPY --from=build /usr/local/lib/libpasswordencoder.so /app/lib/native/linux/
 COPY --from=build /usr/local/lib/libuser_validator.so /app/lib/native/linux/
 COPY --from=build /usr/local/lib/libfile_compressor.so /app/lib/native/linux/
 
-# Copy SQL files to the SQL directory
-COPY --from=build /app/main/src/main/java/com/app/main/root/app/_db/src/*.sql /app/sql/
-
-# Copy config scripts
+# Copy SQL files and config scripts
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_db/src/*.sql /app/src/main/java/com/app/main/root/app/_db/src/
 COPY --from=build /app/main/src/main/java/com/app/main/root/public/generate-config.js /app/src/main/java/com/app/main/root/public/
 COPY --from=build /app/main/src/main/java/com/app/main/root/public/encrypt-url.js /app/src/main/java/com/app/main/root/public/
 
 # Copy the jar file
 COPY --from=build /app/main/target/main-0.0.1-SNAPSHOT.jar server.jar
 
-# Set environment variables for database paths
-ENV DB_DATA_DIR=/app/data/db/
-ENV DB_SQL_DIR=/app/sql/
+# Set library paths
 ENV LD_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux:$LD_LIBRARY_PATH
 ENV JAVA_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux
 
-# Render uses /opt/render/project/src as the working directory in some cases
-# But we'll use /app for consistency
-
 EXPOSE 3001
 
-# Create a startup script
-RUN echo '#!/bin/bash\n\
-echo "=== Starting Application on Render ==="\n\
-echo "Environment: $APP_ENV"\n\
-echo "Port: $PORT"\n\
-echo "Database directory: /app/data/db"\n\
-echo "SQL directory: /app/sql"\n\
-echo ""\n\
-echo "📂 SQL files available:"\n\
-ls -la /app/sql/\n\
-echo ""\n\
-echo "📂 Database directory:"\n\
-ls -la /app/data/db/ || echo "Directory empty"\n\
-echo ""\n\
-if [ "$APP_ENV" = "prod" ] || [ "$APP_ENV" = "production" ]; then \n\
-    echo "Generating production config..."\n\
-    cd /app && node src/main/java/com/app/main/root/public/generate-config.js\n\
-    echo "Config generated successfully"\n\
-fi\n\
-echo ""\n\
-echo "Starting Spring Boot server on port ${PORT:-3001}..."\n\
-exec java \
-    -Djava.library.path=/usr/local/lib:/app/lib/native/linux \
-    -Dserver.port=${PORT:-3001} \
-    -jar /app/server.jar\n\
-' > /app/start.sh && chmod +x /app/start.sh
-
-# Use the startup script
-CMD ["/app/start.sh"]
+# Run config generation then start server
+CMD ["/bin/sh", "-c", "\
+    echo '=== Starting Application ===' && \
+    echo 'Environment: $APP_ENV' && \
+    if [ \"$APP_ENV\" = \"prod\" ] || [ \"$APP_ENV\" = \"production\" ]; then \
+        echo 'Generating production config...' && \
+        cd /app && \
+        node src/main/java/com/app/main/root/public/generate-config.js && \
+        echo 'Config generated successfully'; \
+    fi && \
+    echo 'Starting Spring Boot server...' && \
+    exec java -Djava.library.path=/usr/local/lib:/app/lib/native/linux -jar /app/server.jar \
+"]
