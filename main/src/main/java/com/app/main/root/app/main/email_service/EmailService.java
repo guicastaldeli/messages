@@ -15,17 +15,20 @@ public class EmailService {
 
     @Autowired private EmailDocumentParser emailDocumentParser;
 
-    @Value("${email.smtp.host:smtp.gmail.com}")
+    @Value("${email.smtp.host:smtp.sendgrid.net}")
     private String smtpHost;
 
     @Value("${email.smtp.port:587}")
     private String smtpPort;
 
-    @Value("${email.username}")
+    @Value("${email.username:apikey}")
     private String emailUsername;
 
-    @Value("${email.password}")
+    @Value("${email.password:}")
     private String emailPassword;
+    
+    @Value("${email.from:app.messages.noreply@gmail.com}")
+    private String fromEmail;
 
     @Value("${web.url:{webUrlSrc}}")
     private String webUrl;
@@ -48,6 +51,9 @@ public class EmailService {
         props.put("mail.smtp.port", smtpPort);
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.connectiontimeout", "5000");
+        props.put("mail.smtp.timeout", "5000");
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
 
         Session session = Session.getInstance(props, new Authenticator() {
             @Override
@@ -55,11 +61,33 @@ public class EmailService {
                 return new PasswordAuthentication(emailUsername, emailPassword);
             }
         });
+        
+        session.setDebug(true);
 
         Message message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(emailUsername));
+        message.setFrom(new InternetAddress(fromEmail));
         message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
+        
+        String subject = extractSubject(body);
+        message.setSubject(subject);
+        
         message.setContent(body, "text/html; charset=utf-8");
         Transport.send(message);
+        
+        System.out.println("Email sent successfully to: " + toEmail);
+    }
+    
+    /**
+     * Extract subject from HTML body or use default
+     */
+    private String extractSubject(String htmlBody) {
+        if(htmlBody.contains("<title>")) {
+            int start = htmlBody.indexOf("<title>") + 7;
+            int end = htmlBody.indexOf("</title>", start);
+            if(start > 6 && end > start) {
+                return htmlBody.substring(start, end);
+            }
+        }
+        return "Messages App Notification";
     }
 }
