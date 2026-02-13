@@ -27,7 +27,7 @@ public class LoadBalancer {
                 if(parts.length == 2) {
                     String serverId = parts[0];
                     String port = parts[1];
-                    String url = DEFAULT_URL + port;
+                    String url = DEFAULT_URL + ":" + port;
                     registerServer(serverId, url);
                     System.out.println("Registered server: " + serverId + " at " + url);
                 }
