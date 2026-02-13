@@ -23,9 +23,6 @@ public class KeyManagerService {
     private static final String CIPHER_MODE = "AES";
     private static final int KEY_SIZE = 256;
 
-    @Value("${encryption.master-key}")
-    private String masterKeyEnv;
-
     public KeyManagerService(Map<String, JdbcTemplate> jdbcTemplates) {
         this.jdbcTemplates = jdbcTemplates;
         this.masterKey = initMasterKey();
