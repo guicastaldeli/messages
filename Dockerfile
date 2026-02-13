@@ -200,7 +200,7 @@ compile_native() {\n\
 }\n\
 ' > /usr/local/bin/compile_native.sh && chmod +x /usr/local/bin/compile_native.sh
 
-# Compile message_encoder with EXTENSIVE DEBUG
+# Compile all native libraries (keeping your existing compilation steps)
 RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: message_encoder" && \
@@ -215,7 +215,6 @@ RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo ""
 
-# Compile file_encoder
 RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: file_encoder" && \
@@ -230,7 +229,6 @@ RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo ""
 
-# Compile password_encoder
 RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: password_encoder" && \
@@ -245,7 +243,6 @@ RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo ""
 
-# Compile user_validator
 RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: user_validator" && \
@@ -260,7 +257,6 @@ RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo ""
 
-# Compile file_compressor
 RUN echo "" && \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: file_compressor" && \
@@ -303,8 +299,12 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create directories
-RUN mkdir -p /app/lib/native/linux /app/src/main/java/com/app/main/root/public
+# Create directories INCLUDING the sessions keys directory
+RUN mkdir -p \
+    /app/lib/native/linux \
+    /app/src/main/java/com/app/main/root/public \
+    /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys && \
+    chmod -R 777 /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys
 
 # Copy the freshly built native libraries to both locations
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so /usr/local/lib/
@@ -324,6 +324,9 @@ COPY --from=build /app/main/src/main/java/com/app/main/root/app/_db/src/*.sql /a
 COPY --from=build /app/main/src/main/java/com/app/main/root/public/generate-config.js /app/src/main/java/com/app/main/root/public/
 COPY --from=build /app/main/src/main/java/com/app/main/root/public/encrypt-url.js /app/src/main/java/com/app/main/root/public/
 
+# Copy existing session-keys.dat if it exists (won't fail if it doesn't exist)
+COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/
+
 # Copy the jar file
 COPY --from=build /app/main/target/main-0.0.1-SNAPSHOT.jar server.jar
 
@@ -337,6 +340,8 @@ EXPOSE 3001
 CMD ["/bin/sh", "-c", "\
     echo '=== Starting Application ===' && \
     echo 'Environment: $APP_ENV' && \
+    echo 'Checking session-keys directory...' && \
+    ls -la /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/ || echo 'Directory not accessible' && \
     if [ \"$APP_ENV\" = \"prod\" ] || [ \"$APP_ENV\" = \"production\" ]; then \
         echo 'Generating production config...' && \
         cd /app && \
