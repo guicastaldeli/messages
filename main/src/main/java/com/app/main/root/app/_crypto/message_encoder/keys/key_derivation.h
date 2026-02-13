@@ -18,6 +18,11 @@ public:
     );
     
     static std::vector<unsigned char> KDF_CK(const std::vector<unsigned char>& chainKey);
+
+    static std::vector<unsigned char> KDF_R(
+        const std::vector<unsigned char>& key1,
+        const std::vector<unsigned char>& key2
+    );
 };
 
 #endif

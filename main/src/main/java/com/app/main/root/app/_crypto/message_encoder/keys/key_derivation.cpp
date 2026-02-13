@@ -90,6 +90,13 @@ std::vector<unsigned char> KeyDerivation::KDF_RK(
     return HKDF(rootKey, dhOutput, info, 64);
 }
 
+std::vector<unsigned char> KeyDerivation::KDF_R(
+    const std::vector<unsigned char>& key1,
+    const std::vector<unsigned char>& key2
+) {
+    return KDF_RK(key1, key2);
+}
+
 std::vector<unsigned char> KeyDerivation::KDF_CK(const std::vector<unsigned char>& chainKey) {
     if(chainKey.size() != 32) throw std::runtime_error("chain key must be 32 bytes!");
 
