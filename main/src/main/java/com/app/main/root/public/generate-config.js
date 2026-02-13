@@ -9,47 +9,63 @@ console.log('APP_ENV:', appEnv);
 console.log('Looking for .env at:', envPath);
 console.log('.env exists?', fs.existsSync(envPath));
 
-if(!fs.existsSync(envPath)) {
-    if (!process.env.ENCRYPTION_MASTER_KEY || !process.env.API_URL || 
-        !process.env.SERVER_URL || !process.env.WEB_URL) {
-        console.error('ERROR: Required environment variables not set');
+if(!process.env.API_URL || !process.env.SERVER_URL || !process.env.WEB_URL) {
+    console.log('Environment variables not found, loading from .env file...');
+    
+    if (!fs.existsSync(envPath)) {
+        console.error('ERROR: .env file not found and environment variables not set');
         console.error('Required: ENCRYPTION_MASTER_KEY, API_URL, SERVER_URL, WEB_URL');
         process.exit(1);
     }
-} else {
+    
     require('dotenv').config({ path: envPath });
+} else {
+    console.log(' Using environment variables (production mode)');
 }
 
-
-console.log('Looking for .env at:', envPath);
-console.log('.env exists?', fs.existsSync(envPath));
-
-require('dotenv').config({ path: envPath });
-
 const encryptionKey = process.env.ENCRYPTION_MASTER_KEY;
+const apiUrl = process.env.API_URL;
+const serverUrl = process.env.SERVER_URL;
+const webUrl = process.env.WEB_URL;
 
-if(!encryptionKey) {
-    console.error('ERROR: ENCRYPTION_MASTER_KEY not found in .env');
+console.log('=== Configuration Values ===');
+console.log('API_URL:', apiUrl);
+console.log('SERVER_URL:', serverUrl);
+console.log('WEB_URL:', webUrl);
+console.log('===========================');
+
+if (!encryptionKey) {
+    console.error('ERROR: ENCRYPTION_MASTER_KEY not found');
+    process.exit(1);
+}
+
+if (!apiUrl || !serverUrl || !webUrl) {
+    console.error('ERROR: Missing required URLs');
+    console.error('API_URL:', apiUrl);
+    console.error('SERVER_URL:', serverUrl);
+    console.error('WEB_URL:', webUrl);
     process.exit(1);
 }
 
 const keyBuffer = Buffer.from(encryptionKey, 'base64');
 console.log('Encryption key length:', keyBuffer.length, 'bytes');
 
-if(keyBuffer.length !== 32) {
+if (keyBuffer.length !== 32) {
     console.error('ERROR: ENCRYPTION_MASTER_KEY must be 32 bytes (256 bits) for AES-256');
     console.error('Current length:', keyBuffer.length, 'bytes');
     process.exit(1);
 }
 
-const encryptedApiUrl = encrypt(process.env.API_URL, encryptionKey);
-const encryptedServerUrl = encrypt(process.env.SERVER_URL, encryptionKey);
-const encryptedWebUrl = encrypt(process.env.WEB_URL, encryptionKey);
+console.log('Encrypting URLs...');
+const encryptedApiUrl = encrypt(apiUrl, encryptionKey);
+const encryptedServerUrl = encrypt(serverUrl, encryptionKey);
+const encryptedWebUrl = encrypt(webUrl, encryptionKey);
 
 const config = `
 //
-// Auto-generated from .env - DO NOT EDIT MANUALLY
+// Auto-generated from .env.${appEnv} - DO NOT EDIT MANUALLY
 // Values are encrypted
+// Generated at: ${new Date().toISOString()}
 //
 
 window.ENCRYPTED_CONFIG = {
@@ -114,6 +130,12 @@ window.ENCRYPTED_CONFIG = {
             window.API_GATEWAY_URL = await decrypt(window.ENCRYPTED_CONFIG.apiGateway);
             window.SERVER_API_URL = await decrypt(window.ENCRYPTED_CONFIG.serverApi);
             window.WEB_URL = await decrypt(window.ENCRYPTED_CONFIG.webUrl);
+            
+            console.log('Config decrypted successfully');
+            console.log('WEB_URL:', window.WEB_URL);
+            console.log('API_GATEWAY_URL:', window.API_GATEWAY_URL);
+            console.log('SERVER_API_URL:', window.SERVER_API_URL);
+            
             if(window.configResolve) window.configResolve();
             
             delete window.ENCRYPTED_CONFIG;
@@ -127,4 +149,5 @@ window.ENCRYPTED_CONFIG = {
 const outputPath = path.join(__dirname, 'api-url.js');
 
 fs.writeFileSync(outputPath, config.trim());
-console.log('configuration generated at:', outputPath);
+console.log('Configuration generated at:', outputPath);
+console.log('Environment:', appEnv);
