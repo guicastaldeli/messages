@@ -180,6 +180,28 @@ compile_native() {\n\
 }\n\
 ' > /usr/local/bin/compile_native.sh && chmod +x /usr/local/bin/compile_native.sh
 
+# PRE-COMPILATION VERIFICATION
+RUN echo "═══════════════════════════════════════════" && \
+    echo "PRE-COMPILATION VERIFICATION" && \
+    echo "═══════════════════════════════════════════" && \
+    for module in message_encoder password_encoder user_validator file_encoder; do \
+        echo ""; \
+        echo "Checking module: $module"; \
+        MODULE_DIR="main/src/main/java/com/app/main/root/app/_crypto/$module"; \
+        echo "Directory: $MODULE_DIR"; \
+        if [ -f "$MODULE_DIR/key_derivation.cpp" ]; then \
+            echo "✅ key_derivation.cpp EXISTS"; \
+            ls -lh "$MODULE_DIR/key_derivation.cpp"; \
+        else \
+            echo "❌ key_derivation.cpp MISSING!"; \
+            echo "Contents of $MODULE_DIR:"; \
+            ls -la "$MODULE_DIR" | grep ".cpp" || echo "No .cpp files"; \
+            exit 1; \
+        fi; \
+    done && \
+    echo "═══════════════════════════════════════════" && \
+    echo ""
+
 # Compile all native libraries
 RUN echo "🚀 COMPILING ALL NATIVE LIBRARIES 🚀" && \
     echo "" && \
@@ -199,6 +221,36 @@ RUN echo "🚀 COMPILING ALL NATIVE LIBRARIES 🚀" && \
         main/src/main/java/com/app/main/root/app/file_compressor \
         main/src/main/java/com/app/main/root/app/file_compressor/.build/libfile_compressor.so && \
     echo "✅ ALL COMPILATIONS COMPLETE"
+
+# POST-COMPILATION VERIFICATION
+RUN echo "" && \
+    echo "═══════════════════════════════════════════" && \
+    echo "POST-COMPILATION SYMBOL VERIFICATION" && \
+    echo "═══════════════════════════════════════════" && \
+    for lib in \
+        main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so \
+        main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so; do \
+        echo ""; \
+        echo "Checking: $(basename $lib)"; \
+        echo "-------------------------------------------"; \
+        if nm -D "$lib" 2>/dev/null | grep -i "KeyDerivation" | grep " T " > /dev/null; then \
+            echo "✅ KeyDerivation symbols FOUND:"; \
+            nm -D "$lib" | grep -i "KeyDerivation" | grep " T " | head -3; \
+        else \
+            echo "❌❌❌ CRITICAL ERROR: No KeyDerivation symbols!"; \
+            echo "This library will fail at runtime!"; \
+            echo ""; \
+            echo "All defined symbols:"; \
+            nm -D "$lib" | grep " T " | head -10; \
+            echo ""; \
+            echo "Undefined symbols:"; \
+            nm -D "$lib" | grep " U " | head -10; \
+            exit 1; \
+        fi; \
+    done && \
+    echo "═══════════════════════════════════════════" && \
+    echo "✅ ALL SYMBOL VERIFICATIONS PASSED" && \
+    echo "═══════════════════════════════════════════"
 
 # Build Spring Boot application
 RUN cd main && mvn clean package -DskipTests && \
@@ -257,8 +309,26 @@ EXPOSE 3001
 CMD ["/bin/sh", "-c", "\
     echo '=== Starting Application ===' && \
     echo 'Environment: $APP_ENV' && \
-    echo 'Checking libraries...' && \
-    ls -la /usr/local/lib/*.so && \
+    echo '' && \
+    echo '=== LIBRARY VERIFICATION ===' && \
+    echo 'Libraries in /usr/local/lib:' && \
+    ls -lh /usr/local/lib/*.so && \
+    echo '' && \
+    echo '=== CHECKING libmessage_encoder.so SYMBOLS ===' && \
+    echo 'Checking for KeyDerivation symbols...' && \
+    nm -D /usr/local/lib/libmessage_encoder.so | grep KeyDerivation || echo 'WARNING: No KeyDerivation symbols found!' && \
+    echo '' && \
+    echo 'Undefined symbols in libmessage_encoder.so:' && \
+    nm -D /usr/local/lib/libmessage_encoder.so | grep ' U ' | head -20 && \
+    echo '' && \
+    echo 'Defined symbols in libmessage_encoder.so:' && \
+    nm -D /usr/local/lib/libmessage_encoder.so | grep ' T ' | head -20 && \
+    echo '' && \
+    echo 'Library dependencies:' && \
+    ldd /usr/local/lib/libmessage_encoder.so && \
+    echo '' && \
+    echo '=== END VERIFICATION ===' && \
+    echo '' && \
     echo 'Checking session-keys directory...' && \
     ls -la /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/ || echo 'Directory not accessible' && \
     if [ \"$APP_ENV\" = \"prod\" ] || [ \"$APP_ENV\" = \"production\" ]; then \
