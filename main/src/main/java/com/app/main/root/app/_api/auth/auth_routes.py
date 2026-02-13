@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional
 from auth.auth_service import AuthService
 from user.user_service import UserService
 import json
+import urllib.parse
 
 class AuthRoutes:
     def __init__(self, authService: AuthService, userService: UserService):
