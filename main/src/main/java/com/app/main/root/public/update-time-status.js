@@ -12,7 +12,7 @@ window.addEventListener('load', async () => {
         console.log('Configuration loaded, updating UI...');
                 
         const apiStatus = document.getElementById('api-gateway-status');
-        if(window.API_GATEWAY_URL) {
+        if(window.API_URL) {
             apiStatus.textContent = 'Connected';
             apiStatus.style.color = 'green';
         } else {

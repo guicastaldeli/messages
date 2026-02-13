@@ -8,7 +8,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 @Controller
 @RequestMapping("/main")
@@ -26,15 +28,28 @@ public class ScriptController {
     @ResponseBody
     public ResponseEntity<String> getApiUrl() {
         try {
+            // Try external file first (runtime generated)
+            File externalFile = new File("/app/src/main/java/com/app/main/root/public/api-url.js");
+            if (externalFile.exists()) {
+                System.out.println("✅ Serving api-url.js from external file: " + externalFile.getAbsolutePath());
+                String content = new String(Files.readAllBytes(externalFile.toPath()), StandardCharsets.UTF_8);
+                return ResponseEntity.ok()
+                        .contentType(MediaType.valueOf("application/javascript"))
+                        .body(content);
+            }
+            
+            // Fallback to classpath (bundled)
+            System.out.println("⚠️  External file not found, serving from classpath");
             String content = loadFile("com/app/main/root/public/api-url.js");
             return ResponseEntity.ok()
                     .contentType(MediaType.valueOf("application/javascript"))
                     .body(content);
         } catch(Exception err) {
-            System.out.println(err);
+            System.out.println("❌ Error loading api-url.js: " + err.getMessage());
+            err.printStackTrace();
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
-                    .body("Failed to load");
+                    .body("Failed to load: " + err.getMessage());
         }
     }
 

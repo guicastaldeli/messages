@@ -62,8 +62,8 @@ window.ENCRYPTED_CONFIG = {
     
     (async function() {
         try {
-            window.API_GATEWAY_URL = await decrypt(window.ENCRYPTED_CONFIG.apiGateway);
-            window.SERVER_API_URL = await decrypt(window.ENCRYPTED_CONFIG.serverApi);
+            window.API_URL = await decrypt(window.ENCRYPTED_CONFIG.apiGateway);
+            window.SERVER_URL = await decrypt(window.ENCRYPTED_CONFIG.serverApi);
             window.WEB_URL = await decrypt(window.ENCRYPTED_CONFIG.webUrl);
             if(window.configResolve) window.configResolve();
             

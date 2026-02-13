@@ -62,7 +62,7 @@ CMD ["/bin/sh", "-c", "\
         echo 'Generating production config...' && \
         cd /app && \
         node src/main/java/com/app/main/root/public/generate-config.js && \
-        echo '✅ Config generated successfully'; \
+        echo 'Config generated successfully'; \
     fi && \
     echo 'Starting Spring Boot server...' && \
     exec java -Djava.library.path=/usr/local/lib:/app/lib/native/linux -jar /app/server.jar \
