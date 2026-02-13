@@ -23,59 +23,63 @@ RUN mkdir -p \
     main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build \
     main/src/main/java/com/app/main/root/app/file_compressor/.build
 
-# First, verify the files exist
-RUN ls -la main/src/main/java/com/app/main/root/app/_crypto/message_encoder/
+# Create compilation helper script
+RUN echo '#!/bin/bash\n\
+compile_native() {\n\
+    local dir=$1\n\
+    local output=$2\n\
+    cd $dir\n\
+    echo "=========================================="\n\
+    echo "Compiling in: $(pwd)"\n\
+    echo "=========================================="\n\
+    # Find all .cpp files recursively\n\
+    CPP_FILES=$(find . -name "*.cpp" -type f | tr "\\n" " ")\n\
+    # Find all directories for includes\n\
+    INCLUDE_DIRS=$(find . -type d -not -path "*/\.*" | sed "s/^/-I/" | tr "\\n" " ")\n\
+    echo "Found CPP files: $CPP_FILES"\n\
+    echo "Include dirs: $INCLUDE_DIRS"\n\
+    # Compile\n\
+    g++ -shared -fPIC -o $output \\\n\
+        $CPP_FILES \\\n\
+        $INCLUDE_DIRS \\\n\
+        -I/usr/include/openssl \\\n\
+        -I/usr/include \\\n\
+        -std=c++17 \\\n\
+        -O2 \\\n\
+        -lcrypto -lssl\n\
+    if [ $? -eq 0 ]; then\n\
+        echo "✅ Successfully compiled: $(basename $output)"\n\
+    else\n\
+        echo "❌ Failed to compile: $(basename $output)"\n\
+        exit 1\n\
+    fi\n\
+}\n\
+' > /usr/local/bin/compile_native.sh && chmod +x /usr/local/bin/compile_native.sh
 
-# Compile message_encoder with OpenSSL
-RUN cd main/src/main/java/com/app/main/root/app/_crypto/message_encoder && \
-    echo "Compiling message_encoder for Linux..." && \
-    # Check if key_derivation.cpp exists, if not, create it or find correct name
-    if [ ! -f key_derivation.cpp ]; then \
-        echo "ERROR: key_derivation.cpp not found!"; \
-        find . -name "*.cpp" -ls; \
-        exit 1; \
-    fi && \
-    g++ -shared -fPIC -o .build/libmessage_encoder.so \
-        message_encoder.cpp key_derivation.cpp \
-        -I. \
-        -I/usr/include/openssl \
-        -I/usr/include \
-        -std=c++17 \
-        -O2 \
-        -lcrypto -lssl && \
-    echo "✅ message_encoder compiled"
+# Compile message_encoder
+RUN /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/_crypto/message_encoder \
+    .build/libmessage_encoder.so
 
 # Compile file_encoder
-RUN cd main/src/main/java/com/app/main/root/app/_crypto/file_encoder && \
-    echo "Compiling file_encoder for Linux..." && \
-    g++ -shared -fPIC -o .build/libfileencoder.so \
-        file_encoder.cpp \
-        -I. -I/usr/include -std=c++17 -O2 && \
-    echo "✅ file_encoder compiled"
+RUN /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/_crypto/file_encoder \
+    .build/libfileencoder.so
 
 # Compile password_encoder
-RUN cd main/src/main/java/com/app/main/root/app/_crypto/password_encoder && \
-    echo "Compiling password_encoder for Linux..." && \
-    g++ -shared -fPIC -o .build/libpasswordencoder.so \
-        password_encoder.cpp \
-        -I. -I/usr/include -std=c++17 -O2 && \
-    echo "✅ password_encoder compiled"
+RUN /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/_crypto/password_encoder \
+    .build/libpasswordencoder.so
 
 # Compile user_validator
-RUN cd main/src/main/java/com/app/main/root/app/_crypto/user_validator && \
-    echo "Compiling user_validator for Linux..." && \
-    g++ -shared -fPIC -o .build/libuser_validator.so \
-        user_validator.cpp \
-        -I. -I/usr/include -std=c++17 -O2 && \
-    echo "✅ user_validator compiled"
+RUN /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/_crypto/user_validator \
+    .build/libuser_validator.so
 
 # Compile file_compressor
-RUN cd main/src/main/java/com/app/main/root/app/file_compressor && \
-    echo "Compiling file_compressor for Linux..." && \
-    g++ -shared -fPIC -o .build/libfile_compressor.so \
-        compressor.cpp \
-        -I. -I/usr/include -std=c++17 -O2 && \
-    echo "✅ file_compressor compiled"
+RUN /usr/local/bin/compile_native.sh \
+    main/src/main/java/com/app/main/root/app/file_compressor \
+    .build/libfile_compressor.so
 
 # Build the Spring Boot application
 RUN cd main && mvn clean package -DskipTests
@@ -84,12 +88,12 @@ RUN cd main && mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Install runtime dependencies (only what's needed, not build tools)
+# Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y \
         curl \
         nodejs \
-        libssl3  # Runtime OpenSSL libraries \
+        libssl3 \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
