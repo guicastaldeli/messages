@@ -4,10 +4,11 @@ WORKDIR /app
 
 COPY . .
 
-# Install ALL build dependencies including OpenSSL
+# Install ALL build dependencies including OpenSSL and gcc for C files
 RUN apt-get update && \
     apt-get install -y \
         g++ \
+        gcc \
         make \
         cmake \
         libssl-dev \
@@ -25,7 +26,7 @@ RUN mkdir -p \
     main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build \
     main/src/main/java/com/app/main/root/app/file_compressor/.build
 
-# Create compilation helper script WITH PROPER INCLUDES
+# Create compilation helper script that supports both C and C++
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
@@ -45,53 +46,112 @@ compile_native() {\n\
     \n\
     cd "$base_dir"\n\
     \n\
-    # Find all CPP files, including those in subdirectories\n\
-    CPP_FILES=$(find . -name "*.cpp" -type f | sort)\n\
+    echo "📂 Current directory: $(pwd)"\n\
+    echo "📂 Directory contents:"\n\
+    ls -la\n\
+    echo ""\n\
     \n\
-    if [ -z "$CPP_FILES" ]; then\n\
-        echo "❌ ERROR: No .cpp files found!"\n\
+    # Find all C and C++ files\n\
+    C_FILES=$(find . -type f -name "*.c" 2>/dev/null | sort || true)\n\
+    CPP_FILES=$(find . -type f -name "*.cpp" 2>/dev/null | sort || true)\n\
+    \n\
+    if [ -z "$C_FILES" ] && [ -z "$CPP_FILES" ]; then\n\
+        echo "❌ ERROR: No .c or .cpp files found in $module_name!"\n\
+        echo "Searching recursively:"\n\
+        find . -type f -name "*.c" -o -name "*.cpp" 2>/dev/null | head -20 || echo "  No files found"\n\
         exit 1\n\
     fi\n\
     \n\
-    echo "📂 Found CPP files:"\n\
-    echo "$CPP_FILES" | sed "s/^/  - /"\n\
+    # Display found files\n\
+    if [ -n "$C_FILES" ]; then\n\
+        echo "📂 Found C files:"\n\
+        echo "$C_FILES" | sed "s/^/  - /"\n\
+    fi\n\
+    if [ -n "$CPP_FILES" ]; then\n\
+        echo "📂 Found C++ files:"\n\
+        echo "$CPP_FILES" | sed "s/^/  - /"\n\
+    fi\n\
     echo ""\n\
     \n\
     # Clean and create build directory\n\
     rm -rf .build\n\
     mkdir -p .build\n\
     \n\
-    # Compile each file\n\
-    echo "🔨 Compiling..."\n\
-    for cpp_file in $CPP_FILES; do\n\
-        # Create object file path preserving directory structure\n\
-        rel_path=${cpp_file#./}\n\
-        obj_dir=".build/$(dirname $rel_path)"\n\
-        obj_file=".build/${rel_path%.*}.o"\n\
-        \n\
-        mkdir -p "$obj_dir"\n\
-        \n\
-        echo "  Compiling: $rel_path"\n\
-        \n\
-        # Compile with include paths for all subdirectories\n\
-        g++ -c -fPIC \\\n\
-            "$cpp_file" \\\n\
-            -o "$obj_file" \\\n\
-            -I. \\\n\
-            -I./keys \\\n\
-            -I./crypto_operations \\\n\
-            -I./aes_operations \\\n\
-            -I./utils \\\n\
-            -I"$JNI_INCLUDE" \\\n\
-            -I"$JNI_INCLUDE_LINUX" \\\n\
-            -I/usr/include/openssl \\\n\
-            -std=c++17 \\\n\
-            -O2 \\\n\
-            -Wall \\\n\
-            -Wno-unused-parameter\n\
-        \n\
-        echo "    ✅ Created ${rel_path%.*}.o"\n\
-    done\n\
+    # Compile C files\n\
+    if [ -n "$C_FILES" ]; then\n\
+        echo "🔨 Compiling C files..."\n\
+        for c_file in $C_FILES; do\n\
+            rel_path=${c_file#./}\n\
+            obj_dir=".build/$(dirname $rel_path)"\n\
+            obj_file=".build/${rel_path%.*}.o"\n\
+            \n\
+            mkdir -p "$obj_dir"\n\
+            \n\
+            echo "  Compiling C: $rel_path"\n\
+            \n\
+            gcc -c -fPIC \\\n\
+                "$c_file" \\\n\
+                -o "$obj_file" \\\n\
+                -I. \\\n\
+                -I"$JNI_INCLUDE" \\\n\
+                -I"$JNI_INCLUDE_LINUX" \\\n\
+                -I/usr/include/openssl \\\n\
+                -std=c11 \\\n\
+                -O2 \\\n\
+                -Wall\n\
+            \n\
+            echo "    ✅ Created ${rel_path%.*}.o"\n\
+        done\n\
+    fi\n\
+    \n\
+    # Compile C++ files\n\
+    if [ -n "$CPP_FILES" ]; then\n\
+        echo "🔨 Compiling C++ files..."\n\
+        for cpp_file in $CPP_FILES; do\n\
+            rel_path=${cpp_file#./}\n\
+            obj_dir=".build/$(dirname $rel_path)"\n\
+            obj_file=".build/${rel_path%.*}.o"\n\
+            \n\
+            mkdir -p "$obj_dir"\n\
+            \n\
+            echo "  Compiling C++: $rel_path"\n\
+            \n\
+            # Determine which include paths to use based on module\n\
+            if [ "$module_name" = "message_encoder" ]; then\n\
+                # Message encoder has subdirectories\n\
+                g++ -c -fPIC \\\n\
+                    "$cpp_file" \\\n\
+                    -o "$obj_file" \\\n\
+                    -I. \\\n\
+                    -I./keys \\\n\
+                    -I./crypto_operations \\\n\
+                    -I./aes_operations \\\n\
+                    -I./utils \\\n\
+                    -I"$JNI_INCLUDE" \\\n\
+                    -I"$JNI_INCLUDE_LINUX" \\\n\
+                    -I/usr/include/openssl \\\n\
+                    -std=c++17 \\\n\
+                    -O2 \\\n\
+                    -Wall \\\n\
+                    -Wno-unused-parameter\n\
+            else\n\
+                # Other C++ modules might have simpler structure\n\
+                g++ -c -fPIC \\\n\
+                    "$cpp_file" \\\n\
+                    -o "$obj_file" \\\n\
+                    -I. \\\n\
+                    -I"$JNI_INCLUDE" \\\n\
+                    -I"$JNI_INCLUDE_LINUX" \\\n\
+                    -I/usr/include/openssl \\\n\
+                    -std=c++17 \\\n\
+                    -O2 \\\n\
+                    -Wall \\\n\
+                    -Wno-unused-parameter\n\
+            fi\n\
+            \n\
+            echo "    ✅ Created ${rel_path%.*}.o"\n\
+        done\n\
+    fi\n\
     \n\
     echo ""\n\
     echo "📦 Object files created:"\n\
@@ -102,8 +162,10 @@ compile_native() {\n\
     \n\
     # Find all object files\n\
     OBJ_FILES=$(find .build -name "*.o" -type f)\n\
+    OBJ_COUNT=$(echo "$OBJ_FILES" | wc -w)\n\
+    echo "Linking $OBJ_COUNT object files"\n\
     \n\
-    # Link all object files\n\
+    # Link all object files (use g++ for linking to handle C++ stdlib)\n\
     g++ -shared -fPIC \\\n\
         $OBJ_FILES \\\n\
         -o "$output" \\\n\
@@ -114,18 +176,23 @@ compile_native() {\n\
     \n\
     echo "✅ Library created: $(basename $output)"\n\
     \n\
-    # Verify symbols for message_encoder\n\
-    if [ "$module_name" = "message_encoder" ]; then\n\
-        echo ""\n\
-        echo "🔍 Verifying KeyDerivation symbols in message_encoder:"\n\
-        if nm -C "$output" 2>/dev/null | grep -q "KeyDerivation::KDF_RK"; then\n\
-            echo "✅ KeyDerivation::KDF_RK found"\n\
-            nm -C "$output" 2>/dev/null | grep "KeyDerivation::" | sed "s/^/  /"\n\
-        else\n\
-            echo "❌ ERROR: KeyDerivation::KDF_RK not found!"\n\
-            echo "Checking all symbols:"\n\
-            nm -C "$output" 2>/dev/null | grep -i keyderivation || echo "  No KeyDerivation symbols at all"\n\
-            exit 1\n\
+    # Verify library\n\
+    if [ -f "$output" ]; then\n\
+        echo "✅ Library size: $(ls -lh $output | awk '\''{print $5}'\'')"\n\
+        \n\
+        # Verify symbols for message_encoder\n\
+        if [ "$module_name" = "message_encoder" ]; then\n\
+            echo ""\n\
+            echo "🔍 Verifying KeyDerivation symbols in message_encoder:"\n\
+            if nm -C "$output" 2>/dev/null | grep -q "KeyDerivation::KDF_RK"; then\n\
+                echo "✅ KeyDerivation::KDF_RK found"\n\
+                nm -C "$output" 2>/dev/null | grep "KeyDerivation::" | sed "s/^/  /"\n\
+            else\n\
+                echo "❌ ERROR: KeyDerivation::KDF_RK not found!"\n\
+                echo "Checking all symbols:"\n\
+                nm -C "$output" 2>/dev/null | grep -i keyderivation || echo "  No KeyDerivation symbols at all"\n\
+                exit 1\n\
+            fi\n\
         fi\n\
     fi\n\
     \n\
@@ -134,11 +201,16 @@ compile_native() {\n\
 }\n\
 \n\
 # Compile each module\n\
+echo "🚀 STARTING COMPILATION OF ALL MODULES 🚀"\n\
+echo ""\n\
+\n\
 compile_native "/app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder" "/usr/local/lib/libmessage_encoder.so"\n\
 compile_native "/app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder" "/usr/local/lib/libfileencoder.so"\n\
 compile_native "/app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder" "/usr/local/lib/libpasswordencoder.so"\n\
 compile_native "/app/main/src/main/java/com/app/main/root/app/_crypto/user_validator" "/usr/local/lib/libuser_validator.so"\n\
 compile_native "/app/main/src/main/java/com/app/main/root/app/file_compressor" "/usr/local/lib/libfile_compressor.so"\n\
+\n\
+echo "🎉 ALL MODULES COMPILED SUCCESSFULLY 🎉"\n\
 ' > /usr/local/bin/compile_native.sh && chmod +x /usr/local/bin/compile_native.sh
 
 # Run the compilation
