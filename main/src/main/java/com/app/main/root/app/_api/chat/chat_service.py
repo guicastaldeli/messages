@@ -55,10 +55,8 @@ class ChatService:
         async with httpx.AsyncClient() as client:
             url = f"{self.base_url}{path}"
             
-            # Prepare headers to forward cookies
             headers = {}
             if cookies:
-                # Convert cookies dict to Cookie header string
                 cookie_header = "; ".join([f"{k}={v}" for k, v in cookies.items()])
                 headers["Cookie"] = cookie_header
                 print(f"[ChatService] Forwarding Cookie header to {url}: {cookie_header[:100]}...")
@@ -69,7 +67,7 @@ class ChatService:
                 method, 
                 url, 
                 json=json,
-                headers=headers,  # ← Send cookies as header, not as cookies param
+                headers=headers,
                 follow_redirects=True
             )
             

@@ -17,15 +17,12 @@ class AuthRoutes:
         def extractCookies(req: Request) -> Dict[str, str]:
             cookies = {}
             
-            # Method 1: Try req.cookies (works when client sends cookies properly)
             if req.cookies:
                 cookies.update(req.cookies)
                 print(f"[Routes] Extracted {len(cookies)} cookies from req.cookies")
             
-            # Method 2: Try Cookie header (fallback for some clients)
             cookie_header = req.headers.get('cookie') or req.headers.get('Cookie')
             if cookie_header and not cookies:
-                # Parse Cookie header manually
                 for item in cookie_header.split(';'):
                     item = item.strip()
                     if '=' in item:
@@ -35,7 +32,7 @@ class AuthRoutes:
             
             if not cookies:
                 print(f"[Routes] WARNING: No cookies found!")
-                print(f"[Routes] Headers: {dict(req.headers)}")  # Debug: print all headers
+                print(f"[Routes] Headers: {dict(req.headers)}")
             
             return cookies
         
@@ -49,14 +46,12 @@ class AuthRoutes:
             for k, v in cookies.items():
                 encoded_value = urllib.parse.quote(str(v), safe='')
                 
-                # CRITICAL: Use SameSite=None for cross-origin requests
-                # This allows cookies to be sent from vercel.app to onrender.com
                 res.set_cookie(
                     key=k,
                     value=encoded_value,
                     httponly=k in ["JSESSIONID", "SESSION_ID", "auth_token"],
-                    secure=True,      # MUST be True for SameSite=None
-                    samesite="none",  # ← CHANGED from "lax" to "none"
+                    secure=True,
+                    samesite="none",
                     path="/",
                     max_age=7 * 24 * 60 * 60 if k in ["JSESSIONID", "REMEMBER_USER"] else None
                 )

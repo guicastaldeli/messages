@@ -9,7 +9,6 @@ class MessageRoutes:
         self.setupRoutes()
 
     def setupRoutes(self):
-        ## Extract Cookies Helper
         def extractCookies(req: Request) -> Dict[str, str]:
             cookies = {}
             for k, v in req.cookies.items():
