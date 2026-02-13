@@ -18,6 +18,7 @@ public class EmailService {
     public final static String RESET_TOKEN = EnvConfig.get("RESET_TOKEN");
 
     @Autowired private EmailDocumentParser emailDocumentParser;
+    @Autowired(required = false) private SendGridWebService sendGridWebService; // Auto-wire SendGrid service
 
     @Value("${email.smtp.host:smtp.sendgrid.net}")
     private String smtpHost;
@@ -36,6 +37,9 @@ public class EmailService {
 
     @Value("${web.url:}")
     private String webUrl;
+    
+    @Value("${email.use.sendgrid:true}") // Add configuration to choose method
+    private boolean useSendGrid;
 
     @Autowired
     private org.springframework.core.env.Environment environment;
@@ -50,11 +54,31 @@ public class EmailService {
     }
 
     public void sendEmail(String toEmail, String body) throws MessagingException {
+        // Extract subject from body
+        String subject = extractSubject(body);
+        
+        // Try SendGrid first if available and configured
+        if (useSendGrid && sendGridWebService != null) {
+            System.out.println("📧 Attempting to send via SendGrid API...");
+            boolean sent = sendGridWebService.sendEmail(toEmail, subject, body);
+            if (sent) {
+                System.out.println("✓ Email sent successfully via SendGrid to: " + toEmail);
+                return;
+            } else {
+                System.out.println("⚠ SendGrid sending failed, falling back to SMTP...");
+            }
+        }
+        
+        // Fallback to SMTP
+        sendEmailViaSMTP(toEmail, body);
+    }
+    
+    private void sendEmailViaSMTP(String toEmail, String body) throws MessagingException {
         // Get password from multiple sources with debug output
         String actualPassword = resolvePassword();
         String actualUsername = resolveUsername();
         
-        System.out.println("=== Email Debug ===");
+        System.out.println("=== SMTP Email Debug ===");
         System.out.println("Host: " + smtpHost);
         System.out.println("Port: " + smtpPort);
         System.out.println("Username from prop: " + emailUsername);
@@ -62,7 +86,7 @@ public class EmailService {
         System.out.println("Password found: " + (actualPassword != null && !actualPassword.isEmpty()));
         System.out.println("From: " + fromEmail);
         System.out.println("To: " + toEmail);
-        System.out.println("===================");
+        System.out.println("========================");
         
         if (actualPassword == null || actualPassword.isEmpty()) {
             throw new MessagingException("Email password not configured. Check email.password property or SENDGRID_API_KEY environment variable.");
@@ -100,7 +124,7 @@ public class EmailService {
         message.setContent(body, "text/html; charset=utf-8");
         
         Transport.send(message);
-        System.out.println("✓ Email sent successfully to: " + toEmail);
+        System.out.println("✓ Email sent successfully via SMTP to: " + toEmail);
     }
     
     private String resolvePassword() {
@@ -146,6 +170,8 @@ public class EmailService {
     @PostConstruct
     public void init() {
         System.out.println("=== Email Service Initialized ===");
+        System.out.println("SendGrid Available: " + (sendGridWebService != null));
+        System.out.println("Use SendGrid: " + useSendGrid);
         System.out.println("SMTP Host: " + smtpHost);
         System.out.println("SMTP Port: " + smtpPort);
         System.out.println("Username from properties: " + emailUsername);
