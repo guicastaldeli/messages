@@ -27,43 +27,25 @@ class AuthRoutes:
             
             print(f"[Auth] Setting {len(cookies)} cookies in browser: {list(cookies.keys())}")
             
-            for k, v in cookies.items():
-                # For debugging - try a non-HttpOnly version first
-                is_http_only = k in ["SESSION_ID", "auth_token"]
-                
-                # Try multiple cookie setting strategies
-                cookie_kwargs = {
-                    "key": k,
-                    "value": v,
-                    "httponly": is_http_only,
-                    "secure": False,  # Temporarily False for debugging
-                    "samesite": "lax",
-                    "path": "/",
-                    "max_age": 7 * 24 * 60 * 60 if k == "SESSION_ID" else None
-                }
-                
-                # Set the cookie
-                res.set_cookie(**cookie_kwargs)
-                print(f"[Auth] Set cookie {k} (HttpOnly: {is_http_only})")
-                
-                # Also try setting without HttpOnly as a backup for debugging
-                if is_http_only:
-                    res.set_cookie(
-                        key=f"{k}_DEBUG",
-                        value=v,
-                        httponly=False,
-                        secure=False,
-                        samesite="lax",
-                        path="/"
-                    )
-                    print(f"[Auth] Also set debug cookie {k}_DEBUG")
+            # Determine if we're in production
+            is_production = "onrender.com" in res.headers.get("host", "")
             
-            # Force the cookies to be written by modifying headers directly
-            # This is a more direct approach
             for k, v in cookies.items():
-                cookie_str = f"{k}={v}; Path=/; SameSite=Lax"
-                res.headers.append("Set-Cookie", cookie_str)
-                print(f"[Auth] Added raw cookie header: {cookie_str}")
+                # Don't use HttpOnly for debugging - let's see cookies in JS first
+                is_http_only = False  # Set to True after confirming cookies work
+                
+                # Set cookie with proper domain for cross-subdomain access
+                res.set_cookie(
+                    key=k,
+                    value=v,
+                    httponly=is_http_only,
+                    secure=is_production,  # True on Render, False locally
+                    samesite="lax",
+                    domain=".onrender.com" if is_production else None,  # CRITICAL: Allow all subdomains
+                    path="/",
+                    max_age=7 * 24 * 60 * 60 if k in ["SESSION_ID", "JSESSIONID", "REMEMBER_USER"] else None
+                )
+                print(f"[Auth] Set cookie {k} with domain={'.onrender.com' if is_production else 'None'}, secure={is_production}")
         
         ## Register
         @self.router.post("/register")
