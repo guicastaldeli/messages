@@ -27,25 +27,25 @@ class AuthRoutes:
             
             print(f"[Auth] Setting {len(cookies)} cookies in browser: {list(cookies.keys())}")
             
-            # Determine if we're in production
-            is_production = "onrender.com" in res.headers.get("host", "")
+            # FORCE production settings since we're on Render
+            is_production = True  # Force to True for Render
             
             for k, v in cookies.items():
-                # Don't use HttpOnly for debugging - let's see cookies in JS first
-                is_http_only = False  # Set to True after confirming cookies work
+                # For SESSION_ID and auth_token, use HttpOnly for security
+                is_http_only = k in ["JSESSIONID", "SESSION_ID", "auth_token"]
                 
-                # Set cookie with proper domain for cross-subdomain access
+                # CRITICAL: Set proper domain for cross-domain cookies
                 res.set_cookie(
                     key=k,
                     value=v,
                     httponly=is_http_only,
-                    secure=is_production,  # True on Render, False locally
-                    samesite="lax",
-                    domain=".onrender.com" if is_production else None,  # CRITICAL: Allow all subdomains
+                    secure=True,  # MUST be True for HTTPS!
+                    samesite="none",  # CRITICAL: Allow cross-site requests from Vercel
+                    domain=".onrender.com",  # Allow all Render subdomains
                     path="/",
-                    max_age=7 * 24 * 60 * 60 if k in ["SESSION_ID", "JSESSIONID", "REMEMBER_USER"] else None
+                    max_age=7 * 24 * 60 * 60 if k in ["JSESSIONID", "REMEMBER_USER"] else None
                 )
-                print(f"[Auth] Set cookie {k} with domain={'.onrender.com' if is_production else 'None'}, secure={is_production}")
+                print(f"[Auth] Set cookie {k} with domain=.onrender.com, secure=True, samesite=none")
         
         ## Register
         @self.router.post("/register")
