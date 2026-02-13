@@ -3,171 +3,233 @@ WORKDIR /app
 
 COPY . .
 
-# Install build dependencies
+# Install ALL build dependencies including OpenSSL
 RUN apt-get update && \
-    apt-get install -y g++ gcc libssl-dev pkg-config && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get install -y \
+        g++ \
+        make \
+        cmake \
+        libssl-dev \
+        pkg-config \
+        tree \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Find and copy key_derivation files to all C++ modules
-RUN echo "Finding key_derivation files..." && \
-    KEY_CPP=$(find /app -name "key_derivation.cpp" -type f | head -1) && \
-    KEY_H=$(find /app -name "key_derivation.h" -type f | head -1) && \
-    echo "Found key_derivation.cpp at: $KEY_CPP" && \
-    cp -v "$KEY_CPP" /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/ && \
-    cp -v "$KEY_CPP" /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/ && \
-    if [ -n "$KEY_H" ]; then \
-        echo "Found key_derivation.h at: $KEY_H"; \
-        cp -v "$KEY_H" /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/; \
-        cp -v "$KEY_H" /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/; \
+# Create build directories
+RUN mkdir -p \
+    main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build \
+    main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build \
+    main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build \
+    main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build \
+    main/src/main/java/com/app/main/root/app/file_compressor/.build
+
+# CRITICAL: Find key_derivation.cpp and copy it to ALL modules that need it
+RUN echo "🔍 Locating key_derivation.cpp..." && \
+    KEY_DERIV_SOURCE=$(find /app -name "key_derivation.cpp" -type f | head -1) && \
+    if [ -z "$KEY_DERIV_SOURCE" ]; then \
+        echo "❌ ERROR: key_derivation.cpp not found anywhere!"; \
+        echo "Searching all .cpp files:"; \
+        find /app -name "*.cpp" -type f | head -20; \
+        exit 1; \
+    fi && \
+    echo "✅ Found key_derivation.cpp at: $KEY_DERIV_SOURCE" && \
+    echo "📋 Copying to all modules..." && \
+    cp -v "$KEY_DERIV_SOURCE" /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/ && \
+    cp -v "$KEY_DERIV_SOURCE" /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/ && \
+    cp -v "$KEY_DERIV_SOURCE" /app/main/src/main/java/com/app/main/root/app/_crypto/user_validator/ && \
+    cp -v "$KEY_DERIV_SOURCE" /app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder/ && \
+    echo "✅ key_derivation.cpp copied to all modules"
+
+# Also copy key_derivation.h if it exists
+RUN KEY_DERIV_HEADER=$(find /app -name "key_derivation.h" -type f | head -1) && \
+    if [ -n "$KEY_DERIV_HEADER" ]; then \
+        echo "✅ Found key_derivation.h at: $KEY_DERIV_HEADER"; \
+        cp -v "$KEY_DERIV_HEADER" /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/; \
+        cp -v "$KEY_DERIV_HEADER" /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/; \
+        cp -v "$KEY_DERIV_HEADER" /app/main/src/main/java/com/app/main/root/app/_crypto/user_validator/; \
+        cp -v "$KEY_DERIV_HEADER" /app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder/; \
     fi
 
-# Compile message_encoder (C++ with key_derivation)
-RUN cd /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder && \
-    echo "=== COMPILING MESSAGE_ENCODER ===" && \
-    mkdir -p .build && \
-    echo "Source files:" && \
-    ls -la *.cpp *.h 2>/dev/null || true && \
-    for cpp in *.cpp; do \
-        [ -f "$cpp" ] || continue; \
-        echo "Compiling $cpp"; \
-        g++ -c -fPIC "$cpp" -o ".build/${cpp%.cpp}.o" \
-            -I. \
-            -I/usr/include/openssl \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include/linux \
-            -std=c++17 -O2 -Wall -Wno-unused-parameter -Wno-deprecated-declarations; \
-    done && \
-    echo "Object files:" && \
-    ls -lh .build/*.o && \
-    g++ -shared -fPIC .build/*.o -o .build/libmessage_encoder.so -lcrypto -lssl -lpthread && \
-    echo "Library created:" && \
-    ls -lh .build/libmessage_encoder.so && \
-    echo "KeyDerivation symbols:" && \
-    nm -D .build/libmessage_encoder.so | grep KeyDerivation || echo "WARNING: No KeyDerivation symbols"
+# Create compilation helper script WITH JNI HEADERS
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Find Java include directory\n\
+JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))\n\
+JNI_INCLUDE="$JAVA_HOME/include"\n\
+JNI_INCLUDE_LINUX="$JAVA_HOME/include/linux"\n\
+\n\
+echo "Java Home: $JAVA_HOME"\n\
+echo "JNI Include: $JNI_INCLUDE"\n\
+\n\
+compile_native() {\n\
+    local base_dir=$1\n\
+    local output=$2\n\
+    \n\
+    echo "=========================================="\n\
+    echo "🔧 COMPILING: $(basename $output)"\n\
+    echo "=========================================="\n\
+    echo "📁 Directory: $base_dir"\n\
+    echo "📦 Output: $output"\n\
+    echo ""\n\
+    \n\
+    cd "$base_dir"\n\
+    \n\
+    echo "📂 Directory contents:"\n\
+    ls -la\n\
+    echo ""\n\
+    \n\
+    echo "🔍 Finding C++ source files..."\n\
+    CPP_FILES=$(find . -maxdepth 1 -type f -name "*.cpp" | sort)\n\
+    \n\
+    if [ -z "$CPP_FILES" ]; then\n\
+        echo "❌ ERROR: No .cpp files found!"\n\
+        exit 1\n\
+    fi\n\
+    \n\
+    FILE_COUNT=$(echo "$CPP_FILES" | wc -l)\n\
+    echo "✅ Found $FILE_COUNT files:"\n\
+    echo "$CPP_FILES" | sed "s/^/  - /"\n\
+    echo ""\n\
+    \n\
+    if echo "$CPP_FILES" | grep -q "key_derivation.cpp"; then\n\
+        echo "✅ key_derivation.cpp IS in the list!"\n\
+    else\n\
+        echo "⚠️  WARNING: key_derivation.cpp NOT found in this module"\n\
+    fi\n\
+    echo ""\n\
+    \n\
+    mkdir -p .build\n\
+    \n\
+    echo "🔨 Compiling to object files..."\n\
+    OBJ_FILES=""\n\
+    count=0\n\
+    for cpp_file in $CPP_FILES; do\n\
+        count=$((count + 1))\n\
+        base_name=$(basename "$cpp_file")\n\
+        obj_name="${base_name%.*}.o"\n\
+        obj_file=".build/$obj_name"\n\
+        \n\
+        echo "  [$count/$FILE_COUNT] Compiling: $base_name → $obj_name"\n\
+        \n\
+        if g++ -c -fPIC \\\n\
+            "$cpp_file" \\\n\
+            -o "$obj_file" \\\n\
+            -I. \\\n\
+            -I"$JNI_INCLUDE" \\\n\
+            -I"$JNI_INCLUDE_LINUX" \\\n\
+            -I/usr/include/openssl \\\n\
+            -std=c++17 \\\n\
+            -O2 \\\n\
+            -Wall \\\n\
+            -Wno-unused-parameter \\\n\
+            -Wno-deprecated-declarations 2>&1; then\n\
+            echo "    ✅ Created $(ls -lh $obj_file | awk '\''{print $9, $5}'\'')"\n\
+        else\n\
+            echo "    ❌ FAILED"\n\
+            exit 1\n\
+        fi\n\
+        \n\
+        OBJ_FILES="$OBJ_FILES $obj_file"\n\
+    done\n\
+    echo ""\n\
+    \n\
+    if ls .build/key_derivation.o 2>/dev/null; then\n\
+        echo "✅ key_derivation.o successfully created!"\n\
+    else\n\
+        echo "⚠️  key_derivation.o not found (may not be needed for this module)"\n\
+    fi\n\
+    echo ""\n\
+    \n\
+    echo "🔗 Linking shared library..."\n\
+    echo "Object files: $(echo $OBJ_FILES | wc -w)"\n\
+    \n\
+    if g++ -shared -fPIC \\\n\
+        $OBJ_FILES \\\n\
+        -o "$output" \\\n\
+        -lcrypto \\\n\
+        -lssl \\\n\
+        -lpthread 2>&1; then\n\
+        echo "✅ LINKING SUCCESS"\n\
+    else\n\
+        echo "❌ LINKING FAILED"\n\
+        exit 1\n\
+    fi\n\
+    echo ""\n\
+    \n\
+    echo "✅ Library created:"\n\
+    ls -lh "$output"\n\
+    echo ""\n\
+    \n\
+    echo "🔍 Symbol check..."\n\
+    UNDEFINED=$(nm -D "$output" 2>/dev/null | grep " U " | grep -v "@@" | grep -i "KeyDerivation" || true)\n\
+    if [ -n "$UNDEFINED" ]; then\n\
+        echo "❌ CRITICAL: Undefined KeyDerivation symbols!"\n\
+        echo "$UNDEFINED"\n\
+        exit 1\n\
+    fi\n\
+    \n\
+    DEFINED=$(nm -D "$output" 2>/dev/null | grep " T " | grep -i "KeyDerivation" | head -5 || true)\n\
+    if [ -n "$DEFINED" ]; then\n\
+        echo "✅ KeyDerivation symbols present:"\n\
+        echo "$DEFINED" | sed "s/^/  /"\n\
+    fi\n\
+    echo ""\n\
+    \n\
+    echo "🎉 SUCCESS: $(basename $output)"\n\
+    echo "=========================================="\n\
+    echo ""\n\
+}\n\
+' > /usr/local/bin/compile_native.sh && chmod +x /usr/local/bin/compile_native.sh
 
-# Compile file_encoder (C files, NOT C++)
-RUN cd /app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder && \
-    echo "=== COMPILING FILE_ENCODER ===" && \
-    mkdir -p .build && \
-    echo "Source files:" && \
-    ls -la *.c *.h 2>/dev/null || true && \
-    for c in *.c; do \
-        [ -f "$c" ] || continue; \
-        echo "Compiling $c"; \
-        gcc -c -fPIC "$c" -o ".build/${c%.c}.o" \
-            -I. \
-            -I/usr/include/openssl \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include/linux \
-            -O2 -Wall -Wno-unused-parameter; \
-    done && \
-    echo "Object files:" && \
-    ls -lh .build/*.o && \
-    gcc -shared -fPIC .build/*.o -o .build/libfileencoder.so -lcrypto -lssl -lpthread && \
-    ls -lh .build/libfileencoder.so
+# Compile all native libraries
+RUN echo "🚀 COMPILING ALL NATIVE LIBRARIES 🚀" && \
+    echo "" && \
+    /usr/local/bin/compile_native.sh \
+        main/src/main/java/com/app/main/root/app/_crypto/message_encoder \
+        main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so && \
+    /usr/local/bin/compile_native.sh \
+        main/src/main/java/com/app/main/root/app/_crypto/file_encoder \
+        main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/libfileencoder.so && \
+    /usr/local/bin/compile_native.sh \
+        main/src/main/java/com/app/main/root/app/_crypto/password_encoder \
+        main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so && \
+    /usr/local/bin/compile_native.sh \
+        main/src/main/java/com/app/main/root/app/_crypto/user_validator \
+        main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build/libuser_validator.so && \
+    /usr/local/bin/compile_native.sh \
+        main/src/main/java/com/app/main/root/app/file_compressor \
+        main/src/main/java/com/app/main/root/app/file_compressor/.build/libfile_compressor.so && \
+    echo "✅ ALL COMPILATIONS COMPLETE"
 
-# Compile password_encoder (C++ with key_derivation)
-RUN cd /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder && \
-    echo "=== COMPILING PASSWORD_ENCODER ===" && \
-    mkdir -p .build && \
-    echo "Source files:" && \
-    ls -la *.cpp *.h 2>/dev/null || true && \
-    for cpp in *.cpp; do \
-        [ -f "$cpp" ] || continue; \
-        echo "Compiling $cpp"; \
-        g++ -c -fPIC "$cpp" -o ".build/${cpp%.cpp}.o" \
-            -I. \
-            -I/usr/include/openssl \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include/linux \
-            -std=c++17 -O2 -Wall -Wno-unused-parameter -Wno-deprecated-declarations; \
-    done && \
-    echo "Object files:" && \
-    ls -lh .build/*.o && \
-    g++ -shared -fPIC .build/*.o -o .build/libpasswordencoder.so -lcrypto -lssl -lpthread && \
-    echo "Library created:" && \
-    ls -lh .build/libpasswordencoder.so && \
-    echo "KeyDerivation symbols:" && \
-    nm -D .build/libpasswordencoder.so | grep KeyDerivation || echo "WARNING: No KeyDerivation symbols"
+# Build Spring Boot application
+RUN cd main && mvn clean package -DskipTests && \
+    echo "✅ SPRING BOOT BUILD COMPLETED"
 
-# Compile user_validator (C++)
-RUN cd /app/main/src/main/java/com/app/main/root/app/_crypto/user_validator && \
-    echo "=== COMPILING USER_VALIDATOR ===" && \
-    mkdir -p .build && \
-    echo "Source files:" && \
-    ls -la *.cpp *.h 2>/dev/null || true && \
-    for cpp in *.cpp; do \
-        [ -f "$cpp" ] || continue; \
-        echo "Compiling $cpp"; \
-        g++ -c -fPIC "$cpp" -o ".build/${cpp%.cpp}.o" \
-            -I. \
-            -I/usr/include/openssl \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include/linux \
-            -std=c++17 -O2 -Wall -Wno-unused-parameter -Wno-deprecated-declarations; \
-    done && \
-    echo "Object files:" && \
-    ls -lh .build/*.o && \
-    g++ -shared -fPIC .build/*.o -o .build/libuser_validator.so -lcrypto -lssl -lpthread && \
-    ls -lh .build/libuser_validator.so
-
-# Compile file_compressor (C files)
-RUN cd /app/main/src/main/java/com/app/main/root/app/file_compressor && \
-    echo "=== COMPILING FILE_COMPRESSOR ===" && \
-    mkdir -p .build && \
-    echo "Source files:" && \
-    ls -la *.c *.h 2>/dev/null || true && \
-    for c in *.c; do \
-        [ -f "$c" ] || continue; \
-        echo "Compiling $c"; \
-        gcc -c -fPIC "$c" -o ".build/${c%.c}.o" \
-            -I. \
-            -I/usr/include/openssl \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include \
-            -I/usr/lib/jvm/java-21-openjdk-amd64/include/linux \
-            -O2 -Wall -Wno-unused-parameter; \
-    done && \
-    echo "Object files:" && \
-    ls -lh .build/*.o && \
-    gcc -shared -fPIC .build/*.o -o .build/libfile_compressor.so -lcrypto -lssl -lpthread && \
-    ls -lh .build/libfile_compressor.so
-
-# Verify KeyDerivation symbols in libraries that need them
-RUN echo "" && \
-    echo "=== FINAL SYMBOL VERIFICATION ===" && \
-    for lib in \
-        /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so \
-        /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so; do \
-        echo ""; \
-        echo "Checking $(basename $lib):"; \
-        if nm -D "$lib" | grep -i "KeyDerivation" | grep " T "; then \
-            echo "✅ KeyDerivation symbols found"; \
-        else \
-            echo "❌ CRITICAL: No KeyDerivation symbols!"; \
-            echo "All symbols:"; \
-            nm -D "$lib" | grep " T " | head -20; \
-            exit 1; \
-        fi; \
-    done && \
-    echo "✅ All verifications passed"
-
-# Build Spring Boot
-RUN cd main && mvn clean package -DskipTests
-
-# Runtime stage
+# Final runtime stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+# Install runtime dependencies
 RUN apt-get update && \
-    apt-get install -y curl nodejs libssl3 libstdc++6 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get install -y \
+        curl \
+        nodejs \
+        libssl3 \
+        libstdc++6 \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
+# Create directories
 RUN mkdir -p \
     /app/lib/native/linux \
     /app/src/main/java/com/app/main/root/public \
     /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys && \
     chmod -R 777 /app/src/main/java/com/app/main/root/app/_crypto/message_encoder/keys
 
+# Copy native libraries to BOTH locations
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so /usr/local/lib/
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/libfileencoder.so /usr/local/lib/
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so /usr/local/lib/
@@ -180,20 +242,30 @@ COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/password
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build/libuser_validator.so /app/lib/native/linux/
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/file_compressor/.build/libfile_compressor.so /app/lib/native/linux/
 
+# Copy SQL files and config scripts
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_db/src/*.sql /app/src/main/java/com/app/main/root/app/_db/src/
 COPY --from=build /app/main/src/main/java/com/app/main/root/public/generate-config.js /app/src/main/java/com/app/main/root/public/
 COPY --from=build /app/main/src/main/java/com/app/main/root/public/encrypt-url.js /app/src/main/java/com/app/main/root/public/
+
+# Copy the jar file
 COPY --from=build /app/main/target/main-0.0.1-SNAPSHOT.jar server.jar
 
+# Set library paths
 ENV LD_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux:$LD_LIBRARY_PATH
 ENV JAVA_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux
 
 EXPOSE 3001
 
+# Run config generation then start server
 CMD ["/bin/sh", "-c", "\
     echo '=== Starting Application ===' && \
+    echo 'Environment: $APP_ENV' && \
     if [ \"$APP_ENV\" = \"prod\" ] || [ \"$APP_ENV\" = \"production\" ]; then \
-        cd /app && node src/main/java/com/app/main/root/public/generate-config.js; \
+        echo 'Generating production config...' && \
+        cd /app && \
+        node src/main/java/com/app/main/root/public/generate-config.js && \
+        echo 'Config generated successfully'; \
     fi && \
+    echo 'Starting Spring Boot server...' && \
     exec java -Djava.library.path=/usr/local/lib:/app/lib/native/linux -jar /app/server.jar \
 "]
