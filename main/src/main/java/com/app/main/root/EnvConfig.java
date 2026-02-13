@@ -8,7 +8,8 @@ public class EnvConfig {
 
     static {
         if(!init) {
-            String env = System.getProperty("app.env", "dev");
+            String env = System.getenv("APP_ENV");
+            if(env == null) env = System.getProperty("app.env", "dev");
             String fileName = ".env." + env;
     
             dotenv = Dotenv.configure()
