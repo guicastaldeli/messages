@@ -276,6 +276,9 @@ ENV JAVA_LIBRARY_PATH=/usr/local/lib:/app/lib/native/linux
 ENV DB_DATA_DIR=/app/db/data/
 ENV DB_SQL_DIR=/app/db/src/
 
+# Set session keys path for Docker environment
+ENV SESSION_KEYS_DIR=/app/keys
+
 EXPOSE 3001
 
 # Run config generation then start server
