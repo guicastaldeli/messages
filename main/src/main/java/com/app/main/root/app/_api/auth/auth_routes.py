@@ -20,6 +20,8 @@ class AuthRoutes:
             return cookies
         
         ## Set Cookies
+        import urllib.parse
+
         def setCookies(res: Response, cookies: Dict[str, Any]):
             if not cookies:
                 print("[Auth] No cookies to set!")
@@ -28,25 +30,26 @@ class AuthRoutes:
             print(f"[Auth] Setting {len(cookies)} cookies in browser: {list(cookies.keys())}")
             
             # FORCE production settings since we're on Render
-            is_production = True  # Force to True for Render
+            is_production = True
             
             for k, v in cookies.items():
-                # For SESSION_ID and auth_token, use HttpOnly for security
+                # URL encode the cookie value to handle special characters
+                encoded_value = urllib.parse.quote(str(v), safe='')
+                
                 is_http_only = k in ["JSESSIONID", "SESSION_ID", "auth_token"]
                 
-                # CRITICAL: Set proper domain for cross-domain cookies
                 res.set_cookie(
                     key=k,
-                    value=v,
+                    value=encoded_value,  # Use encoded value!
                     httponly=is_http_only,
-                    secure=True,  # MUST be True for HTTPS!
-                    samesite="none",  # CRITICAL: Allow cross-site requests from Vercel
-                    domain=".onrender.com",  # Allow all Render subdomains
+                    secure=True,
+                    samesite="none",
+                    domain=".onrender.com",
                     path="/",
                     max_age=7 * 24 * 60 * 60 if k in ["JSESSIONID", "REMEMBER_USER"] else None
                 )
-                print(f"[Auth] Set cookie {k} with domain=.onrender.com, secure=True, samesite=none")
-        
+                print(f"[Auth] Set cookie {k} (encoded) with domain=.onrender.com, secure=True, samesite=none")
+                
         ## Register
         @self.router.post("/register")
         async def registerUser(

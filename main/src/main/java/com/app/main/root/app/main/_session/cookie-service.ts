@@ -39,16 +39,14 @@ export class CookieService {
     public static getValue(name: string): string | null {
     if(typeof document === 'undefined') return null;
     
-    console.log('=== CookieService.getValue DEBUG ===');
     console.log(`[CookieService] Looking for: ${name}`);
     console.log(`[CookieService] All cookies:`, document.cookie);
-
-    console.log('====-----------------------------===');
     
     const cookies = document.cookie.split(';');
     for(let cookie of cookies) {
         const [cookieName, cookieVal] = cookie.trim().split('=');
         if(cookieName === name) {
+            // URL decode the value
             const value = decodeURIComponent(cookieVal);
             console.log(`[CookieService] Found ${name}:`, value);
             return value;
