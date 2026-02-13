@@ -3,10 +3,17 @@ WORKDIR /app
 
 COPY . .
 
-# Install build dependencies for native libraries
+# Install ALL build dependencies including OpenSSL
 RUN apt-get update && \
-    apt-get install -y g++ make cmake && \
-    apt-get clean
+    apt-get install -y \
+        g++ \
+        make \
+        cmake \
+        libssl-dev \
+        pkg-config \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create build directories
 RUN mkdir -p \
@@ -16,12 +23,26 @@ RUN mkdir -p \
     main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build \
     main/src/main/java/com/app/main/root/app/file_compressor/.build
 
-# Compile message_encoder with proper Linux ABI
+# First, verify the files exist
+RUN ls -la main/src/main/java/com/app/main/root/app/_crypto/message_encoder/
+
+# Compile message_encoder with OpenSSL
 RUN cd main/src/main/java/com/app/main/root/app/_crypto/message_encoder && \
     echo "Compiling message_encoder for Linux..." && \
+    # Check if key_derivation.cpp exists, if not, create it or find correct name
+    if [ ! -f key_derivation.cpp ]; then \
+        echo "ERROR: key_derivation.cpp not found!"; \
+        find . -name "*.cpp" -ls; \
+        exit 1; \
+    fi && \
     g++ -shared -fPIC -o .build/libmessage_encoder.so \
         message_encoder.cpp key_derivation.cpp \
-        -I. -I/usr/include -std=c++17 -O2 && \
+        -I. \
+        -I/usr/include/openssl \
+        -I/usr/include \
+        -std=c++17 \
+        -O2 \
+        -lcrypto -lssl && \
     echo "✅ message_encoder compiled"
 
 # Compile file_encoder
@@ -63,16 +84,20 @@ RUN cd main && mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies (only what's needed, not build tools)
 RUN apt-get update && \
-    apt-get install -y curl nodejs && \
+    apt-get install -y \
+        curl \
+        nodejs \
+        libssl3  # Runtime OpenSSL libraries \
+        && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Create directories
 RUN mkdir -p /app/lib/native/linux /app/src/main/java/com/app/main/root/public
 
-# Copy the freshly built native libraries (Linux binaries!)
+# Copy the freshly built native libraries
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so /usr/local/lib/
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/libfileencoder.so /usr/local/lib/
 COPY --from=build /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so /usr/local/lib/
