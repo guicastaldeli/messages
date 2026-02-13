@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <cstdlib>
 
 std::string bytesToHex(const std::vector<unsigned char>& data) {
     std::stringstream ss;
@@ -21,6 +22,27 @@ std::vector<unsigned char> hexToBytes(const std::string& hex) {
         bytes.push_back(byte);
     }
     return bytes;
+}
+
+static std::string getSessionKeysPath() {
+    const char* envPath = std::getenv("SESSION_KEYS_PATH");
+    if(envPath != nullptr && envPath[0] != '\0') {
+        std::cout << "Using SESSION_KEYS_PATH from environment: " << envPath << std::endl;
+        return std::string(envPath);
+    }
+    
+    const char* envDir = std::getenv("SESSION_KEYS_DIR");
+    if(envDir != nullptr && envDir[0] != '\0') {
+        std::string dir(envDir);
+        if(!dir.empty() && dir.back() != '/') {
+            dir += '/';
+        }
+        std::string path = dir + "session-keys.dat";
+        std::cout << "Using SESSION_KEYS_DIR from environment: " << path << std::endl;
+        return path;
+    }
+    
+    return "src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat";
 }
 
 /**
@@ -265,12 +287,13 @@ SessionKeys SessionKeys::deserialize(const std::vector<unsigned char>& data) {
     return session;
 }
 
-SessionManager::SessionManager() : 
-    storagePath("src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat") 
-{
+SessionManager::SessionManager() : storagePath(getSessionKeysPath()) {
+    std::cout << "SessionManager initialized with path: " << storagePath << std::endl;
     loadSessions();
 }
+
 SessionManager::SessionManager(const std::string& storagePath) : storagePath(storagePath) {
+    std::cout << "SessionManager initialized with custom path: " << storagePath << std::endl;
     loadSessions();
 }
 
@@ -281,7 +304,7 @@ bool SessionManager::saveSessions() {
     try {
         std::ofstream file(storagePath, std::ios::binary);
         if(!file) {
-            std::cerr << "Failed to open session file: " << storagePath << std::endl;
+            std::cerr << "Failed to open session file for writing: " << storagePath << std::endl;
             return false;
         }
 
@@ -330,7 +353,7 @@ bool SessionManager::loadSessions() {
     try {
         std::ifstream file(storagePath, std::ios::binary);
         if(!file) {
-            std::cout << "No existing session file found: " << storagePath << std::endl;
+            std::cout << "No existing session file found at: " << storagePath << " (will be created on first save)" << std::endl;
             return false;
         }
         sessions.clear();

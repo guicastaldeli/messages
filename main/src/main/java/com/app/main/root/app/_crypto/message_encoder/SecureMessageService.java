@@ -2,12 +2,24 @@ package com.app.main.root.app._crypto.message_encoder;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Service
 public class SecureMessageService {
     private final MessageEncoderWrapper messageEncoder;
-    private static final String KEYS_FILE_PATH = "src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat";
+    private static final String KEYS_FILE_PATH = getKeysFilePath();
     private boolean sessionsLoaded = false;
+    
+    private static String getKeysFilePath() {
+        String keysDir = System.getenv("SESSION_KEYS_DIR");
+        if(keysDir != null && !keysDir.isEmpty()) {
+            String path = keysDir.endsWith("/") ? keysDir : keysDir + "/";
+            return path + "session-keys.dat";
+        }
+        return "src/main/java/com/app/main/root/app/_crypto/message_encoder/keys/session-keys.dat";
+    }
     
     public SecureMessageService(MessageEncoderWrapper messageEncoder) {
         this.messageEncoder = messageEncoder;
@@ -16,10 +28,12 @@ public class SecureMessageService {
     @PostConstruct
     public void init() {
         try {
+            ensureKeysDirectoryExists();
+            
             synchronized(this) {
                 if(!sessionsLoaded) {
                     boolean loaded = messageEncoder.loadSessionsNow();
-                    System.out.println("Sessions loaded: " + loaded);
+                    System.out.println("Sessions loaded from: " + KEYS_FILE_PATH + " - Success: " + loaded);
                     sessionsLoaded = true;
                 }
             }
@@ -28,14 +42,27 @@ public class SecureMessageService {
             err.printStackTrace();
         }
     }
+    
+    private void ensureKeysDirectoryExists() {
+        try {
+            Path keysPath = Paths.get(KEYS_FILE_PATH).getParent();
+            if(keysPath != null && !Files.exists(keysPath)) {
+                Files.createDirectories(keysPath);
+                System.out.println("Created keys directory: " + keysPath.toAbsolutePath());
+            }
+        } catch(Exception err) {
+            System.err.println("Failed to create keys directory: " + err.getMessage());
+        }
+    }
 
     @PreDestroy
     public void shutdown() {
         try {
+            System.out.println("Saving sessions to: " + KEYS_FILE_PATH);
             messageEncoder.saveKeyMaterial(KEYS_FILE_PATH);
             messageEncoder.saveSessions();
         } catch(Exception err) {
-            System.err.println("Failed **shutdown: " + err.getMessage());
+            System.err.println("Failed shutdown: " + err.getMessage());
         }
     }
     
