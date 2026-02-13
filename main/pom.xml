@@ -115,6 +115,7 @@
 					<include>**/*.dat</include>
 					<include>**/*.dll</include>
 					<include>**/*.so</include>
+					<include>**/*.o</include>
 				</includes>
 			</resource>
 		</resources>

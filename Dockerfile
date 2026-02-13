@@ -230,93 +230,65 @@ compile_native() {\n\
 }\n\
 ' > /usr/local/bin/compile_native.sh && chmod +x /usr/local/bin/compile_native.sh
 
-# Compile message_encoder
-RUN echo "" && \
+# Find and copy key_derivation.cpp to all modules that need it
+RUN echo "🔍 Searching for key_derivation.cpp..." && \
+    find /app -name "key_derivation.cpp" -type f || echo "Searching..." && \
+    mkdir -p /app/shared_crypto && \
+    find /app -name "key_derivation.cpp" -exec cp {} /app/shared_crypto/ \; 2>/dev/null || true && \
+    cp /app/shared_crypto/key_derivation.cpp /app/main/src/main/java/com/app/main/root/app/_crypto/message_encoder/ 2>/dev/null || true && \
+    cp /app/shared_crypto/key_derivation.cpp /app/main/src/main/java/com/app/main/root/app/_crypto/user_validator/ 2>/dev/null || true && \
+    cp /app/shared_crypto/key_derivation.cpp /app/main/src/main/java/com/app/main/root/app/_crypto/password_encoder/ 2>/dev/null || true && \
+    cp /app/shared_crypto/key_derivation.cpp /app/main/src/main/java/com/app/main/root/app/_crypto/file_encoder/ 2>/dev/null || true && \
+    echo "✅ Key derivation files copied"
+
+# Compile all native libraries in a single RUN command
+RUN echo "🚀 STARTING ALL NATIVE COMPILATIONS 🚀" && \
+    \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: message_encoder" && \
     echo "═══════════════════════════════════════════════════════════" && \
-    echo "" && \
     /usr/local/bin/compile_native.sh \
-    main/src/main/java/com/app/main/root/app/_crypto/message_encoder \
-    main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so && \
-    echo "" && \
-    echo "═══════════════════════════════════════════════════════════" && \
+        main/src/main/java/com/app/main/root/app/_crypto/message_encoder \
+        main/src/main/java/com/app/main/root/app/_crypto/message_encoder/.build/libmessage_encoder.so && \
     echo "✅ COMPLETED: message_encoder" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo ""
-
-# Compile file_encoder
-RUN echo "" && \
+    \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: file_encoder" && \
     echo "═══════════════════════════════════════════════════════════" && \
-    echo "" && \
     /usr/local/bin/compile_native.sh \
-    main/src/main/java/com/app/main/root/app/_crypto/file_encoder \
-    main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/libfileencoder.so && \
-    echo "" && \
-    echo "═══════════════════════════════════════════════════════════" && \
+        main/src/main/java/com/app/main/root/app/_crypto/file_encoder \
+        main/src/main/java/com/app/main/root/app/_crypto/file_encoder/.build/libfileencoder.so && \
     echo "✅ COMPLETED: file_encoder" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo ""
-
-# Compile password_encoder
-RUN echo "" && \
+    \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: password_encoder" && \
     echo "═══════════════════════════════════════════════════════════" && \
-    echo "" && \
     /usr/local/bin/compile_native.sh \
-    main/src/main/java/com/app/main/root/app/_crypto/password_encoder \
-    main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so && \
-    echo "" && \
-    echo "═══════════════════════════════════════════════════════════" && \
+        main/src/main/java/com/app/main/root/app/_crypto/password_encoder \
+        main/src/main/java/com/app/main/root/app/_crypto/password_encoder/.build/libpasswordencoder.so && \
     echo "✅ COMPLETED: password_encoder" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo ""
-
-# Compile user_validator
-RUN echo "" && \
+    \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: user_validator" && \
     echo "═══════════════════════════════════════════════════════════" && \
-    echo "" && \
     /usr/local/bin/compile_native.sh \
-    main/src/main/java/com/app/main/root/app/_crypto/user_validator \
-    main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build/libuser_validator.so && \
-    echo "" && \
-    echo "═══════════════════════════════════════════════════════════" && \
+        main/src/main/java/com/app/main/root/app/_crypto/user_validator \
+        main/src/main/java/com/app/main/root/app/_crypto/user_validator/.build/libuser_validator.so && \
     echo "✅ COMPLETED: user_validator" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo ""
-
-# Compile file_compressor
-RUN echo "" && \
+    \
     echo "═══════════════════════════════════════════════════════════" && \
     echo "🚀 STARTING COMPILATION: file_compressor" && \
     echo "═══════════════════════════════════════════════════════════" && \
-    echo "" && \
     /usr/local/bin/compile_native.sh \
-    main/src/main/java/com/app/main/root/app/file_compressor \
-    main/src/main/java/com/app/main/root/app/file_compressor/.build/libfile_compressor.so && \
-    echo "" && \
-    echo "═══════════════════════════════════════════════════════════" && \
+        main/src/main/java/com/app/main/root/app/file_compressor \
+        main/src/main/java/com/app/main/root/app/file_compressor/.build/libfile_compressor.so && \
     echo "✅ COMPLETED: file_compressor" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo ""
+    \
+    echo "✅ ALL NATIVE COMPILATIONS COMPLETED SUCCESSFULLY ✅"
 
 # Build the Spring Boot application
-RUN echo "" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo "🚀 BUILDING SPRING BOOT APPLICATION" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo "" && \
-    cd main && mvn clean package -DskipTests && \
-    echo "" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo "✅ SPRING BOOT BUILD COMPLETED" && \
-    echo "═══════════════════════════════════════════════════════════" && \
-    echo ""
+RUN cd main && mvn clean package -DskipTests && \
+    echo "✅ SPRING BOOT BUILD COMPLETED"
 
 # Final stage
 FROM eclipse-temurin:21-jre
