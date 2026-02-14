@@ -20,9 +20,9 @@ public class MessageEncoderWrapper {
             boolean isLinux = osName.contains("nix") || osName.contains("nux") || osName.contains("aix");
             System.out.println("Detected OS: " + osName);
             
-            if (isWindows) {
+              if(isWindows) {
                 loadWindowsLibraries();
-            } else if (isLinux) {
+            } else if(isLinux) {
                 loadLinuxLibraries();
             } else {
                 throw new RuntimeException("Unsupported OS: " + osName);

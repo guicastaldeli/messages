@@ -37,7 +37,7 @@ window.addEventListener('load', async () => {
         }
         document.head.appendChild(script);
                 
-    } catch (error) {
+    } catch(error) {
         console.error('Error loading configuration:', error);
         const apiStatus = document.getElementById('api-gateway-status');
         apiStatus.textContent = 'Error: ' + error.message;

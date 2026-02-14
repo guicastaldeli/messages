@@ -21,7 +21,7 @@ async function checkClientStatus() {
 
         statusElement.textContent = 'Online';
         statusElement.style.color = 'green';
-    } catch (error) {
+    } catch(error) {
         statusElement.textContent = 'Offline';
         statusElement.style.color = 'red';
     }

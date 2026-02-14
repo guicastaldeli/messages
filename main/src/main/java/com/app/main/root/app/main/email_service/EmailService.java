@@ -38,7 +38,7 @@ public class EmailService {
     @Value("${web.url:}")
     private String webUrl;
     
-    @Value("${email.use.sendgrid:true}") // Add configuration to choose method
+    @Value("${email.use.sendgrid:true}")
     private boolean useSendGrid;
 
     @Autowired
@@ -54,27 +54,23 @@ public class EmailService {
     }
 
     public void sendEmail(String toEmail, String body) throws MessagingException {
-        // Extract subject from body
         String subject = extractSubject(body);
         
-        // Try SendGrid first if available and configured
-        if (useSendGrid && sendGridWebService != null) {
-            System.out.println("📧 Attempting to send via SendGrid API...");
+        if(useSendGrid && sendGridWebService != null) {
+            System.out.println("Attempting to send via SendGrid API...");
             boolean sent = sendGridWebService.sendEmail(toEmail, subject, body);
-            if (sent) {
-                System.out.println("✓ Email sent successfully via SendGrid to: " + toEmail);
+            if(sent) {
+                System.out.println("Email sent successfully via SendGrid to: " + toEmail);
                 return;
             } else {
-                System.out.println("⚠ SendGrid sending failed, falling back to SMTP...");
+                System.out.println("SendGrid sending failed, falling back to SMTP...");
             }
         }
         
-        // Fallback to SMTP
         sendEmailViaSMTP(toEmail, body);
     }
     
     private void sendEmailViaSMTP(String toEmail, String body) throws MessagingException {
-        // Get password from multiple sources with debug output
         String actualPassword = resolvePassword();
         String actualUsername = resolveUsername();
         
@@ -88,7 +84,7 @@ public class EmailService {
         System.out.println("To: " + toEmail);
         System.out.println("========================");
         
-        if (actualPassword == null || actualPassword.isEmpty()) {
+        if(actualPassword == null || actualPassword.isEmpty()) {
             throw new MessagingException("Email password not configured. Check email.password property or SENDGRID_API_KEY environment variable.");
         }
 
@@ -101,7 +97,6 @@ public class EmailService {
         props.put("mail.smtp.timeout", "10000");
         props.put("mail.smtp.ssl.protocols", "TLSv1.2");
         
-        // Important: Set this to debug
         props.put("mail.debug", "true");
 
         Session session = Session.getInstance(props, new Authenticator() {
@@ -111,7 +106,6 @@ public class EmailService {
             }
         });
         
-        // Enable session debug
         session.setDebug(true);
 
         Message message = new MimeMessage(session);
@@ -124,23 +118,20 @@ public class EmailService {
         message.setContent(body, "text/html; charset=utf-8");
         
         Transport.send(message);
-        System.out.println("✓ Email sent successfully via SMTP to: " + toEmail);
+        System.out.println("Email sent successfully via SMTP to: " + toEmail);
     }
     
     private String resolvePassword() {
-        // Try property first
-        if (emailPassword != null && !emailPassword.isEmpty()) {
+        if(emailPassword != null && !emailPassword.isEmpty()) {
             return emailPassword;
         }
         
-        // Try environment variable
         String envPassword = System.getenv("SENDGRID_API_KEY");
-        if (envPassword != null && !envPassword.isEmpty()) {
+        if(envPassword != null && !envPassword.isEmpty()) {
             return envPassword;
         }
         
-        // Try Spring environment
-        if (environment != null) {
+        if(environment != null) {
             return environment.getProperty("SENDGRID_API_KEY");
         }
         
@@ -148,20 +139,19 @@ public class EmailService {
     }
     
     private String resolveUsername() {
-        // Always use "apikey" for SendGrid
         return "apikey";
     }
     
     private String extractSubject(String htmlBody) {
-        if (htmlBody != null && htmlBody.contains("<title>")) {
+        if(htmlBody != null && htmlBody.contains("<title>")) {
             try {
                 int start = htmlBody.indexOf("<title>") + 7;
                 int end = htmlBody.indexOf("</title>", start);
-                if (start > 6 && end > start) {
+                if(start > 6 && end > start) {
                     return htmlBody.substring(start, end);
                 }
-            } catch (Exception e) {
-                // Fall through to default
+            } catch(Exception err) {
+                System.out.println(err);
             }
         }
         return "Messages App Notification";

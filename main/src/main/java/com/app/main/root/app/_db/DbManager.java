@@ -18,7 +18,7 @@ public class DbManager {
     
     private static String getDataDir() {
         String dir = System.getenv("DB_DATA_DIR");
-        if (dir == null || dir.isEmpty()) {
+          if(dir == null || dir.isEmpty()) {
             dir = "./src/main/java/com/app/main/root/app/_db/data/";
         }
         return dir.endsWith("/") ? dir : dir + "/";
@@ -26,7 +26,7 @@ public class DbManager {
     
     private static String getSqlDir() {
         String dir = System.getenv("DB_SQL_DIR");
-        if (dir == null || dir.isEmpty()) {
+          if(dir == null || dir.isEmpty()) {
             dir = "./src/main/java/com/app/main/root/app/_db/src/";
         }
         return dir.endsWith("/") ? dir : dir + "/";
@@ -94,7 +94,7 @@ public class DbManager {
                 });
         }
 
-        if (sqlFiles.isEmpty()) {
+          if(sqlFiles.isEmpty()) {
             System.err.println("WARNING: No SQL files found in " + sqlPath.toAbsolutePath());
         }
 

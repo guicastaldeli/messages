@@ -13,7 +13,7 @@ public class Uptime {
         long hours = uptimeMillis / (1000 * 60 * 60) % 24;
         long days = uptimeMillis / (1000 * 60 * 60 * 24);
         
-        if (days > 0) {
+        if(days > 0) {
             return String.format("%dd %02dh %02dm %02ds", days, hours, minutes, seconds);
         } else if(hours > 0) {
             return String.format("%02dh %02dm %02ds", hours, minutes, seconds);

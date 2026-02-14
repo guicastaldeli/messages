@@ -12,7 +12,7 @@ console.log('.env exists?', fs.existsSync(envPath));
 if(!process.env.API_URL || !process.env.SERVER_URL || !process.env.WEB_URL) {
     console.log('Environment variables not found, loading from .env file...');
     
-    if (!fs.existsSync(envPath)) {
+      if(!fs.existsSync(envPath)) {
         console.error('ERROR: .env file not found and environment variables not set');
         console.error('Required: ENCRYPTION_MASTER_KEY, API_URL, SERVER_URL, WEB_URL');
         process.exit(1);
@@ -34,12 +34,12 @@ console.log('SERVER_URL:', serverUrl);
 console.log('WEB_URL:', webUrl);
 console.log('===========================');
 
-if (!encryptionKey) {
+  if(!encryptionKey) {
     console.error('ERROR: ENCRYPTION_MASTER_KEY not found');
     process.exit(1);
 }
 
-if (!apiUrl || !serverUrl || !webUrl) {
+  if(!apiUrl || !serverUrl || !webUrl) {
     console.error('ERROR: Missing required URLs');
     console.error('API_URL:', apiUrl);
     console.error('SERVER_URL:', serverUrl);
@@ -50,7 +50,7 @@ if (!apiUrl || !serverUrl || !webUrl) {
 const keyBuffer = Buffer.from(encryptionKey, 'base64');
 console.log('Encryption key length:', keyBuffer.length, 'bytes');
 
-if (keyBuffer.length !== 32) {
+  if(keyBuffer.length !== 32) {
     console.error('ERROR: ENCRYPTION_MASTER_KEY must be 32 bytes (256 bits) for AES-256');
     console.error('Current length:', keyBuffer.length, 'bytes');
     process.exit(1);
@@ -119,7 +119,7 @@ window.ENCRYPTED_CONFIG = {
             );
             
             return bytesToUtf8(new Uint8Array(decrypted));
-        } catch (error) {
+        } catch(error) {
             console.error('Decryption error:', error);
             throw error;
         }
@@ -139,7 +139,7 @@ window.ENCRYPTED_CONFIG = {
             if(window.configResolve) window.configResolve();
             
             delete window.ENCRYPTED_CONFIG;
-        } catch (error) {
+        } catch(error) {
             console.error('Failed to decrypt configuration:', error);
         }
     })();

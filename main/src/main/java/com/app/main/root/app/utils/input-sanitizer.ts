@@ -65,7 +65,7 @@ class InputSanitizer {
      * Remove Dangerous Patterns
      */
     private static removeDangerousPatterns(text: string): string {
-        if (!text) return '';
+          if(!text) return '';
         
         //Remove javascript: protocol
         text = text.replace(/javascript:/gi, '');
@@ -141,7 +141,7 @@ class InputSanitizer {
      * 
      */
     public static sanitizePassword(password: string): string {
-        if (!password) return '';
+          if(!password) return '';
         
         let cleaned = this.removeDangerousPatterns(password);
         cleaned = cleaned.replace(/<[^>]*>/g, '');
@@ -191,9 +191,9 @@ class InputSanitizer {
             case 'url':
             default:
                 const sanitizeAs = input.getAttribute('data-sanitize-as');
-                if (sanitizeAs === 'username') {
+                  if(sanitizeAs === 'username') {
                     sanitized = this.sanitizeUsername(input.value);
-                } else if (sanitizeAs === 'email') {
+                } else if(sanitizeAs === 'email') {
                     sanitized = this.sanitizeEmail(input.value);
                 } else {
                     sanitized = this.sanitizeText(input.value);
@@ -323,7 +323,7 @@ class InputSanitizer {
      * 
      */
     public static sanitizeUrl(url: string): string {
-        if (!url) return '';
+          if(!url) return '';
         
         let cleaned = url.trim();
         

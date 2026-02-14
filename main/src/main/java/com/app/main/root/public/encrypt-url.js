@@ -16,7 +16,7 @@ function encrypt(text, encryptionKey) {
 function decrypt(encrypted, encryptionKey) {
     const key = Buffer.from(encryptionKey, 'base64');
     
-    if (key.length !== 32) {
+      if(key.length !== 32) {
         throw new Error(`Invalid key length: ${key.length} bytes. Expected 32 bytes for AES-256.`);
     }
     

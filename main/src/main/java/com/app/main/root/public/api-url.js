@@ -55,7 +55,7 @@ window.ENCRYPTED_CONFIG = {
             );
             
             return bytesToUtf8(new Uint8Array(decrypted));
-        } catch (error) {
+        } catch(error) {
             console.error('Decryption error:', error);
             throw error;
         }
@@ -75,7 +75,7 @@ window.ENCRYPTED_CONFIG = {
             if(window.configResolve) window.configResolve();
             
             delete window.ENCRYPTED_CONFIG;
-        } catch (error) {
+        } catch(error) {
             console.error('Failed to decrypt configuration:', error);
         }
     })();
