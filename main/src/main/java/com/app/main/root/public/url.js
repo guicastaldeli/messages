@@ -35,5 +35,5 @@ window.NEXT_PUBLIC_SERVER_DEF_WS_URL = 'ws://messages-server-f1fe.onrender.com/m
 window.NEXT_PUBLIC_SERVER_DIR_WS_URL = 'ws://messages-server-f1fe.onrender.com/main/direct';
 
 // API URLs
-window.API_URL = 'http://messages-api-instance.eba-w4qijkkd.us-west-2.elasticbeanstalk.com';
-window.NEXT_PUBLIC_API_URL = 'http://messages-api-instance.eba-w4qijkkd.us-west-2.elasticbeanstalk.com';
+window.API_URL = 'https://messages-api-p71a.onrender.com';
+window.NEXT_PUBLIC_API_URL = 'https://messages-api-p71a.onrender.com';

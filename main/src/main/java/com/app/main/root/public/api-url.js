@@ -1,7 +1,6 @@
 //
-// Auto-generated from .env.dev - DO NOT EDIT MANUALLY
+// Auto-generated variables - DO NOT EDIT MANUALLY
 // Values are encrypted
-// Generated at: 2026-02-13T20:30:23.920Z
 //
 
 window.ENCRYPTED_CONFIG = {

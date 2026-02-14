@@ -4,17 +4,14 @@
     <title>Server</title>
     <link rel="stylesheet" href="/main/styles/interface.css">
     <script>
-        window.configReady = new Promise((resolve) => {
-            window.configResolve = resolve;
-        });
+        window.configReady = Promise.resolve();
     </script>
     <script th:inline="javascript" src="/main/public/url.js"></script>
-    <script th:inline="javascript" src="/main/public/api-url.js"></script>
     <script>
-        if(typeof window.configResolve === 'function') {
-            console.log('Configurations loaded, resolving promise...');
-            window.configResolve();
-        }
+        console.log('Configuration loaded from url.js');
+        console.log('API_URL:', window.API_URL);
+        console.log('SERVER_URL:', window.SERVER_URL);
+        console.log('WEB_URL:', window.WEB_URL);
     </script>
     <script src="/main/public/update-time-status.js"></script>
     <script src="/main/public/update-uptime.js"></script>
