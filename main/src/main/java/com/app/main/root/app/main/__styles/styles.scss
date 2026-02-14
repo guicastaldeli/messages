@@ -1015,6 +1015,11 @@ body {
     height: 30%;
 }
 
+.group-info.form {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
 /* Group Forms */
 .group-info.form,
 .join-group-form {
