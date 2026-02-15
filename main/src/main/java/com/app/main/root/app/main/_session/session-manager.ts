@@ -112,12 +112,10 @@ export class SessionManager {
             ...addData
         }
 
-        // CRITICAL: Use SameSite=None for cross-origin requests
-        // This allows cookies to be sent from vercel.app to onrender.com
         CookieService.set(this.SESSION_ID_KEY, sessionId, {
             days: rememberUser ? 7 : undefined,
-            secure: true,        // MUST be true for SameSite=None
-            sameSite: 'None'     // Allows cross-origin cookie sending
+            secure: true,
+            sameSite: 'None'
         });
         
         CookieService.set(this.USER_INFO_KEY, JSON.stringify({
