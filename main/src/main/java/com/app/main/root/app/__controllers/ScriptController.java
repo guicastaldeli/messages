@@ -30,7 +30,7 @@ public class ScriptController {
         try {
             File externalFile = new File("/app/src/main/java/com/app/main/root/public/api-url.js");
               if(externalFile.exists()) {
-                System.out.println("✅ Serving api-url.js from external file: " + externalFile.getAbsolutePath());
+                System.out.println("Serving api-url.js from external file: " + externalFile.getAbsolutePath());
                 String content = new String(Files.readAllBytes(externalFile.toPath()), StandardCharsets.UTF_8);
                 return ResponseEntity.ok()
                         .contentType(MediaType.valueOf("application/javascript"))
