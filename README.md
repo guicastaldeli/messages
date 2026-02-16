@@ -1,4 +1,4 @@
-# <img src="https://i.imgur.com/KkOvWGu.png" width=32 style="position: relative; top: -15px; margin-left: 20px;"> <img src="https://i.imgur.com/G5WDjDj.png" width=250 style="position:relative;">
+# <img src="https://i.imgur.com/wLtZB38.png" width=300>
 This is Messages, a complete Message App!, 
 you can send messages, create groups and add your friends.
 
@@ -6,9 +6,8 @@ you can send messages, create groups and add your friends.
 ![dashboard](https://i.imgur.com/O8RWQvW.png)
 
 ## Contacts
-![contact-menu0](https://i.imgur.com/oILshef.png)
-
-You can add contacts by the username of your friend.
+- You can add contacts by the username of your friend:<br>
+![contact-menu0](https://i.imgur.com/oILshef.png)<br>
 ![contact-menu1](https://i.imgur.com/OcsxGOr.png)
 
 ## Groups
