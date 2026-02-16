@@ -263,7 +263,7 @@ export class SessionManager {
             try {
                 const parsed = JSON.parse(value);
                 return {
-                    sessionId: parsed.sessionId || parsed.sessioinId || '',
+                    sessionId: parsed.sessionId || parsed.sessionId || '',
                     userId: parsed.userId || '',
                     username: parsed.username || '',
                     email: parsed.email || ''

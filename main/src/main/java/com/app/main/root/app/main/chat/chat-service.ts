@@ -4,7 +4,6 @@ import { SocketClientConnect } from "../socket-client-connect";
 import { MessageControllerClient } from "./messages/message-controller-client";
 import { FileControllerClient } from "./file/file-controller-client";
 import { EventStream } from "./event-stream";
-import { AnyARecord } from "dns";
 
 export class ChatService {
     private socketClientConnect: SocketClientConnect;
@@ -70,23 +69,14 @@ export class ChatService {
                 throw new Error(`Invalid userId: ${userId}. User ID should not be a chat ID.`);
             }
             
-            const cookies = document.cookie;
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json'
-            }
-            if(cookies) {
-                headers['Cookie'] = cookies;
-                console.log(`[ChatService] Forwarding cookies: ${cookies}`);
-            } else {
-                console.warn(`[ChatService] No cookies found for chat data request`);
-            }
-            
             const res = await fetch(
                 `${this.apiClientController.getUrl()}/api/chat/${chatId}/data?userId=${encodeURIComponent(userId)}&page=${page}&pageSize=${pageSize}`,
                 {
                     method: 'GET',
                     credentials: 'include',
-                    headers: headers
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 }
             );
             
