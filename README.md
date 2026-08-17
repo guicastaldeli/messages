@@ -1,4 +1,4 @@
-# <img src="https://i.imgur.com/wLtZB38.png" width=300>
+# <img src="https://i.imgur.com/x8fKhJb.png" width=300>
 This is Messages, a complete Message App!, 
 you can send messages, create groups and add your friends.
 
