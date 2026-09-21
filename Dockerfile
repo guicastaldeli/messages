@@ -1,10 +1,12 @@
-# Start with the base image
+# ============================================================
+# Stage 1: Builder
+# ============================================================
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
 COPY . .
 
-# Install ALL build dependencies including OpenSSL and gcc for C files
+# Install build dependencies for compiling C/C++ native libraries
 RUN apt-get update && \
     apt-get install -y \
         g++ \
@@ -220,20 +222,27 @@ RUN /usr/local/bin/compile_native.sh
 RUN cd main && mvn clean package -DskipTests && \
     echo "✅ SPRING BOOT BUILD COMPLETED"
 
-# Final runtime stage
+# ============================================================
+# Stage 2: Runtime
+# ============================================================
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies + dotenv for generate-config.js
 RUN apt-get update && \
     apt-get install -y \
         curl \
         nodejs \
+        npm \
         libssl3 \
         libstdc++6 \
         && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    npm install -g dotenv
+
+# Make globally installed npm packages visible to Node's require()
+ENV NODE_PATH=/usr/local/lib/node_modules
 
 # Create directories - CRITICAL: Create database directories with proper permissions
 RUN mkdir -p \
@@ -284,10 +293,10 @@ EXPOSE 3001
 # Run config generation then start server
 CMD ["/bin/sh", "-c", "\
     echo '=== Starting Application ===' && \
-    echo 'Environment: $APP_ENV' && \
+    echo \"Environment: $APP_ENV\" && \
     echo 'Database paths:' && \
-    echo '  DATA_DIR: $DB_DATA_DIR' && \
-    echo '  SQL_DIR: $DB_SQL_DIR' && \
+    echo \"  DATA_DIR: $DB_DATA_DIR\" && \
+    echo \"  SQL_DIR: $DB_SQL_DIR\" && \
     echo 'Checking SQL files...' && \
     ls -la /app/db/src/ && \
     if [ \"$APP_ENV\" = \"prod\" ] || [ \"$APP_ENV\" = \"production\" ]; then \
