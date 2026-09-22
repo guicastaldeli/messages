@@ -18,10 +18,28 @@ class Config:
             
     def loadEnv(self):
         self.env = os.getenv('APP_ENV', 'dev')
-        envFile = f'../../.env-config/.env.{self.env}'
         
-        print(f"Loading {self.env} from: {envFile}")
-        load_dotenv(envFile)
+        filename = f'.env.{self.env}'   
+        paths = [
+            os.getenv('ENV_FILE_PATH'),
+            f'../../.env-config/{filename}',
+            f'/app/.env-config/{filename}',
+            os.path.join(os.path.dirname(__file__), '..', '..', '.env-config', filename),
+            os.path.join(os.path.dirname(__file__), '.env-config', filename)
+        ]
+        
+        envFile = None
+        for path in paths:
+                if path and os.path.isfile(path):
+                        envFile = path
+                        break
+                    
+        if envFile:
+            print(f"Loading {self.env} from: {envFile}")
+            load_dotenv(envFile)
+        else:
+            print(f"WARNING: .env.{self.env} not found in any of the expected locations")
+            print(f"Tried: {paths}")
         
         self.WEB_URL = os.getenv('WEB_URL')
         self.SERVER_URL = os.getenv('SERVER_URL')
