@@ -1,6 +1,12 @@
 struct Material {
     useTexture: f32,
-    padding: vec3<f32>
+    isChat: f32,
+    isFresnel: f32,
+    padding0: f32,
+    baseColor: vec4<f32>,
+    specularPower: f32,
+    specularIntensity: f32,
+    padding1: vec2<f32>
 }
 
 struct VertexOutput {

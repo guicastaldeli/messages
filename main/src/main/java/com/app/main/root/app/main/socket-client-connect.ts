@@ -39,7 +39,7 @@ export class SocketClientConnect {
             try {
                 const url = process.env.NEXT_PUBLIC_SERVER_DEF_HTTP_URL;
                 if(!url) throw new Error("SERVER URL not avaliable. FATAL ERR.");
-                console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', url);
+                //console.log('%cConnecting to:', 'color: #229200ff; font-weight: bold', url);
                 
                 if(this.client) {
                     this.client.deactivate();
@@ -53,7 +53,7 @@ export class SocketClientConnect {
                     heartbeatOutgoing: 4000,
 
                     onConnect: async () => {
-                        console.log('%cConnected to Server ;)', 'color: #004db2ff; font-weight: bold');
+                        //console.log('%cConnected to Server ;)', 'color: #004db2ff; font-weight: bold');
                         this.reconnectAttemps = 0;
 
                         this.subscriptionManager.updateClient(this.client);
@@ -71,7 +71,7 @@ export class SocketClientConnect {
                         console.error('Server error!: ', frame.headers['message'], frame.body);
                     },
                     onWebSocketClose: (e) => {
-                        console.log('%cConnection closed ;(', 'color: #992a24ff; font-weight: bold', e);
+                        //console.log('%cConnection closed ;(', 'color: #992a24ff; font-weight: bold', e);
                         this.connectionPromise = null;
                         if(e.code !== 1000) this.handleReconnect();
                     },
@@ -196,7 +196,7 @@ export class SocketClientConnect {
         if(this.reconnectAttemps < this.maxReconnectAttemps) {
             this.reconnectAttemps++;
             const delay = 3000 * this.reconnectAttemps;
-            console.log(`Reconnecting in ${delay}ms... (${this.reconnectAttemps}/${this.maxReconnectAttemps})`);
+            //console.log(`Reconnecting in ${delay}ms... (${this.reconnectAttemps}/${this.maxReconnectAttemps})`);
 
             setTimeout(() => {
                 this.connect().catch(console.error);

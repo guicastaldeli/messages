@@ -128,7 +128,7 @@ export class ChatController {
         
         await this.notificationController.init(userId, username);
         
-        console.log('Initializing notifications for user:', userId);
+        //console.log('Initializing notifications for user:', userId);
         
         const notificationService = await this.notificationController.getNotificationSevrice();
         await notificationService.loadUserNotification(userId);

@@ -17,10 +17,13 @@ export class MeshLoader {
         return Array.from(this.loadedMeshes.keys());
     }
 
-    private static async checkFileExists(url: string): Promise<boolean> {
+    private static async checkFileExists(name: string): Promise<boolean> {
         try {
-            const res = await fetch(url, { method: 'HEAD' });
-            return res.ok;
+            const res = await fetch(`/main/renderer/mesh?name=${encodeURIComponent(name)}`);
+            if(!res.ok) return false;
+            
+            const data = await res.json();
+            return data.exists === true;
         } catch {
             return false;
         }
@@ -34,7 +37,7 @@ export class MeshLoader {
     public static async load(): Promise<void> {
         try {
             const meshTypes: Type[] = Object.values(Type) as Type[];
-            console.log(`Loading ${meshTypes.length} mesh types:`, meshTypes);
+            //console.log(`Loading ${meshTypes.length} mesh types:`, meshTypes);
 
             const loadPromises = meshTypes.map(async (t) => {
                 if(t === Type.STARS || 
@@ -45,8 +48,7 @@ export class MeshLoader {
                     return await this.loadFile(t);
                 }
 
-                const url = `${MeshLoader.URL}${t}.json`;
-                const meshExists = await this.checkFileExists(url);
+                const meshExists = await this.checkFileExists(t);
                 if(meshExists) {
                     const loaded = await this.loadMesh(t);
                     if(loaded) return loaded;
@@ -55,7 +57,7 @@ export class MeshLoader {
             });
 
             await Promise.all(loadPromises);
-            console.log(`Mesh loading completed. Loaded ${this.loadedMeshes.size} meshes`);
+            //console.log(`Mesh loading completed. Loaded ${this.loadedMeshes.size} meshes`);
         } catch(err) {
             console.error(`ERROR loading mesh! ${MeshLoader.URL}`, err);
             throw err;
@@ -104,7 +106,7 @@ export class MeshLoader {
             );
             
             this.loadedMeshes.set(t, meshData);
-            console.log(`Loaded mesh: ${data.name}`);
+            //console.log(`Loaded mesh: ${data.name}`);
             return meshData;    
         } catch(err) {
             return null;
@@ -123,7 +125,7 @@ export class MeshLoader {
     
             const meshData = meshDataList[0];
             this.loadedMeshes.set(t, meshData);
-            console.log(`Loaded model: ${t} with ${meshDataList.length} meshes`);
+            //console.log(`Loaded model: ${t} with ${meshDataList.length} meshes`);
             return meshData;
         } catch(err) {
             console.error(`Failed to load ${t}:`, err);
@@ -152,7 +154,7 @@ export class MeshLoader {
             }
             
             this.loadedMeshes.set(t, meshData);
-            console.log(`Generated procedural mesh: ${t}`);
+            //console.log(`Generated procedural mesh: ${t}`);
             return meshData;
         } catch(err) {
             console.error(`Failed to generate mesh ${t}:`, err);

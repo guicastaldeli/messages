@@ -49,7 +49,7 @@ export class SubscriptionManager {
                     eventName
                 });
 
-                console.log('%cSubscription created for:', 'color: #00aa00; font-weight: bold', destination);
+                //console.log('%cSubscription created for:', 'color: #00aa00; font-weight: bold', destination);
                 res();
             } catch(err) {
                 console.error('%cSubscription failed for:', 'color: #ff0000; font-weight: bold', destination, err);
@@ -69,7 +69,7 @@ export class SubscriptionManager {
         if(registry.listenerCount <= 0) {
             registry.subscription.unsubscribe();
             this.subscriptionRegistry.delete(destination);
-            console.log('%cUnsubscribed of:', 'color: #888; font-weight: bold', destination);
+            //console.log('%cUnsubscribed of:', 'color: #888; font-weight: bold', destination);
         } else {
             console.log('%cDecremented listener of:', 'color: #888; font-weight: bold', destination, `(count: ${registry.listenerCount})`);
         }

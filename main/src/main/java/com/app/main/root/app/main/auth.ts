@@ -243,7 +243,7 @@ export class Auth {
             SessionManager.clearSession();
                     
             const socketId = await this.socketClientConnect.getSocketId();
-            console.log('Creating new session with socket ID:', socketId);
+            //console.log('Creating new session with socket ID:', socketId);
     
             let result;
             const authService = await this.apiClientController.getAuthService();

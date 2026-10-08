@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   reactStrictMode: true,
   devIndicators: false,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production'
+      ? { exclude: ['error', 'warn'] }
+      : false,
+  },
   webpack: (config) => {
     config.module.rules.push({
       test: /\.wgsl$/,
@@ -26,6 +31,19 @@ const nextConfig: NextConfig = {
         source: '/.shaders/:path*',
         destination: '/.shaders/:path*',
       },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'unload=self'
+          }
+        ]
+      }
     ];
   },
 };

@@ -21,7 +21,7 @@ function HomeContent() {
       try {
         await socketClient.connect();
         setSocketClientConnect(socketClient);
-        console.log("Socket connected successfully");
+        //console.log("Socket connected successfully");
       } catch(error) {
         console.error("Failed to connect socket:", error);
       } finally {

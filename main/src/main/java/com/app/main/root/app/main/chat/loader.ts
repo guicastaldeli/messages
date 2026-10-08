@@ -31,7 +31,7 @@ export class Loader {
                 return;
             }
             
-            console.log(`[Loader.loadChatItems] Loading chat items for userId: ${userId}, sessionId: ${sessionId}`);
+            //console.log(`[Loader.loadChatItems] Loading chat items for userId: ${userId}, sessionId: ${sessionId}`);
             
             const stream = await this.chatService.streamUserChats(userId);
             stream.on('chat_data', (data: any) => {
@@ -50,7 +50,7 @@ export class Loader {
                 }
             });
             stream.on('complete', (data: any) => {
-                console.log('Chat stream completed:', data);
+                //console.log('Chat stream completed:', data);
                 this.emitStreamComplete('chat-stream-complete', {
                     userId,
                     page: data?.page,
@@ -90,7 +90,7 @@ export class Loader {
             try {
                 const sessionId = await this.socketClient.getSocketId();
                 if(sessionId) {
-                    console.log(`[Loader] Socket connection established with sessionId: ${sessionId}`);
+                    //console.log(`[Loader] Socket connection established with sessionId: ${sessionId}`);
                     return sessionId;
                 }
             } catch(err) {
@@ -98,7 +98,7 @@ export class Loader {
             }
             
             if(i < maxRetries - 1) {
-                console.log(`[Loader] Waiting ${retryDelay}ms before retry...`);
+                //console.log(`[Loader] Waiting ${retryDelay}ms before retry...`);
                 await new Promise(resolve => setTimeout(resolve, retryDelay));
             }
         }
@@ -187,14 +187,14 @@ export class Loader {
             const hasRegularMessages = chatData.messages && chatData.messages.length > 0;
             const hasFiles = chatData.files && chatData.files.length > 0;
             
-            console.log(`Chat ${chatId} content check:`, {
+            /*console.log(`Chat ${chatId} content check:`, {
                 timeline: chatData.timeline?.length || 0,
                 messages: chatData.messages?.length || 0,
                 files: chatData.files?.length || 0,
                 hasTimelineItems,
                 hasRegularMessages,
                 hasFiles
-            });
+            });*/
             
             return hasTimelineItems || hasRegularMessages || hasFiles;
         } catch(err) {
@@ -220,7 +220,7 @@ export class Loader {
                 if(lastItem.type === 'file') {
                     return lastItem.fileData?.originalFileName || 'file';
                 } else if(lastItem.type === 'system' || lastItem.isSystem) {
-                    console.log('SYSTEM>>>>', lastItem.content)
+                    //console.log('SYSTEM>>>>', lastItem.content)
                     return lastItem.content || 'System message';
                 } else {
                     return lastItem.content || 'Message';

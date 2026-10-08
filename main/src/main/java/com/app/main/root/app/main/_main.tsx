@@ -1,5 +1,6 @@
 import './__styles/styles.scss';
 import React from 'react';
+import InputSanitizer from '../utils/input-sanitizer';
 import { Component } from 'react';
 import { ApiClientController } from './_api-client/api-client-controller';
 import { SocketClientConnect } from './socket-client-connect';
@@ -16,7 +17,9 @@ import { PasswordResetController } from './password-reset-controller';
 import { Renderer } from './renderer/renderer';
 import { Auth } from './auth';
 import { Hello } from './hello';
-import InputSanitizer from '../utils/input-sanitizer';
+import { disableConsole } from 'console-off';
+
+disableConsole({ exclude: ['error', 'warn'] });
 
 interface State {
     chatManager: ChatManager | null;
@@ -28,6 +31,8 @@ interface State {
     showPasswordReset: boolean;
     passwordResetToken?: string;
     renderer: Renderer | null;
+    rendererReady: boolean;
+    rendererError: string | null;
     activeTab: 'login' | 'register';
     authState: AuthState;
 }
@@ -48,6 +53,8 @@ export class Main extends Component<any, State> {
     private chatManager!: ChatManager;
     private chatController!: ChatController;
     private renderer: Renderer | null = null;
+
+    private rendererInitialized = false;
 
     public auth: Auth;
     public appContainerRef = React.createRef<HTMLDivElement>();
@@ -92,6 +99,8 @@ export class Main extends Component<any, State> {
             showPasswordReset: false,
             passwordResetToken: undefined,
             renderer: null,
+            rendererReady: false,
+            rendererError: null,
             activeTab: 'login',
             authState: { ...this.auth.state }
         }
@@ -103,6 +112,13 @@ export class Main extends Component<any, State> {
         try {
             InputSanitizer.sanitizeAllInputs();
             InputSanitizer.addLiveSanitizationToAll();
+
+            setTimeout(() => {
+                if(!this.state.rendererReady && !this.state.rendererError) {
+                    //console.warn('Renderer init timed out, continuing anyway');
+                    this.setState({ rendererError: 'Renderer timed out' });
+                }
+            }, 15000);
             
             const originalSetState = this.auth.setState.bind(this.auth);
             this.auth.setState = (newState: any, cb?: () => void) => {
@@ -112,18 +128,10 @@ export class Main extends Component<any, State> {
                 });
             }
 
-            await new Promise(resolve => setTimeout(resolve, 0));
-            setTimeout(() => {
-                if(this.canvasRef.current) {
-                    this.initRenderer();
-                    this.hello.init();
-                }
-            }, 100);
-
             await this.connect();
 
             const userInfo = SessionManager.getUserInfo();
-            console.log('Loaded user info from cookies:', userInfo);
+            //console.log('Loaded user info from cookies:', userInfo);
             if(userInfo) {
                 try {
                     const authService = await this.apiClientController.getAuthService();
@@ -189,13 +197,13 @@ export class Main extends Component<any, State> {
                 }
                 
                 const activeChat = localStorage.getItem('active-chat');
-                console.log('Found active chat from storage:', activeChat);
+                //console.log('Found active chat from storage:', activeChat);
                 let activeChatId = null;
                 if(activeChat) {
                     try {
                         const chatObj = JSON.parse(activeChat);
                         activeChatId = chatObj.id || chatObj.chatId;
-                        console.log(`Extracted active chat ID: ${activeChatId}`);
+                        //console.log(`Extracted active chat ID: ${activeChatId}`);
                     } catch(err) {
                         console.warn('Failed to parse active chat, using as-is:', activeChat);
                         activeChatId = activeChat;
@@ -204,11 +212,11 @@ export class Main extends Component<any, State> {
 
                 const cacheService = await this.chatService.getCacheServiceClient();
                 if(userInfo.userId) {
-                    console.log('Initializing cache for user:', userInfo.userId);
+                    //console.log('Initializing cache for user:', userInfo.userId);
                     
                     await cacheService.initCache(userInfo.userId);
                     if(activeChatId) {
-                        console.log('Loading active chat:', activeChatId);
+                        //console.log('Loading active chat:', activeChatId);
                         try {
                             await this.chatService.getData(userInfo.userId, activeChatId, 0);
                         } catch(err) {
@@ -232,6 +240,19 @@ export class Main extends Component<any, State> {
         }
     }
 
+    componentDidUpdate(): void {
+        if(this.rendererInitialized ||
+            !this.canvasRef.current ||
+            document.querySelector('#ctx') !== this.canvasRef.current
+        ) {
+            return;
+        }
+
+        this.rendererInitialized = true;
+        this.initRenderer();
+        this.hello.init();
+    }
+
     componentWillUnmount(): void {
         /*
         this.hello.fontChangeIntervals.forEach(interval => clearInterval(interval));
@@ -248,7 +269,7 @@ export class Main extends Component<any, State> {
 
     public async loadData(userId: string): Promise<any> {
         if(!this.state.chatManager) {
-            console.warn('ChatManager not initialized yet, skipping loadData');
+            //console.warn('ChatManager not initialized yet, skipping loadData');
             return;
         }
         
@@ -259,11 +280,11 @@ export class Main extends Component<any, State> {
                 await new Promise(resolve => setTimeout(resolve, 500));
                 const retrySessionId = await this.socketClientConnect.getSocketId();
                 if(!retrySessionId) {
-                    console.error('Still no sessionId after retry, skipping loadData');
+                    //console.error('Still no sessionId after retry, skipping loadData');
                     return;
                 }
             }
-            console.log('SessionId available, loading chat items for userId:', userId);
+            //console.log('SessionId available, loading chat items for userId:', userId);
         } catch(err) {
             console.error('Error getting sessionId:', err);
             return;
@@ -295,20 +316,39 @@ export class Main extends Component<any, State> {
      * 
      */
     public async initRenderer(): Promise<void> {
-        try {
-            if(!this.canvasRef.current) {
-                console.warn('Canvas ref not available');
-                return;
-            }
+        if (!this.canvasRef.current) {
+            console.warn('Canvas ref not available');
+            this.setState({
+                rendererReady: false,
+                rendererError: 'Canvas not available',
+            });
+            return;
+        }
 
+        try {
             this.renderer = new Renderer();
             await this.renderer.setup(this.canvasRef.current.id);
             await this.renderer.run();
             await this.renderer.update();
 
-            this.setState({ renderer: this.renderer });
-        } catch(err) {
+            this.setState(
+                {
+                    renderer: this.renderer,
+                    rendererReady: true,
+                    rendererError: null,
+                },
+                () => {
+                    requestAnimationFrame(() => {
+                        window.dispatchEvent(new Event('resize'));
+                    });
+                }
+            );
+        } catch (err) {
             console.error('Renderer err', err);
+            this.setState({
+                rendererReady: false,
+                rendererError: (err as Error)?.message ?? 'Failed to initialize renderer',
+            });
         }
     }
 
@@ -330,67 +370,63 @@ export class Main extends Component<any, State> {
 
         return (
             <div className='app' ref={this.appContainerRef}>
-                <SessionProvider 
-                    apiClientController={this.apiClientController} 
+                <SessionProvider
+                    apiClientController={this.apiClientController}
                     initialSession='LOGIN'
                 >
                     <SessionContext.Consumer>
                         {(sessionContext) => {
-                            if(!sessionContext) {
-                                return (
-                                    <div className="session-loading-overlay">
-                                        <div className="session-loading-content">
-                                            <div>Loading session...</div>
-                                            <div className="session-loading-status">
-                                                <span>Initializing application</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            }
+                            const showOverlay =
+                                !sessionContext ||
+                                (!this.state.rendererReady && !this.state.rendererError);
+
+                            /* Show the login screen whenever we're on LOGIN (or the session
+                            hasn't resolved yet, so the canvas can mount and initialize). */
+                            const showLoginScreen =
+                                !sessionContext || sessionContext.currentSession === 'LOGIN';
 
                             return (
                                 <>
                                     <div className="app-main">
-                                        {sessionContext.currentSession === 'LOGIN' && (
+
+                                        {/* LOGIN SCREEN */}
+                                        {showLoginScreen && (
                                             <>
                                                 <header id='main-header'>
                                                     <div id="header-content">
-                                                        <img 
-                                                            src={LOGO_PATH} 
+                                                        <img
+                                                            src={LOGO_PATH}
                                                             alt="messages"
-                                                            onClick={() => window.location.href = ''} 
+                                                            onClick={() => window.location.href = ''}
                                                             title='Home'
                                                         />
                                                         <a href={REPO_LINK} target='_blank'>Repository</a>
                                                     </div>
                                                 </header>
+
                                                 <div className='renderer'>
-                                                    <canvas 
-                                                        id='ctx'
-                                                        ref={this.canvasRef}
-                                                    >
-                                                    </canvas>
+                                                    <canvas id='ctx' ref={this.canvasRef}></canvas>
                                                 </div>
+
                                                 <div className={joinScreenClass}>
                                                     <div className='form'>
                                                         <div className="tab-container">
                                                             {/* Tab Headers */}
                                                             <div className="tab-headers">
-                                                                <div 
+                                                                <div
                                                                     className={`tab-header ${activeTab === 'login' ? 'active' : ''}`}
                                                                     onClick={() => this.switchTab('login')}
                                                                 >
                                                                     Login
                                                                 </div>
-                                                                <div 
+                                                                <div
                                                                     className={`tab-header ${activeTab === 'register' ? 'active' : ''}`}
                                                                     onClick={() => this.switchTab('register')}
                                                                 >
                                                                     Register
                                                                 </div>
                                                             </div>
-                                                                    
+
                                                             <div className="auth-content" style={{ display: hasMessages ? 'flex' : 'none' }}>
                                                                 {authState.message && (
                                                                     <div className="auth-message">
@@ -407,34 +443,50 @@ export class Main extends Component<any, State> {
                                                                     </div>
                                                                 )}
                                                             </div>
+
                                                             {/* Tab Content */}
                                                             <div className="tab-content">
-                                                                {/* Login Tab */}
+                                                                {/* LOGIN TAB */}
                                                                 <div className={`tab-panel ${activeTab === 'login' ? 'active' : ''}`}>
-                                                                    <div className="form-input">
+                                                                    <form
+                                                                        className="form-input"
+                                                                        noValidate
+                                                                        onSubmit={(e) => {
+                                                                            e.preventDefault();
+                                                                            this.auth.join(sessionContext, false);
+                                                                        }}
+                                                                    >
                                                                         <h2>Login</h2>
-                                                                        <label>Email</label>
-                                                                        <input 
-                                                                            type="email" 
+                                                                        <label htmlFor="login-email">Email</label>
+                                                                        <input
+                                                                            id="login-email"
+                                                                            name="email"
+                                                                            type="email"
+                                                                            autoComplete="email"
                                                                             ref={this.auth.loginEmailRef}
                                                                             placeholder="Enter your email"
                                                                             onChange={clearMessages}
                                                                         />
-                                                                        <label>Password</label>
-                                                                        <input 
+
+                                                                        <label htmlFor="login-password">Password</label>
+                                                                        <input
+                                                                            id="login-password"
+                                                                            name="password"
                                                                             type="password"
+                                                                            autoComplete="current-password"
                                                                             ref={this.auth.loginPasswordRef}
                                                                             placeholder="Enter your password"
                                                                             onChange={clearMessages}
                                                                         />
+
                                                                         <div className="login-input">
-                                                                            <button 
-                                                                                className={`login-input-btn ${isAuthenticating === true ? 'auth' : 'default'}`}
-                                                                                onClick={() => this.auth.join(sessionContext, false)}
+                                                                            <button
+                                                                                type="submit"
+                                                                                className={`login-input-btn ${isAuthenticating ? 'auth' : 'default'}`}
                                                                             >
                                                                                 {isAuthenticating ? 'Logging in...' : 'Login'}
                                                                             </button>
-                                                                            <button 
+                                                                            <button
                                                                                 type="button"
                                                                                 className="forgot-password-btn"
                                                                                 onClick={() => this.auth.handlePasswordReset(sessionContext)}
@@ -442,51 +494,71 @@ export class Main extends Component<any, State> {
                                                                                 Forgot Password?
                                                                             </button>
                                                                         </div>
-                                                                    </div>
+                                                                    </form>
                                                                 </div>
-                                                                        
-                                                                {/* Register Tab */}
+
+                                                                {/* REGISTER TAB */}
                                                                 <div className={`tab-panel ${activeTab === 'register' ? 'active' : ''}`}>
-                                                                    <div className="form-input">
+                                                                    <form
+                                                                        className="form-input"
+                                                                        noValidate
+                                                                        onSubmit={(e) => {
+                                                                            e.preventDefault();
+                                                                            this.auth.join(sessionContext, true);
+                                                                        }}
+                                                                    >
                                                                         <h2>Create Account</h2>
-                                                                        <label>Email</label>
-                                                                        <input 
-                                                                            type="email" 
+                                                                        <label htmlFor="register-email">Email</label>
+                                                                        <input
+                                                                            id="register-email"
+                                                                            name="email"
+                                                                            type="email"
+                                                                            autoComplete="email"
                                                                             ref={this.auth.createEmailRef}
                                                                             placeholder="Enter your email"
                                                                             onChange={clearMessages}
                                                                         />
-                                                                        <label>Username</label>
-                                                                        <input 
-                                                                            type="text" 
+
+                                                                        <label htmlFor="register-username">Username</label>
+                                                                        <input
+                                                                            id="register-username"
+                                                                            name="username"
+                                                                            type="text"
+                                                                            autoComplete="username"
                                                                             ref={this.auth.createUsernameRef}
                                                                             placeholder="Choose a username"
                                                                             onChange={clearMessages}
                                                                         />
-                                                                        <label>Password</label>
-                                                                        <input 
+
+                                                                        <label htmlFor="register-password">Password</label>
+                                                                        <input
+                                                                            id="register-password"
+                                                                            name="password"
                                                                             type="password"
+                                                                            autoComplete="new-password"
                                                                             ref={this.auth.createPasswordRef}
                                                                             placeholder="Create a password"
                                                                             onChange={clearMessages}
                                                                         />
+
                                                                         <div className='register-input'>
-                                                                            <button 
-                                                                                className={`register-input-btn ${isAuthenticating === true ? 'auth' : 'default'}`}
-                                                                                onClick={() => this.auth.join(sessionContext, true)}
+                                                                            <button
+                                                                                type="submit"
+                                                                                className={`register-input-btn ${isAuthenticating ? 'auth' : 'default'}`}
                                                                             >
                                                                                 {isAuthenticating ? 'Creating Account...' : 'Create Account'}
                                                                             </button>
                                                                         </div>
-                                                                    </div>
+                                                                    </form>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
+
                                                 <div className="letter-container"></div>
-                                                <div className='info'>
-                                                    <div className="border-info"></div>
+
+                                                <div className="info">
                                                     <div className="text-info">
                                                         <p>
                                                             Messages 2026. Fork on
@@ -496,7 +568,9 @@ export class Main extends Component<any, State> {
                                                 </div>
                                             </>
                                         )}
-                                        {sessionContext.currentSession === 'PASSWORD_RESET' && (
+
+                                        {/* ─────────── PASSWORD RESET SCREEN ─────────── */}
+                                        {sessionContext?.currentSession === 'PASSWORD_RESET' && (
                                             <div className="app-password-reset">
                                                 <PasswordResetController
                                                     apiClientController={this.apiClientController}
@@ -506,7 +580,9 @@ export class Main extends Component<any, State> {
                                                 />
                                             </div>
                                         )}
-                                        {sessionContext.currentSession === 'MAIN_DASHBOARD' && (
+
+                                        {/* ─────────── MAIN DASHBOARD ─────────── */}
+                                        {sessionContext?.currentSession === 'MAIN_DASHBOARD' && (
                                             <>
                                                 {!this.state.chatManager ? (
                                                     <div className="chat-manager-loading-overlay">
@@ -519,7 +595,7 @@ export class Main extends Component<any, State> {
                                                 ) : (
                                                     <div className="app-dashboard">
                                                         <div className="dashboard-content">
-                                                            <Dashboard 
+                                                            <Dashboard
                                                                 ref={this.setDashboardRef}
                                                                 chatController={this.chatController}
                                                                 chatManager={chatManager!}
@@ -535,6 +611,18 @@ export class Main extends Component<any, State> {
                                             </>
                                         )}
                                     </div>
+
+                                    {/* Loading overlay */}
+                                    {showOverlay && (
+                                        <div className="session-loading-overlay">
+                                            <div className="session-loading-content">
+                                                <div>Loading session...</div>
+                                                <div className="session-loading-status">
+                                                    <span>Initializing application</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </>
                             );
                         }}

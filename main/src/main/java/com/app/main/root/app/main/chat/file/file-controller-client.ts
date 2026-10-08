@@ -59,10 +59,10 @@ export class FileControllerClient {
      */
     public async initCache(userId: string, activeChatId?: string): Promise<void> {
         try {
-            console.log('Starting file cache initialization for user:', userId);
+            //console.log('Starting file cache initialization for user:', userId);
             
             const recentFilesResponse = await this.fileService.getRecentFiles(userId);
-            console.log('Recent files response:', recentFilesResponse);
+            //console.log('Recent files response:', recentFilesResponse);
             
             let chats = [];
             if(Array.isArray(recentFilesResponse)) {
@@ -79,7 +79,7 @@ export class FileControllerClient {
                 try {
                     const chatObj = JSON.parse(activeChatId);
                     actualActiveChatId = chatObj.id || chatObj.chatId || activeChatId;
-                    console.log(`Extracted active chat ID from object: ${actualActiveChatId}`);
+                    //console.log(`Extracted active chat ID from object: ${actualActiveChatId}`);
                 } catch(err) {
                     console.warn('Failed to parse activeChatId as JSON, using as-is:', activeChatId);
                 }
@@ -91,12 +91,12 @@ export class FileControllerClient {
                     return chatId === actualActiveChatId;
                 });
                 if(!activeChatExists) {
-                    console.log(`Adding active chat to preload: ${actualActiveChatId}`);
+                    //console.log(`Adding active chat to preload: ${actualActiveChatId}`);
                     chats.push({ id: actualActiveChatId, chatId: actualActiveChatId });
                 }
             }
             
-            console.log(`Found ${chats.length} chats to preload`);
+            //console.log(`Found ${chats.length} chats to preload`);
             
             const preloadPromises = chats.map(async (chat: any) => {
                 const chatId = chat.id || chat.chatId;
@@ -104,12 +104,12 @@ export class FileControllerClient {
                     console.warn('Chat missing ID:', chat);
                     return;
                 }
-                console.log(`Preloading files for chat: ${chatId}`);
+                //console.log(`Preloading files for chat: ${chatId}`);
                 return this.preloadData(userId, chatId);
             });
             
             await Promise.all(preloadPromises);
-            console.log('File cache initialization completed');
+            //console.log('File cache initialization completed');
         } catch(err) {
             console.error('File cache initialization failed: ', err);
             throw err;
@@ -126,7 +126,7 @@ export class FileControllerClient {
                 try {
                     const chatObj = JSON.parse(chatId);
                     actualChatId = chatObj.id || chatObj.chatId || chatId;
-                    console.log(`Extracted chat ID from object: ${actualChatId}`);
+                    //console.log(`Extracted chat ID from object: ${actualChatId}`);
                 } catch(err) {
                     console.warn('Failed to parse chatId as JSON, using as-is:', chatId);
                 }
@@ -150,13 +150,13 @@ export class FileControllerClient {
                 ? pageData.files 
                 : Object.values(pageData.files || {});
             
-            console.log(`Found ${filesArray.length} files in chat data for ${actualChatId}`);
+            //console.log(`Found ${filesArray.length} files in chat data for ${actualChatId}`);
             
             filesArray.forEach((file: any) => {
                 const actualFile = file.fileId ? file : (file[0] || file);
                 
                 const id = actualFile.id || actualFile.fileId;
-                console.log("file debug", actualFile.id, actualFile.fileId, actualFile);
+                //console.log("file debug", actualFile.id, actualFile.fileId, actualFile);
                 const fileChatId = actualFile.chatId;
                 
                 if(!id) {

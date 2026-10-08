@@ -31,11 +31,11 @@ export class CookieService {
         if(secure) cookie += `; Secure`;
         if(sameSite) cookie += `; SameSite=${sameSite}`;
         
-        console.log(`[CookieService] Setting cookie:`, cookie);
+        //console.log(`[CookieService] Setting cookie:`, cookie);
         document.cookie = cookie;
         
         const check = document.cookie;
-        console.log(`[CookieService] After setting, cookies now:`, check);
+        //console.log(`[CookieService] After setting, cookies now:`, check);
     }
     
     /**
@@ -44,24 +44,24 @@ export class CookieService {
     public static getValue(name: string): string | null {
         if(typeof document === 'undefined') return null;
         
-        console.log(`[CookieService] Looking for: ${name}`);
-        console.log(`[CookieService] Raw document.cookie:`, JSON.stringify(document.cookie));
+        //console.log(`[CookieService] Looking for: ${name}`);
+        //console.log(`[CookieService] Raw document.cookie:`, JSON.stringify(document.cookie));
         
         const cookies = document.cookie.split(';');
-        console.log(`[CookieService] Split cookies:`, cookies);
+        //console.log(`[CookieService] Split cookies:`, cookies);
         
         for(let cookie of cookies) {
             const trimmed = cookie.trim();
-            console.log(`[CookieService] Processing:`, JSON.stringify(trimmed));
+            //console.log(`[CookieService] Processing:`, JSON.stringify(trimmed));
             
             const [cookieName, cookieVal] = trimmed.split('=');
             if(cookieName === name) {
                 const value = decodeURIComponent(cookieVal);
-                console.log(`[CookieService] Found ${name}:`, value);
+                //console.log(`[CookieService] Found ${name}:`, value);
                 return value;
             }
         }
-        console.log(`[CookieService] Cookie not found: ${name}`);
+        //console.log(`[CookieService] Cookie not found: ${name}`);
         return null;
     }
 
@@ -78,7 +78,7 @@ export class CookieService {
         let cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}`;
         if(domain) cookie += `; domain=${domain}`;
         
-        console.log('[CookieService] Deleting cookie:', cookie);
+        //console.log('[CookieService] Deleting cookie:', cookie);
         document.cookie = cookie;
     }
     

@@ -19,15 +19,15 @@ export class Raycaster {
         this.device = device;
         this.camera = camera;
 
-        this.rotationBox = new RotationBox(
-            this,
-            {
-                x: this.canvas.width - (this.canvas.width / 1.5),
-                y: 0,
-                width: this.canvas.width / 1.5,
-                height: this.canvas.height
-            }
-        );
+        const rect = canvas.getBoundingClientRect();
+        const w  = rect.width;
+        const h = rect.height;
+
+        this.rotationBox = new RotationBox(this,{
+            x: w - w / 1.5, y: 0,
+            width: w / 1.5,
+            height: h
+        });
 
         this.setupEventListeners();
     }
@@ -50,15 +50,22 @@ export class Raycaster {
         this.canvas.addEventListener('mouseleave', () => {
             this.isMouseInRotationBox = false;
         });
+        window.addEventListener('resize', () => {
+            const rect = this.canvas.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+            this.rotationBox.x = w - w / 1.5;
+            this.rotationBox.y = 0;
+            this.rotationBox.width = w / 1.5;
+            this.rotationBox.height = h;
+        });
     }
 
     /**
      * Get Normalized Mouse Position
      */
     public getNormalizedMousePos(): { x: number, y: number } {
-        if(!this.isMouseInRotationBox) {
-            return { x: 0.5, y: 0.5 }
-        }
+        if(!this.isMouseInRotationBox) return { x: 0.5, y: 0.5 };
 
         const normX = (this.mousePos.x - this.rotationBox.x) / this.rotationBox.width;
         const normY = (this.mousePos.y - this.rotationBox.y) / this.rotationBox.height;
@@ -72,21 +79,23 @@ export class Raycaster {
      * Screen to Rotation
      */
     public screenToRotation(screenX: number, screenY: number): [number, number, number] {
-        const rotationX = (screenX - 0.5) * Math.PI;
-        const rotationY = (screenY - 0.5) * Math.PI;
-        return [rotationX, rotationY, 0];
+        const maxPitch  = Math.PI / 6;
+        const pitch     = -(screenY - 0.5) * maxPitch;
+        const maxYaw    = Math.PI / 4;
+        const yaw       = -(screenX - 0.5) * maxYaw;
+        return [pitch, yaw, 0];
     }
 
     public getRotationBox(): RotationBox {
-        return this.rotationBox
+        const val = this.rotationBox;
+        return val;
     }
 
     public getRotationBoxCoords(): {
-        x: number,
-        y: number,
-        width: number,
-        height: number
+        x: number, y: number,
+        width: number, height: number
     } {
-        return { ...this.rotationBox }
+        const val = { ...this.rotationBox }
+        return val;
     }
 }

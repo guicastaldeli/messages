@@ -203,7 +203,7 @@ export class MessageControllerClient {
                 return chatId && cacheService.cache.has(chatId);
             });
             
-            console.log(`Filtered recent chats: ${validChats.length} valid out of ${chatsArray.length} total`);
+            //console.log(`Filtered recent chats: ${validChats.length} valid out of ${chatsArray.length} total`);
             
             return validChats;
         } catch(err) {
@@ -218,7 +218,7 @@ export class MessageControllerClient {
     public async initCache(userId: string): Promise<void> {
         try {
             const recentChats = await this.getRecentMessages(userId);
-            console.log(`Found ${recentChats.length} recent chats`);
+            //console.log(`Found ${recentChats.length} recent chats`);
             
             const cacheService = await this.chatService.getCacheServiceClient();
             const validChats = recentChats.filter(chat => {
@@ -226,7 +226,7 @@ export class MessageControllerClient {
                 return cacheService.cache.has(chatId);
             });
             
-            console.log(`Preloading data for ${validChats.length} valid chats`);
+            //console.log(`Preloading data for ${validChats.length} valid chats`);
             
             const preloadPromises = validChats.map(async (chat) => {
                 const chatId = chat.id || chat.chatId || chat.groupId;
@@ -238,7 +238,7 @@ export class MessageControllerClient {
             });
             
             await Promise.all(preloadPromises);
-            console.log('Cache initialization completed');
+            //console.log('Cache initialization completed');
         } catch(err) {
             console.error('Cache initialization failed:', err);
             throw new Error('Failed to initialize cache');

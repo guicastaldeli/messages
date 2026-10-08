@@ -82,7 +82,7 @@ export class Dashboard extends Component<Props, State> {
         await new Promise<void>((resolve) => {
             const complete = (event: any) => {
                 const { total } = event.detail;
-                console.log('Stream complete event received. Expected total chats:', total);
+                //console.log('Stream complete event received. Expected total chats:', total);
                 
                 this.setState({ 
                     chatStreamComplete: true,
@@ -117,12 +117,12 @@ export class Dashboard extends Component<Props, State> {
         
         if(allChatsLoaded && this.state.chatStreamComplete) {
             this.setState({ chatItemsAdded: true });
-            console.log('All chats loaded:', { 
+            /*console.log('All chats loaded:', { 
                 currentCount, 
                 expectedCount,
                 chatStreamComplete: this.state.chatStreamComplete,
                 allChatsLoaded: allChatsLoaded
-            });
+            });*/
         }
     }
 
@@ -130,7 +130,7 @@ export class Dashboard extends Component<Props, State> {
         await new Promise<void>((res) => {
             const completed = () => {
                 if(this.state.chatStreamComplete) {
-                    console.log('Chat stream complete, total chats:', this.state.chatList.length);
+                    //console.log('Chat stream complete, total chats:', this.state.chatList.length);
                     res();
                 } else {
                     setTimeout(completed, 100);
@@ -144,13 +144,13 @@ export class Dashboard extends Component<Props, State> {
      *  Chat List Update
      */
     public updateChatList(chatList: any[]): void {
-        console.log('Dashboard.updateChatList called with', chatList.length, 'chats');
+        /*console.log('Dashboard.updateChatList called with', chatList.length, 'chats');
         console.log('Chat details:', chatList.map(c => ({
             id: c.id,
             name: c.name,
             lastMessage: c.lastMessage,
             timestamp: c.timestamp
-        })));
+        })));*/
         
         this.setState({ chatList });
         if(this.props.onChatListUpdate) {
@@ -287,7 +287,7 @@ export class Dashboard extends Component<Props, State> {
                 }
                 
                 if(!currentIds.has(chatId) && !this.removedChatIds.has(chatId)) {
-                    console.log('Polling Found new chat:', chatId);
+                    //console.log('Polling Found new chat:', chatId);
                     processedChats.add(chatId);
                     
                     await this.props.chatManager.subscribeToChat(chatId, chat.type || 'DIRECT');
@@ -339,7 +339,7 @@ export class Dashboard extends Component<Props, State> {
         try {
             this.setState({ isLoading: true });
             
-            console.log('Waiting for socket connection...');
+            //console.log('Waiting for socket connection...');
             const sessionId = await this.waitForSocketConnection();
             if(!sessionId) {
                 console.error('Failed to get sessionId, cannot load data');
@@ -351,7 +351,7 @@ export class Dashboard extends Component<Props, State> {
                 });
                 return;
             }
-            console.log('Socket connected with sessionId:', sessionId);
+            //console.log('Socket connected with sessionId:', sessionId);
 
             this.contactService = new ContactServiceClient({
                 socketClient: this.props.chatController.socketClient,
@@ -368,7 +368,7 @@ export class Dashboard extends Component<Props, State> {
             if(this.state.chatList && this.state.chatList.length > 0) {
                 await this.subscribeToAllChats();
             } else {
-                console.log('No chats to subscribe to');
+                //console.log('No chats to subscribe to');
             }
             
             this.setState({
@@ -424,12 +424,12 @@ export class Dashboard extends Component<Props, State> {
                 
                 if(this.state.chatStreamComplete && 
                     (this.state.chatItemsAdded || shouldBeLoaded)) {
-                    console.log('Chat list processing complete:', {
+                    /*console.log('Chat list processing complete:', {
                         chatListLength: this.state.chatList.length,
                         expectedCount: this.state.expectedChatCount,
                         chatItemsAdded: this.state.chatItemsAdded,
                         shouldBeLoaded: shouldBeLoaded
-                    });
+                    });*/
                     resolve();
                 } else {
                     /*
@@ -450,11 +450,11 @@ export class Dashboard extends Component<Props, State> {
 
     private async subscribeToAllChats(): Promise<void> {
         if(!this.props.chatController || !this.state.chatList.length) {
-            console.log('No chats to subscribe to');
+            //onsole.log('No chats to subscribe to');
             return;
         }
         
-        console.log('Subscribing to all chats:', this.state.chatList.length);
+        //console.log('Subscribing to all chats:', this.state.chatList.length);
         
         for(const chat of this.state.chatList) {
             const chatId = chat.id || chat.chatId;
@@ -462,20 +462,20 @@ export class Dashboard extends Component<Props, State> {
             
             try {
                 const queuePattern = `/user/queue/messages/${chatType.toLowerCase()}/${chatId}`;
-                console.log('Subscribing to queue:', queuePattern);
+                //console.log('Subscribing to queue:', queuePattern);
                 
                 await this.props.chatController.queueManager.subscribe(
                     queuePattern,
                     this.props.chatController.handleChatMessage.bind(this.props.chatController)
                 );
                 
-                console.log('Subscribed to queue:', queuePattern);
+                //console.log('Subscribed to queue:', queuePattern);
             } catch(err) {
                 console.error('Failed to subscribe to chat:', chatId, err);
             }
         }
         
-        console.log('Subscribed to all chats');
+        //console.log('Subscribed to all chats');
     }
 
     private setSession = (session: SessionType): void => {
@@ -629,7 +629,7 @@ export class Dashboard extends Component<Props, State> {
             (this.state.activeChat.id === removedId ||
             this.state.activeChat.groupId === removedId)
         ) {
-            console.log('Clearing active chat');
+            //console.log('Clearing active chat');
             this.setState({ activeChat: null });
             localStorage.removeItem('active-chat');
         }

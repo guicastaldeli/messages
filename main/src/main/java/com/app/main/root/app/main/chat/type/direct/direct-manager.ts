@@ -51,7 +51,7 @@ export class DirectManager {
 
     public setContainer(container: HTMLElement): void {
         this.container = container;
-        console.log('DirectManager: Container set', container);
+        //console.log('DirectManager: Container set', container);
     }
 
     /**

@@ -23,7 +23,7 @@ export class NotificationServiceClient {
             
             if(cookies) {
                 headers['Cookie'] = cookies;
-                console.log(`[NotificationService] Forwarding cookies for persist: ${cookies}`);
+                //console.log(`[NotificationService] Forwarding cookies for persist: ${cookies}`);
             }
 
             const res = await fetch(`${this.apiClientController.getUrl()}/api/notifications`, {
@@ -50,7 +50,7 @@ export class NotificationServiceClient {
             
             if(cookies) {
                 headers['Cookie'] = cookies;
-                console.log(`[NotificationService] Forwarding cookies for load: ${cookies}`);
+                //console.log(`[NotificationService] Forwarding cookies for load: ${cookies}`);
             } else {
                 console.warn(`[NotificationService] No cookies found for notification request`);
             }

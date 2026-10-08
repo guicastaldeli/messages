@@ -55,7 +55,7 @@ export class SessionManager {
             let data: UserSessionData | null = null;
             if(!sessionId) {
                 this.clearSession();
-                console.log('session cleared, no session!');
+                //console.log('session cleared, no session!');
                 return null;
             }
             if(userInfo) {

@@ -97,7 +97,7 @@ export class AuthServiceClient {
      */
     public async validateSession(): Promise<{ valid: boolean; user?: UserData }> {
         try {
-            console.log(`${this.url}/api/auth/validate`)
+            //console.log(`${this.url}/api/auth/validate`)
             const res = await fetch(`${this.url}/api/auth/validate`, {
                 method: 'GET',
                 credentials: 'include',

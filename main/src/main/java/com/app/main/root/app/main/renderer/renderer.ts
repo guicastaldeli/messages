@@ -212,6 +212,8 @@ export class Renderer {
         this.updateCanvasSize();
         this.setupResizeObserver();
 
+        requestAnimationFrame(() => this.handleResize());
+
         this.ctx = this.canvas.getContext('webgpu');
         if(!this.ctx) throw new Error('webgpu err');
 
@@ -269,7 +271,7 @@ export class Renderer {
 
         this.shaderLoader.setDevice(this.device);
         this.shaderLoader.onLoaded((p) => {
-            console.log(`Shader Loaded!: ${p.name}`);
+            //console.log(`Shader Loaded!: ${p.name}`);
         });
         this.shaderLoader.onError((err, name) => {
             console.error(`Shader error in ${name}:`, err);

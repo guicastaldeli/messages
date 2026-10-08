@@ -11,7 +11,7 @@ import { UserColorGenerator } from "@/app/utils/UserColorGenerator";
 export function getRandomColor(): [number, number, number] {
     const randomIndex = Math.floor(Math.random() * UserColorGenerator.COLOR_PALETTE.length);
     const colorObj = UserColorGenerator.COLOR_PALETTE[randomIndex];
-    console.log('Selected color:', colorObj.name, 'at index:', randomIndex); // Debug
+    //console.log('Selected color:', colorObj.name, 'at index:', randomIndex); // Debug
     return hexToRgbNorm(colorObj.value);
 }
 

@@ -25,21 +25,13 @@ export class Scene {
     private elementHandlers: Map<string, ElementHandler> = new Map();
     private raycaster!: Raycaster;
 
-    constructor(
-        canvas: HTMLCanvasElement,
-        device: GPUDevice, 
-        camera: Camera
-    ) {
+    constructor(canvas: HTMLCanvasElement, device: GPUDevice, camera: Camera) {
         this.canvas = canvas;
         this.device = device;
         this.camera = camera;
-        this.raycaster = new Raycaster(
-            this.canvas!, 
-            this.device, 
-            this.camera
-        );
+        this.raycaster = new Raycaster(this.canvas!, this.device, this.camera);
+
         this.registerDefaultHandlers();
-        this.loadScene();
     }
 
     /**
@@ -256,6 +248,6 @@ export class Scene {
      * Init
      */
     public async init(): Promise<void> {
-        
+        await this.loadScene();
     }
 }
