@@ -376,20 +376,13 @@ export class Main extends Component<any, State> {
                 >
                     <SessionContext.Consumer>
                         {(sessionContext) => {
-                            const showOverlay =
-                                !sessionContext ||
-                                (!this.state.rendererReady && !this.state.rendererError);
-
-                            /* Show the login screen whenever we're on LOGIN (or the session
-                            hasn't resolved yet, so the canvas can mount and initialize). */
-                            const showLoginScreen =
-                                !sessionContext || sessionContext.currentSession === 'LOGIN';
+                            const showOverlay = !sessionContext || (!this.state.rendererReady && !this.state.rendererError);
+                            const showLoginScreen = !sessionContext || sessionContext.currentSession === 'LOGIN';
 
                             return (
                                 <>
                                     <div className="app-main">
-
-                                        {/* LOGIN SCREEN */}
+                                        {/* Login Screen */}
                                         {showLoginScreen && (
                                             <>
                                                 <header id='main-header'>
@@ -446,7 +439,7 @@ export class Main extends Component<any, State> {
 
                                                             {/* Tab Content */}
                                                             <div className="tab-content">
-                                                                {/* LOGIN TAB */}
+                                                                {/* Login Tab */}
                                                                 <div className={`tab-panel ${activeTab === 'login' ? 'active' : ''}`}>
                                                                     <form
                                                                         className="form-input"
@@ -497,7 +490,7 @@ export class Main extends Component<any, State> {
                                                                     </form>
                                                                 </div>
 
-                                                                {/* REGISTER TAB */}
+                                                                {/* Register Tab */}
                                                                 <div className={`tab-panel ${activeTab === 'register' ? 'active' : ''}`}>
                                                                     <form
                                                                         className="form-input"
@@ -569,7 +562,7 @@ export class Main extends Component<any, State> {
                                             </>
                                         )}
 
-                                        {/* ─────────── PASSWORD RESET SCREEN ─────────── */}
+                                        {/* Password Reset Screen */}
                                         {sessionContext?.currentSession === 'PASSWORD_RESET' && (
                                             <div className="app-password-reset">
                                                 <PasswordResetController
@@ -581,7 +574,7 @@ export class Main extends Component<any, State> {
                                             </div>
                                         )}
 
-                                        {/* ─────────── MAIN DASHBOARD ─────────── */}
+                                        {/* Main Dashboard */}
                                         {sessionContext?.currentSession === 'MAIN_DASHBOARD' && (
                                             <>
                                                 {!this.state.chatManager ? (
