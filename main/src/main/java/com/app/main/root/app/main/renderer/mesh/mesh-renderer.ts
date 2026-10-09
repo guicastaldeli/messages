@@ -196,7 +196,7 @@ export class MeshRenderer {
     public render(
         renderPass: GPURenderPassEncoder, 
         pipeline: GPURenderPipeline,
-        lightningBindGroup: GPUBindGroup
+        lightingBindGroup: GPUBindGroup
     ): void {
         if(!this.vertexBuffer || !this.indexBuffer) throw new Error('Mesh renderer not init!');
         
@@ -206,8 +206,8 @@ export class MeshRenderer {
         renderPass.setVertexBuffer(0, this.vertexBuffer);
         renderPass.setBindGroup(0, this.bindGroup);
 
-        if(lightningBindGroup) {
-            renderPass.setBindGroup(1, lightningBindGroup);
+        if(lightingBindGroup) {
+            renderPass.setBindGroup(1, lightingBindGroup);
         }
 
         renderPass.setIndexBuffer(this.indexBuffer, this.indexFormat);

@@ -213,18 +213,18 @@ export class Scene {
     public async render(
         renderPass: GPURenderPassEncoder, 
         pipelines: Map<string, GPURenderPipeline>,
-        lightningBindGroup: GPUBindGroup
+        lightingBindGroup: GPUBindGroup
     ): Promise<void> {
         const meshes = this.getElementsByType<MeshRenderer>('mesh');
         for(const renderer of meshes) {
             const meshData = renderer.getMeshData();
             if(meshData.name !== 'stars') {
-                const pipeline = pipelines.get('lightning');
+                const pipeline = pipelines.get('lighting');
                 if(pipeline) {
                     renderer.render(
                         renderPass, 
                         pipeline,
-                        lightningBindGroup
+                        lightingBindGroup
                     );
                 }
             }
@@ -237,7 +237,7 @@ export class Scene {
                     renderer.render(
                         renderPass, 
                         pipeline,
-                        lightningBindGroup
+                        lightingBindGroup
                     );
                 }
             }

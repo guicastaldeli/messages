@@ -1,26 +1,26 @@
 import { AmbientLight } from "./ambient-light";
 import { DirectionalLight } from "./directional-light";
 
-export class LightningController {
+export class LightingController {
     private device: GPUDevice;
     private bindGroup: GPUBindGroup | null = null;
     private bindGroupLayout: GPUBindGroupLayout | null = null;
 
-    private lightningBuffer: GPUBuffer | null = null;
+    private lightingBuffer: GPUBuffer | null = null;
     private ambientLight: AmbientLight | null = null;
     private directionalLights: DirectionalLight[] = [];
 
     constructor(device: GPUDevice) {
         this.device = device;
-        this.createLightningBuffer();
-        this.setDefaultLightning();
+        this.createLightingBuffer();
+        this.setDefaultLighting();
     }
 
     /**
-     * Create Lightning Buffer
+     * Create Lighting Buffer
      */
-    private createLightningBuffer(): void {
-        this.lightningBuffer = this.device.createBuffer({
+    private createLightingBuffer(): void {
+        this.lightingBuffer = this.device.createBuffer({
             size: 84,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
@@ -36,19 +36,19 @@ export class LightningController {
             layout: this.bindGroupLayout,
             entries: [{
                 binding: 0,
-                resource: { buffer: this.lightningBuffer }
+                resource: { buffer: this.lightingBuffer }
             }]
         });
     }
 
-    private setDefaultLightning(): void {
+    private setDefaultLighting(): void {
         this.setAmbientLight(new AmbientLight());
         this.addDirectionalLight(new DirectionalLight());
     }
 
     public clearDirectionalLights(): void {
         this.directionalLights = [];
-        this.updateLightningBuffer();
+        this.updateLightingBuffer();
     }
 
     /**
@@ -56,7 +56,7 @@ export class LightningController {
      */
     public setAmbientLight(light: AmbientLight): void {
         this.ambientLight = light;
-        this.updateLightningBuffer();
+        this.updateLightingBuffer();
     }
 
     public getAmbientLight(): AmbientLight | null {
@@ -68,7 +68,7 @@ export class LightningController {
      */
     public addDirectionalLight(light: DirectionalLight): void {
         this.directionalLights.push(light);
-        this.updateLightningBuffer();
+        this.updateLightingBuffer();
     }
 
     public getDirectionalLights(): DirectionalLight[] {
@@ -76,10 +76,10 @@ export class LightningController {
     }
 
     /**
-     * Update Lightning Buffer
+     * Update Lighting Buffer
      */
-    private updateLightningBuffer(): void {
-        if(!this.lightningBuffer) return;
+    private updateLightingBuffer(): void {
+        if(!this.lightingBuffer) return;
 
         const data = new Float32Array(16);
 
@@ -95,7 +95,7 @@ export class LightningController {
         const lightCountView = new Int32Array(data.buffer, 48, 1);
         lightCountView[0] = this.directionalLights.length;
         
-        this.device.queue.writeBuffer(this.lightningBuffer, 0, data);
+        this.device.queue.writeBuffer(this.lightingBuffer, 0, data);
     }
 
     public getBindGroup(): GPUBindGroup | null {
@@ -107,6 +107,6 @@ export class LightningController {
     }
 
     public update(): void {
-        this.updateLightningBuffer();
+        this.updateLightingBuffer();
     }
 }

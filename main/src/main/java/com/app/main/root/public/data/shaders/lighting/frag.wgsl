@@ -28,7 +28,7 @@ struct AmbientLight {
     intensity: f32
 }
 
-struct Lightning {
+struct Lighting {
     ambient: AmbientLight,
     directional: DirectionalLight,
     lightCount: i32,
@@ -48,7 +48,7 @@ struct VertexOutput {
 @group(0) @binding(2) var<uniform> material: Material;
 @group(0) @binding(3) var baseColorTexture: texture_2d<f32>;
 @group(0) @binding(4) var textureSampler: sampler;
-@group(1) @binding(0) var<uniform> lightning: Lightning;
+@group(1) @binding(0) var<uniform> lighting: Lighting;
 
 fn calculateDirectionalLight(
     light: DirectionalLight, 
@@ -151,12 +151,12 @@ fn main(input: VertexOutput) -> @location(0) vec4<f32> {
         );
     }
 
-    let ambient = lightning.ambient.color * lightning.ambient.intensity;
+    let ambient = lighting.ambient.color * lighting.ambient.intensity;
 
     var directional = vec3<f32>(0.0);
-    if(lightning.lightCount > 0) {
+    if(lighting.lightCount > 0) {
         directional = calculateDirectionalLight(
-            lightning.directional,
+            lighting.directional,
             normal,
             viewDir,
             material.specularPower,

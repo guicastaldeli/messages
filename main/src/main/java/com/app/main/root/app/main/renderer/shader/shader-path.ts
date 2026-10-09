@@ -29,10 +29,10 @@ export const ShaderPaths = {
         vert: 'main/vert.wgsl',
         frag: 'main/frag.wgsl'
     },
-    LIGHTNING: {
-        name: 'lightning',
-        vert: 'lightning/vert.wgsl',
-        frag: 'lightning/frag.wgsl'
+    LIGHTING: {
+        name: 'lighting',
+        vert: 'lighting/vert.wgsl',
+        frag: 'lighting/frag.wgsl'
     },
     SKYBOX: {
         name: 'skybox',

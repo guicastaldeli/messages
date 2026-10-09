@@ -3,7 +3,7 @@ import { Scene } from "./scene";
 import { Tick } from "./tick";
 import { ShaderLoader } from "./shader/shader-loader";
 import { ShaderConfig } from "./shader/shader-config";
-import { LightningController } from "./lightning/lightning-controller";
+import { LightingController } from "./lighting/lighting-controller";
 
 export class Renderer {
     private canvas: HTMLCanvasElement | null = null;
@@ -15,7 +15,7 @@ export class Renderer {
     private camera: Camera | null = null;
     private shaderLoader: ShaderLoader;
     private scene!: Scene;
-    private lightningController: LightningController | null = null;
+    private lightingController: LightingController | null = null;
 
     private isRunning: boolean = false;
     private lastTime: number = 0;
@@ -76,7 +76,7 @@ export class Renderer {
     private async createPipeline(): Promise<void> {
         if(!this.device || !this.ctx) return;
 
-        this.lightningController = new LightningController(this.device);
+        this.lightingController = new LightingController(this.device);
 
         const bindGroupLayout = this.device.createBindGroupLayout({
             entries: [
@@ -110,8 +110,8 @@ export class Renderer {
 
         const bindGroupLayouts = [bindGroupLayout];
 
-        /* Lightning */
-        const lightningBlend: GPUBlendState = {
+        /* Lighting */
+        const lightingBlend: GPUBlendState = {
             color: {
                 srcFactor: 'src-alpha',
                 dstFactor: 'one-minus-src-alpha',
@@ -123,24 +123,24 @@ export class Renderer {
                 operation: 'add'
             }
         }
-        const lightningBindGroupLayout = this.lightningController.getBindGroupLayout();
-        if(lightningBindGroupLayout) {
-            bindGroupLayouts.push(lightningBindGroupLayout);
+        const lightingBindGroupLayout = this.lightingController.getBindGroupLayout();
+        if(lightingBindGroupLayout) {
+            bindGroupLayouts.push(lightingBindGroupLayout);
         }
 
         const layout = this.shaderLoader.createPipelineLayout(bindGroupLayouts);
 
-        await this.shaderLoader.loadProgram('LIGHTNING');
-        const lightningPipeline = this.shaderLoader.createRenderPipeline(
-            'LIGHTNING',
+        await this.shaderLoader.loadProgram('LIGHTING');
+        const lightingPipeline = this.shaderLoader.createRenderPipeline(
+            'LIGHTING',
             layout,
             ShaderConfig.get().vertexBufferLayouts,
             [navigator.gpu.getPreferredCanvasFormat()],
             ShaderConfig.get().depthStencil,
             ShaderConfig.get().primitiveState,
-            lightningBlend
+            lightingBlend
         );
-        this.pipelines.set('lightning', lightningPipeline);
+        this.pipelines.set('lighting', lightingPipeline);
 
         /* Main */
         const mainBlend: GPUBlendState = {
@@ -332,14 +332,14 @@ export class Renderer {
             }
         });
 
-        if(this.lightningController && this.lightningController.getBindGroup()) {
-            renderPass.setBindGroup(1, this.lightningController.getBindGroup());
-            const mainPipeline = this.pipelines.get('lightning');
+        if(this.lightingController && this.lightingController.getBindGroup()) {
+            renderPass.setBindGroup(1, this.lightingController.getBindGroup());
+            const mainPipeline = this.pipelines.get('lighting');
             if(mainPipeline && this.scene) {
                 this.scene.render(
                     renderPass, 
                     this.pipelines,
-                    this.lightningController.getBindGroup()!
+                    this.lightingController.getBindGroup()!
                 );
             }
         }

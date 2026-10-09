@@ -21,7 +21,7 @@ struct AmbientLight {
     intensity: f32
 }
 
-struct Lightning {
+struct Lighting {
     ambient: AmbientLight,
     directional: DirectionalLight,
     lightCount: i32,
@@ -30,7 +30,7 @@ struct Lightning {
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<uniform> model: Model;
-@group(1) @binding(0) var<uniform> lightning: Lightning;
+@group(1) @binding(0) var<uniform> lighting: Lighting;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
