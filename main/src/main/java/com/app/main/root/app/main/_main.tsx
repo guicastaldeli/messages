@@ -54,14 +54,16 @@ export class Main extends Component<any, State> {
     private chatController!: ChatController;
     private renderer: Renderer | null = null;
 
-    private rendererInitialized = false;
-
     public auth: Auth;
     public appContainerRef = React.createRef<HTMLDivElement>();
     private canvasRef = React.createRef<HTMLCanvasElement>();
     private dashboardInstance: Dashboard | null = null;
-
+    
     public hello: Hello;
+    
+    private rendererInitialized = false;
+
+    private RENDER_TIMEOUT: number = 1500;
 
     constructor(props: any) {
         super(props);
@@ -118,7 +120,7 @@ export class Main extends Component<any, State> {
                     //console.warn('Renderer init timed out, continuing anyway');
                     this.setState({ rendererError: 'Renderer timed out' });
                 }
-            }, 15000);
+            }, this.RENDER_TIMEOUT);
             
             const originalSetState = this.auth.setState.bind(this.auth);
             this.auth.setState = (newState: any, cb?: () => void) => {
