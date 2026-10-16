@@ -1,0 +1,47 @@
+services:
+  messages-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: messages-backend
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      - APP_ENV=prod
+      - SERVER_PORT=3003
+      - ENV_CONFIG_DIR=/app/.env-config
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+    volumes:
+      - ./data/db/data:/app/db/data
+      - ./data/keys:/app/keys
+      - ./main/src/main/java/com/app/main/root/.env-config:/app/.env-config
+
+  messages-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: messages-api
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    environment:
+      - APP_ENV=prod
+    volumes:
+      - ./main/src/main/java/com/app/main/root/.env-config:/app/.env-config
+
+  messages-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: messages-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - APP_ENV=prod
+      - NODE_ENV=production
+      - PORT=3002
+      - HOSTNAME=0.0.0.0
+    volumes:
+      - ./main/src/main/java/com/app/main/root/.env-config:/app/.env-config
